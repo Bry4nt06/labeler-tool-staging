@@ -82,6 +82,7 @@ function normalizeBuilderObject(item, mode, stationCount = 6) {
     ? Math.max(0.1, num(item?.wipeSpanDeg, Math.abs(originalEnd - start) || 10))
     : 0;
   const end = kind === "coding" ? start + 5 : kind === "sensor" ? start + 3 : aplRoller ? start + wipeSpanDeg : originalEnd;
+  const bottleHoldStartDeg = Math.min(end, Math.max(start, num(item?.bottleHoldStartDeg, start)));
   return {
     ...item,
     id: String(item?.id || uniqueMapId(mode)),
@@ -95,6 +96,10 @@ function normalizeBuilderObject(item, mode, stationCount = 6) {
     end,
     wipeSpanDeg,
     angle: singlePoint ? start : item?.angle,
+    holdBottleAngle: application === "cold-glue" && kind === "brush" && Boolean(item?.holdBottleAngle),
+    holdCurrentBottleAngle: application === "cold-glue" && kind === "brush" && Boolean(item?.holdCurrentBottleAngle),
+    bottleHoldAngleDeg: application === "cold-glue" && kind === "brush" ? num(item?.bottleHoldAngleDeg, 90) : 90,
+    bottleHoldStartDeg,
     servoAssist: kind === "sensor" && Boolean(item?.servoAssist),
     requiredVisibilityPercent: kind === "sensor" ? Math.min(100, Math.max(1, num(item?.requiredVisibilityPercent, 50))) : 50,
     extension: Math.max(4, num(item?.extension, 20)),
@@ -936,7 +941,7 @@ function renderWipeDownBuilder() {
         ${!isGripper && !isCoding && !isSensor ? isAplRoller
           ? `<label>Roller surface coverage (table deg)<input data-builder-field="wipeSpanDeg" type="number" min="0.1" step="0.1" value="${fmt(item.wipeSpanDeg, 1)}"><small>Contact footprint used by the servo wipe calculation; this is not another roller point.</small></label>`
           : `<label>Stop / point 2<input data-builder-field="end" type="number" step="0.1" value="${fmt(item.end, 1)}"></label>` : ""}
-        ${mode === "cold-glue" && item.kind === "brush" ? `<label>Brush role<select data-builder-field="role"><option value="process" ${item.role === "process" ? "selected" : ""}>Partial wipe</option><option value="final" ${item.role === "final" ? "selected" : ""}>Final wipe</option><option value="hold" ${item.role === "hold" ? "selected" : ""}>Hold only</option></select></label><label>Coverage %<input data-builder-field="coveragePercent" type="number" min="0" max="100" step="1" value="${fmt(item.coveragePercent, 0)}"></label><label>Brush extension<input data-builder-field="extension" type="number" min="4" step="1" value="${fmt(item.extension, 1)}"></label>` : ""}
+        ${mode === "cold-glue" && item.kind === "brush" ? `<label>Brush role<select data-builder-field="role"><option value="process" ${item.role === "process" ? "selected" : ""}>Partial wipe</option><option value="final" ${item.role === "final" ? "selected" : ""}>Final wipe</option><option value="hold" ${item.role === "hold" ? "selected" : ""}>Hold only</option></select></label><label>Coverage %<input data-builder-field="coveragePercent" type="number" min="0" max="100" step="1" value="${fmt(item.coveragePercent, 0)}"></label><label>Brush extension<input data-builder-field="extension" type="number" min="4" step="1" value="${fmt(item.extension, 1)}"></label><div class="brush-hold-inline"><div class="hold-check-row"><label class="inline-check"><input data-builder-field="holdBottleAngle" type="checkbox" ${item.holdBottleAngle ? "checked" : ""}> Hold angle</label><span class="info-tip" role="img" tabindex="0" title="Wipes to the Hold from table angle, then holds either the current bottle angle or the entered angle through the brush end." aria-label="Hold bottle angle information">i</span><label class="inline-check" ${item.holdBottleAngle ? "" : "hidden"}><input data-builder-field="holdCurrentBottleAngle" type="checkbox" ${item.holdCurrentBottleAngle ? "checked" : ""}> Hold Current Deg</label></div><div class="hold-input-row" ${item.holdBottleAngle ? "" : "hidden"}><label class="inline-field" ${!item.holdCurrentBottleAngle ? "" : "hidden"}>Angle<input data-builder-field="bottleHoldAngleDeg" type="number" step="0.1" value="${fmt(item.bottleHoldAngleDeg, 1)}"></label><label class="inline-field">Hold from<input data-builder-field="bottleHoldStartDeg" type="number" min="${fmt(item.start, 1)}" max="${fmt(item.end, 1)}" step="0.1" value="${fmt(item.bottleHoldStartDeg, 1)}" title="Allowed range ${fmt(item.start, 1)}°–${fmt(item.end, 1)}°"></label></div></div>` : ""}
         ${isSensor ? `<label class="builder-checkbox-label"><input data-builder-field="servoAssist" type="checkbox" ${item.servoAssist ? "checked" : ""}> Orient bottle for sensor<small>Creates the shortest turn needed to meet the configured label view.</small></label><label>Required label view (%)<input data-builder-field="requiredVisibilityPercent" type="number" min="1" max="100" step="1" value="${fmt(item.requiredVisibilityPercent, 0)}"><small>1% allows an edge view; 100% aligns the label centerline directly with the sensor.</small></label><div class="sensor-inline-status ${sensorStatus?.passes ? "sensor-status-pass" : "sensor-status-fail"}"><strong>${fmt(sensorStatus?.percent, 1)}% visible</strong><span>Required: ${fmt(sensorStatus?.required, 0)}%</span></div>` : ""}
       </div>
       ${coreColdGlue ? `<small class="builder-core-note">Core Cold Glue machine point</small>` : ""}
@@ -962,7 +967,7 @@ function renderWipeDownBuilder() {
       control.addEventListener("focus", () => recordBuilderHistory(`Edit ${item.name}`), { once: true });
       const applyControlValue = (persist = false) => {
         const field = control.dataset.builderField;
-        const booleanField = field === "servoAssist";
+        const booleanField = field === "servoAssist" || field === "holdBottleAngle" || field === "holdCurrentBottleAngle";
         const numericField = !booleanField && !["name", "side", "role"].includes(field);
         if (numericField && (control.value === "" || control.value === "-" || control.value === "." || control.value === "-.")) return;
         const editable = editableMachineMap();
@@ -977,7 +982,7 @@ function renderWipeDownBuilder() {
         // Rebuilding the list here destroys focus, closes the station details
         // box, and resets the user's scroll position. Only a station change
         // needs regrouping in the collapsible station list.
-        if (persist && field === "station") renderWipeDownBuilder();
+        if (persist && (field === "station" || field === "holdBottleAngle" || field === "holdCurrentBottleAngle")) renderWipeDownBuilder();
       };
       control.addEventListener("input", () => applyControlValue(false));
       control.addEventListener("change", () => applyControlValue(true));

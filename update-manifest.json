@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.57",
+  "version": "0.7.58",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Colors aggregate degree values green and adds spacing within curved travel labels."
+  "notes": "STAGING TEST BUILD — Adds configurable bottle-angle hold controls to inside and outside Cold Glue brush channels."
 }

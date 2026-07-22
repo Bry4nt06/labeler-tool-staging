@@ -336,6 +336,15 @@ function generatedColdGlueFixedProfile() {
     plate = targetPlate;
     add(3, target, plate, `${action} - Reference`, extra);
   };
+  const moveToReferenceWithoutExtraLap = (targetTable, targetPlate, action, extra = {}) => {
+    if (Math.abs(norm(num(targetTable, lastTable)) - norm(lastTable)) <= 0.001) {
+      add(7, lastTable, plate, action, extra);
+      plate = targetPlate;
+      add(3, lastTable, plate, `${action} - Reference`, extra);
+      return;
+    }
+    moveToReference(targetTable, targetPlate, action, extra);
+  };
   const plateTravelTo = (targetPlate) => Math.abs(((num(targetPlate, plate) - plate + 540) % 360) - 180);
   const moveInWindow = (startTable, endTable, targetPlate, action, extra = {}) => {
     const start = unwrapAfter(startTable, lastTable);
@@ -522,9 +531,23 @@ function generatedColdGlueFixedProfile() {
         }
       }
 
-      if (Array.isArray(stationPlan.process) || Array.isArray(stationPlan.final)) {
-        (stationPlan.process || []).forEach((allocation) => applyMove(allocation.start, allocation.end, allocation.rotation, allocation.direction, `${sectionLabel(section)} Partial Brush Wipe-Down`, { station, section, brushStage: "process", brushRole: allocation.role, plannedRotation: allocation.rotation, plannedRatio: allocation.ratio, coveragePercent: stationPlan.partialCoveragePercent }));
-        (stationPlan.final || []).forEach((allocation) => applyMove(allocation.start, allocation.end, allocation.rotation, allocation.direction, `${sectionLabel(section)} Final Brush Wipe-Down`, { station, section, brushStage: "final", brushRole: allocation.role, plannedRotation: allocation.rotation, plannedRatio: allocation.ratio, coveragePercent: 100 - stationPlan.partialCoveragePercent }));
+      if (Array.isArray(stationPlan.process) || Array.isArray(stationPlan.final) || Array.isArray(stationPlan.holds)) {
+        const brushMoves = [
+          ...(stationPlan.process || []).map((allocation) => ({ ...allocation, generatedStage: "process" })),
+          ...(stationPlan.final || []).map((allocation) => ({ ...allocation, generatedStage: "final" })),
+          ...(stationPlan.holds || []).map((allocation) => ({ ...allocation, generatedStage: "hold" }))
+        ].sort((a, b) => num(a.start, 0) - num(b.start, 0));
+        brushMoves.forEach((allocation) => {
+          if (allocation.generatedStage === "hold") {
+            const holdAngle = allocation.holdCurrent ? plate : num(allocation.holdAngle, 90);
+            const holdAction = `${sectionLabel(section)} Brush Hold at ${finishAngle(holdAngle)}°`;
+            moveToReferenceWithoutExtraLap(allocation.start, holdAngle, holdAction, { station, section, brushStage: "hold", channelHold: true, holdAngle });
+            applyMove(allocation.start, allocation.end, 0, 0, holdAction, { station, section, brushStage: "hold", channelHold: true, holdAngle });
+            return;
+          }
+          const finalStage = allocation.generatedStage === "final";
+          applyMove(allocation.start, allocation.end, allocation.rotation, allocation.direction, `${sectionLabel(section)} ${finalStage ? "Final" : "Partial"} Brush Wipe-Down`, { station, section, brushStage: allocation.generatedStage, brushRole: allocation.role, plannedRotation: allocation.rotation, plannedRatio: allocation.ratio, coveragePercent: finalStage ? 100 - stationPlan.partialCoveragePercent : stationPlan.partialCoveragePercent });
+        });
       } else {
         stationPlan.outside.forEach((allocation) => applyMove(allocation.start, allocation.end, allocation.rotation, -1, `${sectionLabel(section)} Outside Brush Wipe-Down`, { station, section, brushStage: "outer", plannedRotation: allocation.rotation, plannedRatio: allocation.ratio }));
         stationPlan.inside.forEach((allocation) => applyMove(allocation.start, allocation.end, allocation.rotation, 1, `${sectionLabel(section)} Inside Brush Wipe-Down`, { station, section, brushStage: "inner", plannedRotation: allocation.rotation, plannedRatio: allocation.ratio }));
