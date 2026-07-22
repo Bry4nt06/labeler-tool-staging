@@ -160,11 +160,6 @@ function bindSetup() {
     updateMapLockUi();
     saveCurrentSettings();
   });
-  els.editMapButton?.addEventListener("click", () => {
-    state.mapLocked = false;
-    updateMapLockUi();
-    setBuilderOpen(true);
-  });
   els.undoMapEdit?.addEventListener("click", () => {
     if (state.builderHistory?.undo?.length) restoreBuilderHistory("undo");
   });
@@ -174,7 +169,6 @@ function bindSetup() {
     state.mapPanX = 0;
     state.mapPanY = 0;
   };
-  els.fitMapView?.addEventListener("click", () => { centerMapView(); applyMapView(); saveCurrentSettings(); });
   els.resetMapView?.addEventListener("click", () => {
     centerMapView();
     applyMapView();
