@@ -1269,6 +1269,18 @@ button.danger:hover {
   margin-bottom: 8px;
 }
 .validation-head h2 { margin: 0; }
+.validation-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.validation-head-actions button[aria-pressed="true"] {
+  border-color: var(--green);
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 10%, var(--panel));
+}
 .compact-builder-button {
   padding: 6px 9px;
   font-size: 11px;

@@ -44,17 +44,18 @@ function drawMapQuadrantReferences(add, parent) {
 }
 
 function drawAggregateSpacingOverlay(add, parent) {
-  const gaps = typeof aggregateCenterlineGaps === "function" ? aggregateCenterlineGaps() : [];
+  if (!state.showAggregateSpacingOverlay) return;
+  const gaps = typeof aggregateCenterlineGaps === "function" ? aggregateCenterlineGaps().filter((gap) => !gap.wrapsToFirst) : [];
   const arcRadius = Math.max(36, state.radius - 24);
   const labelRadius = Math.max(24, state.radius - 43);
   gaps.forEach((gap) => {
-    const color = gap.violatesMinimum ? "#d71920" : "#28735a";
+    const color = gap.violatesMinimum ? "#d71920" : "var(--map-muted)";
     add("path", {
       d: arcPath(gap.startAngle, gap.endAngle, arcRadius - 1.8, arcRadius + 1.8),
       fill: color,
-      "fill-opacity": gap.violatesMinimum ? 0.92 : 0.66,
+      "fill-opacity": gap.violatesMinimum ? 0.7 : 0.26,
       stroke: color,
-      "stroke-width": 0.8,
+      "stroke-width": 0.45,
       "data-aggregate-spacing-from": gap.from,
       "data-aggregate-spacing-to": gap.to,
       "data-aggregate-spacing-gap": gap.gapDeg.toFixed(1),
@@ -66,16 +67,16 @@ function drawAggregateSpacingOverlay(add, parent) {
       x: label.x,
       y: label.y,
       fill: color,
-      "font-size": 10,
-      "font-weight": 800,
+      "font-size": 8,
+      "font-weight": 600,
       stroke: "var(--map-surface)",
-      "stroke-width": 3.5,
+      "stroke-width": 2.2,
       "stroke-linejoin": "round",
       "paint-order": "stroke fill",
       "text-anchor": "middle",
       "dominant-baseline": "middle",
       "data-aggregate-spacing-label": `${gap.from}-${gap.to}`
-    }, parent).textContent = `A${gap.from}→A${gap.to} ${fmt(gap.gapDeg, 1)}°${gap.violatesMinimum ? " < 6°" : ""}`;
+    }, parent).textContent = `A${gap.from}–A${gap.to} ${fmt(gap.gapDeg, 1)}°`;
   });
 }
 

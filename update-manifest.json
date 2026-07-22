@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.51",
+  "version": "0.7.52",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Adds aggregate centerline-spacing overlays with a hard 6-degree minimum callout."
+  "notes": "STAGING TEST BUILD — Makes aggregate gap labels optional and subtle while omitting the last-to-first display label."
 }

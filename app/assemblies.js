@@ -451,6 +451,7 @@ function aggregateCenterlineGaps() {
       startAngle: aggregate.angle,
       endAngle,
       gapDeg,
+      wrapsToFirst: index === aggregates.length - 1,
       violatesMinimum: gapDeg < AGGREGATE_CENTERLINE_MIN_GAP_DEG
     };
   });
