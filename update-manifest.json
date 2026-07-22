@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.55",
+  "version": "0.7.56",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Binds aggregate gap text directly to the visible colored table arcs."
+  "notes": "STAGING TEST BUILD — Renames Aggregate Gaps to Agg Travel Dist. and keeps it inline with Wipe Data."
 }

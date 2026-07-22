@@ -1274,7 +1274,14 @@ button.danger:hover {
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.validation-head-actions .compact-builder-button {
+  flex: 0 0 auto;
+  padding-right: 7px;
+  padding-left: 7px;
+  font-size: 10px;
 }
 .validation-head-actions button[aria-pressed="true"] {
   border-color: var(--green);
