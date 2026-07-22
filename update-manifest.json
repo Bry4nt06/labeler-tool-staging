@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.64",
+  "version": "0.7.65",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Fixes overlapping controls in the reduced Direct-view Preview & Animation card."
+  "notes": "STAGING TEST BUILD — Moves the table-angle and bottle-angle inputs beneath Preview & Animation in Direct view."
 }

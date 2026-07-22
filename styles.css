@@ -422,6 +422,23 @@ p {
     white-space: nowrap;
   }
 
+  .workspace-view-direct #mapRightRail > .preview-angle-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-top-color: var(--panel-accent);
+    border-radius: 8px;
+    background: linear-gradient(180deg, var(--panel-hi), var(--panel));
+  }
+
+  .workspace-view-direct #mapRightRail > .preview-angle-controls .angle-generator-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 86px auto;
+    width: 100%;
+  }
+
   .workspace-view-direct .preview-panel h2 {
     grid-column: 1;
     grid-row: 1;
@@ -697,6 +714,12 @@ input[type="range"] {
 .simulation-actions-spacer {
   width: 28px;
   flex: 0 0 28px;
+}
+
+.preview-angle-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .simulation-action[hidden] {

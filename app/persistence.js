@@ -358,8 +358,16 @@ function setWorkspaceView(value) {
   const preview = layout?.querySelector(":scope > .preview-panel") || app?.querySelector("#mapRightRail > .preview-panel");
   const mapArea = layout?.querySelector(":scope > .map-area");
   const validation = app?.querySelector("#mapRightRail > .validation");
+  const angleControls = app?.querySelector("#previewAngleControls");
+  const tabs = app?.querySelector(":scope > .tabs");
+  const loadGeneratedTurns = app?.querySelector("#loadGeneratedTurns");
   app?.classList.toggle("workspace-view-direct", state.workspaceView === "direct");
-  if (state.workspaceView === "direct" && preview && validation) validation.insertAdjacentElement("afterend", preview);
-  else if (preview && layout && mapArea) layout.insertBefore(preview, mapArea);
+  if (state.workspaceView === "direct" && preview && validation) {
+    validation.insertAdjacentElement("afterend", preview);
+    if (angleControls) preview.insertAdjacentElement("afterend", angleControls);
+  } else {
+    if (preview && layout && mapArea) layout.insertBefore(preview, mapArea);
+    if (angleControls && tabs) tabs.insertBefore(angleControls, loadGeneratedTurns || null);
+  }
   if (els.workspaceView) els.workspaceView.value = state.workspaceView;
 }
