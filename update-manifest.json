@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.54",
+  "version": "0.7.55",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Removes redundant Fit View and Edit Map toolbar buttons."
+  "notes": "STAGING TEST BUILD — Binds aggregate gap text directly to the visible colored table arcs."
 }

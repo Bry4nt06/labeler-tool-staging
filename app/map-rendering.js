@@ -47,36 +47,29 @@ function drawAggregateSpacingOverlay(add, parent) {
   if (!state.showAggregateSpacingOverlay) return;
   const gaps = typeof aggregateCenterlineGaps === "function" ? aggregateCenterlineGaps().filter((gap) => !gap.wrapsToFirst) : [];
   const arcRadius = Math.max(36, state.radius - 24);
-  const labelRadius = Math.max(24, state.radius - 43);
   gaps.forEach((gap) => {
     const color = gap.violatesMinimum ? "#d71920" : "var(--map-muted)";
-    add("path", {
-      d: arcPath(gap.startAngle, gap.endAngle, arcRadius - 1.8, arcRadius + 1.8),
-      fill: color,
-      "fill-opacity": gap.violatesMinimum ? 0.7 : 0.26,
-      stroke: color,
-      "stroke-width": 0.45,
-      "data-aggregate-spacing-from": gap.from,
-      "data-aggregate-spacing-to": gap.to,
-      "data-aggregate-spacing-gap": gap.gapDeg.toFixed(1),
-      "data-spacing-violation": String(gap.violatesMinimum)
-    }, parent);
     const midpoint = gap.startAngle + gap.gapDeg / 2;
-    const midpointPosition = angleToXY(midpoint, labelRadius);
+    const midpointPosition = angleToXY(midpoint, arcRadius);
     const forwardSweep = state.direction === "cw" ? 0 : 1;
     const reverseForReadability = forwardSweep ? midpointPosition.y > 0 : midpointPosition.y < 0;
     const labelStartAngle = reverseForReadability ? gap.endAngle : gap.startAngle;
     const labelEndAngle = reverseForReadability ? gap.startAngle : gap.endAngle;
-    const labelStart = angleToXY(labelStartAngle, labelRadius);
-    const labelEnd = angleToXY(labelEndAngle, labelRadius);
+    const labelStart = angleToXY(labelStartAngle, arcRadius);
+    const labelEnd = angleToXY(labelEndAngle, arcRadius);
     const labelSweep = reverseForReadability ? (forwardSweep ? 0 : 1) : forwardSweep;
     const labelPathId = `aggregate-gap-label-${gap.from}-${gap.to}`;
     add("path", {
       id: labelPathId,
-      d: `M ${labelStart.x} ${labelStart.y} A ${labelRadius} ${labelRadius} 0 ${gap.gapDeg > 180 ? 1 : 0} ${labelSweep} ${labelEnd.x} ${labelEnd.y}`,
+      d: `M ${labelStart.x} ${labelStart.y} A ${arcRadius} ${arcRadius} 0 ${gap.gapDeg > 180 ? 1 : 0} ${labelSweep} ${labelEnd.x} ${labelEnd.y}`,
       fill: "none",
-      stroke: "none",
-      "aria-hidden": "true"
+      stroke: color,
+      "stroke-width": gap.violatesMinimum ? 3.2 : 2.4,
+      "stroke-opacity": gap.violatesMinimum ? 0.7 : 0.3,
+      "data-aggregate-spacing-from": gap.from,
+      "data-aggregate-spacing-to": gap.to,
+      "data-aggregate-spacing-gap": gap.gapDeg.toFixed(1),
+      "data-spacing-violation": String(gap.violatesMinimum)
     }, parent);
     const text = add("text", {
       fill: color,
@@ -86,13 +79,15 @@ function drawAggregateSpacingOverlay(add, parent) {
       "stroke-width": 2.2,
       "stroke-linejoin": "round",
       "paint-order": "stroke fill",
+      dy: -5,
       "data-aggregate-spacing-label": `${gap.from}-${gap.to}`
     }, parent);
     add("textPath", {
       href: `#${labelPathId}`,
       startOffset: "50%",
       "text-anchor": "middle",
-      dy: -3
+      method: "align",
+      spacing: "auto"
     }, text).textContent = `A${gap.from}–A${gap.to} ${fmt(gap.gapDeg, 1)}°`;
   });
 }
