@@ -326,6 +326,57 @@ p {
   font-size: 12px;
 }
 
+@media (min-width: 1250px) {
+  .app.workspace-view-direct {
+    width: min(1880px, calc(100vw - 24px));
+    display: grid;
+    grid-template-columns: minmax(720px, 1.28fr) minmax(520px, 0.92fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    column-gap: 14px;
+    align-items: start;
+  }
+
+  .workspace-view-direct > .topbar {
+    grid-column: 1 / -1;
+  }
+
+  .workspace-view-direct > .layout {
+    grid-column: 1;
+    grid-row: 2 / 4;
+    grid-template-columns: minmax(460px, 1fr) minmax(220px, 260px);
+    align-content: start;
+  }
+
+  .workspace-view-direct > .layout > .preview-panel {
+    grid-column: 1 / -1;
+  }
+
+  .workspace-view-direct > .layout > .map-area {
+    grid-column: 1;
+  }
+
+  .workspace-view-direct > .layout > .right-rail {
+    grid-column: 2;
+  }
+
+  .workspace-view-direct > .layout > .labeler-map-reference:not([hidden]) {
+    grid-column: 1 / -1;
+  }
+
+  .workspace-view-direct > .tabs {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 0;
+  }
+
+  .workspace-view-direct > .table-wrap.active {
+    grid-column: 2;
+    grid-row: 3;
+    width: 100%;
+    max-height: calc(100vh - 170px);
+  }
+}
+
 .layout {
   display: grid;
   grid-template-columns: 300px minmax(420px, 1fr) 310px;
