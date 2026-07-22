@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.61",
+  "version": "0.7.62",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Adds Standard and Direct workspace views, placing the map and active lower panel side by side on wide screens."
+  "notes": "STAGING TEST BUILD — Compacts Preview & Animation into a shallow horizontal strip when Direct view is selected."
 }
