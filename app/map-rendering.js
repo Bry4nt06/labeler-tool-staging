@@ -82,13 +82,20 @@ function drawAggregateSpacingOverlay(add, parent) {
       dy: -5,
       "data-aggregate-spacing-label": `${gap.from}-${gap.to}`
     }, parent);
-    add("textPath", {
+    const textPath = add("textPath", {
       href: `#${labelPathId}`,
       startOffset: "50%",
       "text-anchor": "middle",
       method: "align",
       spacing: "auto"
-    }, text).textContent = `A${gap.from}–A${gap.to} ${fmt(gap.gapDeg, 1)}°`;
+    }, text);
+    add("tspan", {}, textPath).textContent = `A${gap.from}\u2002–\u2002A${gap.to}`;
+    add("tspan", {
+      dx: 9,
+      fill: gap.violatesMinimum ? "#d71920" : "#42c987",
+      "font-weight": 800,
+      "data-aggregate-spacing-degrees": `${gap.from}-${gap.to}`
+    }, textPath).textContent = `${fmt(gap.gapDeg, 1)}°`;
   });
 }
 

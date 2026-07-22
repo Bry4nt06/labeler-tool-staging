@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.56",
+  "version": "0.7.57",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Renames Aggregate Gaps to Agg Travel Dist. and keeps it inline with Wipe Data."
+  "notes": "STAGING TEST BUILD — Colors aggregate degree values green and adds spacing within curved travel labels."
 }
