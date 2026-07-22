@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.59",
+  "version": "0.7.60",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Adds the paired Inside + Outside Brush Channel option with independent degree and hold controls."
+  "notes": "STAGING TEST BUILD — Seeds company maps and libraries on updates without overwriting existing user inputs or matching entries."
 }
