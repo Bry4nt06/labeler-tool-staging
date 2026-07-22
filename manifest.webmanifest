@@ -1,13 +1,13 @@
 {
-  "name": "ServoForge Labeler",
-  "short_name": "ServoForge",
-  "description": "Mechanical map and servo profile builder for bottle labeler systems.",
+  "name": "ServoForge Labeler — STAGING",
+  "short_name": "ServoForge Test",
+  "description": "Test build of ServoForge Labeler. Not for production use.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0c1715",
-  "theme_color": "#173f35",
+  "theme_color": "#9a4f00",
   "icons": [
     {
       "src": "assets/labeler-tool-icon.svg",

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "version": "0.7.49",
-  "releaseUrl": "https://bry4nt06.github.io/labeler-tool-app/",
-  "downloadUrl": "https://bry4nt06.github.io/labeler-tool-app/",
-  "notes": "Adds a per-map maximum turn-speed threshold with explicit validation callouts."
+  "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
+  "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
+  "notes": "STAGING TEST BUILD — Adds a per-map maximum turn-speed threshold with explicit validation callouts."
 }
