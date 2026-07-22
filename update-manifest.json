@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.48",
+  "version": "0.7.49",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-app/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-app/",
-  "notes": "Moves saved profiles to Custom Simulation and stores simulation settings."
+  "notes": "Adds a per-map maximum turn-speed threshold with explicit validation callouts."
 }
