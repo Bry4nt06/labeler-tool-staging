@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.52",
+  "version": "0.7.53",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Makes aggregate gap labels optional and subtle while omitting the last-to-first display label."
+  "notes": "STAGING TEST BUILD — Curves aggregate gap labels along the table-spacing arcs to reduce visual interference."
 }

@@ -62,10 +62,23 @@ function drawAggregateSpacingOverlay(add, parent) {
       "data-spacing-violation": String(gap.violatesMinimum)
     }, parent);
     const midpoint = gap.startAngle + gap.gapDeg / 2;
-    const label = angleToXY(midpoint, labelRadius);
-    add("text", {
-      x: label.x,
-      y: label.y,
+    const midpointPosition = angleToXY(midpoint, labelRadius);
+    const forwardSweep = state.direction === "cw" ? 0 : 1;
+    const reverseForReadability = forwardSweep ? midpointPosition.y > 0 : midpointPosition.y < 0;
+    const labelStartAngle = reverseForReadability ? gap.endAngle : gap.startAngle;
+    const labelEndAngle = reverseForReadability ? gap.startAngle : gap.endAngle;
+    const labelStart = angleToXY(labelStartAngle, labelRadius);
+    const labelEnd = angleToXY(labelEndAngle, labelRadius);
+    const labelSweep = reverseForReadability ? (forwardSweep ? 0 : 1) : forwardSweep;
+    const labelPathId = `aggregate-gap-label-${gap.from}-${gap.to}`;
+    add("path", {
+      id: labelPathId,
+      d: `M ${labelStart.x} ${labelStart.y} A ${labelRadius} ${labelRadius} 0 ${gap.gapDeg > 180 ? 1 : 0} ${labelSweep} ${labelEnd.x} ${labelEnd.y}`,
+      fill: "none",
+      stroke: "none",
+      "aria-hidden": "true"
+    }, parent);
+    const text = add("text", {
       fill: color,
       "font-size": 8,
       "font-weight": 600,
@@ -73,10 +86,14 @@ function drawAggregateSpacingOverlay(add, parent) {
       "stroke-width": 2.2,
       "stroke-linejoin": "round",
       "paint-order": "stroke fill",
-      "text-anchor": "middle",
-      "dominant-baseline": "middle",
       "data-aggregate-spacing-label": `${gap.from}-${gap.to}`
-    }, parent).textContent = `A${gap.from}–A${gap.to} ${fmt(gap.gapDeg, 1)}°`;
+    }, parent);
+    add("textPath", {
+      href: `#${labelPathId}`,
+      startOffset: "50%",
+      "text-anchor": "middle",
+      dy: -3
+    }, text).textContent = `A${gap.from}–A${gap.to} ${fmt(gap.gapDeg, 1)}°`;
   });
 }
 
