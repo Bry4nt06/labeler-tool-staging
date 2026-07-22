@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="application-version" content="0.7.49" />
+    <meta name="application-version" content="0.7.50" />
     <meta name="update-manifest-url" content="./update-manifest.json" />
     <meta name="theme-color" content="#9a4f00" />
     <title>ServoForge Labeler — STAGING</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/labeler-tool-icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=0.7.49" />
+    <link rel="stylesheet" href="styles.css?v=0.7.50" />
   </head>
   <body><div class="staging-environment-banner" role="status">STAGING / TEST BUILD — NOT PRODUCTION</div>
     <main class="app">
@@ -37,7 +37,7 @@
             </label>
             <button id="saveSettings" type="button">Save Settings</button>
             <button id="checkForUpdates" type="button">Check for Updates</button>
-            <output id="updateCheckStatus" class="update-check-status" aria-live="polite">Version 0.7.49 • Updates are checked automatically.</output>
+            <output id="updateCheckStatus" class="update-check-status" aria-live="polite">Version 0.7.50 • Updates are checked automatically.</output>
             <button id="exportSettings" type="button">Export Settings</button>
             <label class="file-action">Import Settings<input id="importSettings" type="file" accept="application/json,.json" /></label>
             <button id="exportJson" type="button">Export JSON</button>
@@ -78,12 +78,6 @@
               <svg id="mapSvg" viewBox="-340 -315 680 630" role="img" aria-label="Circular map of labeler heads and stations"></svg>
               <div id="mapFaultNotice" class="map-fault-notice" hidden></div>
               <button id="mapLockToggle" type="button" class="map-lock-toggle" aria-pressed="true">Locked</button>
-              <form id="tableAngleJumpForm" class="table-angle-jump" aria-label="Jump to table angle">
-                <label for="tableAngleJump">Table angle</label>
-                <input id="tableAngleJump" type="number" min="0" max="359.9" step="0.1" inputmode="decimal" />
-                <span>°</span>
-                <button type="submit">Go</button>
-              </form>
               <div class="map-overlay-control">
                 <label class="switch-setting" for="showMoveDistanceOverlay">
                   <span class="switch-copy"><strong>Show active move distance</strong><small>Display the current table and plate move.</small></span>
@@ -136,7 +130,7 @@
                   <input id="mapStationCount" type="number" min="1" max="6" step="1" hidden />
                   </div>
                 </details>
-                <div class="map-library-actions"><button id="newMachineMap" type="button" class="secondary-button">New From Current</button><button id="saveMachineMap" type="button">Save Map</button><button id="deleteMachineMap" type="button" class="danger">Delete Map</button></div>
+                <div class="map-library-actions"><button id="newMachineMap" type="button" class="secondary-button">New From Current</button><button id="saveMachineMap" type="button">Save Map</button><button id="exportMachineMap" type="button" class="secondary-button">Export Selected Map</button><button id="deleteMachineMap" type="button" class="danger">Delete Map</button></div>
                 <div id="applicationModeDescription" class="mode-description"></div>
                 </div>
               </details>
@@ -223,7 +217,10 @@
         <button class="tab" data-tab="program" type="button">Servo Program</button>
         <button class="tab" data-tab="simulation" type="button">Servo Simulation</button>
         <span class="simulation-actions-spacer" aria-hidden="true"></span>
-        <label class="bottle-angle-control">Bottle angle <input id="previewBottleAngle" type="number" step="0.1" placeholder="Generated" /><span>deg</span></label>
+        <form id="tableAngleJumpForm" class="angle-generator-control table-angle-control" aria-label="Set table angle">
+          <label for="tableAngleJump">Table angle</label><input id="tableAngleJump" type="number" min="0" max="359.9" step="0.1" inputmode="decimal" /><span>deg</span><button class="angle-control-submit" type="submit" aria-label="Set table angle">Set</button>
+        </form>
+        <label class="angle-generator-control bottle-angle-control">Bottle angle <input id="previewBottleAngle" type="number" step="0.1" placeholder="Generated" /><span>deg</span></label>
         <button id="loadGeneratedTurns" class="simulation-action" type="button" hidden>Load From Servo Program</button>
         <button id="clearCustomTurns" class="simulation-action" type="button" hidden>Clear Custom Turns</button>
       </section>
@@ -249,22 +246,22 @@
     <script src="drivers/geometry/label-geometry-driver.js"></script>
     <script src="drivers/application/application-mode-driver.js"></script>
     <script src="drivers/mechanical/mechanical-motion-driver.js"></script>
-    <script src="drivers/mechanical/cold-glue-motion-driver.js?v=0.7.49"></script>
+    <script src="drivers/mechanical/cold-glue-motion-driver.js?v=0.7.50"></script>
     <script src="drivers/servo/servo-command-driver.js"></script>
     <script src="drivers/validation/motion-validation-driver.js"></script>
     <script src="drivers/profile/apl-profile-driver.js"></script>
-    <script src="app/defaults.js?v=0.7.49"></script>
-    <script src="app/persistence.js?v=0.7.49"></script>
+    <script src="app/defaults.js?v=0.7.50"></script>
+    <script src="app/persistence.js?v=0.7.50"></script>
     <script src="app/geometry-and-planning.js"></script>
     <script src="app/profile-generation.js"></script>
-    <script src="app/simulation-engine.js?v=0.7.49"></script>
+    <script src="app/simulation-engine.js?v=0.7.50"></script>
     <script src="app/assemblies.js"></script>
     <script src="app/wipe-down-builder.js"></script>
     <script src="app/validation.js"></script>
     <script src="app/setup-bindings.js"></script>
     <script src="app/map-rendering.js"></script>
-    <script src="app/table-rendering.js?v=0.7.49"></script>
-    <script src="app/bootstrap.js?v=0.7.49"></script>
+    <script src="app/table-rendering.js?v=0.7.50"></script>
+    <script src="app/bootstrap.js?v=0.7.50"></script>
     <script src="app.js"></script>
   </body>
 </html>

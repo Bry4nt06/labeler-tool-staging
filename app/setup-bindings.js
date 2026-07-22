@@ -56,8 +56,7 @@ function bindSetup() {
       state.isPlaying = false;
       if (els.playPause) els.playPause.textContent = "Play";
     });
-    els.tableAngleJumpForm?.addEventListener("submit", (event) => {
-      event.preventDefault();
+    const applyTableAngleJump = () => {
       const requestedAngle = num(els.tableAngleJump.value, state.previewAngle);
       state.previewAngle = norm(requestedAngle);
       state.isPlaying = false;
@@ -65,6 +64,11 @@ function bindSetup() {
       els.previewAngle.value = state.previewAngle;
       saveCurrentSettings();
       renderAnimationFrame();
+    };
+    els.tableAngleJump.addEventListener("change", applyTableAngleJump);
+    els.tableAngleJumpForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      applyTableAngleJump();
     });
   }
   if (els.previewBottleAngle) {

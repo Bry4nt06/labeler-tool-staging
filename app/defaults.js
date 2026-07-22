@@ -248,6 +248,7 @@ const els = {
   configuredMapObjectsSection: document.querySelector("#configuredMapObjectsSection"),
   newMachineMap: document.querySelector("#newMachineMap"),
   saveMachineMap: document.querySelector("#saveMachineMap"),
+  exportMachineMap: document.querySelector("#exportMachineMap"),
   deleteMachineMap: document.querySelector("#deleteMachineMap"),
   applicationModeDescription: document.querySelector("#applicationModeDescription"),
   assemblyEditor: document.querySelector("#assemblyEditor"),
