@@ -353,6 +353,13 @@ function setThemePreset(value) {
 
 function setWorkspaceView(value) {
   state.workspaceView = value === "direct" ? "direct" : "standard";
-  document.querySelector(".app")?.classList.toggle("workspace-view-direct", state.workspaceView === "direct");
+  const app = document.querySelector(".app");
+  const layout = app?.querySelector(":scope > .layout");
+  const preview = layout?.querySelector(":scope > .preview-panel") || app?.querySelector("#mapRightRail > .preview-panel");
+  const mapArea = layout?.querySelector(":scope > .map-area");
+  const validation = app?.querySelector("#mapRightRail > .validation");
+  app?.classList.toggle("workspace-view-direct", state.workspaceView === "direct");
+  if (state.workspaceView === "direct" && preview && validation) validation.insertAdjacentElement("afterend", preview);
+  else if (preview && layout && mapArea) layout.insertBefore(preview, mapArea);
   if (els.workspaceView) els.workspaceView.value = state.workspaceView;
 }

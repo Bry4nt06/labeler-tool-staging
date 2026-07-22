@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.62",
+  "version": "0.7.63",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Compacts Preview & Animation into a shallow horizontal strip when Direct view is selected."
+  "notes": "STAGING TEST BUILD — Moves a reduced Preview & Animation card beneath Validation in the Direct view center rail."
 }
