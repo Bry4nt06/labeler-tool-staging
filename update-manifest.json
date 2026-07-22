@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.58",
+  "version": "0.7.59",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Adds configurable bottle-angle hold controls to inside and outside Cold Glue brush channels."
+  "notes": "STAGING TEST BUILD — Adds the paired Inside + Outside Brush Channel option with independent degree and hold controls."
 }
