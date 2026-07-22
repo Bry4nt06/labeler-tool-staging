@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.50",
+  "version": "0.7.51",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Adds selected-map export and moves Table Angle beside the matching Bottle Angle control."
+  "notes": "STAGING TEST BUILD — Adds aggregate centerline-spacing overlays with a hard 6-degree minimum callout."
 }

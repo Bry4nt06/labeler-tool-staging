@@ -153,6 +153,11 @@ function validate() {
     const callout = level === "bad" ? "EXCEEDS THRESHOLD" : level === "warn" ? "NEAR THRESHOLD" : "WITHIN THRESHOLD";
     notes.push([level, `Maximum turn speed: ${fmt(speed, 1)} deg bottle / 1 deg table at HMI ${maxSpeed.hmi} — ${callout} (${fmt(threshold, 1)}:1 limit).`]);
   }
+  if (typeof aggregateCenterlineGaps === "function") {
+    aggregateCenterlineGaps()
+      .filter((gap) => gap.violatesMinimum)
+      .forEach((gap) => notes.push(["bad", `Aggregate centerline spacing A${gap.from} → A${gap.to} is ${fmt(gap.gapDeg, 1)}°, below the 6.0° minimum.`]));
+  }
   if (!notes.length) notes.push(["ok", "No geometry or servo profile warnings at the current settings."]);
   return notes;
 }
