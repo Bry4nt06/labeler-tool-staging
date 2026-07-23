@@ -352,7 +352,7 @@ function inferAplStationSections(machineMap) {
   return result;
 }
 
-function createMachineMap({ id, name, machineType, applicationMode, headCount, aggregateCount, stationCount, enabledAggregates, enabledStations, aggregateAngles, stationAngles, stationSections, objects, depths, machineSettings, restoreDefaultObjects = true, isTemplate = false, blankSeedVersion = 0 } = {}) {
+function createMachineMap({ id, name, machineType, applicationMode, headCount, aggregateCount, stationCount, enabledAggregates, enabledStations, aggregateAngles, stationAngles, stationSections, objects, depths, machineSettings, coldGlueProfile, restoreDefaultObjects = true, isTemplate = false, blankSeedVersion = 0 } = {}) {
   const mode = applicationMode === "cold-glue" ? "cold-glue" : "apl";
   const aggregates = Math.max(1, Math.min(6, Math.round(num(aggregateCount, mode === "cold-glue" ? 3 : 6))));
   const stations = Math.max(1, Math.min(6, Math.round(num(stationCount, aggregates))));
@@ -399,6 +399,9 @@ function createMachineMap({ id, name, machineType, applicationMode, headCount, a
       zeroAngle: norm(num(machineSettings?.zeroAngle, state?.zeroAngle !== undefined ? state.zeroAngle : 0)),
       maxMoveRatio: Math.max(0.1, num(machineSettings?.maxMoveRatio, state?.maxMoveRatio !== undefined ? state.maxMoveRatio : 21))
     },
+    coldGlueProfile: mode === "cold-glue" && coldGlueProfile && typeof coldGlueProfile === "object"
+      ? { ...coldGlueProfile }
+      : undefined,
     depths: { ...state.depths, ...(depths || {}) },
     restoreDefaultObjects: restoreDefaultObjects !== false,
     objects: sourceObjects.map((item) => normalizeBuilderObject({ ...item, kind: item.kind === "wipe" ? "brush" : item.kind }, mode, stations))

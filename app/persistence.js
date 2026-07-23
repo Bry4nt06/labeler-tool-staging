@@ -206,7 +206,7 @@ function saveCurrentSettings() {
   window.setTimeout(() => { els.saveSettings.textContent = "Save Settings"; }, 1100);
 }
 
-const COMPANY_SETTINGS_SEED_VERSION = 1;
+const COMPANY_SETTINGS_SEED_VERSION = 2;
 const COMPANY_SETTINGS_SEED_KEY = "labelerCompanySettingsSeedVersion";
 
 function normalizedSeedKey(value) {

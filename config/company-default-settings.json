@@ -664,6 +664,129 @@
         "schemaVersion": 11,
         "blankSeedVersion": 1,
         "isTemplate": false,
+        "id": "map-stella-12oz-ow-green-center-tack",
+        "name": "60H CG Stella 12oz Center Tack",
+        "machineType": "Autocol",
+        "applicationMode": "cold-glue",
+        "headCount": 60,
+        "aggregateCount": 3,
+        "stationCount": 3,
+        "enabledAggregates": [
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "enabledStations": [
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "aggregateAngles": {
+          "1": 81,
+          "2": 108.5,
+          "3": 153,
+          "4": 188.5,
+          "5": 231,
+          "6": 269.5
+        },
+        "stationAngles": {
+          "1": 81,
+          "2": 108.5,
+          "3": 153,
+          "4": 188.5,
+          "5": 231,
+          "6": 269.5
+        },
+        "stationSections": {
+          "1": "neck",
+          "3": "body",
+          "5": "back"
+        },
+        "machineSettings": {
+          "direction": "ccw",
+          "radius": 250,
+          "referencePitchRadiusMm": 572.965,
+          "encoderCountsPerRev": 10000,
+          "servoGearRatio": 1.051,
+          "autoScaleTableMap": true,
+          "zeroAngle": 270,
+          "maxMoveRatio": 24
+        },
+        "coldGlueProfile": {
+          "neckOverWipeDeg": 4,
+          "bodyOverWipeDeg": 3,
+          "backOverWipeDeg": 3,
+          "centerTack": true,
+          "opposedBrushPitches": 2
+        },
+        "depths": {
+          "spender": 12,
+          "opRoller": 19,
+          "nonOpRoller": -16,
+          "wipeInner": -16,
+          "wipeOuter": 17
+        },
+        "restoreDefaultObjects": false,
+        "objects": [
+          {
+            "id": "stella-12oz-neck-dual-channel",
+            "name": "Neck Staggered Dual Brush Channel",
+            "kind": "brush-channel",
+            "application": "cold-glue",
+            "station": 1,
+            "side": "outer",
+            "start": 92,
+            "end": 120,
+            "outerStart": 92,
+            "outerEnd": 112,
+            "innerStart": 100,
+            "innerEnd": 120,
+            "extension": 20
+          },
+          {
+            "id": "stella-12oz-body-dual-channel",
+            "name": "Body Staggered Dual Brush Channel",
+            "kind": "brush-channel",
+            "application": "cold-glue",
+            "station": 3,
+            "side": "outer",
+            "start": 165,
+            "end": 191,
+            "outerStart": 165,
+            "outerEnd": 184,
+            "innerStart": 172,
+            "innerEnd": 191,
+            "extension": 20
+          },
+          {
+            "id": "stella-12oz-back-dual-channel",
+            "name": "Back Staggered Dual Brush Channel",
+            "kind": "brush-channel",
+            "application": "cold-glue",
+            "station": 5,
+            "side": "outer",
+            "start": 243,
+            "end": 267,
+            "outerStart": 243,
+            "outerEnd": 261,
+            "innerStart": 249,
+            "innerEnd": 267,
+            "extension": 20
+          }
+        ],
+        "coldGlueOptimizationVersion": 2,
+        "stella12ozCenterTackVersion": 1
+      },
+      {
+        "schemaVersion": 11,
+        "blankSeedVersion": 1,
+        "isTemplate": false,
         "id": "machine-map-1784551038032-413",
         "name": "MAB1 APL",
         "machineType": "Autocol",
@@ -885,6 +1008,12 @@
         "bottleType": "660ms OWGreen",
         "diameterTargetMm": 74.8,
         "radiusReductionMm": 2.1
+      },
+      {
+        "id": 10,
+        "bottleType": "Stella OW Green 330ml",
+        "diameterTargetMm": 60,
+        "radiusReductionMm": 0.3
       }
     ],
     "labelSpecs": [
@@ -1053,6 +1182,20 @@
         "neckHeightMm": 67.16,
         "neckLengthMm": 109.5,
         "neckBottomCurveMm": 110.5,
+        "neckBottomCircumferenceMm": 104.5,
+        "codeBoxCenterMm": 24
+      },
+      {
+        "id": 15,
+        "applicationMode": "cold-glue",
+        "brand": "Stella 12oz OW Green - 3 Label",
+        "specNumber": "0-904-496-811 / 0-903-721-296",
+        "bottleType": "Stella OW Green 330ml",
+        "bodyLengthMm": 109.31,
+        "backLengthMm": 87,
+        "neckHeightMm": 62.2,
+        "neckLengthMm": 70.6,
+        "neckBottomCurveMm": 70.6,
         "neckBottomCircumferenceMm": 104.5,
         "codeBoxCenterMm": 24
       }

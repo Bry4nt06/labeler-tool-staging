@@ -146,12 +146,13 @@
       Math.min(candidate.end, brush.end) > Math.max(candidate.start, brush.start) + 0.001
     ));
     const brushes = hasSharedOppositeChannel ? collapseSharedOppositeChannels(wipeBrushes) : wipeBrushes;
-    const centerTackTwoSided = fullWrap;
+    // Every Cold Glue label is center-tacked at the aggregate. The two loose
+    // halves must therefore be wiped in opposite plate directions regardless
+    // of whether the label is a full neck wrap or a shorter body/back label.
+    const centerTackTwoSided = labelDeg > 0;
     const simultaneousOppositeWipe = hasSharedOppositeChannel;
-    // A long center-tack neck label has two loose halves. Each half must be
-    // wiped completely, and the plate must reverse between the outside and
-    // inside brush channels. The center is already attached, so do not add the
-    // leading-edge over-wipe allowance used by body/back labels.
+    // The center is already attached, so the two opposite wipe directions
+    // divide the developed label length exactly in half.
     const totalRotation = centerTackTwoSided ? labelDeg : simultaneousOppositeWipe ? labelDeg / 2 + overWipeDeg : labelDeg + overWipeDeg * 2;
     const defaultPartialPercent = Math.max(5, Math.min(95, finite(options?.partialCoveragePercent, 50)));
     if (simultaneousOppositeWipe) {

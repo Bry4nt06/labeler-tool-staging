@@ -374,8 +374,12 @@ function generatedColdGlueFixedProfile() {
     if (!wipe) return null;
     const channels = stationObjects.filter((item) => item.kind === "brush-channel");
     if (channels.length) {
-      const firstHalfRequired = Math.max(0, num(wipe.labelDeg, 0) / 2 + num(wipe.overWipeDeg, 0));
-      const reverseRequired = Math.max(0, num(wipe.labelDeg, 0) + num(wipe.overWipeDeg, 0) * 2);
+      // Cold Glue is center-tacked for every label. A staggered channel wipes
+      // the first loose half, holds the bottle while both brushes oppose it,
+      // then reverses through the remaining one-sided brush to wipe the other
+      // half. Neither stage should rotate a complete label length.
+      const firstHalfRequired = Math.max(0, num(wipe.labelDeg, 0) / 2);
+      const reverseRequired = Math.max(0, num(wipe.labelDeg, 0) / 2);
       const requiredRotation = firstHalfRequired + reverseRequired;
       let moves = [];
       channels.forEach((channel) => {
@@ -395,7 +399,7 @@ function generatedColdGlueFixedProfile() {
           const outerActive = middle >= outerStart && middle <= outerEnd;
           const innerActive = middle >= innerStart && middle <= innerEnd;
           const held = Boolean(channel.holdBottleAngle) && middle >= holdStart - 0.001;
-          if (held || (outerActive && innerActive)) moves.push({ id: channel.id, stage: "opposed", start, end, rotation: 0, direction: 0, holdAngle: num(channel.bottleHoldAngleDeg, 90), holdCurrent: held && Boolean(channel.holdCurrentBottleAngle), configuredHold: held });
+          if (held || (outerActive && innerActive)) moves.push({ id: channel.id, stage: "opposed", start, end, rotation: 0, direction: 0, holdAngle: num(channel.bottleHoldAngleDeg, 90), holdCurrent: held ? Boolean(channel.holdCurrentBottleAngle) : true, configuredHold: held });
           else if (outerActive) moves.push({ id: channel.id, stage: "outer", start, end, direction: 1 });
           else if (innerActive) moves.push({ id: channel.id, stage: "inner", start, end, direction: -1 });
         }
@@ -588,7 +592,9 @@ function generatedColdGlueFixedProfile() {
           if (allocation.stage === "opposed") {
             const holdAngle = allocation.holdCurrent ? plate : num(allocation.holdAngle, 90);
             const action = `${sectionLabel(section)} Brush Channel ${allocation.configuredHold ? "Configured" : "Opposed"} Hold at ${finishAngle(holdAngle)}°`;
-            moveToReferenceWithoutExtraLap(allocation.start, holdAngle, action, { station, section, brushStage: "opposed", channelHold: true, holdAngle });
+            if (!allocation.holdCurrent || Math.abs(holdAngle - plate) > 0.001) {
+              moveToReferenceWithoutExtraLap(allocation.start, holdAngle, action, { station, section, brushStage: "opposed", channelHold: true, holdAngle });
+            }
             applyMove(allocation.start, allocation.end, 0, 0, action, { station, section, brushStage: "opposed", channelHold: true, holdAngle });
           } else if (allocation.rotation > 0.001) {
             applyMove(allocation.start, allocation.end, allocation.rotation, allocation.direction, `${sectionLabel(section)} ${allocation.stage === "outer" ? "Outside" : "Inside"} Brush Channel Wipe-Down`, { station, section, brushStage: allocation.stage, plannedRotation: allocation.rotation, plannedRatio: allocation.ratio });
