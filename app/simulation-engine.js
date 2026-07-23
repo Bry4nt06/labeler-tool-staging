@@ -332,25 +332,44 @@ function drawAllProgramMovesOverlay(add, parent, program = currentProgram()) {
     const positiveTurn = Number(move.plateTravel) > 0;
     const negativeTurn = Number(move.plateTravel) < 0;
     const color = move.moveFault ? "#d71920" : positiveTurn ? "#22b980" : negativeTurn ? "#e59a36" : "#5b8eae";
+    const fullDescription = String(move.action || "Servo move").trim();
+    const maxDescriptionLength = Math.max(7, Math.min(20, Math.floor(span * 0.75)));
+    const shortDescription = fullDescription.length > maxDescriptionLength
+      ? `${fullDescription.slice(0, Math.max(4, maxDescriptionLength - 1)).trimEnd()}…`
+      : fullDescription;
 
-    add("path", {
+    const moveShape = add("path", {
       d: `M ${startOuter.x} ${startOuter.y} A ${outerRadius} ${outerRadius} 0 ${largeArc} ${sweep} ${endOuter.x} ${endOuter.y} L ${endInner.x} ${endInner.y} A ${innerRadius} ${innerRadius} 0 ${largeArc} ${reverseSweep} ${startInner.x} ${startInner.y} Z`,
       fill: color,
       "fill-opacity": index % 2 ? 0.23 : 0.32,
-      stroke: color,
-      "stroke-width": 1.4,
-      "stroke-opacity": 0.92,
+      stroke: "none",
       "data-program-move-hmi": move.hmi
     }, parent);
+    add("title", {}, moveShape).textContent = `HMI ${move.hmi}: ${fullDescription}`;
 
-    const markerAngle = startAngle + move.tableTravel / 2;
-    const marker = angleToXY(markerAngle, (innerRadius + outerRadius) / 2);
-    add("circle", { cx: marker.x, cy: marker.y, r: 10, fill: color, stroke: "#eefcff", "stroke-width": 1.2 }, parent);
+    const labelAngle = startAngle + move.tableTravel / 2;
+    const label = angleToXY(labelAngle, (innerRadius + outerRadius) / 2);
+    let labelRotation = norm(angleToSvgRotation(labelAngle) + 90);
+    if (labelRotation > 90 && labelRotation < 270) labelRotation = norm(labelRotation + 180);
+    add("text", {
+      x: label.x,
+      y: label.y + 2.4,
+      fill: "#eefcff",
+      "font-size": 6.5,
+      "font-weight": 650,
+      "text-anchor": "middle",
+      transform: `rotate(${labelRotation} ${label.x} ${label.y})`,
+      "pointer-events": "none"
+    }, parent).textContent = shortDescription;
+
+    const markerAngle = endAngle;
+    const marker = angleToXY(markerAngle, outerRadius - 7);
+    add("circle", { cx: marker.x, cy: marker.y, r: 6.5, fill: color, stroke: "#eefcff", "stroke-width": 0.8 }, parent);
     add("text", {
       x: marker.x,
-      y: marker.y + 3.5,
+      y: marker.y + 2.3,
       fill: "#ffffff",
-      "font-size": 8,
+      "font-size": 6.5,
       "font-weight": 800,
       "text-anchor": "middle",
       "aria-label": `HMI ${move.hmi}`
