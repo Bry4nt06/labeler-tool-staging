@@ -362,14 +362,16 @@ function drawAllProgramMovesOverlay(add, parent, program = currentProgram()) {
 
     const markerAngle = startAngle;
     const marker = angleToXY(markerAngle, innerRadius + 7);
-    add("circle", { cx: marker.x, cy: marker.y, r: 5, fill: color, stroke: "#eefcff", "stroke-width": 0.6 }, parent);
     add("text", {
       x: marker.x,
-      y: marker.y + 1.9,
-      fill: "#ffffff",
-      "font-size": 5.25,
+      y: marker.y + 1.5,
+      fill: color,
+      "font-size": 4.5,
       "font-weight": 800,
       "text-anchor": "middle",
+      stroke: "#07151d",
+      "stroke-width": 0.7,
+      "paint-order": "stroke",
       "aria-label": `HMI ${move.hmi}`
     }, parent).textContent = String(move.hmi);
   });
