@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.66",
+  "version": "0.7.67",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Adds a Settings feedback button that opens a pre-addressed ServoForge email."
+  "notes": "STAGING TEST BUILD — Adds an optional all-program-moves map overlay and stabilizes the Label Wipe-Down heading."
 }
