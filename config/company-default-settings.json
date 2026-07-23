@@ -665,7 +665,7 @@
         "blankSeedVersion": 1,
         "isTemplate": false,
         "id": "map-stella-12oz-ow-green-center-tack",
-        "name": "60H CG Stella 12oz Center Tack",
+        "name": "60H CG Stella 330ml Center Tack",
         "machineType": "Autocol",
         "applicationMode": "cold-glue",
         "headCount": 60,
@@ -1188,7 +1188,7 @@
       {
         "id": 15,
         "applicationMode": "cold-glue",
-        "brand": "Stella 12oz OW Green - 3 Label",
+        "brand": "Stella 330ml OW Green - 3 Label",
         "specNumber": "0-904-496-811 / 0-903-721-296",
         "bottleType": "Stella OW Green 330ml",
         "bodyLengthMm": 109.31,

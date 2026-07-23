@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.75",
+  "version": "0.7.76",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Adds an optimized Stella 12 oz three-label Cold Glue map with staggered two-pitch brush channels and center-tack servo planning."
+  "notes": "STAGING TEST BUILD — Corrects the optimized Stella OW Green package designation to 330 ml while preserving its center-tack map and servo settings."
 }
