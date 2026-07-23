@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.68",
+  "version": "0.7.69",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Refines all-program-move overlays with borderless fills, smaller end markers, and compact action descriptions."
+  "notes": "STAGING TEST BUILD — Moves smaller HMI markers to move starts and curves complete action descriptions along each overlay."
 }

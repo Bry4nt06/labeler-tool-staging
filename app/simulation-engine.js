@@ -333,10 +333,6 @@ function drawAllProgramMovesOverlay(add, parent, program = currentProgram()) {
     const negativeTurn = Number(move.plateTravel) < 0;
     const color = move.moveFault ? "#d71920" : positiveTurn ? "#22b980" : negativeTurn ? "#e59a36" : "#5b8eae";
     const fullDescription = String(move.action || "Servo move").trim();
-    const maxDescriptionLength = Math.max(7, Math.min(20, Math.floor(span * 0.75)));
-    const shortDescription = fullDescription.length > maxDescriptionLength
-      ? `${fullDescription.slice(0, Math.max(4, maxDescriptionLength - 1)).trimEnd()}…`
-      : fullDescription;
 
     const moveShape = add("path", {
       d: `M ${startOuter.x} ${startOuter.y} A ${outerRadius} ${outerRadius} 0 ${largeArc} ${sweep} ${endOuter.x} ${endOuter.y} L ${endInner.x} ${endInner.y} A ${innerRadius} ${innerRadius} 0 ${largeArc} ${reverseSweep} ${startInner.x} ${startInner.y} Z`,
@@ -347,29 +343,41 @@ function drawAllProgramMovesOverlay(add, parent, program = currentProgram()) {
     }, parent);
     add("title", {}, moveShape).textContent = `HMI ${move.hmi}: ${fullDescription}`;
 
+    const labelRadius = (innerRadius + outerRadius) / 2;
     const labelAngle = startAngle + move.tableTravel / 2;
-    const label = angleToXY(labelAngle, (innerRadius + outerRadius) / 2);
-    let labelRotation = norm(angleToSvgRotation(labelAngle) + 90);
-    if (labelRotation > 90 && labelRotation < 270) labelRotation = norm(labelRotation + 180);
-    add("text", {
-      x: label.x,
-      y: label.y + 2.4,
-      fill: "#eefcff",
-      "font-size": 6.5,
-      "font-weight": 650,
-      "text-anchor": "middle",
-      transform: `rotate(${labelRotation} ${label.x} ${label.y})`,
+    const labelVisualAngle = angleToSvgRotation(labelAngle);
+    const reverseLabelPath = labelVisualAngle > 90 && labelVisualAngle < 270;
+    const labelStart = angleToXY(reverseLabelPath ? endAngle : startAngle, labelRadius);
+    const labelEnd = angleToXY(reverseLabelPath ? startAngle : endAngle, labelRadius);
+    const labelSweep = reverseLabelPath ? reverseSweep : sweep;
+    const labelPathId = `program-move-label-${index}-${String(move.hmi).replace(/[^a-z0-9_-]/gi, "")}`;
+    add("path", {
+      id: labelPathId,
+      d: `M ${labelStart.x} ${labelStart.y} A ${labelRadius} ${labelRadius} 0 ${largeArc} ${labelSweep} ${labelEnd.x} ${labelEnd.y}`,
+      fill: "none",
+      stroke: "none",
       "pointer-events": "none"
-    }, parent).textContent = shortDescription;
+    }, parent);
+    const descriptionText = add("text", {
+      fill: "#eefcff",
+      "font-size": 6,
+      "font-weight": 650,
+      "pointer-events": "none"
+    }, parent);
+    add("textPath", {
+      href: `#${labelPathId}`,
+      startOffset: "50%",
+      "text-anchor": "middle"
+    }, descriptionText).textContent = fullDescription;
 
-    const markerAngle = endAngle;
+    const markerAngle = startAngle;
     const marker = angleToXY(markerAngle, outerRadius - 7);
-    add("circle", { cx: marker.x, cy: marker.y, r: 6.5, fill: color, stroke: "#eefcff", "stroke-width": 0.8 }, parent);
+    add("circle", { cx: marker.x, cy: marker.y, r: 5, fill: color, stroke: "#eefcff", "stroke-width": 0.6 }, parent);
     add("text", {
       x: marker.x,
-      y: marker.y + 2.3,
+      y: marker.y + 1.9,
       fill: "#ffffff",
-      "font-size": 6.5,
+      "font-size": 5.25,
       "font-weight": 800,
       "text-anchor": "middle",
       "aria-label": `HMI ${move.hmi}`
