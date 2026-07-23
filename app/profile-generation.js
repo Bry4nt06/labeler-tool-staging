@@ -378,9 +378,7 @@ function generatedColdGlueFixedProfile() {
       // the first loose half, holds the bottle while both brushes oppose it,
       // then reverses through the remaining one-sided brush to wipe the other
       // half. Neither stage should rotate a complete label length.
-      const firstHalfRequired = Math.max(0, num(wipe.labelDeg, 0) / 2);
-      const reverseRequired = Math.max(0, num(wipe.labelDeg, 0) / 2);
-      const requiredRotation = firstHalfRequired + reverseRequired;
+      const requiredRotation = Math.max(0, num(wipe.labelDeg, 0));
       let moves = [];
       channels.forEach((channel) => {
         const outerStart = num(channel.outerStart, channel.start);
@@ -400,31 +398,30 @@ function generatedColdGlueFixedProfile() {
           const innerActive = middle >= innerStart && middle <= innerEnd;
           const held = Boolean(channel.holdBottleAngle) && middle >= holdStart - 0.001;
           if (held || (outerActive && innerActive)) moves.push({ id: channel.id, stage: "opposed", start, end, rotation: 0, direction: 0, holdAngle: num(channel.bottleHoldAngleDeg, 90), holdCurrent: held && Boolean(channel.holdCurrentBottleAngle), configuredHold: held });
-          else if (outerActive) moves.push({ id: channel.id, stage: "outer", start, end, direction: 1 });
-          else if (innerActive) moves.push({ id: channel.id, stage: "inner", start, end, direction: -1 });
+          else if (outerActive) moves.push({ id: channel.id, stage: "outer", start, end, direction: -1 });
+          else if (innerActive) moves.push({ id: channel.id, stage: "inner", start, end, direction: 1 });
         }
       });
       const issues = [];
       const candidates = moves.filter((move) => move.stage === "outer" || move.stage === "inner").sort((a, b) => a.start - b.start);
-      const totalOpenSpan = candidates.reduce((sum, move) => sum + move.end - move.start, 0);
-      const safeRatio = state.maxMoveRatio * 0.9;
-      const plannedRatio = totalOpenSpan > 0 ? Math.min(safeRatio, requiredRotation / totalOpenSpan) : 0;
-      const initialDirection = candidates[0]?.direction || 1;
-      let firstRemaining = firstHalfRequired;
-      let reverseRemaining = reverseRequired;
+      // Use every available degree of one-sided brush contact at the fastest
+      // non-faulting speed. The configured threshold itself is a fault
+      // boundary, so retain 0.1 ratio of headroom after one-decimal rounding.
+      const plannedRatio = Math.max(0.01, state.maxMoveRatio - 0.1);
       const allocated = candidates.map((move) => {
-        const reversing = firstRemaining <= 0.001;
-        const remaining = reversing ? reverseRemaining : firstRemaining;
-        const rotation = Math.min(remaining, (move.end - move.start) * plannedRatio);
-        if (reversing) reverseRemaining -= rotation;
-        else firstRemaining -= rotation;
-        return { ...move, rotation, ratio: plannedRatio, direction: reversing ? -initialDirection : initialDirection, centerTackStage: reversing ? "reverse-to-second-edge" : "first-half-to-edge" };
+        const outside = move.stage === "outer";
+        return {
+          ...move,
+          rotation: (move.end - move.start) * plannedRatio,
+          ratio: plannedRatio,
+          direction: outside ? -1 : 1,
+          rotationSense: outside ? "clockwise" : "counter-clockwise",
+          centerTackStage: outside ? "outside-maximum-wipe" : "inside-maximum-wipe"
+        };
       });
       const candidateSet = new Set(candidates);
       moves = [...moves.filter((move) => !candidateSet.has(move)), ...allocated].sort((a, b) => a.start - b.start);
-      const remainingRotation = Math.max(0, firstRemaining) + Math.max(0, reverseRemaining);
       if (requiredRotation > 0.001 && !candidates.length && !channels.every((channel) => channel.holdBottleAngle)) issues.push({ level: "bad", code: "cold-glue-channel-closed", message: "The Brush Channel has no open one-sided brush length available to wipe the label." });
-      else if (remainingRotation > 0.001 && candidates.length) issues.push({ level: "bad", code: "cold-glue-channel-capacity", message: `The open Brush Channel length is short by ${remainingRotation.toFixed(1)} deg of bottle rotation.` });
       return { labelDeg: wipe.labelDeg, overWipeDeg: wipe.overWipeDeg, channelMoves: moves, issues };
     }
     const brushes = stationObjects.filter((item) => item.kind === "brush");

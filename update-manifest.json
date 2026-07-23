@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.77",
+  "version": "0.7.78",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Faces every Stella label toward the gripper at application and holds the bottle at 90 degrees throughout each opposed brush channel."
+  "notes": "STAGING TEST BUILD — Uses the full one-sided brush contact at maximum non-faulting turn speed: outside wipes rotate clockwise and inside wipes rotate counter-clockwise."
 }
