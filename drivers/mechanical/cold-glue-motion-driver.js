@@ -113,10 +113,19 @@
   }
 
   function applicationTarget(baseTargetDeg, mapDirection = "cw", labelDeg = 0) {
-    // The proven Autocol full-wrap setup tacks the neck label at 120 degrees.
-    // Mirror the sign when the machine direction is reversed.
-    if (finite(labelDeg, 0) >= 330) return mapDirection === "ccw" ? 120 : -120;
-    return finite(baseTargetDeg, 0);
+    // The gripper/spender is the radial zero reference. Every Cold Glue label
+    // must be center-tacked while the bottle face points directly at it.
+    void baseTargetDeg;
+    void mapDirection;
+    void labelDeg;
+    return 0;
+  }
+
+  function brushEntryTarget(opposedHoldAngleDeg, firstHalfRotationDeg, firstHalfDirection) {
+    // Enter the first one-sided brush early enough that its half-label turn
+    // finishes exactly perpendicular to the opposed brush channel.
+    return finite(opposedHoldAngleDeg, 90)
+      - finite(firstHalfDirection, 0) * finite(firstHalfRotationDeg, 0);
   }
 
   function createPlan(options) {
@@ -215,5 +224,5 @@
     };
   }
 
-  global.LabelerColdGlueMotionDriver = { createPlan, flowFacingTarget, applicationTarget };
+  global.LabelerColdGlueMotionDriver = { createPlan, flowFacingTarget, applicationTarget, brushEntryTarget };
 })(window);

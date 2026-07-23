@@ -747,6 +747,7 @@
             "outerEnd": 112,
             "innerStart": 100,
             "innerEnd": 120,
+            "bottleHoldAngleDeg": 90,
             "extension": 20
           },
           {
@@ -762,6 +763,7 @@
             "outerEnd": 184,
             "innerStart": 172,
             "innerEnd": 191,
+            "bottleHoldAngleDeg": 90,
             "extension": 20
           },
           {
@@ -777,6 +779,7 @@
             "outerEnd": 261,
             "innerStart": 249,
             "innerEnd": 267,
+            "bottleHoldAngleDeg": 90,
             "extension": 20
           }
         ],

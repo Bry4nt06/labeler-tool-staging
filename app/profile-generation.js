@@ -399,7 +399,7 @@ function generatedColdGlueFixedProfile() {
           const outerActive = middle >= outerStart && middle <= outerEnd;
           const innerActive = middle >= innerStart && middle <= innerEnd;
           const held = Boolean(channel.holdBottleAngle) && middle >= holdStart - 0.001;
-          if (held || (outerActive && innerActive)) moves.push({ id: channel.id, stage: "opposed", start, end, rotation: 0, direction: 0, holdAngle: num(channel.bottleHoldAngleDeg, 90), holdCurrent: held ? Boolean(channel.holdCurrentBottleAngle) : true, configuredHold: held });
+          if (held || (outerActive && innerActive)) moves.push({ id: channel.id, stage: "opposed", start, end, rotation: 0, direction: 0, holdAngle: num(channel.bottleHoldAngleDeg, 90), holdCurrent: held && Boolean(channel.holdCurrentBottleAngle), configuredHold: held });
           else if (outerActive) moves.push({ id: channel.id, stage: "outer", start, end, direction: 1 });
           else if (innerActive) moves.push({ id: channel.id, stage: "inner", start, end, direction: -1 });
         }
@@ -574,16 +574,20 @@ function generatedColdGlueFixedProfile() {
         .sort((a, b) => num(a.start, 0) - num(b.start, 0));
       const firstBrush = allBrushAllocations[0];
       if (firstBrush && !aggregateAlreadyPassed) {
-        const flowFacingPlate = coldGlueDriver?.flowFacingTarget
-          ? coldGlueDriver.flowFacingTarget(plate, mapDirection, stationPlan.labelDeg)
-          : applicationTargets[section] + (mapDirection === "ccw" ? -90 : 90);
+        const firstWipe = allBrushAllocations.find((allocation) => num(allocation.rotation, 0) > 0.001);
+        const opposedHold = allBrushAllocations.find((allocation) => allocation.stage === "opposed");
+        const flowFacingPlate = firstWipe && opposedHold && coldGlueDriver?.brushEntryTarget
+          ? coldGlueDriver.brushEntryTarget(num(opposedHold.holdAngle, 90), firstWipe.rotation, firstWipe.direction)
+          : coldGlueDriver?.flowFacingTarget
+            ? coldGlueDriver.flowFacingTarget(plate, mapDirection, stationPlan.labelDeg)
+            : applicationTargets[section] + (mapDirection === "ccw" ? -90 : 90);
         const brushEntryTable = firstBrush.start - Math.max(0, num(stationPlan.brushEntryLeadDeg, 0));
         const alignmentExtra = { station, section, brushEntryAlignment: true, mapDirection, flowFacingOffsetDeg: mapDirection === "ccw" ? 90 : -90 };
         if (stationPlan.fullWrap) {
           const alignmentStart = Math.max(lastTable + 0.5, brushEntryTable - plateTravelTo(flowFacingPlate) / Math.max(0.1, Math.min(state.maxMoveRatio * 0.9, 7.5)));
-          moveInWindow(alignmentStart, brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Face Bottle With Flow Before Brush Channel`, alignmentExtra);
+          moveInWindow(alignmentStart, brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Pre-Orient for 90° Brush Channel`, alignmentExtra);
         } else {
-          moveToReference(brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Face Bottle With Flow Before Brush Channel`, alignmentExtra);
+          moveToReference(brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Pre-Orient for 90° Brush Channel`, alignmentExtra);
         }
       }
 

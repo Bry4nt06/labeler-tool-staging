@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.76",
+  "version": "0.7.77",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Corrects the optimized Stella OW Green package designation to 330 ml while preserving its center-tack map and servo settings."
+  "notes": "STAGING TEST BUILD — Faces every Stella label toward the gripper at application and holds the bottle at 90 degrees throughout each opposed brush channel."
 }
