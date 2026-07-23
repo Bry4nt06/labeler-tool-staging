@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.73",
+  "version": "0.7.74",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Reduces roller visuals and gives map objects muted, borderless styling."
+  "notes": "STAGING TEST BUILD — Resets completed wipe-down telemetry when the station advances to its next correction."
 }
