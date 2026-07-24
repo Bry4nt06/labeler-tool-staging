@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.80",
+  "version": "0.7.81",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Requires every generated servo instruction, for every brand, to use a unique bottle-table angle separated by at least 0.1 degree."
+  "notes": "STAGING TEST BUILD — Requires all generated and user-entered servo table angles to be separated by at least 0.5 degree for every brand."
 }

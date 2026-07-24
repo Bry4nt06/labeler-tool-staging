@@ -1145,8 +1145,8 @@ function generatedServoProfile() {
   return rows;
 }
 
-function enforceUniqueServoTableAngles(rows, minimumStep = 0.1) {
-  const step = Math.max(0.1, Math.abs(num(minimumStep, 0.1)));
+function enforceUniqueServoTableAngles(rows, minimumStep = 0.5) {
+  const step = Math.max(0.5, Math.abs(num(minimumStep, 0.5)));
   let previous = -Infinity;
   return (Array.isArray(rows) ? rows : []).map((row) => {
     const requested = num(row?.tableAngle, Number.isFinite(previous) ? previous + step : 0);
@@ -1161,11 +1161,11 @@ function enforceUniqueServoTableAngles(rows, minimumStep = 0.1) {
 function applyGeneratedServoProfile() {
   // Finalize table ordering after every brand-specific and machine-specific
   // generator has run. Separate servo instructions must never share a bottle
-  // table setpoint; one-decimal HMI output requires at least 0.1 degree.
+  // table setpoint; every HMI setpoint requires at least 0.5 degree.
   const generated = enforceUniqueServoTableAngles(applyMachineTypeProfileFraming(generatedServoProfile()));
   const profileKey = servoOverrideProfileKey();
   const overrides = state.servoOverrides?.[profileKey] || {};
-  state.program = generated.map((row, index) => {
+  const requested = generated.map((row, index) => {
     const override = overrides[String(row.plc ?? index)] || {};
     return {
       ...row,
@@ -1176,6 +1176,13 @@ function applyGeneratedServoProfile() {
       tableAngleOverride: Number.isFinite(Number(override.tableAngle)) ? Number(override.tableAngle) : null,
       plateAngleOverride: Number.isFinite(Number(override.plateAngle)) ? Number(override.plateAngle) : null
     };
+  });
+  state.program = enforceUniqueServoTableAngles(requested);
+  state.program.forEach((row, index) => {
+    if (!Number.isFinite(Number(requested[index]?.tableAngleOverride))) return;
+    const rowKey = String(row.plc ?? index);
+    overrides[rowKey] = { ...(overrides[rowKey] || {}), tableAngle: row.tableAngle };
+    row.tableAngleOverride = row.tableAngle;
   });
 }
 
