@@ -848,6 +848,14 @@ input[type="range"] {
   min-width: 0;
 }
 
+.build-card h3 {
+  margin: 18px 0 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 14px;
+}
+
 .build-card label {
   display: grid;
   gap: 5px;

@@ -353,7 +353,8 @@ function inferAplStationSections(machineMap) {
 }
 
 function createMachineMap({ id, name, machineType, applicationMode, headCount, aggregateCount, stationCount, enabledAggregates, enabledStations, aggregateAngles, stationAngles, stationSections, objects, depths, machineSettings, coldGlueProfile, restoreDefaultObjects = true, isTemplate = false, blankSeedVersion = 0 } = {}) {
-  const mode = applicationMode === "cold-glue" ? "cold-glue" : "apl";
+  const normalizedMachineType = String(machineType || "TopModul");
+  const mode = normalizedMachineType.toLowerCase() === "multimodul" ? "apl" : applicationMode === "cold-glue" ? "cold-glue" : "apl";
   const aggregates = Math.max(1, Math.min(6, Math.round(num(aggregateCount, mode === "cold-glue" ? 3 : 6))));
   const stations = Math.max(1, Math.min(6, Math.round(num(stationCount, aggregates))));
   const sourceObjects = Array.isArray(objects)
@@ -377,7 +378,7 @@ function createMachineMap({ id, name, machineType, applicationMode, headCount, a
     isTemplate: Boolean(isTemplate),
     id: String(id || uniqueMapId("machine-map")),
     name: String(name || `${mode === "cold-glue" ? "Cold Glue" : "APL"} ${aggregates}-Aggregate Map`),
-    machineType: String(machineType || "TopModul"),
+    machineType: normalizedMachineType,
     applicationMode: mode,
     headCount: Math.max(1, Math.min(120, Math.round(num(headCount, machineSettings?.headCount !== undefined ? machineSettings.headCount : (state?.headCount !== undefined ? state.headCount : 60))))),
     aggregateCount: normalizeEnabledSlots(enabledAggregates, aggregates).filter(Boolean).length,
@@ -418,6 +419,7 @@ function editableMachineMap() {
 }
 
 function inferredMachineMapApplicationMode(map) {
+  if (String(map?.machineType || "").trim().toLowerCase() === "multimodul") return "apl";
   if (map?.applicationMode === "cold-glue") return "cold-glue";
   const name = String(map?.name || "");
   return /cold[ -]?glue/i.test(name) || /(^|[\s_-])cg([\s_-]|$)/i.test(name) ? "cold-glue" : "apl";
@@ -785,10 +787,15 @@ function renderMapLibraryControls() {
   }
   if (els.mapLibrarySummary) els.mapLibrarySummary.textContent = `${map.machineType || "TopModul"} • ${map.name} • ${map.headCount} heads • ${map.aggregateCount} aggregate${map.aggregateCount === 1 ? "" : "s"}`;
   if (els.mapName) els.mapName.value = map.name;
-  if (els.applicationMode) els.applicationMode.value = state.applicationMode;
+  if (els.applicationMode) {
+    const multiModul = String(map.machineType || "").trim().toLowerCase() === "multimodul";
+    els.applicationMode.value = multiModul ? "apl" : state.applicationMode;
+    els.applicationMode.disabled = multiModul;
+    els.applicationMode.title = multiModul ? "MultiModul is an APL labeler." : "";
+  }
   if (els.mapHeadCount) els.mapHeadCount.value = map.headCount;
   if (els.mapMachineType) {
-    const types = [...new Set(["TopMatic", "Autocol", "TopModul", ...(state.machineTypes || []), map.machineType || "TopModul"])];
+    const types = [...new Set(["TopMatic", "Autocol", "TopModul", "MultiModul", ...(state.machineTypes || []), map.machineType || "TopModul"])];
     els.mapMachineType.replaceChildren(...types.map((type) => {
       const option = document.createElement("option");
       option.value = type;
@@ -1061,7 +1068,9 @@ function saveMapDefinitionFromControls(event) {
   const previousLimit = activeAplStationLimit(map);
   map.name = String(els.mapName?.value || map.name).trim() || map.name;
   map.machineType = String(els.mapMachineType?.value || map.machineType || "TopModul").trim() || "TopModul";
-  state.applicationMode = els.applicationMode?.value === "cold-glue" ? "cold-glue" : "apl";
+  state.applicationMode = map.machineType.toLowerCase() === "multimodul"
+    ? "apl"
+    : els.applicationMode?.value === "cold-glue" ? "cold-glue" : "apl";
   map.applicationMode = state.applicationMode;
   if (map.applicationMode === "cold-glue") {
     map.objects = normalizeColdGlueMap(map.objects);
@@ -1123,13 +1132,17 @@ function bindWipeDownBuilder() {
   document.querySelector("#redoBuilderEdit")?.addEventListener("click", () => restoreBuilderHistory("redo"));
   document.querySelector("#guidedMapSetup")?.addEventListener("click", () => {
     const map = editableMachineMap();
-    const machineType = String(window.prompt("Machine type (TopMatic, Autocol, or TopModul):", map.machineType || "TopModul") || "").trim();
+    const machineType = String(window.prompt("Machine type (TopMatic, Autocol, TopModul, or MultiModul):", map.machineType || "TopModul") || "").trim();
     if (!machineType) return;
     const headCount = Math.max(1, Math.min(120, Math.round(num(window.prompt("Head count:", String(map.headCount || 45)), map.headCount || 45))));
     const stations = Math.max(1, Math.min(6, Math.round(num(window.prompt("Number of active application stations:", String(map.stationCount || 3)), map.stationCount || 3))));
     const labels = String(window.prompt("Label order by station (comma separated):", stations === 3 ? "neck,body,back" : "neck,neck,body,body,back,back") || "").split(",").map((value) => value.trim().toLowerCase());
     recordBuilderHistory("Guided map setup");
     map.machineType = machineType;
+    if (machineType.toLowerCase() === "multimodul") {
+      map.applicationMode = "apl";
+      state.applicationMode = "apl";
+    }
     map.headCount = headCount;
     map.enabledAggregates = Array.from({ length: 6 }, (_, index) => index < stations);
     map.enabledStations = Array.from({ length: 6 }, (_, index) => index < stations);

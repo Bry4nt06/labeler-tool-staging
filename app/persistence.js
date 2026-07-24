@@ -70,7 +70,7 @@ function loadSavedSettings() {
     if (Array.isArray(saved.servoProfileLibrary)) state.servoProfileLibrary = saved.servoProfileLibrary;
     if (typeof saved.activeServoProfileId === "string") state.activeServoProfileId = saved.activeServoProfileId;
     if (Array.isArray(saved.machineTypes)) {
-      state.machineTypes = [...new Set(["TopMatic", "Autocol", "TopModul", ...saved.machineTypes.map((value) => String(value).trim()).filter(Boolean)])];
+      state.machineTypes = [...new Set(["TopMatic", "Autocol", "TopModul", "MultiModul", ...saved.machineTypes.map((value) => String(value).trim()).filter(Boolean)])];
     }
     if (Array.isArray(saved.coldGlueMap)) state.coldGlueMap = normalizeColdGlueMap(saved.coldGlueMap);
     if (saved.coldGlueAggregateSettings && typeof saved.coldGlueAggregateSettings === "object") state.coldGlueAggregateSettings = deepClone(saved.coldGlueAggregateSettings);

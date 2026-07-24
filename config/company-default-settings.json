@@ -919,7 +919,8 @@
     "machineTypes": [
       "TopMatic",
       "Autocol",
-      "TopModul"
+      "TopModul",
+      "MultiModul"
     ],
     "activeMapId": "machine-map-1784426568359-9375",
     "mapZoom": 0.6584840293614721,
