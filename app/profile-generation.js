@@ -1145,8 +1145,24 @@ function generatedServoProfile() {
   return rows;
 }
 
+function enforceUniqueServoTableAngles(rows, minimumStep = 0.1) {
+  const step = Math.max(0.1, Math.abs(num(minimumStep, 0.1)));
+  let previous = -Infinity;
+  return (Array.isArray(rows) ? rows : []).map((row) => {
+    const requested = num(row?.tableAngle, Number.isFinite(previous) ? previous + step : 0);
+    const tableAngle = Number.isFinite(previous)
+      ? finishAngle(Math.max(requested, previous + step))
+      : finishAngle(requested);
+    previous = tableAngle;
+    return { ...row, tableAngle };
+  });
+}
+
 function applyGeneratedServoProfile() {
-  const generated = applyMachineTypeProfileFraming(generatedServoProfile());
+  // Finalize table ordering after every brand-specific and machine-specific
+  // generator has run. Separate servo instructions must never share a bottle
+  // table setpoint; one-decimal HMI output requires at least 0.1 degree.
+  const generated = enforceUniqueServoTableAngles(applyMachineTypeProfileFraming(generatedServoProfile()));
   const profileKey = servoOverrideProfileKey();
   const overrides = state.servoOverrides?.[profileKey] || {};
   state.program = generated.map((row, index) => {
