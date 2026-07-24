@@ -23,7 +23,7 @@
       holdAngle: finite(item?.bottleHoldAngleDeg, 90),
       holdCurrent: Boolean(item?.holdCurrentBottleAngle),
       holdStart: Math.max(start, Math.min(end, finite(item?.bottleHoldStartDeg, start))),
-      direction: side === "inner" ? 1 : -1,
+      direction: side === "inner" ? -1 : 1,
       coveragePercent: Math.max(0, Math.min(100, finite(item?.coveragePercent, NaN)))
     };
   }
@@ -96,7 +96,7 @@
         ...window,
         rotation: window.span * plannedRatio,
         ratio: plannedRatio,
-        direction: window.side === "inner" ? 1 : -1,
+        direction: window.side === "inner" ? -1 : 1,
         rotationSense: window.side === "inner" ? "counter-clockwise" : "clockwise"
       }));
   }

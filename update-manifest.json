@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.78",
+  "version": "0.7.79",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Uses the full one-sided brush contact at maximum non-faulting turn speed: outside wipes rotate clockwise and inside wipes rotate counter-clockwise."
+  "notes": "STAGING TEST BUILD — Corrects the servo sign so outside wipe-downs physically rotate clockwise and inside wipe-downs physically rotate counter-clockwise."
 }

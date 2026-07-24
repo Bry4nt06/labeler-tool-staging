@@ -398,8 +398,8 @@ function generatedColdGlueFixedProfile() {
           const innerActive = middle >= innerStart && middle <= innerEnd;
           const held = Boolean(channel.holdBottleAngle) && middle >= holdStart - 0.001;
           if (held || (outerActive && innerActive)) moves.push({ id: channel.id, stage: "opposed", start, end, rotation: 0, direction: 0, holdAngle: num(channel.bottleHoldAngleDeg, 90), holdCurrent: held && Boolean(channel.holdCurrentBottleAngle), configuredHold: held });
-          else if (outerActive) moves.push({ id: channel.id, stage: "outer", start, end, direction: -1 });
-          else if (innerActive) moves.push({ id: channel.id, stage: "inner", start, end, direction: 1 });
+          else if (outerActive) moves.push({ id: channel.id, stage: "outer", start, end, direction: 1 });
+          else if (innerActive) moves.push({ id: channel.id, stage: "inner", start, end, direction: -1 });
         }
       });
       const issues = [];
@@ -414,7 +414,7 @@ function generatedColdGlueFixedProfile() {
           ...move,
           rotation: (move.end - move.start) * plannedRatio,
           ratio: plannedRatio,
-          direction: outside ? -1 : 1,
+          direction: outside ? 1 : -1,
           rotationSense: outside ? "clockwise" : "counter-clockwise",
           centerTackStage: outside ? "outside-maximum-wipe" : "inside-maximum-wipe"
         };
