@@ -290,7 +290,11 @@ function showPendingToolUpdate(worker) {
 async function registerToolUpdateService() {
   if (!("serviceWorker" in navigator) || window.location.protocol === "file:") return;
   try {
-    updateServiceWorkerRegistration = await navigator.serviceWorker.register("./service-worker.js", { scope: "./" });
+    const currentVersion = document.querySelector('meta[name="application-version"]')?.content || "current";
+    updateServiceWorkerRegistration = await navigator.serviceWorker.register(`./service-worker.js?v=${encodeURIComponent(currentVersion)}`, {
+      scope: "./",
+      updateViaCache: "none"
+    });
     if (updateServiceWorkerRegistration.waiting) showPendingToolUpdate(updateServiceWorkerRegistration.waiting);
     updateServiceWorkerRegistration.addEventListener("updatefound", () => {
       const installing = updateServiceWorkerRegistration.installing;

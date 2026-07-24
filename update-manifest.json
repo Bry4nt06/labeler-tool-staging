@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.81",
+  "version": "0.7.82",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Requires all generated and user-entered servo table angles to be separated by at least 0.5 degree for every brand."
+  "notes": "STAGING TEST BUILD — Prevents stale profile code from loading and guarantees visible generated and override table angles remain at least 0.5 degree apart."
 }
