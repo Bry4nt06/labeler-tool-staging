@@ -26,9 +26,18 @@
   function enforceReleaseVersion() {
     const meta = document.querySelector('meta[name="application-version"]');
     if (meta && meta.content !== RELEASE_VERSION) meta.content = RELEASE_VERSION;
+
     const status = typeof els !== "undefined" ? els.updateCheckStatus : document.querySelector("#updateCheckStatus");
-    if (status && /^Version\s+\d+/i.test(status.textContent || "") && !/available|downloading|applying|checking|up to date/i.test(status.textContent || "")) {
-      status.textContent = `Version ${RELEASE_VERSION} • Updates are checked automatically.`;
+    const currentText = status?.textContent || "";
+    const releaseText = `Version ${RELEASE_VERSION} • Updates are checked automatically.`;
+    const isIdleVersionText = /^Version\s+\d+/i.test(currentText)
+      && !/available|downloading|applying|checking|up to date/i.test(currentText);
+
+    // Never rewrite identical text. The previous observer wrote the same value
+    // after every DOM mutation, which recursively triggered itself and locked
+    // the page before the application could finish loading.
+    if (status && isIdleVersionText && currentText !== releaseText) {
+      status.textContent = releaseText;
     }
   }
 
@@ -150,12 +159,14 @@
   };
 
   enforceReleaseVersion();
-  const observer = new MutationObserver(enforceReleaseVersion);
-  observer.observe(document.documentElement, {
-    subtree: true,
-    childList: true,
-    characterData: true,
-    attributes: true,
-    attributeFilter: ["content"]
-  });
+
+  // Observe only the two version nodes rather than the entire application DOM.
+  // Feature rendering can perform thousands of mutations and must never drive
+  // the release-version observer.
+  const versionMeta = document.querySelector('meta[name="application-version"]');
+  const versionStatus = document.querySelector("#updateCheckStatus");
+  const versionObserver = new MutationObserver(enforceReleaseVersion);
+  if (versionMeta) versionObserver.observe(versionMeta, { attributes: true, attributeFilter: ["content"] });
+  if (versionStatus) versionObserver.observe(versionStatus, { childList: true, subtree: true, characterData: true });
+  window.addEventListener("load", enforceReleaseVersion, { once: true });
 })();
