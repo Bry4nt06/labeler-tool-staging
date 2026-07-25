@@ -1800,6 +1800,20 @@ button.danger:hover {
   overscroll-behavior: contain;
 }
 .wipe-builder-drawer .builder-card { padding: 9px; }
+.wipe-builder-drawer .collapsible-builder-section > summary { padding: 8px 9px; font-size: 13px; }
+.wipe-builder-drawer .collapsible-builder-section > summary strong { font-size: 13px; }
+.wipe-builder-drawer .collapsible-builder-section > summary small { font-size: 9px; }
+.wipe-builder-drawer .collapsible-builder-content { padding: 8px; }
+.wipe-builder-drawer .map-library-grid { gap: 6px; }
+.wipe-builder-drawer .map-library-grid label,
+.wipe-builder-drawer .builder-add-grid label,
+.wipe-builder-drawer .builder-row-grid label { gap: 3px; font-size: 11px; }
+.wipe-builder-drawer .map-library-grid input,
+.wipe-builder-drawer .map-library-grid select,
+.wipe-builder-drawer .builder-add-grid input,
+.wipe-builder-drawer .builder-add-grid select,
+.wipe-builder-drawer .builder-row-grid input,
+.wipe-builder-drawer .builder-row-grid select { min-height: 32px; padding: 5px 7px; font-size: 12px; }
 .wipe-builder-drawer .object-depth-grid,
 .wipe-builder-drawer .builder-add-grid,
 .wipe-builder-drawer .builder-row-grid {
