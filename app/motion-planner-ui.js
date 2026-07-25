@@ -1,6 +1,6 @@
 "use strict";
 
-const STAGING_APPLICATION_VERSION = "0.7.94";
+const STAGING_APPLICATION_VERSION = "0.7.95";
 const SERVO_TABLE_ANGLE_STEP_DEG = 0.5;
 const SERVO_TABLE_ANGLE_EPSILON = 0.0001;
 
@@ -8,7 +8,7 @@ function updateRuntimeApplicationVersion() {
   const versionMeta = document.querySelector('meta[name="application-version"]');
   if (versionMeta) versionMeta.content = STAGING_APPLICATION_VERSION;
   const status = document.querySelector("#updateCheckStatus");
-  if (status && /Version\s+0\.7\.93/i.test(status.textContent || "")) {
+  if (status && /Version\s+0\.7\.(?:93|94)/i.test(status.textContent || "")) {
     status.textContent = `Version ${STAGING_APPLICATION_VERSION} • Updates are checked automatically.`;
   }
 }
@@ -16,6 +16,13 @@ function updateRuntimeApplicationVersion() {
 function tableAngleNumber(value, fallback = null) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function hasExplicitTableAngleOverride(value) {
+  return value !== null
+    && value !== undefined
+    && String(value).trim() !== ""
+    && Number.isFinite(Number(value));
 }
 
 function tableAngleResolution(value) {
@@ -80,7 +87,10 @@ function normalizeServoProgramTableAngles(rows) {
     row.generatedTableAngle = generated.values[index];
   });
 
-  const finalInput = source.map((row, index) => Number.isFinite(Number(row.tableAngleOverride))
+  // Null, undefined and blank override fields are not numeric overrides.
+  // Number(null) equals zero in JavaScript, which previously filled every
+  // blank override box with the artificial 0.5-degree repair sequence.
+  const finalInput = source.map((row, index) => hasExplicitTableAngleOverride(row.tableAngleOverride)
     ? Number(row.tableAngleOverride)
     : generated.values[index]);
   const finalSeries = buildStrictlyIncreasingAngleSeries(finalInput, source);
@@ -88,7 +98,7 @@ function normalizeServoProgramTableAngles(rows) {
 
   source.forEach((row, index) => {
     const finalAngle = finalSeries.values[index];
-    const hadOverride = Number.isFinite(Number(row.tableAngleOverride));
+    const hadOverride = hasExplicitTableAngleOverride(row.tableAngleOverride);
     row.originalTableAngle = finalInput[index];
     row.tableAngle = finalAngle;
     row.strictTableAngleSequence = true;
@@ -97,6 +107,10 @@ function normalizeServoProgramTableAngles(rows) {
       row.originalTableAngleOverride = Number(row.tableAngleOverride);
       row.tableAngleOverride = finalAngle;
       row.tableAngleOverrideAdjusted = true;
+    } else if (!hadOverride) {
+      row.tableAngleOverride = null;
+      delete row.originalTableAngleOverride;
+      delete row.tableAngleOverrideAdjusted;
     }
   });
 
