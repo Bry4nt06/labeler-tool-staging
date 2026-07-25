@@ -754,6 +754,11 @@ function generatedAplMapDrivenProfile(machineMap) {
   const moveToReference = (tableAngle, targetPlate, action, extra = {}) => {
     const targetTable = unwrapAfter(tableAngle, lastTable);
     const rotation = targetPlate - plate;
+    if (extra.singleMotion) {
+      add(7, targetTable, targetPlate, action, { ...extra, plannedRotation: rotation });
+      plate = targetPlate;
+      return;
+    }
     if (Math.abs(rotation) <= 0.001) {
       if (!motionStarted) add(3, targetTable, plate, action, extra);
       return;
@@ -854,7 +859,17 @@ function generatedAplMapDrivenProfile(machineMap) {
     if (!wipe || !selectedLabelApplicationState()[section]) return;
     const aggregate = scaleMapAngle(num(machineMap.aggregateAngles?.[String(station)], num(machineMap.stationAngles?.[String(station)], 0)));
     const applicationPoint = aggregate - scaleMapSpan(num(profileTiming.spenderArriveEarly, 7.5));
-    moveToReference(applicationPoint, targets[section], `Hold for ${sectionLabel(section)} Application - Agg ${station}`, { station, section });
+    const previousEntry = orderedStationGroups.slice(0, stationIndex).reverse().find(([previousStation]) => {
+      const previousSection = sections[String(previousStation)] || labelSectionForStation(previousStation);
+      return selectedLabelApplicationState()[previousSection];
+    });
+    const previousSection = previousEntry ? (sections[String(previousEntry[0])] || labelSectionForStation(previousEntry[0])) : "";
+    const bottleSetupForBody = previousSection === "neck" && section === "body";
+    moveToReference(applicationPoint, targets[section], bottleSetupForBody
+      ? `Bottle Setup for Body Application - Agg ${station}`
+      : `Hold for ${sectionLabel(section)} Application - Agg ${station}`, {
+      station, section, singleMotion: bottleSetupForBody, phaseTransition: bottleSetupForBody ? "neck-to-body" : undefined
+    });
 
     const nextEntry = orderedStationGroups.slice(stationIndex + 1).find(([nextStation]) => {
       const nextSection = sections[String(nextStation)] || labelSectionForStation(nextStation);
