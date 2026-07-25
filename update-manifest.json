@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.97",
+  "version": "0.7.98",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Fixes APL wipe-down pads rendering as oversized circles or displaced shapes at certain table positions. Pad arcs now handle 0/360 degree crossings safely, enforce valid inner and outer radii, and cap visual thickness without changing the stored physical extension value."
+  "notes": "STAGING TEST BUILD — Milestone 4 introduces the Servo Pipeline Validator. It validates mechanical-event alignment, planner and translator consistency, supported CMD usage, Rest/Correction and advanced-motion grammar, strictly increasing table angles, terminal CMD 3 Rest, speed limits, row identity, and fallback conditions. A PASS/REVIEW/FAIL summary is now shown in Validation."
 }
