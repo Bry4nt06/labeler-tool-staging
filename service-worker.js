@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "servoforge-labeler-staging-v0.7.99";
+const CACHE_NAME = "servoforge-labeler-staging-v0.8.0";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -17,6 +17,7 @@ const APP_FILES = [
   "./drivers/mechanical/cold-glue-motion-driver.js",
   "./drivers/servo/servo-command-driver.js",
   "./drivers/planning/motion-planner-driver.js",
+  "./drivers/planning/mechanical-event-planner-driver.js",
   "./drivers/translation/profile-translator-driver.js",
   "./drivers/validation/motion-validation-driver.js",
   "./drivers/validation/servo-pipeline-validator-driver.js",
@@ -38,6 +39,7 @@ const APP_FILES = [
   "./app/profile-translator-integration.js",
   "./app/servo-pipeline-validator-integration.js",
   "./app/simulator-milestone.js",
+  "./app/milestone-6-7-integration.js",
   "./app/update-service-fix.js"
 ];
 
