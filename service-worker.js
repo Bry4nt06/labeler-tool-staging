@@ -1,13 +1,9 @@
 "use strict";
 
-const CACHE_NAME = "servoforge-labeler-staging-v0.8.2";
+const CACHE_NAME = "servoforge-labeler-staging-v0.8.3";
 const FALLBACK_PAGE = "./index.html";
 
 self.addEventListener("install", (event) => {
-  // Do not block installation on a large cache.addAll operation. A single
-  // missing or delayed asset previously left the app on "Downloading" until
-  // the updater timed out. The worker activates immediately and assets are
-  // cached opportunistically as they are requested.
   event.waitUntil(self.skipWaiting());
 });
 
@@ -44,9 +40,7 @@ self.addEventListener("fetch", (event) => {
       .catch(async () => {
         const cached = await caches.match(event.request);
         if (cached) return cached;
-        if (event.request.mode === "navigate") {
-          return caches.match(FALLBACK_PAGE);
-        }
+        if (event.request.mode === "navigate") return caches.match(FALLBACK_PAGE);
         throw new Error(`Offline resource unavailable: ${event.request.url}`);
       })
   );
