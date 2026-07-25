@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "servoforge-labeler-staging-v0.7.95";
+const CACHE_NAME = "servoforge-labeler-staging-v0.7.96";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -17,6 +17,7 @@ const APP_FILES = [
   "./drivers/mechanical/cold-glue-motion-driver.js",
   "./drivers/servo/servo-command-driver.js",
   "./drivers/planning/motion-planner-driver.js",
+  "./drivers/translation/profile-translator-driver.js",
   "./drivers/validation/motion-validation-driver.js",
   "./drivers/profile/apl-profile-driver.js",
   "./app/defaults.js",
@@ -32,14 +33,13 @@ const APP_FILES = [
   "./app/map-rendering.js",
   "./app/table-rendering.js",
   "./app/bootstrap.js",
-  "./app/motion-planner-ui.js"
+  "./app/motion-planner-ui.js",
+  "./app/profile-translator-integration.js",
+  "./app/update-service-fix.js"
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_FILES))
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES)));
 });
 
 self.addEventListener("activate", (event) => {
