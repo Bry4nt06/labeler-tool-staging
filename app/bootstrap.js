@@ -126,8 +126,6 @@ function bindGlobalActions() {
 
 function animationFrame(now) {
   if (animationTimerId === null) return;
-  // Limit a single catch-up frame after a hidden/stalled tab, while retaining
-  // continuous time-based motion at normal requestAnimationFrame cadence.
   const elapsedSeconds = Math.min(0.05, Math.max(0, now - lastAnimationTime) / 1000);
   lastAnimationTime = now;
   if (state.isPlaying) {
@@ -180,3 +178,11 @@ async function initializeLabelerApp() {
     showStartupError(error);
   }
 }
+
+(function loadSimulatorMilestone() {
+  if (document.querySelector('script[data-servoforge-simulator="0.7.99"]')) return;
+  const script = document.createElement("script");
+  script.src = "app/simulator-milestone.js?v=0.7.99";
+  script.dataset.servoforgeSimulator = "0.7.99";
+  document.head.appendChild(script);
+})();
