@@ -3,22 +3,19 @@
 let lastAnimationTime = performance.now();
 let animationTimerId = null;
 
-const UPDATE_WAIT_TIMEOUT_MS = 20000;
-const PENDING_UPDATE_VERSION_KEY = "servoforgePendingUpdateVersion";
+const STAGING_RELEASE_VERSION = "0.8.3";
+const STAGING_CACHE_PREFIX = "servoforge-labeler-staging-";
 
 function currentApplicationVersion() {
-  return document.querySelector('meta[name="application-version"]')?.content || "0.0.0";
+  return document.querySelector('meta[name="application-version"]')?.content || STAGING_RELEASE_VERSION;
 }
 
 function configuredUpdateManifestUrl() {
-  return document.querySelector('meta[name="update-manifest-url"]')?.content?.trim() || "";
+  return document.querySelector('meta[name="update-manifest-url"]')?.content?.trim() || "./update-manifest.json";
 }
 
 function setToolUpdateUi(message, buttonText = "Check for Updates", disabled = false) {
-  if (els.updateCheckStatus) {
-    els.updateCheckStatus.textContent = message;
-    els.updateCheckStatus.querySelectorAll("a").forEach((link) => link.remove());
-  }
+  if (els.updateCheckStatus) els.updateCheckStatus.textContent = message;
   if (els.checkForUpdates) {
     els.checkForUpdates.textContent = buttonText;
     els.checkForUpdates.disabled = disabled;
@@ -28,13 +25,40 @@ function setToolUpdateUi(message, buttonText = "Check for Updates", disabled = f
 function updateDestinationUrl(rawUrl, version) {
   let destination;
   try {
-    destination = new URL(rawUrl || window.location.href, window.location.href);
+    destination = new URL(rawUrl || "./", window.location.href);
   } catch {
-    destination = new URL(window.location.href);
+    destination = new URL("./", window.location.href);
   }
   destination.searchParams.set("version", String(version || Date.now()));
   destination.searchParams.set("updated", Date.now().toString());
   return destination.toString();
+}
+
+async function clearStaleStagingRuntime() {
+  const appScope = new URL("./", window.location.href).href;
+  const tasks = [];
+
+  if ("serviceWorker" in navigator) {
+    tasks.push(
+      navigator.serviceWorker.getRegistrations().then((registrations) => Promise.all(
+        registrations
+          .filter((registration) => registration.scope.startsWith(appScope))
+          .map((registration) => registration.unregister())
+      ))
+    );
+  }
+
+  if ("caches" in window) {
+    tasks.push(
+      caches.keys().then((names) => Promise.all(
+        names
+          .filter((name) => name.startsWith(STAGING_CACHE_PREFIX))
+          .map((name) => caches.delete(name))
+      ))
+    );
+  }
+
+  await Promise.allSettled(tasks);
 }
 
 function navigateToUpdateInCurrentWindow(rawUrl, version) {
@@ -42,175 +66,60 @@ function navigateToUpdateInCurrentWindow(rawUrl, version) {
   window.location.replace(updateDestinationUrl(rawUrl, version));
 }
 
-function waitForWorkerInstalled(worker, timeoutMs = UPDATE_WAIT_TIMEOUT_MS) {
-  return new Promise((resolve) => {
-    if (!worker) {
-      resolve(null);
-      return;
-    }
-    if (worker.state === "installed" || worker.state === "activated") {
-      resolve(worker);
-      return;
-    }
-    let complete = false;
-    const finish = (value) => {
-      if (complete) return;
-      complete = true;
-      window.clearTimeout(timer);
-      worker.removeEventListener("statechange", onStateChange);
-      resolve(value);
-    };
-    const onStateChange = () => {
-      if (worker.state === "installed" || worker.state === "activated") finish(worker);
-      else if (worker.state === "redundant") finish(null);
-    };
-    const timer = window.setTimeout(() => finish(null), timeoutMs);
-    worker.addEventListener("statechange", onStateChange);
-  });
+function showPendingToolUpdate() {
+  setToolUpdateUi("A browser update is ready. Apply it in this window.", "Apply Update", false);
 }
 
-function waitForRegistrationWorker(registration, timeoutMs = UPDATE_WAIT_TIMEOUT_MS) {
-  return new Promise((resolve) => {
-    if (registration.waiting) {
-      resolve(registration.waiting);
-      return;
-    }
-    if (registration.installing) {
-      waitForWorkerInstalled(registration.installing, timeoutMs).then(resolve);
-      return;
-    }
-    let complete = false;
-    const finish = (value) => {
-      if (complete) return;
-      complete = true;
-      window.clearTimeout(timer);
-      registration.removeEventListener("updatefound", onUpdateFound);
-      resolve(value);
-    };
-    const onUpdateFound = () => {
-      waitForWorkerInstalled(registration.installing, timeoutMs).then(finish);
-    };
-    const timer = window.setTimeout(() => finish(registration.waiting || null), timeoutMs);
-    registration.addEventListener("updatefound", onUpdateFound);
-  });
-}
-
-async function getToolUpdateRegistration() {
-  if (!("serviceWorker" in navigator) || window.location.protocol === "file:") return null;
-  const existing = updateServiceWorkerRegistration
-    || await navigator.serviceWorker.getRegistration("./");
-  updateServiceWorkerRegistration = existing
-    || await navigator.serviceWorker.register("./service-worker.js", {
-      scope: "./",
-      updateViaCache: "none"
-    });
-  return updateServiceWorkerRegistration;
-}
-
-function applyWaitingToolUpdate(worker, version = "") {
-  if (!worker) return false;
-  pendingServiceWorker = worker;
-  try {
-    if (version) sessionStorage.setItem(PENDING_UPDATE_VERSION_KEY, String(version));
-  } catch {
-    // Session storage is optional; the same-window reload still works without it.
-  }
-  setToolUpdateUi("Applying update…", "Applying Update", true);
-  if (typeof saveCurrentSettings === "function") saveCurrentSettings();
-  worker.postMessage({ type: "SKIP_WAITING" });
-  return true;
-}
-
-showPendingToolUpdate = function showReliablePendingToolUpdate(worker) {
-  pendingServiceWorker = worker;
-  setToolUpdateUi("Update downloaded • Restart to apply.", "Restart to Update", false);
-};
-
-registerToolUpdateService = async function registerReliableToolUpdateService() {
+async function registerToolUpdateService() {
+  const meta = document.querySelector('meta[name="application-version"]');
+  if (meta) meta.content = STAGING_RELEASE_VERSION;
   if (!("serviceWorker" in navigator) || window.location.protocol === "file:") return;
-  try {
-    const registration = await getToolUpdateRegistration();
-    if (!registration) return;
-    if (registration.waiting) showPendingToolUpdate(registration.waiting);
-    registration.addEventListener("updatefound", () => {
-      const installing = registration.installing;
-      installing?.addEventListener("statechange", () => {
-        if (installing.state === "installed" && navigator.serviceWorker.controller) {
-          showPendingToolUpdate(installing);
-        }
-      });
-    });
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (reloadingForServiceWorker) return;
-      reloadingForServiceWorker = true;
-      let version = "";
-      try {
-        version = sessionStorage.getItem(PENDING_UPDATE_VERSION_KEY) || "";
-        sessionStorage.removeItem(PENDING_UPDATE_VERSION_KEY);
-      } catch {
-        version = "";
-      }
-      navigateToUpdateInCurrentWindow(window.location.href, version || Date.now());
-    });
-    await registration.update();
-  } catch (error) {
-    console.error("Automatic update service unavailable", error);
-  }
-};
 
-checkForToolUpdates = async function checkForReliableToolUpdates() {
+  try {
+    updateServiceWorkerRegistration = await navigator.serviceWorker.register(
+      `./service-worker.js?v=${STAGING_RELEASE_VERSION}`,
+      { scope: "./", updateViaCache: "none" }
+    );
+  } catch (error) {
+    console.warn("Service worker registration is unavailable. Same-window updates remain enabled.", error);
+  }
+}
+
+async function checkForToolUpdates() {
   const currentVersion = currentApplicationVersion();
   const manifestUrl = configuredUpdateManifestUrl();
-
-  if (pendingServiceWorker) {
-    applyWaitingToolUpdate(pendingServiceWorker);
-    return;
-  }
-
   setToolUpdateUi("Checking for updates…", "Check for Updates", true);
-  try {
-    if (!manifestUrl) {
-      setToolUpdateUi(`Version ${currentVersion} • Update source not configured yet.`);
-      return;
-    }
 
+  try {
     const response = await fetch(`${manifestUrl}${manifestUrl.includes("?") ? "&" : "?"}t=${Date.now()}`, {
-      cache: "no-store"
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" }
     });
     if (!response.ok) throw new Error(`Update server returned ${response.status}.`);
+
     const manifest = await response.json();
     const latestVersion = String(manifest?.version || "").trim();
     if (!latestVersion) throw new Error("Update manifest has no version.");
 
     if (compareApplicationVersions(latestVersion, currentVersion) <= 0) {
-      setToolUpdateUi(`Up to date • Version ${currentVersion}`);
+      setToolUpdateUi(`Up to date • Version ${currentVersion}`, "Check for Updates", false);
       return;
     }
 
-    const destination = String(manifest.releaseUrl || manifest.downloadUrl || window.location.href).trim();
-    setToolUpdateUi(`Downloading version ${latestVersion}…`, "Downloading Update", true);
-    const registration = await getToolUpdateRegistration();
+    const destination = String(manifest.releaseUrl || manifest.downloadUrl || "./").trim();
+    setToolUpdateUi(`Applying version ${latestVersion} in this window…`, "Applying Update", true);
+    if (typeof saveCurrentSettings === "function") saveCurrentSettings();
 
-    if (!registration) {
-      setToolUpdateUi(`Opening version ${latestVersion} in this window…`, "Applying Update", true);
-      navigateToUpdateInCurrentWindow(destination, latestVersion);
-      return;
-    }
-
-    const workerPromise = waitForRegistrationWorker(registration);
-    await registration.update();
-    const worker = registration.waiting || await workerPromise;
-    if (applyWaitingToolUpdate(registration.waiting || worker, latestVersion)) return;
-
-    // Some browsers activate an update without leaving a waiting worker. In
-    // that case, navigate to the release in this same window with cache busting.
-    setToolUpdateUi(`Opening version ${latestVersion} in this window…`, "Applying Update", true);
+    // The updater no longer waits for an installing or waiting service worker.
+    // That wait was the source of the recurring Downloading timeout. Clear the
+    // stale worker/cache state and navigate directly in this same window.
+    await clearStaleStagingRuntime();
     navigateToUpdateInCurrentWindow(destination, latestVersion);
   } catch (error) {
-    setToolUpdateUi("Unable to apply the update. Check the connection and try again.");
     console.error("Update check failed", error);
+    setToolUpdateUi("Unable to apply the update. Check the connection and try again.", "Check for Updates", false);
   }
-};
+}
 
 function download(name, type, content) {
   const blob = new Blob([content], { type });
@@ -248,6 +157,7 @@ function bindGlobalActions() {
       renderMap();
     });
   }
+
   const setWipeDownPopupOpen = (open) => {
     if (!els.wipeDownDataPanel) return;
     els.wipeDownDataPanel.hidden = !open;
@@ -292,8 +202,6 @@ function bindGlobalActions() {
   });
 
   els.saveSettings.addEventListener("click", saveCurrentSettings);
-  // Resolve the updater function at click time so a loaded updater patch can
-  // replace it without leaving a stale event-listener reference behind.
   els.checkForUpdates?.addEventListener("click", () => checkForToolUpdates());
   els.simulation?.addEventListener("click", (event) => {
     const insertButton = event.target.closest(".simulation-insert-pair");
@@ -368,9 +276,7 @@ function showStartupError(error) {
     notice.innerHTML = `<strong>Tool startup error</strong><span>${message}</span>`;
     mapPanel.appendChild(notice);
   }
-  if (validationList) {
-    validationList.innerHTML = `<div class="notice bad">Startup failed: ${message}</div>`;
-  }
+  if (validationList) validationList.innerHTML = `<div class="notice bad">Startup failed: ${message}</div>`;
 }
 
 async function initializeLabelerApp() {
