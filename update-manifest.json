@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.98",
+  "version": "0.7.99",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Milestone 4 introduces the Servo Pipeline Validator. It validates mechanical-event alignment, planner and translator consistency, supported CMD usage, Rest/Correction and advanced-motion grammar, strictly increasing table angles, terminal CMD 3 Rest, speed limits, row identity, and fallback conditions. A PASS/REVIEW/FAIL summary is now shown in Validation."
+  "notes": "STAGING TEST BUILD — Milestone 5 adds the simulator runtime and fixes program-source isolation. The Mechanical Map now always uses the current generated servo program outside the Servo Simulation tab, so Aggregate 3 and 4 CMD 7 wipe corrections remain visible. Custom simulator rows are isolated to Servo Simulation, with generated/custom source controls, active HMI and command readouts, move progress, bottle angle, row health, fault status, and click-to-jump simulation rows."
 }
