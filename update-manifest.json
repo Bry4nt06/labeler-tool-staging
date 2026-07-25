@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.8.2",
+  "version": "0.8.3",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Updater recovery release. Removes the blocking service-worker pre-cache that caused the Downloading state to time out. The new worker installs immediately, claims the current page, reloads the same window, and caches files opportunistically after the update is active."
+  "notes": "STAGING TEST BUILD — Consolidates update handling into the staging bootstrap. Update checks no longer wait for a service-worker installing or waiting state. The app saves settings, removes stale staging workers and caches, and reloads the release in the same browser window."
 }
