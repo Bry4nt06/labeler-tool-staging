@@ -852,9 +852,25 @@ function renderMapLibraryControls() {
   }
   if (els.newMachineMap) els.newMachineMap.disabled = libraryLocation.zone === "ALL";
   if (els.applicationMode) {
+    // MultiModul machines can run either application system. Rebuild the
+    // options whenever a map is rendered so a previously saved APL map never
+    // leaves the selector with only its current application available.
+    const supportedModes = [
+      { value: "apl", label: "APL" },
+      { value: "cold-glue", label: "Cold Glue" }
+    ];
+    els.applicationMode.replaceChildren(...supportedModes.map(({ value, label }) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      return option;
+    }));
     els.applicationMode.value = state.applicationMode;
     els.applicationMode.disabled = false;
-    els.applicationMode.title = "";
+    els.applicationMode.setAttribute("aria-disabled", "false");
+    els.applicationMode.title = String(map.machineType || "").trim() === "MultiModul"
+      ? "Choose APL or Cold Glue for this MultiModul map."
+      : "Choose the application system saved with this map.";
   }
   if (els.mapHeadCount) els.mapHeadCount.value = map.headCount;
   if (els.mapMachineType) {
