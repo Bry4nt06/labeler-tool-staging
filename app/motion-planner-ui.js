@@ -1,7 +1,141 @@
 "use strict";
 
+const STAGING_APPLICATION_VERSION = "0.7.94";
+const SERVO_TABLE_ANGLE_STEP_DEG = 0.5;
+const SERVO_TABLE_ANGLE_EPSILON = 0.0001;
+
+function updateRuntimeApplicationVersion() {
+  const versionMeta = document.querySelector('meta[name="application-version"]');
+  if (versionMeta) versionMeta.content = STAGING_APPLICATION_VERSION;
+  const status = document.querySelector("#updateCheckStatus");
+  if (status && /Version\s+0\.7\.93/i.test(status.textContent || "")) {
+    status.textContent = `Version ${STAGING_APPLICATION_VERSION} • Updates are checked automatically.`;
+  }
+}
+
+function tableAngleNumber(value, fallback = null) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function tableAngleResolution(value) {
+  return Math.round(Number(value) * 10) / 10;
+}
+
+function terminalTableAngleIndex(rows) {
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    const row = rows[index];
+    if (row?.terminalRest === true || /end\s*(?:of\s*)?curve/i.test(String(row?.action || ""))) return index;
+  }
+  return -1;
+}
+
+function buildStrictlyIncreasingAngleSeries(rawValues, rows, minimumStep = SERVO_TABLE_ANGLE_STEP_DEG) {
+  if (!rawValues.length) return { values: [], adjusted: [] };
+  const values = rawValues.map((value, index) => tableAngleResolution(tableAngleNumber(value, index ? rawValues[index - 1] : 0)));
+  const original = [...values];
+  const terminalIndex = terminalTableAngleIndex(rows);
+
+  for (let index = 1; index < values.length; index += 1) {
+    if (values[index] <= values[index - 1] + SERVO_TABLE_ANGLE_EPSILON) {
+      values[index] = tableAngleResolution(values[index - 1] + minimumStep);
+    }
+  }
+
+  // End Curve is the final fixed boundary for a normal profile. If resolving
+  // duplicate rows pushes an earlier command into that boundary, work backward
+  // by the same 0.5-degree minimum instead of moving End Curve past 359 degrees.
+  if (terminalIndex > 0) {
+    const originalTerminal = tableAngleNumber(rawValues[terminalIndex], 359);
+    const terminalAngle = tableAngleResolution(Math.max(359, originalTerminal));
+    values[terminalIndex] = terminalAngle;
+    for (let index = terminalIndex - 1; index >= 0; index -= 1) {
+      const latestAllowed = tableAngleResolution(values[index + 1] - minimumStep);
+      if (values[index] >= values[index + 1] - SERVO_TABLE_ANGLE_EPSILON) values[index] = latestAllowed;
+    }
+  }
+
+  // One final forward pass guarantees that rounding never reintroduces an
+  // equal table angle. Every command row therefore owns a unique table angle.
+  for (let index = 1; index < values.length; index += 1) {
+    if (values[index] <= values[index - 1] + SERVO_TABLE_ANGLE_EPSILON) {
+      values[index] = tableAngleResolution(values[index - 1] + minimumStep);
+    }
+  }
+
+  const adjusted = values
+    .map((value, index) => Math.abs(value - original[index]) > SERVO_TABLE_ANGLE_EPSILON ? index : -1)
+    .filter((index) => index >= 0);
+  return { values, adjusted };
+}
+
+function normalizeServoProgramTableAngles(rows) {
+  const source = Array.isArray(rows) ? rows.map((row) => ({ ...row })) : [];
+  if (!source.length) return { rows: source, adjustedRows: [], minimumStep: SERVO_TABLE_ANGLE_STEP_DEG };
+
+  const generatedInput = source.map((row) => tableAngleNumber(row.generatedTableAngle, tableAngleNumber(row.tableAngle, 0)));
+  const generated = buildStrictlyIncreasingAngleSeries(generatedInput, source);
+  source.forEach((row, index) => {
+    row.originalGeneratedTableAngle = generatedInput[index];
+    row.generatedTableAngle = generated.values[index];
+  });
+
+  const finalInput = source.map((row, index) => Number.isFinite(Number(row.tableAngleOverride))
+    ? Number(row.tableAngleOverride)
+    : generated.values[index]);
+  const finalSeries = buildStrictlyIncreasingAngleSeries(finalInput, source);
+  const adjustedRows = new Set([...generated.adjusted, ...finalSeries.adjusted]);
+
+  source.forEach((row, index) => {
+    const finalAngle = finalSeries.values[index];
+    const hadOverride = Number.isFinite(Number(row.tableAngleOverride));
+    row.originalTableAngle = finalInput[index];
+    row.tableAngle = finalAngle;
+    row.strictTableAngleSequence = true;
+    row.tableAngleSequenceAdjusted = adjustedRows.has(index);
+    if (hadOverride && Math.abs(Number(row.tableAngleOverride) - finalAngle) > SERVO_TABLE_ANGLE_EPSILON) {
+      row.originalTableAngleOverride = Number(row.tableAngleOverride);
+      row.tableAngleOverride = finalAngle;
+      row.tableAngleOverrideAdjusted = true;
+    }
+  });
+
+  return {
+    rows: source,
+    adjustedRows: [...adjustedRows].map((index) => source[index]?.hmi ?? index + 1),
+    minimumStep: SERVO_TABLE_ANGLE_STEP_DEG
+  };
+}
+
+if (typeof applyGeneratedServoProfile === "function") {
+  const applyGeneratedServoProfileBeforeStrictAngles = applyGeneratedServoProfile;
+  applyGeneratedServoProfile = function applyGeneratedServoProfileWithStrictAngles(...args) {
+    const result = applyGeneratedServoProfileBeforeStrictAngles.apply(this, args);
+    const normalized = normalizeServoProgramTableAngles(state.program);
+    state.program = normalized.rows;
+    state.tableAngleSequence = {
+      valid: true,
+      minimumStep: normalized.minimumStep,
+      adjustedRows: normalized.adjustedRows,
+      adjustedCount: normalized.adjustedRows.length
+    };
+    return result;
+  };
+}
+
 function activeMotionPlannerProfileId() {
   return state.selectedMotionProfileId || state.defaultMotionProfileId || "automatic";
+}
+
+function selectedMotionPlannerProfile() {
+  if (typeof allMotionProfiles !== "function") return null;
+  const selectedId = activeMotionPlannerProfileId();
+  return allMotionProfiles().find((profile) => profile.id === selectedId) || allMotionProfiles()[0] || null;
+}
+
+function activeMotionPlannerMachineProfile(profile = selectedMotionPlannerProfile()) {
+  if (typeof resolveProfileMachine === "function") return resolveProfileMachine(profile);
+  return "DEFAULT";
 }
 
 function motionIntentDisplayName(intent) {
@@ -19,7 +153,12 @@ function currentMechanicalMotionPlan() {
   const planner = window.LabelerMotionPlannerDriver;
   if (!planner?.buildPlan) return null;
   const rows = typeof programSegments === "function" ? programSegments(state.program) : state.program;
-  return planner.buildPlan(rows, { profileId: activeMotionPlannerProfileId() });
+  const profile = selectedMotionPlannerProfile();
+  return planner.buildPlan(rows, {
+    profileId: activeMotionPlannerProfileId(),
+    machineProfile: activeMotionPlannerMachineProfile(profile),
+    customIntents: profile?.builtIn ? [] : profile?.intents || []
+  });
 }
 
 function installMotionPlannerUiStyles() {
@@ -35,7 +174,7 @@ function installMotionPlannerUiStyles() {
     .mechanical-timeline-summary { display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end; }
     .mechanical-timeline-summary span { padding:3px 6px;border:1px solid var(--line);border-radius:999px;background:var(--input);font-size:8px;white-space:nowrap; }
     .mechanical-timeline-track { display:flex;gap:4px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:thin; }
-    .mechanical-event { flex:0 0 126px;min-width:0;padding:5px;border:1px solid var(--line);border-radius:6px;background:var(--panel-hi); }
+    .mechanical-event { flex:0 0 136px;min-width:0;padding:5px;border:1px solid var(--line);border-radius:6px;background:var(--panel-hi); }
     .mechanical-event strong,.mechanical-event small,.mechanical-event span { display:block;overflow-wrap:anywhere; }
     .mechanical-event strong { font-size:9px;line-height:1.1; }
     .mechanical-event span { margin-top:2px;font-size:8px;color:var(--green);font-weight:700; }
@@ -55,16 +194,21 @@ function mechanicalTimelineMarkup(plan) {
   const summary = Object.entries(plan.summary || {})
     .map(([intent, count]) => `<span>${motionIntentDisplayName(intent)} ${count}</span>`)
     .join("");
+  const angleSummary = state.tableAngleSequence?.adjustedCount
+    ? `<span>Angles repaired ${state.tableAngleSequence.adjustedCount}</span>`
+    : `<span>Angles strictly increasing</span>`;
   const events = plan.steps.map((step) => {
     const row = (typeof programSegments === "function" ? programSegments(state.program) : state.program)[step.index] || {};
-    return `<article class="mechanical-event" title="${String(step.reason || "").replace(/"/g, "&quot;")}">
-      <strong>${Number.isFinite(step.tableAngle) ? `${step.tableAngle.toFixed(1)} deg` : "--"} • HMI ${step.hmi}</strong>
-      <span>${commandDisplayForPlannerRow(row)} • ${motionIntentDisplayName(step.intent)}</span>
-      <small>${step.action || "Mechanical event"}</small>
+    const recommendation = Number.isFinite(Number(step.recommendedCommand)) ? ` → CMD ${step.recommendedCommand}` : "";
+    const fallback = step.fallbackUsed ? " • fallback" : "";
+    return `<article class="mechanical-event" title="${String(step.fallbackReason || step.reason || "").replace(/"/g, "&quot;")}">
+      <strong>${step.eventId || `EV${String(step.index + 1).padStart(3, "0")}`} • ${Number.isFinite(step.tableAngle) ? `${step.tableAngle.toFixed(1)} deg` : "--"}</strong>
+      <span>${commandDisplayForPlannerRow(row)} • ${motionIntentDisplayName(step.intent)}${recommendation}${fallback}</span>
+      <small>${step.action || step.eventType || "Mechanical event"}</small>
     </article>`;
   }).join("");
   return `<section class="mechanical-timeline" aria-label="Mechanical motion timeline">
-    <div class="mechanical-timeline-head"><div><h3>Mechanical Timeline</h3><p>Generated CMD lines remain visible. The planner intent is shown beside each command and action.</p></div><div class="mechanical-timeline-summary">${summary}</div></div>
+    <div class="mechanical-timeline-head"><div><h3>Mechanical Timeline</h3><p>Every CMD row has a unique, continuously increasing table angle.</p></div><div class="mechanical-timeline-summary">${angleSummary}${summary}</div></div>
     <div class="mechanical-timeline-track">${events}</div>
   </section>`;
 }
@@ -90,7 +234,8 @@ function applyPlannerToProgramTable(plan) {
     wrapper.appendChild(actionInput);
     actionInput.value = originalAction;
     tr.dataset.motionIntent = step.intent;
-    tr.title = `${commandDisplayForPlannerRow(row)} • ${motionIntentDisplayName(step.intent)} • ${step.reason}`;
+    tr.dataset.motionEventId = step.eventId || "";
+    tr.title = `${step.eventId || "Event"} • ${commandDisplayForPlannerRow(row)} • ${motionIntentDisplayName(step.intent)} • ${step.reason}`;
   });
 }
 
@@ -99,7 +244,7 @@ function enhanceProgramWithMotionPlanner() {
   const program = document.querySelector("#program");
   if (!program) return;
   const plan = currentMechanicalMotionPlan();
-  state.motionPlan = plan;
+  state.plannerPreview = plan;
   program.querySelector(".mechanical-timeline")?.remove();
   const table = program.querySelector(":scope > table");
   if (table && plan) table.insertAdjacentHTML("beforebegin", mechanicalTimelineMarkup(plan));
@@ -114,3 +259,5 @@ if (typeof renderProgram === "function") {
     return result;
   };
 }
+
+updateRuntimeApplicationVersion();
