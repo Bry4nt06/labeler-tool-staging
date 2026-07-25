@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="application-version" content="0.7.91" />
+    <meta name="application-version" content="0.7.92" />
     <meta name="update-manifest-url" content="./update-manifest.json" />
     <meta name="theme-color" content="#9a4f00" />
     <title>ServoForge Labeler — STAGING</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/labeler-tool-icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=0.7.91" />
+    <link rel="stylesheet" href="styles.css?v=0.7.92" />
   </head>
   <body><div class="staging-environment-banner" role="status">STAGING / TEST BUILD — NOT PRODUCTION</div>
     <main class="app">
@@ -43,24 +43,13 @@
             </label>
             <button id="saveSettings" type="button">Save Settings</button>
             <button id="checkForUpdates" type="button">Check for Updates</button>
-            <output id="updateCheckStatus" class="update-check-status" aria-live="polite">Version 0.7.91 • Updates are checked automatically.</output>
+            <output id="updateCheckStatus" class="update-check-status" aria-live="polite">Version 0.7.92 • Updates are checked automatically.</output>
             <button id="exportSettings" type="button">Export Settings</button>
             <label class="file-action">Import Settings<input id="importSettings" type="file" accept="application/json,.json" /></label>
             <button id="exportJson" type="button">Export JSON</button>
             <label class="file-action">Import Fault JSON<input id="importFaultConfig" type="file" accept="application/json,.json" /></label>
             <button id="exportCsv" type="button">Export CSV</button>
             <a id="giveFeedback" class="feedback-action" href="mailto:jeremy.bryant@anheuser-busch.com?subject=ServoForge%20Labeler%20Feedback">Give Some Feedback</a>
-          </div>
-        </details>
-        <details id="developerMenu" class="top-settings-menu developer-menu">
-          <summary>Configure</summary>
-          <div class="actions top-settings-panel developer-panel">
-            <div class="developer-menu-heading"><strong>Developer Menu</strong><small>Staging only. Manage the zones and sites available in Build Inputs.</small></div>
-            <div id="developerZoneSiteEditor" class="zone-site-editor"></div>
-            <div class="developer-menu-actions">
-              <button id="exportZoneSiteConfig" type="button">Export Zone/Site Config</button>
-              <label class="file-action">Import Zone/Site Config<input id="importZoneSiteConfig" type="file" accept="application/json,.json" /></label>
-            </div>
           </div>
         </details>
       </section>

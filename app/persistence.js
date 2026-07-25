@@ -72,7 +72,7 @@ function loadSavedSettings() {
     if (Array.isArray(saved.servoProfileLibrary)) state.servoProfileLibrary = saved.servoProfileLibrary;
     if (typeof saved.activeServoProfileId === "string") state.activeServoProfileId = saved.activeServoProfileId;
     if (Array.isArray(saved.machineTypes)) {
-      state.machineTypes = [...new Set(["TopMatic", "Autocol", "TopModul", "MultiModul", ...saved.machineTypes.map((value) => String(value).trim()).filter(Boolean)])];
+      state.machineTypes = [...new Set(["TopMatic", "Autocol", "TopModul", ...saved.machineTypes.map((value) => String(value).trim()).filter(Boolean)])];
     }
     if (Array.isArray(saved.coldGlueMap)) state.coldGlueMap = normalizeColdGlueMap(saved.coldGlueMap);
     if (saved.coldGlueAggregateSettings && typeof saved.coldGlueAggregateSettings === "object") state.coldGlueAggregateSettings = deepClone(saved.coldGlueAggregateSettings);
@@ -213,7 +213,7 @@ function saveCurrentSettings() {
   window.setTimeout(() => { els.saveSettings.textContent = "Save Settings"; }, 1100);
 }
 
-const COMPANY_SETTINGS_SEED_VERSION = 3;
+const COMPANY_SETTINGS_SEED_VERSION = 1;
 const COMPANY_SETTINGS_SEED_KEY = "labelerCompanySettingsSeedVersion";
 
 function normalizedSeedKey(value) {
@@ -243,18 +243,6 @@ async function applyCompanySettingsSeed() {
     if (!seeded || typeof seeded !== "object") throw new Error("Company settings are invalid.");
 
     const hasUserSettings = Boolean(readStorage(SETTINGS_KEY));
-    // v0.7.75 introduced the OW Green package with an incorrect 12 oz display
-    // name. Preserve the seeded records and any user edits while correcting
-    // only those exact library identities to their proper 330 ml designation.
-    const stella330Map = state.mapLibrary?.find((item) => item?.id === "map-stella-12oz-ow-green-center-tack");
-    if (stella330Map && stella330Map.name === "60H CG Stella 12oz Center Tack") {
-      stella330Map.name = "60H CG Stella 330ml Center Tack";
-    }
-    const stella330Label = state.labelSpecs?.find((item) =>
-      item?.brand === "Stella 12oz OW Green - 3 Label"
-      && item?.bottleType === "Stella OW Green 330ml"
-    );
-    if (stella330Label) stella330Label.brand = "Stella 330ml OW Green - 3 Label";
     if (!hasUserSettings) {
       if (!writeStorage(SETTINGS_KEY, JSON.stringify(seeded))) throw new Error("Browser storage is unavailable.");
       loadSavedSettings();
@@ -297,11 +285,7 @@ function showPendingToolUpdate(worker) {
 async function registerToolUpdateService() {
   if (!("serviceWorker" in navigator) || window.location.protocol === "file:") return;
   try {
-    const currentVersion = document.querySelector('meta[name="application-version"]')?.content || "current";
-    updateServiceWorkerRegistration = await navigator.serviceWorker.register(`./service-worker.js?v=${encodeURIComponent(currentVersion)}`, {
-      scope: "./",
-      updateViaCache: "none"
-    });
+    updateServiceWorkerRegistration = await navigator.serviceWorker.register("./service-worker.js", { scope: "./" });
     if (updateServiceWorkerRegistration.waiting) showPendingToolUpdate(updateServiceWorkerRegistration.waiting);
     updateServiceWorkerRegistration.addEventListener("updatefound", () => {
       const installing = updateServiceWorkerRegistration.installing;
