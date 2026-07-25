@@ -1,7 +1,7 @@
 "use strict";
 
 (function installMilestonesSixAndSeven() {
-  const RELEASE_VERSION = "0.8.0";
+  const RELEASE_VERSION = "0.8.2";
   const RETRY_MS = 25;
   let installed = false;
 
