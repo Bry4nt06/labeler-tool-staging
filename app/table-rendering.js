@@ -153,6 +153,7 @@ function renderLabelSpecs() {
 }
 
 function renderBuildInputs() {
+  ensureSelectedZoneAndSite();
   const availableLabels = labelSpecsForApplication();
   const brandOptions = availableLabels.map((spec) => spec.brand).filter(Boolean);
   const bottleOptions = state.bottleSpecs.map((spec) => spec.bottleType).filter(Boolean);
@@ -207,6 +208,10 @@ function renderBuildInputs() {
       <div class="build-card">
         <h2>Build Program Inputs</h2>
         <div class="application-filter-note">Showing ${state.applicationMode === "cold-glue" ? "Cold Glue" : "APL"} brand profiles only.</div>
+        <div class="zone-site-selection">
+          <label>Zone <select id="zoneSelect">${optionList(zoneNames(), state.selectedZone)}</select></label>
+          <label>Site <select id="siteSelect"${sitesForZone(state.selectedZone).length ? "" : " disabled"}>${sitesForZone(state.selectedZone).length ? optionList(sitesForZone(state.selectedZone), state.selectedSite) : '<option value="">No sites configured</option>'}</select></label>
+        </div>
         <label>Brand <select id="brandSelect"${brandOptions.length ? "" : " disabled"}>${brandOptions.length ? optionList(brandOptions, state.selectedBrand) : `<option value="">No ${state.applicationMode === "cold-glue" ? "Cold Glue" : "APL"} brands assigned</option>`}</select></label>
         <label>Bottle Type <select id="bottleSelect">${optionList(bottleOptions, state.selectedBottle)}</select></label>
         <h3>Label &amp; Bottle Geometry</h3>
@@ -232,6 +237,18 @@ function renderBuildInputs() {
 
   const brandSelect = els.buildInputs.querySelector("#brandSelect");
   const bottleSelect = els.buildInputs.querySelector("#bottleSelect");
+  const zoneSelect = els.buildInputs.querySelector("#zoneSelect");
+  const siteSelect = els.buildInputs.querySelector("#siteSelect");
+  zoneSelect?.addEventListener("change", () => {
+    state.selectedZone = zoneSelect.value;
+    ensureSelectedZoneAndSite();
+    saveCurrentSettings();
+    render();
+  });
+  siteSelect?.addEventListener("change", () => {
+    state.selectedSite = siteSelect.value;
+    saveCurrentSettings();
+  });
   brandSelect.addEventListener("change", () => {
     state.selectedBrand = brandSelect.value;
     const label = selectedLabelSpec();
