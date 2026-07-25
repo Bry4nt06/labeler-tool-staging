@@ -160,8 +160,6 @@
       const worker = registration.waiting || await workerPromise;
       if (applyWaitingWorker(registration.waiting || worker)) return;
 
-      // The service worker may activate immediately. Keep the update in the same
-      // window and force a cache-busted navigation rather than opening a new tab.
       if (typeof saveCurrentSettings === "function") saveCurrentSettings();
       setUpdateUi(`Opening version ${latestVersion}…`, "Applying Update", true);
       const nextUrl = new URL(window.location.href);
@@ -173,4 +171,16 @@
       console.error("Update check failed", error);
     }
   };
+})();
+
+(function loadMilestonesSixAndSeven() {
+  if (window.LabelerMechanicalEventPlannerDriver) return;
+  const plannerScript = document.createElement("script");
+  plannerScript.src = "drivers/planning/mechanical-event-planner-driver.js?v=0.8.0";
+  plannerScript.addEventListener("load", () => {
+    const integrationScript = document.createElement("script");
+    integrationScript.src = "app/milestone-6-7-integration.js?v=0.8.0";
+    document.head.appendChild(integrationScript);
+  });
+  document.head.appendChild(plannerScript);
 })();
