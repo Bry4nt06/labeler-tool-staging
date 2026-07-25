@@ -398,7 +398,7 @@ function mapsForMapLibraryLocation() {
 
 function createMachineMap({ id, name, zone, site, machineType, applicationMode, headCount, aggregateCount, stationCount, enabledAggregates, enabledStations, aggregateAngles, stationAngles, stationSections, objects, depths, machineSettings, coldGlueProfile, restoreDefaultObjects = true, isTemplate = false, blankSeedVersion = 0 } = {}) {
   const normalizedMachineType = String(machineType || "TopModul");
-  const mode = normalizedMachineType.toLowerCase() === "multimodul" ? "apl" : applicationMode === "cold-glue" ? "cold-glue" : "apl";
+  const mode = applicationMode === "cold-glue" ? "cold-glue" : "apl";
   const aggregates = Math.max(1, Math.min(6, Math.round(num(aggregateCount, mode === "cold-glue" ? 3 : 6))));
   const stations = Math.max(1, Math.min(6, Math.round(num(stationCount, aggregates))));
   const sourceObjects = Array.isArray(objects)
@@ -466,7 +466,6 @@ function editableMachineMap() {
 }
 
 function inferredMachineMapApplicationMode(map) {
-  if (String(map?.machineType || "").trim().toLowerCase() === "multimodul") return "apl";
   if (map?.applicationMode === "cold-glue") return "cold-glue";
   const name = String(map?.name || "");
   return /cold[ -]?glue/i.test(name) || /(^|[\s_-])cg([\s_-]|$)/i.test(name) ? "cold-glue" : "apl";
@@ -853,10 +852,9 @@ function renderMapLibraryControls() {
   }
   if (els.newMachineMap) els.newMachineMap.disabled = libraryLocation.zone === "ALL";
   if (els.applicationMode) {
-    const multiModul = String(map.machineType || "").trim().toLowerCase() === "multimodul";
-    els.applicationMode.value = multiModul ? "apl" : state.applicationMode;
-    els.applicationMode.disabled = multiModul;
-    els.applicationMode.title = multiModul ? "MultiModul is an APL labeler." : "";
+    els.applicationMode.value = state.applicationMode;
+    els.applicationMode.disabled = false;
+    els.applicationMode.title = "";
   }
   if (els.mapHeadCount) els.mapHeadCount.value = map.headCount;
   if (els.mapMachineType) {
@@ -1145,9 +1143,7 @@ function saveMapDefinitionFromControls(event) {
   state.mapLibraryZone = proposedZone;
   state.mapLibrarySite = proposedSite;
   map.machineType = String(els.mapMachineType?.value || map.machineType || "TopModul").trim() || "TopModul";
-  state.applicationMode = map.machineType.toLowerCase() === "multimodul"
-    ? "apl"
-    : els.applicationMode?.value === "cold-glue" ? "cold-glue" : "apl";
+  state.applicationMode = els.applicationMode?.value === "cold-glue" ? "cold-glue" : "apl";
   map.applicationMode = state.applicationMode;
   if (map.applicationMode === "cold-glue") {
     map.objects = normalizeColdGlueMap(map.objects);
@@ -1221,10 +1217,6 @@ function bindWipeDownBuilder() {
     const labels = String(window.prompt("Label order by station (comma separated):", stations === 3 ? "neck,body,back" : "neck,neck,body,body,back,back") || "").split(",").map((value) => value.trim().toLowerCase());
     recordBuilderHistory("Guided map setup");
     map.machineType = machineType;
-    if (machineType.toLowerCase() === "multimodul") {
-      map.applicationMode = "apl";
-      state.applicationMode = "apl";
-    }
     map.headCount = headCount;
     map.enabledAggregates = Array.from({ length: 6 }, (_, index) => index < stations);
     map.enabledStations = Array.from({ length: 6 }, (_, index) => index < stations);
