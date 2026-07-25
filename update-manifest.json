@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.8.3",
+  "version": "0.8.4",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Consolidates update handling into the staging bootstrap. Update checks no longer wait for a service-worker installing or waiting state. The app saves settings, removes stale staging workers and caches, and reloads the release in the same browser window."
+  "notes": "STAGING TEST BUILD — Publishes a single authoritative 0.8.4 application shell and unified same-window update manager. Every application asset is cache-busted with the release version, the HTML metadata and Settings version agree, stale staging workers and caches are removed during an update, and the updater no longer waits for service-worker installation before navigating to the release."
 }
