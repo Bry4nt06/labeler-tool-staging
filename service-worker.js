@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "servoforge-labeler-staging-v0.7.98";
+const CACHE_NAME = "servoforge-labeler-staging-v0.7.99";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -37,6 +37,7 @@ const APP_FILES = [
   "./app/motion-planner-ui.js",
   "./app/profile-translator-integration.js",
   "./app/servo-pipeline-validator-integration.js",
+  "./app/simulator-milestone.js",
   "./app/update-service-fix.js"
 ];
 
