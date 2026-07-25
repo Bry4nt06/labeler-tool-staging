@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.92",
+  "version": "0.7.93",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Promotes the tested Zone/Site map workflow, MultiModul application selection, and neck-to-body servo transition improvements."
+  "notes": "STAGING TEST BUILD — Adds the mechanical motion planner, mechanical timeline, planner intent classification, and CMD visibility within the Action column. Existing program generation remains CMD 3/CMD 7 while the new planning layer is validated."
 }
