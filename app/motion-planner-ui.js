@@ -1,8 +1,10 @@
 "use strict";
 
-const STAGING_APPLICATION_VERSION = "0.7.96";
+const STAGING_APPLICATION_VERSION = "0.7.97";
 const SERVO_TABLE_ANGLE_STEP_DEG = 0.5;
 const SERVO_TABLE_ANGLE_EPSILON = 0.0001;
+const MAP_ARC_EPSILON_DEG = 0.001;
+const MAP_PAD_VISUAL_MAX_EXTENSION = 36;
 
 function updateRuntimeApplicationVersion() {
   const versionMeta = document.querySelector('meta[name="application-version"]');
@@ -264,13 +266,67 @@ if (typeof renderProgram === "function") {
   };
 }
 
+function installSafeWipeDownPadRendering() {
+  if (typeof angleToXY !== "function" || typeof arcPath !== "function") return;
+
+  arcPath = function safeMapArcPath(startAngle, endAngle, innerRadius, outerRadius) {
+    const start = tableAngleNumber(startAngle, 0);
+    const end = tableAngleNumber(endAngle, start);
+    const rawSpan = end - start;
+    let span = ((rawSpan % 360) + 360) % 360;
+    if (Math.abs(rawSpan) <= MAP_ARC_EPSILON_DEG) span = MAP_ARC_EPSILON_DEG;
+    else if (span <= MAP_ARC_EPSILON_DEG) span = 359.999;
+
+    const resolvedEnd = start + span;
+    const requestedInner = tableAngleNumber(innerRadius, 1);
+    const requestedOuter = tableAngleNumber(outerRadius, requestedInner + 1);
+    const safeInner = Math.max(1, Math.min(requestedInner, requestedOuter - 0.5));
+    const safeOuter = Math.max(safeInner + 0.5, Math.max(requestedInner, requestedOuter));
+    const startOuter = angleToXY(start, safeOuter);
+    const endOuter = angleToXY(resolvedEnd, safeOuter);
+    const startInner = angleToXY(start, safeInner);
+    const endInner = angleToXY(resolvedEnd, safeInner);
+    const largeArc = span > 180 ? 1 : 0;
+    const sweepOuter = state.direction === "cw" ? 0 : 1;
+    const sweepInner = sweepOuter ? 0 : 1;
+    return [
+      `M ${startOuter.x} ${startOuter.y}`,
+      `A ${safeOuter} ${safeOuter} 0 ${largeArc} ${sweepOuter} ${endOuter.x} ${endOuter.y}`,
+      `L ${endInner.x} ${endInner.y}`,
+      `A ${safeInner} ${safeInner} 0 ${largeArc} ${sweepInner} ${startInner.x} ${startInner.y}`,
+      "Z"
+    ].join(" ");
+  };
+
+  if (typeof drawConfiguredAssemblies !== "function" || drawConfiguredAssemblies.safePadRenderingInstalled) return;
+  const drawConfiguredAssembliesBeforePadSafety = drawConfiguredAssemblies;
+  const safeDrawConfiguredAssemblies = function drawConfiguredAssembliesWithSafePads(add, layer) {
+    if (state.applicationMode !== "apl" || !Array.isArray(state.aplMapObjects)) {
+      return drawConfiguredAssembliesBeforePadSafety(add, layer);
+    }
+    const originalObjects = state.aplMapObjects;
+    state.aplMapObjects = originalObjects.map((item) => {
+      if (item?.kind !== "pad") return item;
+      const extension = Math.max(4, Math.min(MAP_PAD_VISUAL_MAX_EXTENSION, tableAngleNumber(item.extension, 20)));
+      return { ...item, extension };
+    });
+    try {
+      return drawConfiguredAssembliesBeforePadSafety(add, layer);
+    } finally {
+      state.aplMapObjects = originalObjects;
+    }
+  };
+  safeDrawConfiguredAssemblies.safePadRenderingInstalled = true;
+  drawConfiguredAssemblies = safeDrawConfiguredAssemblies;
+}
+
 function loadProfileTranslatorRelease() {
   if (window.LabelerProfileTranslatorDriver) return;
   const driverScript = document.createElement("script");
-  driverScript.src = "drivers/translation/profile-translator-driver.js?v=0.7.96";
+  driverScript.src = "drivers/translation/profile-translator-driver.js?v=0.7.97";
   driverScript.addEventListener("load", () => {
     const integrationScript = document.createElement("script");
-    integrationScript.src = "app/profile-translator-integration.js?v=0.7.96";
+    integrationScript.src = "app/profile-translator-integration.js?v=0.7.97";
     integrationScript.addEventListener("load", () => {
       if (typeof render === "function") render();
     });
@@ -279,5 +335,6 @@ function loadProfileTranslatorRelease() {
   document.head.appendChild(driverScript);
 }
 
+installSafeWipeDownPadRendering();
 updateRuntimeApplicationVersion();
 loadProfileTranslatorRelease();
