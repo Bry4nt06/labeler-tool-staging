@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "servoforge-labeler-staging-v0.7.93";
+const CACHE_NAME = "servoforge-labeler-staging-v0.7.94";
 const APP_FILES = [
   "./",
   "./index.html",
