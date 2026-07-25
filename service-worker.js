@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "servoforge-labeler-staging-v0.8.0";
+const CACHE_NAME = "servoforge-labeler-staging-v0.8.1";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -44,7 +44,16 @@ const APP_FILES = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES)));
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => Promise.all(APP_FILES.map(async (path) => {
+        const request = new Request(path, { cache: "reload" });
+        const response = await fetch(request);
+        if (!response.ok) throw new Error(`Unable to cache ${path}: ${response.status}`);
+        await cache.put(request, response.clone());
+      })))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (event) => {
@@ -62,7 +71,7 @@ self.addEventListener("message", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET" || new URL(event.request.url).origin !== self.location.origin) return;
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: "no-store" })
       .then((response) => {
         if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()));
         return response;
