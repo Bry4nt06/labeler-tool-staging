@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.8.0",
+  "version": "0.8.1",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Milestones 6 and 7 are combined. TopModul validation now accepts correction chains in the form CMD 3 → one or more CMD 7 commands → CMD 3, removing the incorrect immediate-reference errors while still detecting unreferenced, interrupted, empty, or unclosed chains. The planner now builds a mechanical-event timeline with stable event IDs, process IDs, aggregate and label-section ownership, stages, map-object links, start/target angles, correction-chain IDs, and event-driven motion intents before command translation."
+  "notes": "STAGING TEST BUILD — Fixes the in-app updater so updates activate automatically and reload the current window. The updater no longer depends on an Open latest version link, no longer opens a new tab, saves current settings before activation, cache-busts the same-window reload, and forces the new service worker to take control immediately."
 }
