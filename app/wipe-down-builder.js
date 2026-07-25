@@ -369,9 +369,15 @@ function mapLibraryLocation() {
   ensureSelectedZoneAndSite();
   const active = state.mapLibrary.find((map) => map.id === state.activeMapId) || state.mapLibrary[0];
   const fallback = mapLocationFor(active);
-  const zone = zoneNames().includes(normalizedZoneSiteName(state.mapLibraryZone))
+  const requestedZone = normalizedZoneSiteName(state.mapLibraryZone);
+  const zone = requestedZone === "ALL" || zoneNames().includes(requestedZone)
     ? normalizedZoneSiteName(state.mapLibraryZone)
     : fallback.zone;
+  if (zone === "ALL") {
+    state.mapLibraryZone = "ALL";
+    state.mapLibrarySite = "";
+    return { zone: "ALL", site: "" };
+  }
   const sites = sitesForZone(zone);
   const site = sites.includes(normalizedZoneSiteName(state.mapLibrarySite))
     ? normalizedZoneSiteName(state.mapLibrarySite)
@@ -383,6 +389,7 @@ function mapLibraryLocation() {
 
 function mapsForMapLibraryLocation() {
   const location = mapLibraryLocation();
+  if (location.zone === "ALL") return [...state.mapLibrary];
   return state.mapLibrary.filter((entry) => {
     const entryLocation = mapLocationFor(entry);
     return entryLocation.zone === location.zone && entryLocation.site === location.site;
@@ -838,12 +845,13 @@ function renderMapLibraryControls() {
   }
   if (els.mapLibrarySummary) els.mapLibrarySummary.textContent = `${map.machineType || "TopModul"} • ${map.name} • ${map.headCount} heads • ${map.aggregateCount} aggregate${map.aggregateCount === 1 ? "" : "s"}`;
   if (els.mapName) els.mapName.value = map.name;
-  if (els.mapZone) els.mapZone.innerHTML = optionList(zoneNames(), libraryLocation.zone);
+  if (els.mapZone) els.mapZone.innerHTML = optionList(["ALL", ...zoneNames()], libraryLocation.zone);
   if (els.mapSite) {
     const sites = sitesForZone(libraryLocation.zone);
-    els.mapSite.disabled = !sites.length;
-    els.mapSite.innerHTML = sites.length ? optionList(sites, libraryLocation.site) : '<option value="">No sites configured</option>';
+    els.mapSite.disabled = libraryLocation.zone === "ALL" || !sites.length;
+    els.mapSite.innerHTML = libraryLocation.zone === "ALL" ? '<option value="">All sites</option>' : sites.length ? optionList(sites, libraryLocation.site) : '<option value="">No sites configured</option>';
   }
+  if (els.newMachineMap) els.newMachineMap.disabled = libraryLocation.zone === "ALL";
   if (els.applicationMode) {
     const multiModul = String(map.machineType || "").trim().toLowerCase() === "multimodul";
     els.applicationMode.value = multiModul ? "apl" : state.applicationMode;
@@ -1126,6 +1134,7 @@ function saveMapDefinitionFromControls(event) {
   const proposedName = String(els.mapName?.value || map.name).trim() || map.name;
   const proposedZone = normalizedZoneSiteName(els.mapZone?.value) || mapLocationFor(map).zone;
   const proposedSite = normalizedZoneSiteName(els.mapSite?.value) || sitesForZone(proposedZone)[0] || "";
+  if (proposedZone === "ALL") { window.alert("Select a specific Zone and Site before saving a map."); return; }
   if (explicitSave && !window.confirm(`Save map "${proposedName}" to ${proposedZone || "No Zone"} / ${proposedSite || "No Site"}?`)) return;
   const previousLimit = activeAplStationLimit(map);
   map.name = proposedName;
@@ -1253,7 +1262,7 @@ function bindWipeDownBuilder() {
   els.mapMachineType?.addEventListener("change", saveMapDefinitionFromControls);
   els.mapZone?.addEventListener("change", () => {
     state.mapLibraryZone = normalizedZoneSiteName(els.mapZone.value) || mapLibraryLocation().zone;
-    state.mapLibrarySite = sitesForZone(state.mapLibraryZone)[0] || "";
+    state.mapLibrarySite = state.mapLibraryZone === "ALL" ? "" : sitesForZone(state.mapLibraryZone)[0] || "";
     const maps = mapsForMapLibraryLocation();
     if (maps.length) loadMachineMapIntoRuntime(maps[0], true);
     renderMapLibraryControls();
