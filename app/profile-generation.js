@@ -754,11 +754,6 @@ function generatedAplMapDrivenProfile(machineMap) {
   const moveToReference = (tableAngle, targetPlate, action, extra = {}) => {
     const targetTable = unwrapAfter(tableAngle, lastTable);
     const rotation = targetPlate - plate;
-    if (extra.singleMotion) {
-      add(7, targetTable, targetPlate, action, { ...extra, plannedRotation: rotation });
-      plate = targetPlate;
-      return;
-    }
     if (Math.abs(rotation) <= 0.001) {
       if (!motionStarted) add(3, targetTable, plate, action, extra);
       return;
@@ -859,17 +854,7 @@ function generatedAplMapDrivenProfile(machineMap) {
     if (!wipe || !selectedLabelApplicationState()[section]) return;
     const aggregate = scaleMapAngle(num(machineMap.aggregateAngles?.[String(station)], num(machineMap.stationAngles?.[String(station)], 0)));
     const applicationPoint = aggregate - scaleMapSpan(num(profileTiming.spenderArriveEarly, 7.5));
-    const previousEntry = orderedStationGroups.slice(0, stationIndex).reverse().find(([previousStation]) => {
-      const previousSection = sections[String(previousStation)] || labelSectionForStation(previousStation);
-      return selectedLabelApplicationState()[previousSection];
-    });
-    const previousSection = previousEntry ? (sections[String(previousEntry[0])] || labelSectionForStation(previousEntry[0])) : "";
-    const bottleSetupForBody = previousSection === "neck" && section === "body";
-    moveToReference(applicationPoint, targets[section], bottleSetupForBody
-      ? `Bottle Setup for Body Application - Agg ${station}`
-      : `Hold for ${sectionLabel(section)} Application - Agg ${station}`, {
-      station, section, singleMotion: bottleSetupForBody, phaseTransition: bottleSetupForBody ? "neck-to-body" : undefined
-    });
+    moveToReference(applicationPoint, targets[section], `Hold for ${sectionLabel(section)} Application - Agg ${station}`, { station, section });
 
     const nextEntry = orderedStationGroups.slice(stationIndex + 1).find(([nextStation]) => {
       const nextSection = sections[String(nextStation)] || labelSectionForStation(nextStation);
@@ -907,12 +892,18 @@ function generatedAplMapDrivenProfile(machineMap) {
       }
       if (outside) moves.push(applyTurn(outside.start, outside.end, longNeckPlan?.outsideRotation ?? required, `Wipe Turn 1 ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: "outer" }));
       if (inside) {
-        // Finish the neck reversal while the bottle is physically touching the
-        // inside roller. The following station iteration creates a separate
-        // orientation move for the next label; merging that target here would
-        // spread part of the neck wipe into the open gap after this roller.
-        const secondRotation = -(longNeckPlan?.insideRotation ?? required);
-        moves.push(applyTurn(inside.start, inside.end, secondRotation, `Wipe Turn 2 ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: "inner" }));
+        // At the neck-to-body boundary, finish the neck wipe at the body's
+        // required bottle angle. The terminal CMD 3 is a Rest, so the next
+        // body wipe starts directly from that orientation without a setup row.
+        const neckToBody = section === "neck" && sectionBoundary?.section === "body";
+        const nextWipeStart = neckToBody
+          ? Math.min(...(nextEntry?.[1] || []).filter((item) => item.kind === "roller" || item.kind === "pad").map((item) => num(item.start, Infinity)))
+          : NaN;
+        const transitionEnd = Number.isFinite(nextWipeStart) ? nextWipeStart - 1.5 : inside.end;
+        const secondRotation = neckToBody ? sectionBoundary.plateAngle - plate : -(longNeckPlan?.insideRotation ?? required);
+        moves.push(applyTurn(inside.start, transitionEnd, secondRotation, `Wipe Turn 2 ${sectionLabel(section)} - Agg ${station}`, {
+          station, section, stage: "inner", endAction: neckToBody ? "Rest" : undefined, phaseTransition: neckToBody ? "neck-to-body" : undefined
+        }));
       }
     } else {
       const outsidePad = contactRange(preferredObjects.filter((item) => item.side !== "inner"));
