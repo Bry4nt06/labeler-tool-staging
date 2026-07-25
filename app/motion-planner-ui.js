@@ -1,6 +1,6 @@
 "use strict";
 
-const STAGING_APPLICATION_VERSION = "0.7.95";
+const STAGING_APPLICATION_VERSION = "0.7.96";
 const SERVO_TABLE_ANGLE_STEP_DEG = 0.5;
 const SERVO_TABLE_ANGLE_EPSILON = 0.0001;
 
@@ -8,9 +8,7 @@ function updateRuntimeApplicationVersion() {
   const versionMeta = document.querySelector('meta[name="application-version"]');
   if (versionMeta) versionMeta.content = STAGING_APPLICATION_VERSION;
   const status = document.querySelector("#updateCheckStatus");
-  if (status && /Version\s+0\.7\.(?:93|94)/i.test(status.textContent || "")) {
-    status.textContent = `Version ${STAGING_APPLICATION_VERSION} • Updates are checked automatically.`;
-  }
+  if (status) status.textContent = `Version ${STAGING_APPLICATION_VERSION} • Updates are checked automatically.`;
 }
 
 function tableAngleNumber(value, fallback = null) {
@@ -49,9 +47,6 @@ function buildStrictlyIncreasingAngleSeries(rawValues, rows, minimumStep = SERVO
     }
   }
 
-  // End Curve is the final fixed boundary for a normal profile. If resolving
-  // duplicate rows pushes an earlier command into that boundary, work backward
-  // by the same 0.5-degree minimum instead of moving End Curve past 359 degrees.
   if (terminalIndex > 0) {
     const originalTerminal = tableAngleNumber(rawValues[terminalIndex], 359);
     const terminalAngle = tableAngleResolution(Math.max(359, originalTerminal));
@@ -62,8 +57,6 @@ function buildStrictlyIncreasingAngleSeries(rawValues, rows, minimumStep = SERVO
     }
   }
 
-  // One final forward pass guarantees that rounding never reintroduces an
-  // equal table angle. Every command row therefore owns a unique table angle.
   for (let index = 1; index < values.length; index += 1) {
     if (values[index] <= values[index - 1] + SERVO_TABLE_ANGLE_EPSILON) {
       values[index] = tableAngleResolution(values[index - 1] + minimumStep);
@@ -87,9 +80,6 @@ function normalizeServoProgramTableAngles(rows) {
     row.generatedTableAngle = generated.values[index];
   });
 
-  // Null, undefined and blank override fields are not numeric overrides.
-  // Number(null) equals zero in JavaScript, which previously filled every
-  // blank override box with the artificial 0.5-degree repair sequence.
   const finalInput = source.map((row, index) => hasExplicitTableAngleOverride(row.tableAngleOverride)
     ? Number(row.tableAngleOverride)
     : generated.values[index]);
@@ -274,4 +264,20 @@ if (typeof renderProgram === "function") {
   };
 }
 
+function loadProfileTranslatorRelease() {
+  if (window.LabelerProfileTranslatorDriver) return;
+  const driverScript = document.createElement("script");
+  driverScript.src = "drivers/translation/profile-translator-driver.js?v=0.7.96";
+  driverScript.addEventListener("load", () => {
+    const integrationScript = document.createElement("script");
+    integrationScript.src = "app/profile-translator-integration.js?v=0.7.96";
+    integrationScript.addEventListener("load", () => {
+      if (typeof render === "function") render();
+    });
+    document.head.appendChild(integrationScript);
+  });
+  document.head.appendChild(driverScript);
+}
+
 updateRuntimeApplicationVersion();
+loadProfileTranslatorRelease();
