@@ -352,7 +352,20 @@ function inferAplStationSections(machineMap) {
   return result;
 }
 
-function createMachineMap({ id, name, machineType, applicationMode, headCount, aggregateCount, stationCount, enabledAggregates, enabledStations, aggregateAngles, stationAngles, stationSections, objects, depths, machineSettings, coldGlueProfile, restoreDefaultObjects = true, isTemplate = false, blankSeedVersion = 0 } = {}) {
+function mapLocationFor(map) {
+  ensureSelectedZoneAndSite();
+  const zone = zoneNames().includes(normalizedZoneSiteName(map?.zone)) ? normalizedZoneSiteName(map.zone) : state.selectedZone;
+  const sites = sitesForZone(zone);
+  const site = sites.includes(normalizedZoneSiteName(map?.site)) ? normalizedZoneSiteName(map.site) : sites[0] || "";
+  return { zone, site };
+}
+
+function mapLocationLabel(map) {
+  const { zone, site } = mapLocationFor(map);
+  return `${zone || "No Zone"} / ${site || "No Site"}`;
+}
+
+function createMachineMap({ id, name, zone, site, machineType, applicationMode, headCount, aggregateCount, stationCount, enabledAggregates, enabledStations, aggregateAngles, stationAngles, stationSections, objects, depths, machineSettings, coldGlueProfile, restoreDefaultObjects = true, isTemplate = false, blankSeedVersion = 0 } = {}) {
   const normalizedMachineType = String(machineType || "TopModul");
   const mode = normalizedMachineType.toLowerCase() === "multimodul" ? "apl" : applicationMode === "cold-glue" ? "cold-glue" : "apl";
   const aggregates = Math.max(1, Math.min(6, Math.round(num(aggregateCount, mode === "cold-glue" ? 3 : 6))));
@@ -372,12 +385,15 @@ function createMachineMap({ id, name, machineType, applicationMode, headCount, a
       station: 1
     });
   }
+  const location = mapLocationFor({ zone, site });
   return {
     schemaVersion: MACHINE_MAP_SCHEMA_VERSION,
     blankSeedVersion: Math.max(0, Math.round(num(blankSeedVersion, 0))),
     isTemplate: Boolean(isTemplate),
     id: String(id || uniqueMapId("machine-map")),
     name: String(name || `${mode === "cold-glue" ? "Cold Glue" : "APL"} ${aggregates}-Aggregate Map`),
+    zone: location.zone,
+    site: location.site,
     machineType: normalizedMachineType,
     applicationMode: mode,
     headCount: Math.max(1, Math.min(120, Math.round(num(headCount, machineSettings?.headCount !== undefined ? machineSettings.headCount : (state?.headCount !== undefined ? state.headCount : 60))))),
@@ -441,6 +457,7 @@ function ensurePersistentApplicationMaps() {
         map.applicationMode = applicationMode;
         map.isTemplate = isProtectedMapTemplate(map);
         map.aggregateAngles = normalizeAggregateAngles(map.aggregateAngles, applicationMode, map.objects);
+        Object.assign(map, mapLocationFor(map));
       } else {
         state.mapLibrary[index] = createMachineMap({ ...map, applicationMode });
       }
@@ -551,6 +568,11 @@ function ensurePersistentApplicationMaps() {
 
 function loadMachineMapIntoRuntime(map, shouldRender = true) {
   if (!map) return;
+  const location = mapLocationFor(map);
+  map.zone = location.zone;
+  map.site = location.site;
+  state.selectedZone = location.zone;
+  state.selectedSite = location.site;
   runtimeMachineMapId = map.id;
   state.activeMapId = map.id;
   state.applicationMode = inferredMachineMapApplicationMode(map);
@@ -783,10 +805,18 @@ function renderMapLibraryControls() {
   const map = activeMachineMap();
   if (!map) return;
   if (els.mapLibrarySelect) {
-    els.mapLibrarySelect.innerHTML = state.mapLibrary.map((entry) => `<option value="${entry.id}"${entry.id === map.id ? " selected" : ""}>${entry.name}</option>`).join("");
+    els.mapLibrarySelect.innerHTML = state.mapLibrary.map((entry) => `<option value="${entry.id}"${entry.id === map.id ? " selected" : ""}>${entry.name} â€¢ ${mapLocationLabel(entry)}</option>`).join("");
   }
   if (els.mapLibrarySummary) els.mapLibrarySummary.textContent = `${map.machineType || "TopModul"} • ${map.name} • ${map.headCount} heads • ${map.aggregateCount} aggregate${map.aggregateCount === 1 ? "" : "s"}`;
   if (els.mapName) els.mapName.value = map.name;
+  const location = mapLocationFor(map);
+  Object.assign(map, location);
+  if (els.mapZone) els.mapZone.innerHTML = optionList(zoneNames(), location.zone);
+  if (els.mapSite) {
+    const sites = sitesForZone(location.zone);
+    els.mapSite.disabled = !sites.length;
+    els.mapSite.innerHTML = sites.length ? optionList(sites, location.site) : '<option value="">No sites configured</option>';
+  }
   if (els.applicationMode) {
     const multiModul = String(map.machineType || "").trim().toLowerCase() === "multimodul";
     els.applicationMode.value = multiModul ? "apl" : state.applicationMode;
@@ -1063,10 +1093,19 @@ function renderWipeDownBuilder() {
 
 function saveMapDefinitionFromControls(event) {
   const liveInput = event?.type === "input";
+  const explicitSave = event?.type === "click";
   const map = editableMachineMap();
   if (!map) return;
+  const proposedName = String(els.mapName?.value || map.name).trim() || map.name;
+  const proposedZone = normalizedZoneSiteName(els.mapZone?.value) || mapLocationFor(map).zone;
+  const proposedSite = normalizedZoneSiteName(els.mapSite?.value) || sitesForZone(proposedZone)[0] || "";
+  if (explicitSave && !window.confirm(`Save map "${proposedName}" to ${proposedZone || "No Zone"} / ${proposedSite || "No Site"}?`)) return;
   const previousLimit = activeAplStationLimit(map);
-  map.name = String(els.mapName?.value || map.name).trim() || map.name;
+  map.name = proposedName;
+  map.zone = proposedZone;
+  map.site = proposedSite;
+  state.selectedZone = proposedZone;
+  state.selectedSite = proposedSite;
   map.machineType = String(els.mapMachineType?.value || map.machineType || "TopModul").trim() || "TopModul";
   state.applicationMode = map.machineType.toLowerCase() === "multimodul"
     ? "apl"
@@ -1182,6 +1221,23 @@ function bindWipeDownBuilder() {
   els.saveMachineMap?.addEventListener("click", saveMapDefinitionFromControls);
   els.exportMachineMap?.addEventListener("click", exportSelectedMachineMap);
   els.mapMachineType?.addEventListener("change", saveMapDefinitionFromControls);
+  els.mapZone?.addEventListener("change", () => {
+    const map = editableMachineMap();
+    if (!map) return;
+    map.zone = normalizedZoneSiteName(els.mapZone.value) || mapLocationFor(map).zone;
+    map.site = sitesForZone(map.zone)[0] || "";
+    state.selectedZone = map.zone;
+    state.selectedSite = map.site;
+    renderMapLibraryControls();
+  });
+  els.mapSite?.addEventListener("change", () => {
+    const map = editableMachineMap();
+    if (map) {
+      map.site = normalizedZoneSiteName(els.mapSite.value) || "";
+      state.selectedZone = map.zone;
+      state.selectedSite = map.site;
+    }
+  });
   els.addMachineType?.addEventListener("click", () => {
     const entered = String(window.prompt("Enter the new machine type name:", "") || "").trim();
     if (!entered) return;
@@ -1193,6 +1249,8 @@ function bindWipeDownBuilder() {
   els.deleteMachineMap?.addEventListener("click", () => {
     if (state.mapLibrary.length <= 1) { window.alert("At least one machine map must remain in the library."); return; }
     const index = state.mapLibrary.findIndex((map) => map.id === state.activeMapId);
+    const map = state.mapLibrary[index];
+    if (!map || !window.confirm(`Delete map "${map.name}" from ${mapLocationLabel(map)}? This cannot be undone.`)) return;
     if (index >= 0) state.mapLibrary.splice(index, 1);
     loadMachineMapIntoRuntime(state.mapLibrary[Math.max(0, index - 1)] || state.mapLibrary[0], true);
     saveCurrentSettings(); renderWipeDownBuilder();

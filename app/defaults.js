@@ -234,6 +234,8 @@ const els = {
   applicationMode: document.querySelector("#applicationMode"),
   mapLibrarySelect: document.querySelector("#mapLibrarySelect"),
   mapName: document.querySelector("#mapName"),
+  mapZone: document.querySelector("#mapZone"),
+  mapSite: document.querySelector("#mapSite"),
   mapHeadCount: document.querySelector("#mapHeadCount"),
   mapMachineType: document.querySelector("#mapMachineType"),
   addMachineType: document.querySelector("#addMachineType"),
