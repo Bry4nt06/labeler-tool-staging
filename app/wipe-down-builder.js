@@ -1203,6 +1203,11 @@ function exportSelectedMachineMap() {
   download(`${safeName}.servoforge-map.json`, "application/json", JSON.stringify(payload, null, 2));
 }
 
+function clearServoSimulationForSelectedMap() {
+  state.simulation = { useCustom: false, turns: [], rows: [], deletedRows: [], lines: [] };
+  state.previewBottleAngle = null;
+}
+
 function bindWipeDownBuilder() {
   if (!els.addBuilderObject) return;
   document.querySelector("#undoBuilderEdit")?.addEventListener("click", () => restoreBuilderHistory("undo"));
@@ -1249,13 +1254,13 @@ function bindWipeDownBuilder() {
   document.querySelector("#builderObjectType")?.addEventListener("change", updateBuilderTypeControls);
   els.mapLibrarySelect?.addEventListener("change", () => {
     const selected = state.mapLibrary.find((map) => map.id === els.mapLibrarySelect.value);
-    if (selected) { loadMachineMapIntoRuntime(selected, true); saveCurrentSettings(); renderWipeDownBuilder(); }
+    if (selected) { clearServoSimulationForSelectedMap(); loadMachineMapIntoRuntime(selected, true); saveCurrentSettings(); renderWipeDownBuilder(); }
   });
   els.newMachineMap?.addEventListener("click", () => {
     const base = activeMachineMap();
     const location = mapLibraryLocation();
     const copy = createMachineMap({ ...deepClone(base), id: uniqueMapId("machine-map"), name: uniqueMapName(`${base.name} Copy`), zone: location.zone, site: location.site, isTemplate: false });
-    state.mapLibrary.push(copy); loadMachineMapIntoRuntime(copy, true); saveCurrentSettings(); renderWipeDownBuilder();
+    state.mapLibrary.push(copy); clearServoSimulationForSelectedMap(); loadMachineMapIntoRuntime(copy, true); saveCurrentSettings(); renderWipeDownBuilder();
   });
   els.saveMachineMap?.addEventListener("click", saveMapDefinitionFromControls);
   els.exportMachineMap?.addEventListener("click", exportSelectedMachineMap);
@@ -1264,13 +1269,13 @@ function bindWipeDownBuilder() {
     state.mapLibraryZone = normalizedZoneSiteName(els.mapZone.value) || mapLibraryLocation().zone;
     state.mapLibrarySite = state.mapLibraryZone === "ALL" ? "" : sitesForZone(state.mapLibraryZone)[0] || "";
     const maps = mapsForMapLibraryLocation();
-    if (maps.length) loadMachineMapIntoRuntime(maps[0], true);
+    if (maps.length) { clearServoSimulationForSelectedMap(); loadMachineMapIntoRuntime(maps[0], true); }
     renderMapLibraryControls();
   });
   els.mapSite?.addEventListener("change", () => {
     state.mapLibrarySite = normalizedZoneSiteName(els.mapSite.value) || "";
     const maps = mapsForMapLibraryLocation();
-    if (maps.length) loadMachineMapIntoRuntime(maps[0], true);
+    if (maps.length) { clearServoSimulationForSelectedMap(); loadMachineMapIntoRuntime(maps[0], true); }
     renderMapLibraryControls();
   });
   els.addMachineType?.addEventListener("click", () => {
