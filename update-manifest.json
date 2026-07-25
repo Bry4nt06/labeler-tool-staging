@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.99",
+  "version": "0.8.0",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Milestone 5 adds the simulator runtime and fixes program-source isolation. The Mechanical Map now always uses the current generated servo program outside the Servo Simulation tab, so Aggregate 3 and 4 CMD 7 wipe corrections remain visible. Custom simulator rows are isolated to Servo Simulation, with generated/custom source controls, active HMI and command readouts, move progress, bottle angle, row health, fault status, and click-to-jump simulation rows."
+  "notes": "STAGING TEST BUILD — Milestones 6 and 7 are combined. TopModul validation now accepts correction chains in the form CMD 3 → one or more CMD 7 commands → CMD 3, removing the incorrect immediate-reference errors while still detecting unreferenced, interrupted, empty, or unclosed chains. The planner now builds a mechanical-event timeline with stable event IDs, process IDs, aggregate and label-section ownership, stages, map-object links, start/target angles, correction-chain IDs, and event-driven motion intents before command translation."
 }
