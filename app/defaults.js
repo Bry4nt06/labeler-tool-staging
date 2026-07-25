@@ -187,6 +187,8 @@ const state = {
   selectedBottle: "LNNR - 12 Oz",
   selectedZone: "NAZ",
   selectedSite: "FCL",
+  mapLibraryZone: "",
+  mapLibrarySite: "",
   zoneSiteConfiguration: deepClone(defaultZoneSiteConfiguration),
   buildInputs: {
     neckSpenderPlateDeg: 75,

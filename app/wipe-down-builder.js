@@ -365,6 +365,30 @@ function mapLocationLabel(map) {
   return `${zone || "No Zone"} / ${site || "No Site"}`;
 }
 
+function mapLibraryLocation() {
+  ensureSelectedZoneAndSite();
+  const active = state.mapLibrary.find((map) => map.id === state.activeMapId) || state.mapLibrary[0];
+  const fallback = mapLocationFor(active);
+  const zone = zoneNames().includes(normalizedZoneSiteName(state.mapLibraryZone))
+    ? normalizedZoneSiteName(state.mapLibraryZone)
+    : fallback.zone;
+  const sites = sitesForZone(zone);
+  const site = sites.includes(normalizedZoneSiteName(state.mapLibrarySite))
+    ? normalizedZoneSiteName(state.mapLibrarySite)
+    : (sites.includes(fallback.site) ? fallback.site : sites[0] || "");
+  state.mapLibraryZone = zone;
+  state.mapLibrarySite = site;
+  return { zone, site };
+}
+
+function mapsForMapLibraryLocation() {
+  const location = mapLibraryLocation();
+  return state.mapLibrary.filter((entry) => {
+    const entryLocation = mapLocationFor(entry);
+    return entryLocation.zone === location.zone && entryLocation.site === location.site;
+  });
+}
+
 function createMachineMap({ id, name, zone, site, machineType, applicationMode, headCount, aggregateCount, stationCount, enabledAggregates, enabledStations, aggregateAngles, stationAngles, stationSections, objects, depths, machineSettings, coldGlueProfile, restoreDefaultObjects = true, isTemplate = false, blankSeedVersion = 0 } = {}) {
   const normalizedMachineType = String(machineType || "TopModul");
   const mode = normalizedMachineType.toLowerCase() === "multimodul" ? "apl" : applicationMode === "cold-glue" ? "cold-glue" : "apl";
@@ -804,18 +828,21 @@ function renderMachineLayoutControls(machineMap) {
 function renderMapLibraryControls() {
   const map = activeMachineMap();
   if (!map) return;
+  const libraryLocation = mapLibraryLocation();
+  const visibleMaps = mapsForMapLibraryLocation();
   if (els.mapLibrarySelect) {
-    els.mapLibrarySelect.innerHTML = state.mapLibrary.map((entry) => `<option value="${entry.id}"${entry.id === map.id ? " selected" : ""}>${entry.name} â€¢ ${mapLocationLabel(entry)}</option>`).join("");
+    els.mapLibrarySelect.disabled = !visibleMaps.length;
+    els.mapLibrarySelect.innerHTML = visibleMaps.length
+      ? visibleMaps.map((entry) => `<option value="${entry.id}"${entry.id === map.id ? " selected" : ""}>${entry.name}</option>`).join("")
+      : '<option value="">No maps saved for this site</option>';
   }
   if (els.mapLibrarySummary) els.mapLibrarySummary.textContent = `${map.machineType || "TopModul"} • ${map.name} • ${map.headCount} heads • ${map.aggregateCount} aggregate${map.aggregateCount === 1 ? "" : "s"}`;
   if (els.mapName) els.mapName.value = map.name;
-  const location = mapLocationFor(map);
-  Object.assign(map, location);
-  if (els.mapZone) els.mapZone.innerHTML = optionList(zoneNames(), location.zone);
+  if (els.mapZone) els.mapZone.innerHTML = optionList(zoneNames(), libraryLocation.zone);
   if (els.mapSite) {
-    const sites = sitesForZone(location.zone);
+    const sites = sitesForZone(libraryLocation.zone);
     els.mapSite.disabled = !sites.length;
-    els.mapSite.innerHTML = sites.length ? optionList(sites, location.site) : '<option value="">No sites configured</option>';
+    els.mapSite.innerHTML = sites.length ? optionList(sites, libraryLocation.site) : '<option value="">No sites configured</option>';
   }
   if (els.applicationMode) {
     const multiModul = String(map.machineType || "").trim().toLowerCase() === "multimodul";
@@ -1106,6 +1133,8 @@ function saveMapDefinitionFromControls(event) {
   map.site = proposedSite;
   state.selectedZone = proposedZone;
   state.selectedSite = proposedSite;
+  state.mapLibraryZone = proposedZone;
+  state.mapLibrarySite = proposedSite;
   map.machineType = String(els.mapMachineType?.value || map.machineType || "TopModul").trim() || "TopModul";
   state.applicationMode = map.machineType.toLowerCase() === "multimodul"
     ? "apl"
@@ -1215,28 +1244,25 @@ function bindWipeDownBuilder() {
   });
   els.newMachineMap?.addEventListener("click", () => {
     const base = activeMachineMap();
-    const copy = createMachineMap({ ...deepClone(base), id: uniqueMapId("machine-map"), name: uniqueMapName(`${base.name} Copy`), isTemplate: false });
+    const location = mapLibraryLocation();
+    const copy = createMachineMap({ ...deepClone(base), id: uniqueMapId("machine-map"), name: uniqueMapName(`${base.name} Copy`), zone: location.zone, site: location.site, isTemplate: false });
     state.mapLibrary.push(copy); loadMachineMapIntoRuntime(copy, true); saveCurrentSettings(); renderWipeDownBuilder();
   });
   els.saveMachineMap?.addEventListener("click", saveMapDefinitionFromControls);
   els.exportMachineMap?.addEventListener("click", exportSelectedMachineMap);
   els.mapMachineType?.addEventListener("change", saveMapDefinitionFromControls);
   els.mapZone?.addEventListener("change", () => {
-    const map = editableMachineMap();
-    if (!map) return;
-    map.zone = normalizedZoneSiteName(els.mapZone.value) || mapLocationFor(map).zone;
-    map.site = sitesForZone(map.zone)[0] || "";
-    state.selectedZone = map.zone;
-    state.selectedSite = map.site;
+    state.mapLibraryZone = normalizedZoneSiteName(els.mapZone.value) || mapLibraryLocation().zone;
+    state.mapLibrarySite = sitesForZone(state.mapLibraryZone)[0] || "";
+    const maps = mapsForMapLibraryLocation();
+    if (maps.length) loadMachineMapIntoRuntime(maps[0], true);
     renderMapLibraryControls();
   });
   els.mapSite?.addEventListener("change", () => {
-    const map = editableMachineMap();
-    if (map) {
-      map.site = normalizedZoneSiteName(els.mapSite.value) || "";
-      state.selectedZone = map.zone;
-      state.selectedSite = map.site;
-    }
+    state.mapLibrarySite = normalizedZoneSiteName(els.mapSite.value) || "";
+    const maps = mapsForMapLibraryLocation();
+    if (maps.length) loadMachineMapIntoRuntime(maps[0], true);
+    renderMapLibraryControls();
   });
   els.addMachineType?.addEventListener("click", () => {
     const entered = String(window.prompt("Enter the new machine type name:", "") || "").trim();
