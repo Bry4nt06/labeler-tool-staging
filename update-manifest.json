@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.96",
+  "version": "0.7.97",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Connects the selected Motion Profile to the generated servo program through the new machine profile translator. Adds profile-aware CMD translation, safe 3/7 fallback, terminal Rest enforcement, translator validation, profile persistence, and live regeneration when the profile changes."
+  "notes": "STAGING TEST BUILD — Fixes APL wipe-down pads rendering as oversized circles or displaced shapes at certain table positions. Pad arcs now handle 0/360 degree crossings safely, enforce valid inner and outer radii, and cap visual thickness without changing the stored physical extension value."
 }
