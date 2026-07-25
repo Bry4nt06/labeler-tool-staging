@@ -29,30 +29,60 @@ function installServoMotionLibraryStyles() {
   const style = document.createElement("style");
   style.id = "servoMotionLibraryStyles";
   style.textContent = `
-    .servo-motion-workbench { margin: 0 0 14px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
-    .servo-motion-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .servo-motion-workbench {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+      margin: 0 0 8px;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--panel);
+      font-size: 11px;
+    }
+    .servo-motion-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+    .servo-motion-head > div { min-width: 0; }
     .servo-motion-head h2, .servo-motion-head p { margin: 0; }
-    .servo-motion-head p { margin-top: 4px; color: var(--muted); }
-    .servo-motion-status { padding: 5px 9px; border: 1px solid var(--green); border-radius: 999px; color: var(--green); white-space: nowrap; }
-    .servo-motion-controls { display: grid; grid-template-columns: minmax(180px, 0.7fr) minmax(240px, 1.3fr) auto; gap: 10px; align-items: end; margin-bottom: 12px; }
-    .servo-motion-controls label { display: grid; gap: 5px; }
-    .servo-motion-controls textarea { min-height: 74px; resize: vertical; }
-    .servo-motion-grid { display: grid; grid-template-columns: repeat(7, minmax(105px, 1fr)); gap: 8px; }
-    .servo-move-card { min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-hi); cursor: pointer; }
+    .servo-motion-head h2 { font-size: 14px; line-height: 1.15; }
+    .servo-motion-head p { margin-top: 2px; color: var(--muted); font-size: 10px; line-height: 1.25; }
+    .servo-motion-status { flex: 0 1 auto; max-width: 38%; padding: 3px 7px; border: 1px solid var(--green); border-radius: 999px; color: var(--green); font-size: 10px; line-height: 1.1; text-align: center; white-space: normal; overflow-wrap: anywhere; }
+    .servo-motion-controls { display: grid; grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr) auto; gap: 7px; align-items: end; margin-bottom: 7px; }
+    .servo-motion-controls label { min-width: 0; display: grid; gap: 3px; font-size: 10px; }
+    .servo-motion-controls select, .servo-motion-controls textarea, .servo-motion-controls button { min-width: 0; font-size: 11px; }
+    .servo-motion-controls select { width: 100%; height: 31px; padding: 4px 6px; }
+    .servo-motion-controls textarea { width: 100%; min-height: 48px; max-height: 64px; padding: 5px 6px; resize: vertical; line-height: 1.2; }
+    .servo-motion-controls button { min-height: 31px; padding: 5px 9px; white-space: nowrap; }
+    .servo-motion-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; width: 100%; }
+    .servo-move-card { min-width: 0; width: 100%; padding: 6px 4px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel-hi); cursor: pointer; overflow: hidden; }
     .servo-move-card[aria-selected="true"] { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
-    .servo-move-code { display: inline-grid; place-items: center; width: 27px; height: 27px; margin-bottom: 7px; border-radius: 50%; background: var(--input); font-weight: 800; }
-    .servo-move-card strong, .servo-move-card small { display: block; }
-    .servo-move-card small { margin-top: 4px; color: var(--muted); }
-    .servo-motion-detail { display: grid; grid-template-columns: minmax(220px, 0.8fr) minmax(300px, 1.2fr); gap: 12px; margin-top: 12px; }
-    .servo-motion-detail > div { padding: 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--input); }
-    .servo-motion-detail h3 { margin: 0 0 7px; }
-    .servo-motion-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-    .servo-motion-meta span { padding: 5px 7px; border-radius: 6px; background: var(--panel); }
-    .servo-intent-output { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; align-items: center; }
-    .servo-intent-chip { padding: 5px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); }
+    .servo-move-code { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-bottom: 4px; border-radius: 50%; background: var(--input); font-size: 10px; font-weight: 800; }
+    .servo-move-card strong, .servo-move-card small { display: block; max-width: 100%; overflow-wrap: anywhere; word-break: normal; }
+    .servo-move-card strong { font-size: 10px; line-height: 1.1; }
+    .servo-move-card small { margin-top: 2px; color: var(--muted); font-size: 8px; line-height: 1.05; }
+    .servo-motion-detail { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 7px; margin-top: 7px; }
+    .servo-motion-detail > div { min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--input); overflow: hidden; }
+    .servo-motion-detail h3 { margin: 0 0 4px; font-size: 12px; line-height: 1.15; }
+    .servo-motion-detail p { margin: 0 0 6px; font-size: 10px; line-height: 1.25; }
+    .servo-motion-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+    .servo-motion-meta span { min-width: 0; padding: 4px 5px; border-radius: 5px; background: var(--panel); font-size: 9px; line-height: 1.15; overflow-wrap: anywhere; }
+    .servo-intent-output { display: flex; flex-wrap: wrap; gap: 4px; min-height: 26px; align-items: center; font-size: 10px; }
+    .servo-intent-chip { max-width: 100%; padding: 3px 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); overflow-wrap: anywhere; }
     .servo-intent-error { color: #ff8181; }
-    @media (max-width: 1100px) { .servo-motion-grid { grid-template-columns: repeat(4, minmax(110px, 1fr)); } }
-    @media (max-width: 760px) { .servo-motion-controls, .servo-motion-detail { grid-template-columns: 1fr; } .servo-motion-grid { grid-template-columns: repeat(2, minmax(120px, 1fr)); } }
+    #program { overflow-x: hidden; }
+    #program > table { width: 100%; table-layout: fixed; }
+    #program > table th, #program > table td { font-size: 10px; padding: 4px 3px; }
+    #program > table input, #program > table select { min-width: 0; width: 100%; font-size: 10px; padding: 3px 4px; }
+    @media (max-width: 900px) {
+      .servo-motion-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .servo-motion-controls { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+      .servo-motion-controls button { grid-column: 1 / -1; }
+    }
+    @media (max-width: 650px) {
+      .servo-motion-head, .servo-motion-controls, .servo-motion-detail { grid-template-columns: 1fr; display: grid; }
+      .servo-motion-status { max-width: 100%; justify-self: start; }
+      .servo-motion-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
   `;
   document.head.appendChild(style);
 }
@@ -77,9 +107,9 @@ function servoMotionWorkbenchMarkup() {
       <small>${move.speedMode.replaceAll("-", " ")}</small>
     </button>`).join("");
   return `
-    <section class="servo-motion-workbench" aria-label="KRONES servo motion library">
+    <section class="servo-motion-workbench" aria-label="Servo motion library">
       <div class="servo-motion-head">
-        <div><h2>Servo Motion Library</h2><p>All KRONES move commands are registered. Generated production profiles still default to Rest (3) and Correction (7).</p></div>
+        <div><h2>Servo Motion Library</h2><p>All move commands are registered. Generated profiles still default to Rest (3) and Correction (7).</p></div>
         <span class="servo-motion-status">${profile.name}</span>
       </div>
       <div class="servo-motion-controls">
