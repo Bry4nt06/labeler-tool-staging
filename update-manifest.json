@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.95",
+  "version": "0.7.96",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Fixes blank table override fields being interpreted as numeric zero. Automatic table-angle sequencing now updates only the generated table-angle column, while override inputs remain empty unless the user explicitly enters an override."
+  "notes": "STAGING TEST BUILD — Connects the selected Motion Profile to the generated servo program through the new machine profile translator. Adds profile-aware CMD translation, safe 3/7 fallback, terminal Rest enforcement, translator validation, profile persistence, and live regeneration when the profile changes."
 }
