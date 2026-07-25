@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.8.1",
+  "version": "0.8.2",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Fixes the in-app updater so updates activate automatically and reload the current window. The updater no longer depends on an Open latest version link, no longer opens a new tab, saves current settings before activation, cache-busts the same-window reload, and forces the new service worker to take control immediately."
+  "notes": "STAGING TEST BUILD — Updater recovery release. Removes the blocking service-worker pre-cache that caused the Downloading state to time out. The new worker installs immediately, claims the current page, reloads the same window, and caches files opportunistically after the update is active."
 }
