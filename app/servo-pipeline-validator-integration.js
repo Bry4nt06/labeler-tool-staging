@@ -1,7 +1,7 @@
 "use strict";
 
 (function installServoPipelineValidation() {
-  const VALIDATOR_RELEASE_VERSION = "0.7.98";
+  const VALIDATOR_RELEASE_VERSION = "0.8.4";
   let installed = false;
 
   function activeValidationPlan() {
