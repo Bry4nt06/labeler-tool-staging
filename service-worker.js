@@ -1,65 +1,24 @@
 "use strict";
 
-const CACHE_NAME = "servoforge-labeler-staging-v0.8.1";
-const APP_FILES = [
-  "./",
-  "./index.html",
-  "./styles.css",
-  "./app.js",
-  "./fault-config.json",
-  "./manifest.webmanifest",
-  "./update-manifest.json",
-  "./config/company-default-settings.json",
-  "./assets/labeler-tool-icon.svg",
-  "./drivers/geometry/label-geometry-driver.js",
-  "./drivers/application/application-mode-driver.js",
-  "./drivers/mechanical/mechanical-motion-driver.js",
-  "./drivers/mechanical/cold-glue-motion-driver.js",
-  "./drivers/servo/servo-command-driver.js",
-  "./drivers/planning/motion-planner-driver.js",
-  "./drivers/planning/mechanical-event-planner-driver.js",
-  "./drivers/translation/profile-translator-driver.js",
-  "./drivers/validation/motion-validation-driver.js",
-  "./drivers/validation/servo-pipeline-validator-driver.js",
-  "./drivers/profile/apl-profile-driver.js",
-  "./app/defaults.js",
-  "./app/persistence.js",
-  "./app/zone-site-configuration.js",
-  "./app/geometry-and-planning.js",
-  "./app/profile-generation.js",
-  "./app/simulation-engine.js",
-  "./app/assemblies.js",
-  "./app/wipe-down-builder.js",
-  "./app/validation.js",
-  "./app/setup-bindings.js",
-  "./app/map-rendering.js",
-  "./app/table-rendering.js",
-  "./app/bootstrap.js",
-  "./app/motion-planner-ui.js",
-  "./app/profile-translator-integration.js",
-  "./app/servo-pipeline-validator-integration.js",
-  "./app/simulator-milestone.js",
-  "./app/milestone-6-7-integration.js",
-  "./app/update-service-fix.js"
-];
+const CACHE_NAME = "servoforge-labeler-staging-v0.8.2";
+const FALLBACK_PAGE = "./index.html";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => Promise.all(APP_FILES.map(async (path) => {
-        const request = new Request(path, { cache: "reload" });
-        const response = await fetch(request);
-        if (!response.ok) throw new Error(`Unable to cache ${path}: ${response.status}`);
-        await cache.put(request, response.clone());
-      })))
-      .then(() => self.skipWaiting())
-  );
+  // Do not block installation on a large cache.addAll operation. A single
+  // missing or delayed asset previously left the app on "Downloading" until
+  // the updater timed out. The worker activates immediately and assets are
+  // cached opportunistically as they are requested.
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((names) => Promise.all(names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))))
+      .then((names) => Promise.all(
+        names
+          .filter((name) => name.startsWith("servoforge-labeler-staging-") && name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
+      ))
       .then(() => self.clients.claim())
   );
 });
@@ -69,13 +28,26 @@ self.addEventListener("message", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET" || new URL(event.request.url).origin !== self.location.origin) return;
+  if (event.request.method !== "GET") return;
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin !== self.location.origin) return;
+
   event.respondWith(
     fetch(event.request, { cache: "no-store" })
       .then((response) => {
-        if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()));
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
         return response;
       })
-      .catch(() => caches.match(event.request).then((cached) => cached || caches.match("./index.html")))
+      .catch(async () => {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        if (event.request.mode === "navigate") {
+          return caches.match(FALLBACK_PAGE);
+        }
+        throw new Error(`Offline resource unavailable: ${event.request.url}`);
+      })
   );
 });
