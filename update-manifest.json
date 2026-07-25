@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.84",
+  "version": "0.7.85",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "notes": "STAGING TEST BUILD — Adds application-specific editable Build Program parameters and the MultiModul APL machine type."
