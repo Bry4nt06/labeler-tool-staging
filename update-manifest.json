@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.93",
+  "version": "0.7.94",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Adds the mechanical motion planner, mechanical timeline, planner intent classification, and CMD visibility within the Action column. Existing program generation remains CMD 3/CMD 7 while the new planning layer is validated."
+  "notes": "STAGING TEST BUILD — Enforces a strictly increasing, unique table angle for every servo command row, repairs duplicate/equal setpoints at 0.5 degree spacing, preserves the final End Curve reference, restores the motion planner, and adds machine-profile command recommendations."
 }
