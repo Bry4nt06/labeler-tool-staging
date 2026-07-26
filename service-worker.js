@@ -24,6 +24,7 @@ const CORE_ASSETS = Object.freeze([
   "./drivers/servo/servo-command-driver.js",
   "./drivers/planning/motion-planner-driver.js",
   "./drivers/planning/mechanical-event-planner-driver.js",
+  "./drivers/planning/incremental-rotation-driver.js",
   "./drivers/translation/profile-translator-driver.js",
   "./drivers/validation/motion-validation-driver.js",
   "./drivers/validation/servo-pipeline-validator-driver.js",
@@ -55,6 +56,8 @@ const CORE_ASSETS = Object.freeze([
   "./app/topmodul-double-correction-integration.js",
   "./app/program-optimizer-integration.js",
   "./app/release-readiness-integration.js",
+  "./app/diagnostics-workspace-integration.js",
+  "./app/incremental-rotation-integration.js",
   "./app/update-manager.js",
   "./app.js"
 ]);
