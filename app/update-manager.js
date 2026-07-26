@@ -1,7 +1,7 @@
 "use strict";
 
 (function installServoForgeUpdateManager() {
-  const RELEASE_VERSION = document.querySelector('meta[name="application-version"]')?.content || "0.8.5";
+  const RELEASE_VERSION = document.querySelector('meta[name="application-version"]')?.content || "0.8.6";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-staging-";
 
