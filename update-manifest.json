@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.8.9",
+  "version": "0.9.0",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — The final validation layer now uses the selected machine type. TopModul consecutive CMD 7 backspin and wipe moves are checked as one correction chain, and the obsolete immediate 3-7-3 messages are removed before the Validation panel is rendered."
+  "notes": "STAGING TEST BUILD — Milestone 10 adds Program Diagnostics & Optimization. The Servo Program now analyzes correction speed margin, short table windows, duplicate actions, redundant generic references, wipe-down contact coverage, and uneven TopModul correction-chain timing. Safe timing candidates are validated first and can be loaded into Servo Simulation for before-and-after review without changing the generated production program."
 }
