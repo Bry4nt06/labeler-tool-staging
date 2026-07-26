@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.8.7",
+  "version": "0.8.8",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Fixes machine-specific program termination. TopModul now finishes at the final CMD 3 Rest reference, including Hold for Coding, and no longer appends an Autocol-style End of curve row that creates a zero-motion CMD 7 fault. Autocol continues to finish with its dedicated CMD 3 End of curve boundary at 359 degrees."
+  "notes": "STAGING TEST BUILD — TopModul validation now accepts consecutive CMD 7 correction moves, including label backspin and reverse-wipe stages, as one referenced correction chain. The obsolete immediate 3-7-3 errors are removed only for TopModul. The chain must still begin after CMD 3, every CMD 7 must produce bottle movement, non-correction commands cannot interrupt it, and the chain must close on CMD 3 Rest."
 }
