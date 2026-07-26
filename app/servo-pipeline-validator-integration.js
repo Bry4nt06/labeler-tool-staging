@@ -1,7 +1,7 @@
 "use strict";
 
 (function installServoPipelineValidation() {
-  const VALIDATOR_RELEASE_VERSION = "0.8.4";
+  const VALIDATOR_RELEASE_VERSION = "0.8.5";
   let installed = false;
 
   function activeValidationPlan() {
@@ -84,7 +84,10 @@
     const banner = document.createElement("div");
     banner.className = "pipeline-validation-banner";
     banner.dataset.status = result.status;
-    banner.innerHTML = `<strong>${result.machineProfile} • ${result.profileId}</strong> — mechanical events, translated commands, references, speed envelope, terminal Rest, and table-angle order validated.`;
+    const grammarLabel = result.machineGrammarName
+      ? `${result.machineFamily} • ${result.machineGrammarName}`
+      : `${result.machineProfile} • ${result.profileId}`;
+    banner.innerHTML = `<strong>${grammarLabel}</strong> — mechanical events, translated commands, references, speed envelope, terminal Rest, and table-angle order validated.`;
     els.validationList.prepend(banner);
   }
 
