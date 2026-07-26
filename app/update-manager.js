@@ -1,7 +1,35 @@
 "use strict";
 
+(function loadAuthoritativePipelineValidation() {
+  const release = "0.8.9";
+  if (document.querySelector(`script[data-servoforge-pipeline-validation="${release}"]`)) return;
+  const script = document.createElement("script");
+  script.src = `app/servo-pipeline-validator-integration.js?v=${release}`;
+  script.dataset.servoforgePipelineValidation = release;
+  script.addEventListener("load", () => {
+    window.setTimeout(() => {
+      if (typeof render === "function") render();
+    }, 75);
+  });
+  document.head.appendChild(script);
+})();
+
+(function loadTopModulDoubleCorrectionPolicy() {
+  const release = "0.8.9";
+  if (document.querySelector(`script[data-servoforge-topmodul-double-correction="${release}"]`)) return;
+  const script = document.createElement("script");
+  script.src = `app/topmodul-double-correction-integration.js?v=${release}`;
+  script.dataset.servoforgeTopmodulDoubleCorrection = release;
+  script.addEventListener("load", () => {
+    window.setTimeout(() => {
+      if (typeof render === "function") render();
+    }, 50);
+  });
+  document.head.appendChild(script);
+})();
+
 (function installServoForgeUpdateManager() {
-  const RELEASE_VERSION = "0.8.8";
+  const RELEASE_VERSION = "0.8.9";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-staging-";
 
