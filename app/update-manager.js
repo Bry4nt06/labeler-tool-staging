@@ -1,44 +1,7 @@
 "use strict";
 
-(function loadServoForgeMilestoneTen() {
-  const release = "0.9.0";
-
-  function loadScript(src, attribute, after = null) {
-    return new Promise((resolve, reject) => {
-      const selector = `script[${attribute}="${release}"]`;
-      const existing = document.querySelector(selector);
-      if (existing) {
-        if (existing.dataset.loaded === "true") resolve(existing);
-        else existing.addEventListener("load", () => resolve(existing), { once: true });
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = `${src}?v=${release}`;
-      script.setAttribute(attribute, release);
-      script.addEventListener("load", () => {
-        script.dataset.loaded = "true";
-        if (typeof after === "function") after();
-        resolve(script);
-      }, { once: true });
-      script.addEventListener("error", () => reject(new Error(`Unable to load ${src}`)), { once: true });
-      document.head.appendChild(script);
-    });
-  }
-
-  Promise.resolve()
-    .then(() => loadScript("app/servo-pipeline-validator-integration.js", "data-servoforge-pipeline-validation"))
-    .then(() => loadScript("app/topmodul-double-correction-integration.js", "data-servoforge-topmodul-double-correction"))
-    .then(() => loadScript("drivers/optimization/program-optimizer-driver.js", "data-servoforge-program-optimizer-driver"))
-    .then(() => loadScript("app/program-optimizer-integration.js", "data-servoforge-program-optimizer", () => {
-      window.setTimeout(() => {
-        if (typeof render === "function") render();
-      }, 75);
-    }))
-    .catch((error) => console.error("Milestone 10 loader failed", error));
-})();
-
 (function installServoForgeUpdateManager() {
-  const RELEASE_VERSION = "0.9.0";
+  const RELEASE_VERSION = "0.9.1";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-staging-";
 
@@ -69,7 +32,6 @@
     const releaseText = `Version ${RELEASE_VERSION} • Updates are checked automatically.`;
     const isIdleVersionText = /^Version\s+\d+/i.test(currentText)
       && !/available|downloading|applying|checking|up to date/i.test(currentText);
-
     if (status && isIdleVersionText && currentText !== releaseText) status.textContent = releaseText;
   }
 
@@ -160,8 +122,8 @@
     setStatus("Checking for updates…", "Check for Updates", true);
 
     try {
-      const url = manifestUrl();
-      const response = await fetch(`${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`, {
+      const source = manifestUrl();
+      const response = await fetch(`${source}${source.includes("?") ? "&" : "?"}t=${Date.now()}`, {
         cache: "no-store",
         headers: { "Cache-Control": "no-cache" }
       });

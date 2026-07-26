@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.9.0",
+  "version": "0.9.1",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Milestone 10 adds Program Diagnostics & Optimization. The Servo Program now analyzes correction speed margin, short table windows, duplicate actions, redundant generic references, wipe-down contact coverage, and uneven TopModul correction-chain timing. Safe timing candidates are validated first and can be loaded into Servo Simulation for before-and-after review without changing the generated production program."
+  "notes": "STAGING TEST BUILD — Milestone 11 adds Release Readiness and Production Hardening. Settings now provides a release check for version alignment, critical assets, maps, specifications, persistence, exports, machine-family regressions, deterministic replay, non-destructive optimization, update configuration, and offline startup. Prepare Offline builds a verified recovery cache without changing operator data."
 }
