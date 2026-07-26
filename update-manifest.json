@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.8.4",
+  "version": "0.8.5",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Publishes a single authoritative 0.8.4 application shell and unified same-window update manager. Every application asset is cache-busted with the release version, the HTML metadata and Settings version agree, stale staging workers and caches are removed during an update, and the updater no longer waits for service-worker installation before navigating to the release."
+  "notes": "STAGING TEST BUILD — Milestone 8 adds machine-family servo grammar profiles. TopModul and APL now validate full correction chains using CMD 3 followed by one or more consecutive CMD 7 moves and a closing CMD 3 reference. Autocol, Cold Glue, and TopMatic retain referenced 3-7-3 pairs, while MultiModul uses advanced motion-state validation. Mechanical-event rows and the timeline now carry machine-family and correction-chain metadata."
 }
