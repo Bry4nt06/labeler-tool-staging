@@ -7,15 +7,20 @@
     {
       "version": "0.9.1",
       "milestone": 11,
-      "title": "Production Hardening and Release Readiness",
-      "summary": "Adds an operator-run release check, regression coverage, settings/export integrity checks, map migration checks, update alignment checks, verified offline preparation, and consolidated release notes.",
+      "title": "Production Hardening, Release Readiness, and Incremental Profile Generation",
+      "summary": "Adds operator-run release checks and a constrained Incremental Rotations profile generator that can distribute equivalent bottle orientation across multiple safe TopModul CMD 7 stages.",
       "changes": [
         "Run Release Check from Settings and export the complete JSON report.",
         "Validate application version metadata, loaded asset versions, update manifest destination, and critical published assets.",
         "Validate saved maps, blank templates, bottle specs, label specs, settings JSON round-trip, browser storage, and CSV export shape.",
         "Run built-in TopModul, Autocol, replay determinism, and non-destructive optimizer regressions.",
         "Prepare and verify a complete offline application cache without changing operator data.",
-        "Keep current-setup servo faults visible as configuration review items rather than hiding them from release checks."
+        "Keep current-setup servo faults visible as configuration review items rather than hiding them from release checks.",
+        "Generate Incremental Rotations across multiple CMD 7 stages instead of forcing an equivalent orientation into one short table window.",
+        "Require inside wipe-down support on both enabled members of an aggregate pair before continuing rotation out of the wipe-down.",
+        "Convert only eligible wipe-complete CMD 3 references into continued correction stages; application, sensor, coding, terminal, Autocol, and manually overridden references remain protected.",
+        "Borrow only verified downstream table travel before the next protected mechanical boundary and insert additional setpoints when a single correction stage would be too large.",
+        "Reject the complete candidate unless table angles remain increasing, every CMD 7 moves the bottle below the configured speed limit, the final orientation remains physically equivalent, TopModul grammar passes, and the program still closes at CMD 3 Rest."
       ]
     },
     {
