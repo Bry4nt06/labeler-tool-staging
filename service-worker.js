@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.1";
-const CACHE_NAME = `servoforge-labeler-staging-v${RELEASE_VERSION}`;
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 const UPDATE_MANIFEST_URL = new URL("./update-manifest.json", self.registration.scope).href;
