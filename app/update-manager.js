@@ -1,35 +1,44 @@
 "use strict";
 
-(function loadAuthoritativePipelineValidation() {
-  const release = "0.8.9";
-  if (document.querySelector(`script[data-servoforge-pipeline-validation="${release}"]`)) return;
-  const script = document.createElement("script");
-  script.src = `app/servo-pipeline-validator-integration.js?v=${release}`;
-  script.dataset.servoforgePipelineValidation = release;
-  script.addEventListener("load", () => {
-    window.setTimeout(() => {
-      if (typeof render === "function") render();
-    }, 75);
-  });
-  document.head.appendChild(script);
-})();
+(function loadServoForgeMilestoneTen() {
+  const release = "0.9.0";
 
-(function loadTopModulDoubleCorrectionPolicy() {
-  const release = "0.8.9";
-  if (document.querySelector(`script[data-servoforge-topmodul-double-correction="${release}"]`)) return;
-  const script = document.createElement("script");
-  script.src = `app/topmodul-double-correction-integration.js?v=${release}`;
-  script.dataset.servoforgeTopmodulDoubleCorrection = release;
-  script.addEventListener("load", () => {
-    window.setTimeout(() => {
-      if (typeof render === "function") render();
-    }, 50);
-  });
-  document.head.appendChild(script);
+  function loadScript(src, attribute, after = null) {
+    return new Promise((resolve, reject) => {
+      const selector = `script[${attribute}="${release}"]`;
+      const existing = document.querySelector(selector);
+      if (existing) {
+        if (existing.dataset.loaded === "true") resolve(existing);
+        else existing.addEventListener("load", () => resolve(existing), { once: true });
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = `${src}?v=${release}`;
+      script.setAttribute(attribute, release);
+      script.addEventListener("load", () => {
+        script.dataset.loaded = "true";
+        if (typeof after === "function") after();
+        resolve(script);
+      }, { once: true });
+      script.addEventListener("error", () => reject(new Error(`Unable to load ${src}`)), { once: true });
+      document.head.appendChild(script);
+    });
+  }
+
+  Promise.resolve()
+    .then(() => loadScript("app/servo-pipeline-validator-integration.js", "data-servoforge-pipeline-validation"))
+    .then(() => loadScript("app/topmodul-double-correction-integration.js", "data-servoforge-topmodul-double-correction"))
+    .then(() => loadScript("drivers/optimization/program-optimizer-driver.js", "data-servoforge-program-optimizer-driver"))
+    .then(() => loadScript("app/program-optimizer-integration.js", "data-servoforge-program-optimizer", () => {
+      window.setTimeout(() => {
+        if (typeof render === "function") render();
+      }, 75);
+    }))
+    .catch((error) => console.error("Milestone 10 loader failed", error));
 })();
 
 (function installServoForgeUpdateManager() {
-  const RELEASE_VERSION = "0.8.9";
+  const RELEASE_VERSION = "0.9.0";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-staging-";
 
@@ -61,9 +70,7 @@
     const isIdleVersionText = /^Version\s+\d+/i.test(currentText)
       && !/available|downloading|applying|checking|up to date/i.test(currentText);
 
-    if (status && isIdleVersionText && currentText !== releaseText) {
-      status.textContent = releaseText;
-    }
+    if (status && isIdleVersionText && currentText !== releaseText) status.textContent = releaseText;
   }
 
   function versionParts(value) {
@@ -95,7 +102,6 @@
 
   async function clearStaleRuntime() {
     const tasks = [];
-
     if ("serviceWorker" in navigator) {
       tasks.push(
         navigator.serviceWorker.getRegistrations()
@@ -106,7 +112,6 @@
           ))
       );
     }
-
     if ("caches" in window) {
       tasks.push(
         caches.keys().then((names) => Promise.all(
@@ -116,7 +121,6 @@
         ))
       );
     }
-
     await Promise.allSettled(tasks);
   }
 
@@ -184,7 +188,6 @@
   };
 
   enforceReleaseVersion();
-
   const versionMeta = document.querySelector('meta[name="application-version"]');
   const versionStatus = document.querySelector("#updateCheckStatus");
   const versionObserver = new MutationObserver(enforceReleaseVersion);
