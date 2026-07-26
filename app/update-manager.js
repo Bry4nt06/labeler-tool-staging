@@ -1,7 +1,7 @@
 "use strict";
 
 (function installServoForgeUpdateManager() {
-  const RELEASE_VERSION = "0.8.4";
+  const RELEASE_VERSION = document.querySelector('meta[name="application-version"]')?.content || "0.8.5";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-staging-";
 
@@ -33,9 +33,6 @@
     const isIdleVersionText = /^Version\s+\d+/i.test(currentText)
       && !/available|downloading|applying|checking|up to date/i.test(currentText);
 
-    // Never rewrite identical text. The previous observer wrote the same value
-    // after every DOM mutation, which recursively triggered itself and locked
-    // the page before the application could finish loading.
     if (status && isIdleVersionText && currentText !== releaseText) {
       status.textContent = releaseText;
     }
@@ -160,9 +157,6 @@
 
   enforceReleaseVersion();
 
-  // Observe only the two version nodes rather than the entire application DOM.
-  // Feature rendering can perform thousands of mutations and must never drive
-  // the release-version observer.
   const versionMeta = document.querySelector('meta[name="application-version"]');
   const versionStatus = document.querySelector("#updateCheckStatus");
   const versionObserver = new MutationObserver(enforceReleaseVersion);
