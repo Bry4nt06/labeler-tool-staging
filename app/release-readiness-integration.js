@@ -1,5 +1,13 @@
 "use strict";
 
+(function loadDiagnosticsWorkspace() {
+  if (document.querySelector('script[data-servoforge-diagnostics-workspace="0.9.1"]')) return;
+  const script = document.createElement("script");
+  script.src = "app/diagnostics-workspace-integration.js?v=0.9.1";
+  script.dataset.servoforgeDiagnosticsWorkspace = "0.9.1";
+  document.head.appendChild(script);
+})();
+
 (function installReleaseReadinessInterface() {
   const RELEASE_VERSION = "0.9.1";
   const RETRY_MS = 25;
