@@ -58,6 +58,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/release-readiness-integration.js",
   "./app/diagnostics-workspace-integration.js",
   "./app/incremental-rotation-integration.js",
+  "./app/simulation-collapsible-integration.js",
   "./app/update-manager.js",
   "./app.js"
 ]);
