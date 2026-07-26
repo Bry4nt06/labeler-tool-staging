@@ -160,18 +160,55 @@
 
 (function scopeReleaseReadinessAssetVersions() {
   const driver = window.LabelerReleaseReadinessDriver;
-  if (!driver?.run || driver.releaseManagedAssetScope) return;
+  if (!driver?.run || driver.releaseManagedAssetScopeV2) return;
 
   const baseRun = driver.run.bind(driver);
   const appPath = new URL("./", window.location.href).pathname;
-  const legacyDynamicPaths = new Set([
-    "app/simulator-milestone.js",
+  const RELEASE_MANAGED_PATHS = Object.freeze([
+    "styles.css",
+    "drivers/geometry/label-geometry-driver.js",
+    "drivers/application/application-mode-driver.js",
+    "drivers/mechanical/mechanical-motion-driver.js",
+    "drivers/mechanical/cold-glue-motion-driver.js",
+    "drivers/servo/servo-command-driver.js",
+    "drivers/planning/motion-planner-driver.js",
+    "drivers/planning/mechanical-event-planner-driver.js",
     "drivers/translation/profile-translator-driver.js",
-    "app/profile-translator-integration.js"
+    "drivers/validation/motion-validation-driver.js",
+    "drivers/validation/servo-pipeline-validator-driver.js",
+    "drivers/validation/machine-family-grammar-driver.js",
+    "drivers/simulation/servo-replay-driver.js",
+    "drivers/optimization/program-optimizer-driver.js",
+    "drivers/quality/release-readiness-driver.js",
+    "drivers/profile/apl-profile-driver.js",
+    "app/defaults.js",
+    "app/persistence.js",
+    "app/zone-site-configuration.js",
+    "app/geometry-and-planning.js",
+    "app/profile-generation.js",
+    "app/simulation-engine.js",
+    "app/assemblies.js",
+    "app/wipe-down-builder.js",
+    "app/validation.js",
+    "app/setup-bindings.js",
+    "app/map-rendering.js",
+    "app/table-rendering.js",
+    "app/bootstrap.js",
+    "app/motion-planner-ui.js",
+    "app/profile-translator-integration.js",
+    "app/servo-pipeline-validator-integration.js",
+    "app/milestone-6-7-integration.js",
+    "app/machine-family-grammar-integration.js",
+    "app/servo-replay-integration.js",
+    "app/machine-terminal-policy-integration.js",
+    "app/topmodul-double-correction-integration.js",
+    "app/program-optimizer-integration.js",
+    "app/release-readiness-integration.js",
+    "app/update-manager.js",
+    "app.js"
   ]);
-  const isModuleScopedNode = (node) => Array.from(node.attributes || [])
-    .some((attribute) => attribute.name.startsWith("data-servoforge-"));
-  const relativeAssetPath = (source) => {
+
+  function relativeAssetPath(source) {
     try {
       const url = new URL(source, window.location.href);
       return url.pathname.startsWith(appPath)
@@ -180,24 +217,46 @@
     } catch {
       return "";
     }
-  };
-  const isLegacyDynamicNode = (node) => legacyDynamicPaths.has(relativeAssetPath(node.src || node.href));
+  }
 
   function assetReport(expectedVersion) {
     const nodes = [
-      ...document.querySelectorAll('script[src*="?v="]'),
-      ...document.querySelectorAll('link[rel="stylesheet"][href*="?v="]')
+      ...document.querySelectorAll('script[src*="?v="],link[rel="stylesheet"][href*="?v="]')
     ];
-    const releaseManaged = nodes.filter((node) => !isModuleScopedNode(node) && !isLegacyDynamicNode(node));
-    const moduleScoped = nodes.filter((node) => isModuleScopedNode(node) || isLegacyDynamicNode(node));
-    const entries = releaseManaged.map((node) => {
+    const byPath = new Map();
+
+    nodes.forEach((node) => {
       const source = node.src || node.href;
+      const path = relativeAssetPath(source);
+      if (!RELEASE_MANAGED_PATHS.includes(path)) return;
       let version = "";
       try { version = new URL(source, window.location.href).searchParams.get("v") || ""; } catch { version = ""; }
-      return { source, version };
+      if (!byPath.has(path)) byPath.set(path, []);
+      byPath.get(path).push({ source, path, version });
     });
-    const mismatches = entries.filter((entry) => entry.version !== expectedVersion);
-    return { entries, mismatches, moduleScopedCount: moduleScoped.length };
+
+    const entries = [];
+    const mismatches = [];
+    let duplicateTagCount = 0;
+
+    RELEASE_MANAGED_PATHS.forEach((path) => {
+      const records = byPath.get(path) || [];
+      duplicateTagCount += Math.max(0, records.length - 1);
+      const aligned = records.find((entry) => entry.version === expectedVersion);
+      if (aligned) {
+        entries.push(aligned);
+        return;
+      }
+      mismatches.push({
+        path,
+        source: records[0]?.source || "",
+        expectedVersion,
+        observedVersions: [...new Set(records.map((entry) => entry.version).filter(Boolean))],
+        missing: records.length === 0
+      });
+    });
+
+    return { entries, mismatches, duplicateTagCount, requiredCount: RELEASE_MANAGED_PATHS.length };
   }
 
   function replaceAssetResult(report) {
@@ -207,14 +266,14 @@
     const replacement = {
       id: "version-assets",
       category: "release",
-      level: assets.mismatches.length ? "fail" : assets.entries.length ? "pass" : "review",
+      level: assets.mismatches.length ? "fail" : "pass",
       message: assets.mismatches.length
-        ? `${assets.mismatches.length} release-managed asset${assets.mismatches.length === 1 ? " is" : "s are"} not aligned to ${expectedVersion}.`
-        : assets.entries.length
-          ? `${assets.entries.length} release-managed assets are aligned to ${expectedVersion}; ${assets.moduleScopedCount} legacy or independently versioned feature module${assets.moduleScopedCount === 1 ? " is" : "s are"} loaded.`
-          : "No release-managed versioned application assets were detected.",
+        ? `${assets.mismatches.length} required release asset${assets.mismatches.length === 1 ? " is" : "s are"} missing or not aligned to ${expectedVersion}.`
+        : `${assets.requiredCount} required release assets are aligned to ${expectedVersion}; ${assets.duplicateTagCount} duplicate legacy tag${assets.duplicateTagCount === 1 ? " was" : "s were"} ignored because an aligned instance is loaded.`,
       expected: expectedVersion,
-      mismatches: assets.mismatches
+      mismatches: assets.mismatches,
+      duplicateTagCount: assets.duplicateTagCount,
+      requiredCount: assets.requiredCount
     };
     const existingIndex = report.results.findIndex((item) => item?.id === "version-assets");
     if (existingIndex >= 0) report.results.splice(existingIndex, 1, replacement);
@@ -228,7 +287,7 @@
 
   window.LabelerReleaseReadinessDriver = Object.freeze({
     ...driver,
-    releaseManagedAssetScope: true,
+    releaseManagedAssetScopeV2: true,
     async run(options = {}) {
       return replaceAssetResult(await baseRun(options));
     }
