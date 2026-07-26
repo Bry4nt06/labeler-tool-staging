@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.8.6",
+  "version": "0.8.7",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Milestone 9 adds deterministic servo replay and diagnostics. Users can step forward or backward by HMI row or mechanical event, jump directly to an event, pause automatically at reference rows, highlight the active CMD 7 correction chain, view cumulative bottle rotation, compare generated and custom simulations, see why each command was generated, and detect active map/program mismatches during playback."
+  "notes": "STAGING TEST BUILD — Fixes machine-specific program termination. TopModul now finishes at the final CMD 3 Rest reference, including Hold for Coding, and no longer appends an Autocol-style End of curve row that creates a zero-motion CMD 7 fault. Autocol continues to finish with its dedicated CMD 3 End of curve boundary at 359 degrees."
 }
