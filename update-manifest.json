@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.8.8",
+  "version": "0.8.9",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — TopModul validation now accepts consecutive CMD 7 correction moves, including label backspin and reverse-wipe stages, as one referenced correction chain. The obsolete immediate 3-7-3 errors are removed only for TopModul. The chain must still begin after CMD 3, every CMD 7 must produce bottle movement, non-correction commands cannot interrupt it, and the chain must close on CMD 3 Rest."
+  "notes": "STAGING TEST BUILD — The final validation layer now uses the selected machine type. TopModul consecutive CMD 7 backspin and wipe moves are checked as one correction chain, and the obsolete immediate 3-7-3 messages are removed before the Validation panel is rendered."
 }
