@@ -26,13 +26,12 @@
   function enforceReleaseVersion() {
     const meta = document.querySelector('meta[name="application-version"]');
     if (meta && meta.content !== RELEASE_VERSION) meta.content = RELEASE_VERSION;
-
     const status = typeof els !== "undefined" ? els.updateCheckStatus : document.querySelector("#updateCheckStatus");
     const currentText = status?.textContent || "";
     const releaseText = `Version ${RELEASE_VERSION} • Updates are checked automatically.`;
-    const isIdleVersionText = /^Version\s+\d+/i.test(currentText)
+    const idle = /^Version\s+\d+/i.test(currentText)
       && !/available|downloading|applying|checking|up to date/i.test(currentText);
-    if (status && isIdleVersionText && currentText !== releaseText) status.textContent = releaseText;
+    if (status && idle && currentText !== releaseText) status.textContent = releaseText;
   }
 
   function versionParts(value) {
@@ -65,23 +64,18 @@
   async function clearStaleRuntime() {
     const tasks = [];
     if ("serviceWorker" in navigator) {
-      tasks.push(
-        navigator.serviceWorker.getRegistrations()
-          .then((registrations) => Promise.all(
-            registrations
-              .filter((registration) => registration.scope.startsWith(APP_SCOPE))
-              .map((registration) => registration.unregister())
-          ))
-      );
+      tasks.push(navigator.serviceWorker.getRegistrations().then((registrations) => Promise.all(
+        registrations
+          .filter((registration) => registration.scope.startsWith(APP_SCOPE))
+          .map((registration) => registration.unregister())
+      )));
     }
     if ("caches" in window) {
-      tasks.push(
-        caches.keys().then((names) => Promise.all(
-          names
-            .filter((name) => name.startsWith(CACHE_PREFIX))
-            .map((name) => caches.delete(name))
-        ))
-      );
+      tasks.push(caches.keys().then((names) => Promise.all(
+        names
+          .filter((name) => name.startsWith(CACHE_PREFIX))
+          .map((name) => caches.delete(name))
+      )));
     }
     await Promise.allSettled(tasks);
   }
@@ -120,7 +114,6 @@
   checkForToolUpdates = async function checkForManagedToolUpdates() {
     const installedVersion = currentVersion();
     setStatus("Checking for updates…", "Check for Updates", true);
-
     try {
       const source = manifestUrl();
       const response = await fetch(`${source}${source.includes("?") ? "&" : "?"}t=${Date.now()}`, {
@@ -128,16 +121,13 @@
         headers: { "Cache-Control": "no-cache" }
       });
       if (!response.ok) throw new Error(`Update server returned ${response.status}.`);
-
       const manifest = await response.json();
       const latestVersion = String(manifest?.version || "").trim();
       if (!latestVersion) throw new Error("Update manifest does not contain a version.");
-
       if (compareVersions(latestVersion, installedVersion) <= 0) {
         setStatus(`Up to date • Version ${installedVersion}`, "Check for Updates", false);
         return;
       }
-
       const destination = String(manifest.releaseUrl || manifest.downloadUrl || APP_SCOPE).trim();
       setStatus(`Applying version ${latestVersion} in this window…`, "Applying Update", true);
       saveBeforeNavigation();
@@ -158,9 +148,47 @@
   window.addEventListener("load", enforceReleaseVersion, { once: true });
 })();
 
+(function loadStagingFeatureModules() {
+  const RELEASE_VERSION = "0.9.1";
+  const modules = [
+    "app/diagnostics-workspace-integration.js",
+    "drivers/planning/incremental-rotation-driver.js",
+    "app/incremental-rotation-integration.js"
+  ];
+
+  function loadScript(path) {
+    return new Promise((resolve, reject) => {
+      const existing = [...document.scripts].find((script) => {
+        try { return new URL(script.src, location.href).pathname.endsWith(`/${path}`); } catch { return false; }
+      });
+      if (existing) {
+        if (existing.dataset.loaded === "true") resolve();
+        else {
+          existing.addEventListener("load", resolve, { once: true });
+          existing.addEventListener("error", reject, { once: true });
+        }
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = `./${path}?v=${RELEASE_VERSION}`;
+      script.async = false;
+      script.dataset.releaseManagedFeature = "true";
+      script.addEventListener("load", () => {
+        script.dataset.loaded = "true";
+        resolve();
+      }, { once: true });
+      script.addEventListener("error", () => reject(new Error(`Unable to load ${path}.`)), { once: true });
+      document.body.appendChild(script);
+    });
+  }
+
+  modules.reduce((promise, path) => promise.then(() => loadScript(path)), Promise.resolve())
+    .catch((error) => console.error("Staging feature module load failed", error));
+})();
+
 (function scopeReleaseReadinessAssetVersions() {
   const driver = window.LabelerReleaseReadinessDriver;
-  if (!driver?.run || driver.releaseManagedAssetScopeV2) return;
+  if (!driver?.run || driver.releaseManagedAssetScopeV3) return;
 
   const baseRun = driver.run.bind(driver);
   const appPath = new URL("./", window.location.href).pathname;
@@ -173,6 +201,7 @@
     "drivers/servo/servo-command-driver.js",
     "drivers/planning/motion-planner-driver.js",
     "drivers/planning/mechanical-event-planner-driver.js",
+    "drivers/planning/incremental-rotation-driver.js",
     "drivers/translation/profile-translator-driver.js",
     "drivers/validation/motion-validation-driver.js",
     "drivers/validation/servo-pipeline-validator-driver.js",
@@ -204,30 +233,26 @@
     "app/topmodul-double-correction-integration.js",
     "app/program-optimizer-integration.js",
     "app/release-readiness-integration.js",
+    "app/diagnostics-workspace-integration.js",
+    "app/incremental-rotation-integration.js",
     "app/update-manager.js",
     "app.js"
   ]);
 
-  function relativeAssetPath(source) {
+  function relativePath(source) {
     try {
       const url = new URL(source, window.location.href);
-      return url.pathname.startsWith(appPath)
-        ? url.pathname.slice(appPath.length)
-        : url.pathname.replace(/^\//, "");
+      return url.pathname.startsWith(appPath) ? url.pathname.slice(appPath.length) : url.pathname.replace(/^\//, "");
     } catch {
       return "";
     }
   }
 
   function assetReport(expectedVersion) {
-    const nodes = [
-      ...document.querySelectorAll('script[src*="?v="],link[rel="stylesheet"][href*="?v="]')
-    ];
     const byPath = new Map();
-
-    nodes.forEach((node) => {
+    document.querySelectorAll('script[src*="?v="],link[rel="stylesheet"][href*="?v="]').forEach((node) => {
       const source = node.src || node.href;
-      const path = relativeAssetPath(source);
+      const path = relativePath(source);
       if (!RELEASE_MANAGED_PATHS.includes(path)) return;
       let version = "";
       try { version = new URL(source, window.location.href).searchParams.get("v") || ""; } catch { version = ""; }
@@ -235,18 +260,12 @@
       byPath.get(path).push({ source, path, version });
     });
 
-    const entries = [];
     const mismatches = [];
     let duplicateTagCount = 0;
-
     RELEASE_MANAGED_PATHS.forEach((path) => {
       const records = byPath.get(path) || [];
       duplicateTagCount += Math.max(0, records.length - 1);
-      const aligned = records.find((entry) => entry.version === expectedVersion);
-      if (aligned) {
-        entries.push(aligned);
-        return;
-      }
+      if (records.some((entry) => entry.version === expectedVersion)) return;
       mismatches.push({
         path,
         source: records[0]?.source || "",
@@ -255,8 +274,7 @@
         missing: records.length === 0
       });
     });
-
-    return { entries, mismatches, duplicateTagCount, requiredCount: RELEASE_MANAGED_PATHS.length };
+    return { mismatches, duplicateTagCount, requiredCount: RELEASE_MANAGED_PATHS.length };
   }
 
   function replaceAssetResult(report) {
@@ -275,8 +293,8 @@
       duplicateTagCount: assets.duplicateTagCount,
       requiredCount: assets.requiredCount
     };
-    const existingIndex = report.results.findIndex((item) => item?.id === "version-assets");
-    if (existingIndex >= 0) report.results.splice(existingIndex, 1, replacement);
+    const index = report.results.findIndex((item) => item?.id === "version-assets");
+    if (index >= 0) report.results.splice(index, 1, replacement);
     else report.results.push(replacement);
     const aggregate = driver.summarize(report.results);
     report.summary = aggregate.summary;
@@ -287,7 +305,7 @@
 
   window.LabelerReleaseReadinessDriver = Object.freeze({
     ...driver,
-    releaseManagedAssetScopeV2: true,
+    releaseManagedAssetScopeV3: true,
     async run(options = {}) {
       return replaceAssetResult(await baseRun(options));
     }
