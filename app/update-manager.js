@@ -163,16 +163,33 @@
   if (!driver?.run || driver.releaseManagedAssetScope) return;
 
   const baseRun = driver.run.bind(driver);
+  const appPath = new URL("./", window.location.href).pathname;
+  const legacyDynamicPaths = new Set([
+    "app/simulator-milestone.js",
+    "drivers/translation/profile-translator-driver.js",
+    "app/profile-translator-integration.js"
+  ]);
   const isModuleScopedNode = (node) => Array.from(node.attributes || [])
     .some((attribute) => attribute.name.startsWith("data-servoforge-"));
+  const relativeAssetPath = (source) => {
+    try {
+      const url = new URL(source, window.location.href);
+      return url.pathname.startsWith(appPath)
+        ? url.pathname.slice(appPath.length)
+        : url.pathname.replace(/^\//, "");
+    } catch {
+      return "";
+    }
+  };
+  const isLegacyDynamicNode = (node) => legacyDynamicPaths.has(relativeAssetPath(node.src || node.href));
 
   function assetReport(expectedVersion) {
     const nodes = [
       ...document.querySelectorAll('script[src*="?v="]'),
       ...document.querySelectorAll('link[rel="stylesheet"][href*="?v="]')
     ];
-    const releaseManaged = nodes.filter((node) => !isModuleScopedNode(node));
-    const moduleScoped = nodes.filter(isModuleScopedNode);
+    const releaseManaged = nodes.filter((node) => !isModuleScopedNode(node) && !isLegacyDynamicNode(node));
+    const moduleScoped = nodes.filter((node) => isModuleScopedNode(node) || isLegacyDynamicNode(node));
     const entries = releaseManaged.map((node) => {
       const source = node.src || node.href;
       let version = "";
@@ -194,7 +211,7 @@
       message: assets.mismatches.length
         ? `${assets.mismatches.length} release-managed asset${assets.mismatches.length === 1 ? " is" : "s are"} not aligned to ${expectedVersion}.`
         : assets.entries.length
-          ? `${assets.entries.length} release-managed assets are aligned to ${expectedVersion}; ${assets.moduleScopedCount} independently versioned feature module${assets.moduleScopedCount === 1 ? " is" : "s are"} loaded.`
+          ? `${assets.entries.length} release-managed assets are aligned to ${expectedVersion}; ${assets.moduleScopedCount} legacy or independently versioned feature module${assets.moduleScopedCount === 1 ? " is" : "s are"} loaded.`
           : "No release-managed versioned application assets were detected.",
       expected: expectedVersion,
       mismatches: assets.mismatches
