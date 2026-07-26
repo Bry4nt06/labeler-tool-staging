@@ -157,3 +157,63 @@
   if (versionStatus) versionObserver.observe(versionStatus, { childList: true, subtree: true, characterData: true });
   window.addEventListener("load", enforceReleaseVersion, { once: true });
 })();
+
+(function scopeReleaseReadinessAssetVersions() {
+  const driver = window.LabelerReleaseReadinessDriver;
+  if (!driver?.run || driver.releaseManagedAssetScope) return;
+
+  const baseRun = driver.run.bind(driver);
+  const isModuleScopedNode = (node) => Array.from(node.attributes || [])
+    .some((attribute) => attribute.name.startsWith("data-servoforge-"));
+
+  function assetReport(expectedVersion) {
+    const nodes = [
+      ...document.querySelectorAll('script[src*="?v="]'),
+      ...document.querySelectorAll('link[rel="stylesheet"][href*="?v="]')
+    ];
+    const releaseManaged = nodes.filter((node) => !isModuleScopedNode(node));
+    const moduleScoped = nodes.filter(isModuleScopedNode);
+    const entries = releaseManaged.map((node) => {
+      const source = node.src || node.href;
+      let version = "";
+      try { version = new URL(source, window.location.href).searchParams.get("v") || ""; } catch { version = ""; }
+      return { source, version };
+    });
+    const mismatches = entries.filter((entry) => entry.version !== expectedVersion);
+    return { entries, mismatches, moduleScopedCount: moduleScoped.length };
+  }
+
+  function replaceAssetResult(report) {
+    if (!report || !Array.isArray(report.results)) return report;
+    const expectedVersion = report.version || window.SERVOFORGE_RELEASE_VERSION || "0.9.1";
+    const assets = assetReport(expectedVersion);
+    const replacement = {
+      id: "version-assets",
+      category: "release",
+      level: assets.mismatches.length ? "fail" : assets.entries.length ? "pass" : "review",
+      message: assets.mismatches.length
+        ? `${assets.mismatches.length} release-managed asset${assets.mismatches.length === 1 ? " is" : "s are"} not aligned to ${expectedVersion}.`
+        : assets.entries.length
+          ? `${assets.entries.length} release-managed assets are aligned to ${expectedVersion}; ${assets.moduleScopedCount} independently versioned feature module${assets.moduleScopedCount === 1 ? " is" : "s are"} loaded.`
+          : "No release-managed versioned application assets were detected.",
+      expected: expectedVersion,
+      mismatches: assets.mismatches
+    };
+    const existingIndex = report.results.findIndex((item) => item?.id === "version-assets");
+    if (existingIndex >= 0) report.results.splice(existingIndex, 1, replacement);
+    else report.results.push(replacement);
+    const aggregate = driver.summarize(report.results);
+    report.summary = aggregate.summary;
+    report.categories = aggregate.categories;
+    report.status = aggregate.status;
+    return report;
+  }
+
+  window.LabelerReleaseReadinessDriver = Object.freeze({
+    ...driver,
+    releaseManagedAssetScope: true,
+    async run(options = {}) {
+      return replaceAssetResult(await baseRun(options));
+    }
+  });
+})();
