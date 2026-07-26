@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.9.1",
+  "version": "0.7.92",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Incremental Rotations now uses a constrained multi-stage profile generator. It can continue rotation out of supported inside wipe-downs, convert eligible wipe-complete references into CMD 7 stages, borrow safe downstream table travel before protected application/coding boundaries, insert additional correction setpoints, preserve paired-aggregate requirements, and validate every generated stage against TopModul grammar, orientation equivalence, table ordering, terminal behavior, and the configured servo-speed limit."
+  "notes": "STAGING TEST BUILD — Promotes the tested Zone/Site map workflow, MultiModul application selection, and neck-to-body servo transition improvements."
 }
