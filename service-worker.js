@@ -89,13 +89,13 @@ async function cacheStatus() {
   };
 }
 
-async function prepareOffline(requestedAssets = CORE_ASSETS, requestedVersion = RELEASE_VERSION) {
+async function prepareOffline(requestedAssets = [], requestedVersion = RELEASE_VERSION) {
   if (String(requestedVersion || RELEASE_VERSION) !== RELEASE_VERSION) {
     throw new Error(`Offline cache version ${requestedVersion} does not match service worker ${RELEASE_VERSION}.`);
   }
   const allowed = new Set(CORE_ASSETS);
-  const assets = [...new Set((Array.isArray(requestedAssets) ? requestedAssets : CORE_ASSETS)
-    .filter((asset) => allowed.has(asset)))];
+  const additions = (Array.isArray(requestedAssets) ? requestedAssets : []).filter((asset) => allowed.has(asset));
+  const assets = [...new Set([...CORE_ASSETS, ...additions])];
   const cache = await caches.open(CACHE_NAME);
 
   for (const asset of assets) {
