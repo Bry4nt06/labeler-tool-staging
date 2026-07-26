@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.8.5",
+  "version": "0.8.6",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Milestone 8 adds machine-family servo grammar profiles. TopModul and APL now validate full correction chains using CMD 3 followed by one or more consecutive CMD 7 moves and a closing CMD 3 reference. Autocol, Cold Glue, and TopMatic retain referenced 3-7-3 pairs, while MultiModul uses advanced motion-state validation. Mechanical-event rows and the timeline now carry machine-family and correction-chain metadata."
+  "notes": "STAGING TEST BUILD — Milestone 9 adds deterministic servo replay and diagnostics. Users can step forward or backward by HMI row or mechanical event, jump directly to an event, pause automatically at reference rows, highlight the active CMD 7 correction chain, view cumulative bottle rotation, compare generated and custom simulations, see why each command was generated, and detect active map/program mismatches during playback."
 }
