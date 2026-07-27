@@ -52,6 +52,7 @@ function renderBottleSpecs() {
     const id = nextId(state.bottleSpecs);
     state.bottleSpecs.push({ id, bottleType: `New Bottle ${id}`, diameterTargetMm: 0, radiusReductionMm: 0 });
     state.selectedBottle = `New Bottle ${id}`;
+    saveCurrentSettings();
     render();
   });
   const body = els.bottleSpecs.querySelector("tbody");
@@ -67,10 +68,11 @@ function renderBottleSpecs() {
       state.labelSpecs.forEach((label) => {
         if (label.bottleType === oldBottleType) label.bottleType = newBottleType;
       });
+      saveCurrentSettings();
       render();
     });
-    inputs[1].addEventListener("change", () => { spec.diameterTargetMm = num(inputs[1].value, spec.diameterTargetMm); render(); });
-    inputs[2].addEventListener("change", () => { spec.radiusReductionMm = num(inputs[2].value, spec.radiusReductionMm); render(); });
+    inputs[1].addEventListener("change", () => { spec.diameterTargetMm = num(inputs[1].value, spec.diameterTargetMm); saveCurrentSettings(); render(); });
+    inputs[2].addEventListener("change", () => { spec.radiusReductionMm = num(inputs[2].value, spec.radiusReductionMm); saveCurrentSettings(); render(); });
     const deleteButton = tr.querySelector("button");
     if (deleteButton) {
       deleteButton.addEventListener("click", () => {
@@ -82,6 +84,7 @@ function renderBottleSpecs() {
         state.labelSpecs.forEach((label) => {
           if (label.bottleType === deletedBottleType) label.bottleType = replacement;
         });
+        saveCurrentSettings();
         render();
       });
     }
@@ -116,6 +119,7 @@ function renderLabelSpecs() {
       codeBoxCenterMm: 0
     });
     state.selectedBrand = `New Label ${id}`;
+    saveCurrentSettings();
     render();
   });
   const body = els.labelSpecs.querySelector("tbody");
@@ -131,12 +135,14 @@ function renderLabelSpecs() {
         const oldBrand = spec.brand;
         spec[keys[index]] = input.type === "number" ? num(input.value, spec[keys[index]]) : input.value;
         if (keys[index] === "brand" && state.selectedBrand === oldBrand) state.selectedBrand = spec.brand;
+        saveCurrentSettings();
         render();
       });
     });
     applicationSelect.addEventListener("change", () => {
       spec.applicationMode = normalizeLabelApplicationMode(applicationSelect.value);
       ensureSelectedBrandForApplication();
+      saveCurrentSettings();
       render();
     });
     const deleteButton = tr.querySelector("button");
@@ -145,6 +151,7 @@ function renderLabelSpecs() {
         if (!window.confirm(`Delete label spec "${spec.brand}"?`)) return;
         state.labelSpecs = state.labelSpecs.filter((row) => row.id !== spec.id);
         ensureSelectedBrandForApplication();
+        saveCurrentSettings();
         render();
       });
     }
@@ -153,7 +160,6 @@ function renderLabelSpecs() {
 }
 
 function renderBuildInputs() {
-  ensureSelectedZoneAndSite();
   const availableLabels = labelSpecsForApplication();
   const brandOptions = availableLabels.map((spec) => spec.brand).filter(Boolean);
   const bottleOptions = state.bottleSpecs.map((spec) => spec.bottleType).filter(Boolean);
@@ -208,10 +214,6 @@ function renderBuildInputs() {
       <div class="build-card">
         <h2>Build Program Inputs</h2>
         <div class="application-filter-note">Showing ${state.applicationMode === "cold-glue" ? "Cold Glue" : "APL"} brand profiles only.</div>
-        <div class="zone-site-selection">
-          <label>Zone <select id="zoneSelect">${optionList(zoneNames(), state.selectedZone)}</select></label>
-          <label>Site <select id="siteSelect"${sitesForZone(state.selectedZone).length ? "" : " disabled"}>${sitesForZone(state.selectedZone).length ? optionList(sitesForZone(state.selectedZone), state.selectedSite) : '<option value="">No sites configured</option>'}</select></label>
-        </div>
         <label>Brand <select id="brandSelect"${brandOptions.length ? "" : " disabled"}>${brandOptions.length ? optionList(brandOptions, state.selectedBrand) : `<option value="">No ${state.applicationMode === "cold-glue" ? "Cold Glue" : "APL"} brands assigned</option>`}</select></label>
         <label>Bottle Type <select id="bottleSelect">${optionList(bottleOptions, state.selectedBottle)}</select></label>
         <h3>Label &amp; Bottle Geometry</h3>
@@ -237,25 +239,14 @@ function renderBuildInputs() {
 
   const brandSelect = els.buildInputs.querySelector("#brandSelect");
   const bottleSelect = els.buildInputs.querySelector("#bottleSelect");
-  const zoneSelect = els.buildInputs.querySelector("#zoneSelect");
-  const siteSelect = els.buildInputs.querySelector("#siteSelect");
-  zoneSelect?.addEventListener("change", () => {
-    state.selectedZone = zoneSelect.value;
-    ensureSelectedZoneAndSite();
-    saveCurrentSettings();
-    render();
-  });
-  siteSelect?.addEventListener("change", () => {
-    state.selectedSite = siteSelect.value;
-    saveCurrentSettings();
-  });
   brandSelect.addEventListener("change", () => {
     state.selectedBrand = brandSelect.value;
     const label = selectedLabelSpec();
     ensureBottleReferenceForLabel(label);
+    saveCurrentSettings();
     render();
   });
-  bottleSelect.addEventListener("change", () => { state.selectedBottle = bottleSelect.value; render(); });
+  bottleSelect.addEventListener("change", () => { state.selectedBottle = bottleSelect.value; saveCurrentSettings(); render(); });
   ["neckSpenderPlateDeg", "neckOverWipeDeg", "bodyOverWipeDeg", "backOverWipeDeg", "plateStartPositionDeg", "neckOffsetMm", "bodyOffsetMm", "backOffsetMm", "backInspectionOffsetMm"].forEach((key) => {
     const input = els.buildInputs.querySelector(`#${key}`);
     input?.addEventListener("change", () => { state.buildInputs[key] = num(input.value, state.buildInputs[key]); saveCurrentSettings(); render(); });

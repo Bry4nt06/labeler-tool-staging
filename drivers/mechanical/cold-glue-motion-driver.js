@@ -23,42 +23,9 @@
       holdAngle: finite(item?.bottleHoldAngleDeg, 90),
       holdCurrent: Boolean(item?.holdCurrentBottleAngle),
       holdStart: Math.max(start, Math.min(end, finite(item?.bottleHoldStartDeg, start))),
-      direction: side === "inner" ? 1 : -1,
+      direction: side === "inner" ? -1 : 1,
       coveragePercent: Math.max(0, Math.min(100, finite(item?.coveragePercent, NaN)))
     };
-  }
-
-  function allocateAcrossWindows(required, windows, maxRatio, safetyFactor) {
-    let remaining = Math.max(0, required);
-    const allocations = [];
-    const usable = windows.filter((window) => window.span > 0.001 && window.role !== "hold");
-    const totalWeight = usable.reduce((sum, window) => {
-      const explicit = Number.isFinite(window.coveragePercent) && window.coveragePercent > 0 ? window.coveragePercent : null;
-      return sum + (explicit === null ? window.span : Math.max(0.001, explicit));
-    }, 0);
-
-    usable.forEach((window, index) => {
-      const explicit = Number.isFinite(window.coveragePercent) && window.coveragePercent > 0 ? window.coveragePercent : null;
-      const weight = explicit === null ? window.span : Math.max(0.001, explicit);
-      const requested = index === usable.length - 1 ? remaining : required * (weight / Math.max(0.001, totalWeight));
-      const capacity = window.span * maxRatio * safetyFactor;
-      const rotation = Math.min(remaining, requested, capacity);
-      allocations.push({ ...window, rotation, ratio: rotation / window.span });
-      remaining -= rotation;
-    });
-
-    if (remaining > 0.001) {
-      for (const allocation of allocations) {
-        const capacity = allocation.span * maxRatio * safetyFactor;
-        const spare = Math.max(0, capacity - allocation.rotation);
-        const added = Math.min(spare, remaining);
-        allocation.rotation += added;
-        allocation.ratio = allocation.rotation / allocation.span;
-        remaining -= added;
-        if (remaining <= 0.001) break;
-      }
-    }
-    return { allocations, remaining: Math.max(0, remaining) };
   }
 
   function collapseSharedOppositeChannels(brushes) {
@@ -113,10 +80,32 @@
   }
 
   function applicationTarget(baseTargetDeg, mapDirection = "cw", labelDeg = 0) {
-    // The proven Autocol full-wrap setup tacks the neck label at 120 degrees.
-    // Mirror the sign when the machine direction is reversed.
-    if (finite(labelDeg, 0) >= 330) return mapDirection === "ccw" ? 120 : -120;
-    return finite(baseTargetDeg, 0);
+    // The gripper/spender is the radial zero reference. Every Cold Glue label
+    // must be center-tacked while the bottle face points directly at it.
+    void baseTargetDeg;
+    void mapDirection;
+    void labelDeg;
+    return 0;
+  }
+
+  function maximumWipeAcrossWindows(windows, maxRatio) {
+    const plannedRatio = Math.max(0.01, maxRatio - 0.1);
+    return windows
+      .filter((window) => window.span > 0.001 && window.role !== "hold")
+      .map((window) => ({
+        ...window,
+        rotation: window.span * plannedRatio,
+        ratio: plannedRatio,
+        direction: window.side === "inner" ? -1 : 1,
+        rotationSense: window.side === "inner" ? "counter-clockwise" : "clockwise"
+      }));
+  }
+
+  function brushEntryTarget(opposedHoldAngleDeg, firstHalfRotationDeg, firstHalfDirection) {
+    // Enter the first one-sided brush early enough that its half-label turn
+    // finishes exactly perpendicular to the opposed brush channel.
+    return finite(opposedHoldAngleDeg, 90)
+      - finite(firstHalfDirection, 0) * finite(firstHalfRotationDeg, 0);
   }
 
   function createPlan(options) {
@@ -125,7 +114,6 @@
     const fullWrap = labelDeg >= 330;
     const mapDirection = options?.mapDirection === "ccw" ? "ccw" : "cw";
     const maxRatio = Math.max(0.1, finite(options?.maxRatio, 21));
-    const safetyFactor = Math.max(0.25, Math.min(0.98, finite(options?.safetyFactor, 0.9)));
     const normalizedBrushes = (Array.isArray(options?.brushes) ? options.brushes : [])
       .map(normalizeBrush)
       .filter((brush) => brush.end > brush.start)
@@ -146,12 +134,13 @@
       Math.min(candidate.end, brush.end) > Math.max(candidate.start, brush.start) + 0.001
     ));
     const brushes = hasSharedOppositeChannel ? collapseSharedOppositeChannels(wipeBrushes) : wipeBrushes;
-    const centerTackTwoSided = fullWrap;
+    // Every Cold Glue label is center-tacked at the aggregate. The two loose
+    // halves must therefore be wiped in opposite plate directions regardless
+    // of whether the label is a full neck wrap or a shorter body/back label.
+    const centerTackTwoSided = labelDeg > 0;
     const simultaneousOppositeWipe = hasSharedOppositeChannel;
-    // A long center-tack neck label has two loose halves. Each half must be
-    // wiped completely, and the plate must reverse between the outside and
-    // inside brush channels. The center is already attached, so do not add the
-    // leading-edge over-wipe allowance used by body/back labels.
+    // The center is already attached, so the two opposite wipe directions
+    // divide the developed label length exactly in half.
     const totalRotation = centerTackTwoSided ? labelDeg : simultaneousOppositeWipe ? labelDeg / 2 + overWipeDeg : labelDeg + overWipeDeg * 2;
     const defaultPartialPercent = Math.max(5, Math.min(95, finite(options?.partialCoveragePercent, 50)));
     if (simultaneousOppositeWipe) {
@@ -179,21 +168,8 @@
     const processRequired = totalRotation * partialPercent / 100;
     const finalRequired = Math.max(0, totalRotation - processRequired);
 
-    const processPlan = allocateAcrossWindows(processRequired, processBrushes, maxRatio, safetyFactor);
-    const finalPlan = allocateAcrossWindows(finalRequired + processPlan.remaining, finalBrushes, maxRatio, safetyFactor);
-
-    if (centerTackTwoSided) {
-      const firstDirection = mapDirection === "ccw" ? 1 : -1;
-      processPlan.allocations.forEach((allocation) => { allocation.direction = firstDirection; });
-      finalPlan.allocations.forEach((allocation) => { allocation.direction = -firstDirection; });
-    }
-
-    if (processPlan.remaining > 0.001 && !finalBrushes.length) {
-      issues.push({ level: "bad", code: "cold-glue-process-capacity", message: `Brush channels are short by ${processPlan.remaining.toFixed(1)} deg of bottle rotation.` });
-    }
-    if (finalPlan.remaining > 0.001) {
-      issues.push({ level: "bad", code: "cold-glue-final-capacity", message: `Final brush is short by ${finalPlan.remaining.toFixed(1)} deg of bottle rotation.` });
-    }
+    const processAllocations = maximumWipeAcrossWindows(processBrushes, maxRatio);
+    const finalAllocations = maximumWipeAcrossWindows(finalBrushes, maxRatio);
 
     return {
       labelDeg,
@@ -207,12 +183,12 @@
       partialCoveragePercent: partialPercent,
       processRequired,
       finalRequired,
-      process: processPlan.allocations,
-      final: finalPlan.allocations,
+      process: processAllocations,
+      final: finalAllocations,
       holds,
       issues
     };
   }
 
-  global.LabelerColdGlueMotionDriver = { createPlan, flowFacingTarget, applicationTarget };
+  global.LabelerColdGlueMotionDriver = { createPlan, flowFacingTarget, applicationTarget, brushEntryTarget };
 })(window);

@@ -1,9 +1,29 @@
 "use strict";
 
-const MACHINE_MAP_SCHEMA_VERSION = 11;
+const MACHINE_MAP_SCHEMA_VERSION = 12;
 const STELLA_330_FULL_WRAP_CALIBRATION_VERSION = 2;
 const BLANK_MAP_SEED_VERSION = 1;
+const MACHINE_SITE_DIRECTORY = Object.freeze({
+  NAZ: Object.freeze(["FCL", "COB", "WMB", "JAX", "LA", "HOB", "CVL", "BVL"]),
+  SAZ: Object.freeze(["Unassigned"]),
+  UKZ: Object.freeze(["Magor", "Camden"])
+});
 let runtimeMachineMapId = null;
+
+function normalizedMachineZone(value) {
+  const requested = String(value || "").trim().toUpperCase();
+  return Object.hasOwn(MACHINE_SITE_DIRECTORY, requested) ? requested : "NAZ";
+}
+
+function machineSitesForZone(zone) {
+  return [...(MACHINE_SITE_DIRECTORY[normalizedMachineZone(zone)] || ["Unassigned"])];
+}
+
+function normalizedMachineSite(zone, value) {
+  const requested = String(value || "").trim();
+  const sites = machineSitesForZone(zone);
+  return sites.find((site) => site.toLowerCase() === requested.toLowerCase()) || sites[0] || "Unassigned";
+}
 
 function isProtectedMapTemplate() {
   return false;
@@ -352,53 +372,10 @@ function inferAplStationSections(machineMap) {
   return result;
 }
 
-function mapLocationFor(map) {
-  ensureSelectedZoneAndSite();
-  const zone = zoneNames().includes(normalizedZoneSiteName(map?.zone)) ? normalizedZoneSiteName(map.zone) : state.selectedZone;
-  const sites = sitesForZone(zone);
-  const site = sites.includes(normalizedZoneSiteName(map?.site)) ? normalizedZoneSiteName(map.site) : sites[0] || "";
-  return { zone, site };
-}
-
-function mapLocationLabel(map) {
-  const { zone, site } = mapLocationFor(map);
-  return `${zone || "No Zone"} / ${site || "No Site"}`;
-}
-
-function mapLibraryLocation() {
-  ensureSelectedZoneAndSite();
-  const active = state.mapLibrary.find((map) => map.id === state.activeMapId) || state.mapLibrary[0];
-  const fallback = mapLocationFor(active);
-  const requestedZone = normalizedZoneSiteName(state.mapLibraryZone);
-  const zone = requestedZone === "ALL" || zoneNames().includes(requestedZone)
-    ? normalizedZoneSiteName(state.mapLibraryZone)
-    : fallback.zone;
-  if (zone === "ALL") {
-    state.mapLibraryZone = "ALL";
-    state.mapLibrarySite = "";
-    return { zone: "ALL", site: "" };
-  }
-  const sites = sitesForZone(zone);
-  const site = sites.includes(normalizedZoneSiteName(state.mapLibrarySite))
-    ? normalizedZoneSiteName(state.mapLibrarySite)
-    : (sites.includes(fallback.site) ? fallback.site : sites[0] || "");
-  state.mapLibraryZone = zone;
-  state.mapLibrarySite = site;
-  return { zone, site };
-}
-
-function mapsForMapLibraryLocation() {
-  const location = mapLibraryLocation();
-  if (location.zone === "ALL") return [...state.mapLibrary];
-  return state.mapLibrary.filter((entry) => {
-    const entryLocation = mapLocationFor(entry);
-    return entryLocation.zone === location.zone && entryLocation.site === location.site;
-  });
-}
-
-function createMachineMap({ id, name, zone, site, machineType, applicationMode, headCount, aggregateCount, stationCount, enabledAggregates, enabledStations, aggregateAngles, stationAngles, stationSections, objects, depths, machineSettings, coldGlueProfile, restoreDefaultObjects = true, isTemplate = false, blankSeedVersion = 0 } = {}) {
+function createMachineMap({ id, name, zone, site, machineType, applicationMode, headCount, aggregateCount, stationCount, enabledAggregates, enabledStations, aggregateAngles, stationAngles, stationSections, objects, depths, machineSettings, coldGlueProfile, programData, restoreDefaultObjects = true, isTemplate = false, blankSeedVersion = 0 } = {}) {
   const normalizedMachineType = String(machineType || "TopModul");
-  const mode = applicationMode === "cold-glue" ? "cold-glue" : "apl";
+  const mode = normalizedMachineType.toLowerCase() === "multimodul" ? "apl" : applicationMode === "cold-glue" ? "cold-glue" : "apl";
+  const normalizedZone = normalizedMachineZone(zone);
   const aggregates = Math.max(1, Math.min(6, Math.round(num(aggregateCount, mode === "cold-glue" ? 3 : 6))));
   const stations = Math.max(1, Math.min(6, Math.round(num(stationCount, aggregates))));
   const sourceObjects = Array.isArray(objects)
@@ -416,15 +393,14 @@ function createMachineMap({ id, name, zone, site, machineType, applicationMode, 
       station: 1
     });
   }
-  const location = mapLocationFor({ zone, site });
   return {
     schemaVersion: MACHINE_MAP_SCHEMA_VERSION,
     blankSeedVersion: Math.max(0, Math.round(num(blankSeedVersion, 0))),
     isTemplate: Boolean(isTemplate),
     id: String(id || uniqueMapId("machine-map")),
     name: String(name || `${mode === "cold-glue" ? "Cold Glue" : "APL"} ${aggregates}-Aggregate Map`),
-    zone: location.zone,
-    site: location.site,
+    zone: normalizedZone,
+    site: normalizedMachineSite(normalizedZone, site),
     machineType: normalizedMachineType,
     applicationMode: mode,
     headCount: Math.max(1, Math.min(120, Math.round(num(headCount, machineSettings?.headCount !== undefined ? machineSettings.headCount : (state?.headCount !== undefined ? state.headCount : 60))))),
@@ -450,6 +426,7 @@ function createMachineMap({ id, name, zone, site, machineType, applicationMode, 
     coldGlueProfile: mode === "cold-glue" && coldGlueProfile && typeof coldGlueProfile === "object"
       ? { ...coldGlueProfile }
       : undefined,
+    programData: programData && typeof programData === "object" ? deepClone(programData) : null,
     depths: { ...state.depths, ...(depths || {}) },
     restoreDefaultObjects: restoreDefaultObjects !== false,
     objects: sourceObjects.map((item) => normalizeBuilderObject({ ...item, kind: item.kind === "wipe" ? "brush" : item.kind }, mode, stations))
@@ -465,7 +442,36 @@ function editableMachineMap() {
   return activeMachineMap();
 }
 
+function snapshotActiveMapProgramData(map = activeMachineMap()) {
+  if (!map) return null;
+  const mode = map.applicationMode === "cold-glue" ? "cold-glue" : "apl";
+  map.programData = {
+    selectedBrand: state.selectedBrand,
+    selectedBottle: state.selectedBottle,
+    buildInputs: deepClone(state.buildInputs),
+    labelSpecs: deepClone(state.labelSpecs.filter((spec) => normalizeLabelApplicationMode(spec?.applicationMode) === mode)),
+    bottleSpecs: deepClone(state.bottleSpecs)
+  };
+  return map.programData;
+}
+
+function restoreMachineMapProgramData(map) {
+  const data = map?.programData;
+  if (!data || typeof data !== "object") return false;
+  const mode = map.applicationMode === "cold-glue" ? "cold-glue" : "apl";
+  if (data.buildInputs && typeof data.buildInputs === "object") state.buildInputs = { ...state.buildInputs, ...deepClone(data.buildInputs) };
+  if (Array.isArray(data.labelSpecs) && data.labelSpecs.length) {
+    const otherModeLabels = state.labelSpecs.filter((spec) => normalizeLabelApplicationMode(spec?.applicationMode) !== mode);
+    state.labelSpecs = [...otherModeLabels, ...deepClone(data.labelSpecs).map((spec) => ({ ...spec, applicationMode: mode }))];
+  }
+  if (Array.isArray(data.bottleSpecs) && data.bottleSpecs.length) state.bottleSpecs = deepClone(data.bottleSpecs);
+  if (typeof data.selectedBrand === "string") state.selectedBrand = data.selectedBrand;
+  if (typeof data.selectedBottle === "string") state.selectedBottle = data.selectedBottle;
+  return true;
+}
+
 function inferredMachineMapApplicationMode(map) {
+  if (String(map?.machineType || "").trim().toLowerCase() === "multimodul") return "apl";
   if (map?.applicationMode === "cold-glue") return "cold-glue";
   const name = String(map?.name || "");
   return /cold[ -]?glue/i.test(name) || /(^|[\s_-])cg([\s_-]|$)/i.test(name) ? "cold-glue" : "apl";
@@ -487,7 +493,6 @@ function ensurePersistentApplicationMaps() {
         map.applicationMode = applicationMode;
         map.isTemplate = isProtectedMapTemplate(map);
         map.aggregateAngles = normalizeAggregateAngles(map.aggregateAngles, applicationMode, map.objects);
-        Object.assign(map, mapLocationFor(map));
       } else {
         state.mapLibrary[index] = createMachineMap({ ...map, applicationMode });
       }
@@ -598,15 +603,14 @@ function ensurePersistentApplicationMaps() {
 
 function loadMachineMapIntoRuntime(map, shouldRender = true) {
   if (!map) return;
-  const location = mapLocationFor(map);
-  map.zone = location.zone;
-  map.site = location.site;
-  state.selectedZone = location.zone;
-  state.selectedSite = location.site;
+  if (runtimeMachineMapId && runtimeMachineMapId !== map.id) {
+    snapshotActiveMapProgramData(state.mapLibrary.find((entry) => entry.id === runtimeMachineMapId));
+  }
   runtimeMachineMapId = map.id;
   state.activeMapId = map.id;
   state.applicationMode = inferredMachineMapApplicationMode(map);
   map.applicationMode = state.applicationMode;
+  const restoredProgramData = restoreMachineMapProgramData(map);
   state.headCount = map.headCount;
   const settings = map.machineSettings || {};
   state.direction = settings.direction === "cw" ? "cw" : "ccw";
@@ -634,6 +638,7 @@ function loadMachineMapIntoRuntime(map, shouldRender = true) {
     .filter((item) => item.kind === "coding" || activeAplStationNumbers(map).includes(Number(item.station)));
   syncApplicationMapToLegacyState();
   ensureSelectedBrandForApplication();
+  if (!restoredProgramData) snapshotActiveMapProgramData(map);
   const runtimeFields = ["headCount", "radius", "referencePitchRadiusMm", "encoderCountsPerRev", "servoGearRatio", "zeroAngle", "maxMoveRatio", "direction"];
   runtimeFields.forEach((key) => { if (els[key]) els[key].value = state[key]; });
   if (els.autoScaleTableMap) els.autoScaleTableMap.checked = Boolean(state.autoScaleTableMap);
@@ -834,43 +839,37 @@ function renderMachineLayoutControls(machineMap) {
 function renderMapLibraryControls() {
   const map = activeMachineMap();
   if (!map) return;
-  const libraryLocation = mapLibraryLocation();
-  const visibleMaps = mapsForMapLibraryLocation();
   if (els.mapLibrarySelect) {
-    els.mapLibrarySelect.disabled = !visibleMaps.length;
-    els.mapLibrarySelect.innerHTML = visibleMaps.length
-      ? visibleMaps.map((entry) => `<option value="${entry.id}"${entry.id === map.id ? " selected" : ""}>${entry.name}</option>`).join("")
-      : '<option value="">No maps saved for this site</option>';
+    els.mapLibrarySelect.innerHTML = state.mapLibrary.map((entry) => `<option value="${entry.id}"${entry.id === map.id ? " selected" : ""}>${entry.zone || "NAZ"} / ${entry.site || "FCL"} — ${entry.name}</option>`).join("");
   }
   if (els.mapLibrarySummary) els.mapLibrarySummary.textContent = `${map.machineType || "TopModul"} • ${map.name} • ${map.headCount} heads • ${map.aggregateCount} aggregate${map.aggregateCount === 1 ? "" : "s"}`;
   if (els.mapName) els.mapName.value = map.name;
-  if (els.mapZone) els.mapZone.innerHTML = optionList(["ALL", ...zoneNames()], libraryLocation.zone);
-  if (els.mapSite) {
-    const sites = sitesForZone(libraryLocation.zone);
-    els.mapSite.disabled = libraryLocation.zone === "ALL" || !sites.length;
-    els.mapSite.innerHTML = libraryLocation.zone === "ALL" ? '<option value="">All sites</option>' : sites.length ? optionList(sites, libraryLocation.site) : '<option value="">No sites configured</option>';
+  if (els.mapLibrarySummary && !els.mapLibrarySummary.textContent.startsWith(`${map.zone || "NAZ"} / ${map.site || "FCL"}`)) {
+    els.mapLibrarySummary.textContent = `${map.zone || "NAZ"} / ${map.site || "FCL"} · ${els.mapLibrarySummary.textContent}`;
   }
-  if (els.newMachineMap) els.newMachineMap.disabled = libraryLocation.zone === "ALL";
-  if (els.applicationMode) {
-    // MultiModul machines can run either application system. Rebuild the
-    // options whenever a map is rendered so a previously saved APL map never
-    // leaves the selector with only its current application available.
-    const supportedModes = [
-      { value: "apl", label: "APL" },
-      { value: "cold-glue", label: "Cold Glue" }
-    ];
-    els.applicationMode.replaceChildren(...supportedModes.map(({ value, label }) => {
+  if (els.mapZone) {
+    els.mapZone.replaceChildren(...Object.keys(MACHINE_SITE_DIRECTORY).map((zone) => {
       const option = document.createElement("option");
-      option.value = value;
-      option.textContent = label;
+      option.value = zone;
+      option.textContent = zone;
+      option.selected = zone === normalizedMachineZone(map.zone);
       return option;
     }));
-    els.applicationMode.value = state.applicationMode;
-    els.applicationMode.disabled = false;
-    els.applicationMode.setAttribute("aria-disabled", "false");
-    els.applicationMode.title = String(map.machineType || "").trim() === "MultiModul"
-      ? "Choose APL or Cold Glue for this MultiModul map."
-      : "Choose the application system saved with this map.";
+  }
+  if (els.mapSite) {
+    els.mapSite.replaceChildren(...machineSitesForZone(map.zone).map((site) => {
+      const option = document.createElement("option");
+      option.value = site;
+      option.textContent = site;
+      option.selected = site === normalizedMachineSite(map.zone, map.site);
+      return option;
+    }));
+  }
+  if (els.applicationMode) {
+    const multiModul = String(map.machineType || "").trim().toLowerCase() === "multimodul";
+    els.applicationMode.value = multiModul ? "apl" : state.applicationMode;
+    els.applicationMode.disabled = multiModul;
+    els.applicationMode.title = multiModul ? "MultiModul is an APL labeler." : "";
   }
   if (els.mapHeadCount) els.mapHeadCount.value = map.headCount;
   if (els.mapMachineType) {
@@ -1142,24 +1141,16 @@ function renderWipeDownBuilder() {
 
 function saveMapDefinitionFromControls(event) {
   const liveInput = event?.type === "input";
-  const explicitSave = event?.type === "click";
   const map = editableMachineMap();
   if (!map) return;
-  const proposedName = String(els.mapName?.value || map.name).trim() || map.name;
-  const proposedZone = normalizedZoneSiteName(els.mapZone?.value) || mapLocationFor(map).zone;
-  const proposedSite = normalizedZoneSiteName(els.mapSite?.value) || sitesForZone(proposedZone)[0] || "";
-  if (proposedZone === "ALL") { window.alert("Select a specific Zone and Site before saving a map."); return; }
-  if (explicitSave && !window.confirm(`Save map "${proposedName}" to ${proposedZone || "No Zone"} / ${proposedSite || "No Site"}?`)) return;
   const previousLimit = activeAplStationLimit(map);
-  map.name = proposedName;
-  map.zone = proposedZone;
-  map.site = proposedSite;
-  state.selectedZone = proposedZone;
-  state.selectedSite = proposedSite;
-  state.mapLibraryZone = proposedZone;
-  state.mapLibrarySite = proposedSite;
+  map.name = String(els.mapName?.value || map.name).trim() || map.name;
+  map.zone = normalizedMachineZone(els.mapZone?.value || map.zone);
+  map.site = normalizedMachineSite(map.zone, els.mapSite?.value || map.site);
   map.machineType = String(els.mapMachineType?.value || map.machineType || "TopModul").trim() || "TopModul";
-  state.applicationMode = els.applicationMode?.value === "cold-glue" ? "cold-glue" : "apl";
+  state.applicationMode = map.machineType.toLowerCase() === "multimodul"
+    ? "apl"
+    : els.applicationMode?.value === "cold-glue" ? "cold-glue" : "apl";
   map.applicationMode = state.applicationMode;
   if (map.applicationMode === "cold-glue") {
     map.objects = normalizeColdGlueMap(map.objects);
@@ -1185,6 +1176,7 @@ function saveMapDefinitionFromControls(event) {
   map.aggregateAngles = normalizeAggregateAngles(map.aggregateAngles, map.applicationMode, map.objects);
   map.stationAngles = normalizeStationAngles({ ...map.stationAngles, ...map.aggregateAngles });
   ensureAplObjectsForNewStations(map, previousLimit);
+  snapshotActiveMapProgramData(map);
   if (liveInput) {
     loadMachineMapIntoRuntime(map, false);
     refreshAfterBuilderEdit({ persist: true });
@@ -1215,11 +1207,6 @@ function exportSelectedMachineMap() {
   download(`${safeName}.servoforge-map.json`, "application/json", JSON.stringify(payload, null, 2));
 }
 
-function clearServoSimulationForSelectedMap() {
-  state.simulation = { useCustom: false, turns: [], rows: [], deletedRows: [], lines: [] };
-  state.previewBottleAngle = null;
-}
-
 function bindWipeDownBuilder() {
   if (!els.addBuilderObject) return;
   document.querySelector("#undoBuilderEdit")?.addEventListener("click", () => restoreBuilderHistory("undo"));
@@ -1233,6 +1220,10 @@ function bindWipeDownBuilder() {
     const labels = String(window.prompt("Label order by station (comma separated):", stations === 3 ? "neck,body,back" : "neck,neck,body,body,back,back") || "").split(",").map((value) => value.trim().toLowerCase());
     recordBuilderHistory("Guided map setup");
     map.machineType = machineType;
+    if (machineType.toLowerCase() === "multimodul") {
+      map.applicationMode = "apl";
+      state.applicationMode = "apl";
+    }
     map.headCount = headCount;
     map.enabledAggregates = Array.from({ length: 6 }, (_, index) => index < stations);
     map.enabledStations = Array.from({ length: 6 }, (_, index) => index < stations);
@@ -1262,30 +1253,16 @@ function bindWipeDownBuilder() {
   document.querySelector("#builderObjectType")?.addEventListener("change", updateBuilderTypeControls);
   els.mapLibrarySelect?.addEventListener("change", () => {
     const selected = state.mapLibrary.find((map) => map.id === els.mapLibrarySelect.value);
-    if (selected) { clearServoSimulationForSelectedMap(); loadMachineMapIntoRuntime(selected, true); saveCurrentSettings(); renderWipeDownBuilder(); }
+    if (selected) { loadMachineMapIntoRuntime(selected, true); saveCurrentSettings(); renderWipeDownBuilder(); }
   });
   els.newMachineMap?.addEventListener("click", () => {
     const base = activeMachineMap();
-    const location = mapLibraryLocation();
-    const copy = createMachineMap({ ...deepClone(base), id: uniqueMapId("machine-map"), name: uniqueMapName(`${base.name} Copy`), zone: location.zone, site: location.site, isTemplate: false });
-    state.mapLibrary.push(copy); clearServoSimulationForSelectedMap(); loadMachineMapIntoRuntime(copy, true); saveCurrentSettings(); renderWipeDownBuilder();
+    const copy = createMachineMap({ ...deepClone(base), id: uniqueMapId("machine-map"), name: uniqueMapName(`${base.name} Copy`), isTemplate: false });
+    state.mapLibrary.push(copy); loadMachineMapIntoRuntime(copy, true); saveCurrentSettings(); renderWipeDownBuilder();
   });
   els.saveMachineMap?.addEventListener("click", saveMapDefinitionFromControls);
   els.exportMachineMap?.addEventListener("click", exportSelectedMachineMap);
   els.mapMachineType?.addEventListener("change", saveMapDefinitionFromControls);
-  els.mapZone?.addEventListener("change", () => {
-    state.mapLibraryZone = normalizedZoneSiteName(els.mapZone.value) || mapLibraryLocation().zone;
-    state.mapLibrarySite = state.mapLibraryZone === "ALL" ? "" : sitesForZone(state.mapLibraryZone)[0] || "";
-    const maps = mapsForMapLibraryLocation();
-    if (maps.length) { clearServoSimulationForSelectedMap(); loadMachineMapIntoRuntime(maps[0], true); }
-    renderMapLibraryControls();
-  });
-  els.mapSite?.addEventListener("change", () => {
-    state.mapLibrarySite = normalizedZoneSiteName(els.mapSite.value) || "";
-    const maps = mapsForMapLibraryLocation();
-    if (maps.length) { clearServoSimulationForSelectedMap(); loadMachineMapIntoRuntime(maps[0], true); }
-    renderMapLibraryControls();
-  });
   els.addMachineType?.addEventListener("click", () => {
     const entered = String(window.prompt("Enter the new machine type name:", "") || "").trim();
     if (!entered) return;
@@ -1297,8 +1274,6 @@ function bindWipeDownBuilder() {
   els.deleteMachineMap?.addEventListener("click", () => {
     if (state.mapLibrary.length <= 1) { window.alert("At least one machine map must remain in the library."); return; }
     const index = state.mapLibrary.findIndex((map) => map.id === state.activeMapId);
-    const map = state.mapLibrary[index];
-    if (!map || !window.confirm(`Delete map "${map.name}" from ${mapLocationLabel(map)}? This cannot be undone.`)) return;
     if (index >= 0) state.mapLibrary.splice(index, 1);
     loadMachineMapIntoRuntime(state.mapLibrary[Math.max(0, index - 1)] || state.mapLibrary[0], true);
     saveCurrentSettings(); renderWipeDownBuilder();
@@ -1307,7 +1282,7 @@ function bindWipeDownBuilder() {
     control?.addEventListener("input", saveMapDefinitionFromControls);
     control?.addEventListener("change", saveMapDefinitionFromControls);
   });
-  [els.applicationMode, els.mapDirection, els.mapAutoScaleTableMap].forEach((control) => control?.addEventListener("change", saveMapDefinitionFromControls));
+  [els.applicationMode, els.mapZone, els.mapSite, els.mapDirection, els.mapAutoScaleTableMap].forEach((control) => control?.addEventListener("change", saveMapDefinitionFromControls));
 
   els.addBuilderObject.addEventListener("click", () => {
     recordBuilderHistory("Add map object");

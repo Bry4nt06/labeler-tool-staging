@@ -227,8 +227,12 @@ function sectionWipePlan(section) {
       ? label.bodyLengthMm
       : label.backLengthMm;
   const contactMm = section === "neck" ? state.buildInputs.neckContactMm : section === "body" ? state.buildInputs.bodyContactMm : state.buildInputs.backContactMm;
-  const overWipeDeg = section === "neck" ? state.buildInputs.neckOverWipeDeg : section === "body" ? state.buildInputs.bodyOverWipeDeg : state.buildInputs.backOverWipeDeg;
   const coldGlueLabel = normalizeLabelApplicationMode(label.applicationMode) === "cold-glue";
+  const coldGlueProfile = coldGlueLabel && typeof activeMachineMap === "function"
+    ? activeMachineMap()?.coldGlueProfile
+    : null;
+  const configuredOverWipeDeg = section === "neck" ? state.buildInputs.neckOverWipeDeg : section === "body" ? state.buildInputs.bodyOverWipeDeg : state.buildInputs.backOverWipeDeg;
+  const overWipeDeg = num(coldGlueProfile?.[`${section}OverWipeDeg`], configuredOverWipeDeg);
   const mode = coldGlueLabel || (section === "neck" && state.buildInputs.neckApplication === "Center") ? "center-tack-two-stage" : "leading-edge";
   return window.LabelerGeometryDriver?.solveSection({ mode, labelLengthMm, circumferenceMm, contactMm, overWipeDeg }) ?? null;
 }

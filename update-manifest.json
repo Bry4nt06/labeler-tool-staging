@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.92",
+  "version": "0.7.84",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING TEST BUILD — Promotes the tested Zone/Site map workflow, MultiModul application selection, and neck-to-body servo transition improvements."
+  "notes": "STAGING TEST BUILD — Adds Zone and Site organization and stores brand, bottle, specifications, and Build Program data with each saved map."
 }

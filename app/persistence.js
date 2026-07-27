@@ -27,7 +27,7 @@ function loadSavedSettings() {
   if (!raw) return;
   try {
     const saved = JSON.parse(raw);
-    ["headCount", "radius", "zeroAngle", "direction", "previewAngle", "previewBottleAngle", "animationSpeed", "maxMoveRatio", "tablePitchRadiusMm", "referencePitchRadiusMm", "autoScaleTableMap", "encoderCountsPerRev", "servoGearRatio", "padClearanceMm", "showMoveDistanceOverlay", "showAllProgramMovesOverlay", "showQuadrantReferences", "showAggregateSpacingOverlay", "workspaceView", "wipeBuilderOpen", "activeMapId", "mapZoom", "mapPanX", "mapPanY", "mapLocked", "selectedBrand", "selectedBottle", "selectedZone", "selectedSite", "mapLibraryZone", "mapLibrarySite", "themePreset"].forEach((key) => {
+    ["headCount", "radius", "zeroAngle", "direction", "previewAngle", "previewBottleAngle", "animationSpeed", "maxMoveRatio", "tablePitchRadiusMm", "referencePitchRadiusMm", "autoScaleTableMap", "encoderCountsPerRev", "servoGearRatio", "padClearanceMm", "showMoveDistanceOverlay", "showAllProgramMovesOverlay", "showQuadrantReferences", "showAggregateSpacingOverlay", "workspaceView", "wipeBuilderOpen", "activeMapId", "mapZoom", "mapPanX", "mapPanY", "mapLocked", "selectedBrand", "selectedBottle", "themePreset"].forEach((key) => {
       if (saved[key] !== undefined) state[key] = saved[key];
     });
     // Older builds stored degrees per 0.1-second tick. Preserve the perceived
@@ -37,8 +37,6 @@ function loadSavedSettings() {
       : Math.min(50, Math.max(1, num(state.animationSpeed, 1) * 10));
     state.animationSpeedUnit = "deg-per-second";
     if (saved.depths) state.depths = { ...state.depths, ...saved.depths };
-    if (saved.zoneSiteConfiguration) state.zoneSiteConfiguration = normalizeZoneSiteConfiguration(saved.zoneSiteConfiguration);
-    ensureSelectedZoneAndSite();
     if (saved.buildInputs) state.buildInputs = { ...state.buildInputs, ...saved.buildInputs };
     const legacyBuildInputs = saved.buildInputs || {};
     if (Array.isArray(saved.bottleSpecs)) state.bottleSpecs = saved.bottleSpecs;
@@ -72,7 +70,7 @@ function loadSavedSettings() {
     if (Array.isArray(saved.servoProfileLibrary)) state.servoProfileLibrary = saved.servoProfileLibrary;
     if (typeof saved.activeServoProfileId === "string") state.activeServoProfileId = saved.activeServoProfileId;
     if (Array.isArray(saved.machineTypes)) {
-      state.machineTypes = [...new Set(["TopMatic", "Autocol", "TopModul", ...saved.machineTypes.map((value) => String(value).trim()).filter(Boolean)])];
+      state.machineTypes = [...new Set(["TopMatic", "Autocol", "TopModul", "MultiModul", ...saved.machineTypes.map((value) => String(value).trim()).filter(Boolean)])];
     }
     if (Array.isArray(saved.coldGlueMap)) state.coldGlueMap = normalizeColdGlueMap(saved.coldGlueMap);
     if (saved.coldGlueAggregateSettings && typeof saved.coldGlueAggregateSettings === "object") state.coldGlueAggregateSettings = deepClone(saved.coldGlueAggregateSettings);
@@ -124,6 +122,7 @@ function importFaultConfigFile(file) {
 }
 
 function settingsSnapshot() {
+  if (typeof snapshotActiveMapProgramData === "function") snapshotActiveMapProgramData();
   return {
     themePreset: state.themePreset,
     headCount: state.headCount,
@@ -159,11 +158,6 @@ function settingsSnapshot() {
     depths: state.depths,
     selectedBrand: state.selectedBrand,
     selectedBottle: state.selectedBottle,
-    selectedZone: state.selectedZone,
-    selectedSite: state.selectedSite,
-    mapLibraryZone: state.mapLibraryZone,
-    mapLibrarySite: state.mapLibrarySite,
-    zoneSiteConfiguration: state.zoneSiteConfiguration,
     buildInputs: state.buildInputs,
     bottleSpecs: state.bottleSpecs,
     labelSpecs: state.labelSpecs,
@@ -213,7 +207,7 @@ function saveCurrentSettings() {
   window.setTimeout(() => { els.saveSettings.textContent = "Save Settings"; }, 1100);
 }
 
-const COMPANY_SETTINGS_SEED_VERSION = 1;
+const COMPANY_SETTINGS_SEED_VERSION = 3;
 const COMPANY_SETTINGS_SEED_KEY = "labelerCompanySettingsSeedVersion";
 
 function normalizedSeedKey(value) {
@@ -243,6 +237,18 @@ async function applyCompanySettingsSeed() {
     if (!seeded || typeof seeded !== "object") throw new Error("Company settings are invalid.");
 
     const hasUserSettings = Boolean(readStorage(SETTINGS_KEY));
+    // v0.7.75 introduced the OW Green package with an incorrect 12 oz display
+    // name. Preserve the seeded records and any user edits while correcting
+    // only those exact library identities to their proper 330 ml designation.
+    const stella330Map = state.mapLibrary?.find((item) => item?.id === "map-stella-12oz-ow-green-center-tack");
+    if (stella330Map && stella330Map.name === "60H CG Stella 12oz Center Tack") {
+      stella330Map.name = "60H CG Stella 330ml Center Tack";
+    }
+    const stella330Label = state.labelSpecs?.find((item) =>
+      item?.brand === "Stella 12oz OW Green - 3 Label"
+      && item?.bottleType === "Stella OW Green 330ml"
+    );
+    if (stella330Label) stella330Label.brand = "Stella 330ml OW Green - 3 Label";
     if (!hasUserSettings) {
       if (!writeStorage(SETTINGS_KEY, JSON.stringify(seeded))) throw new Error("Browser storage is unavailable.");
       loadSavedSettings();
@@ -285,7 +291,11 @@ function showPendingToolUpdate(worker) {
 async function registerToolUpdateService() {
   if (!("serviceWorker" in navigator) || window.location.protocol === "file:") return;
   try {
-    updateServiceWorkerRegistration = await navigator.serviceWorker.register("./service-worker.js", { scope: "./" });
+    const currentVersion = document.querySelector('meta[name="application-version"]')?.content || "current";
+    updateServiceWorkerRegistration = await navigator.serviceWorker.register(`./service-worker.js?v=${encodeURIComponent(currentVersion)}`, {
+      scope: "./",
+      updateViaCache: "none"
+    });
     if (updateServiceWorkerRegistration.waiting) showPendingToolUpdate(updateServiceWorkerRegistration.waiting);
     updateServiceWorkerRegistration.addEventListener("updatefound", () => {
       const installing = updateServiceWorkerRegistration.installing;

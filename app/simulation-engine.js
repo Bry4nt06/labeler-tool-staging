@@ -36,6 +36,7 @@ function ensureSimulationRows() {
 function simulationProgram() {
   ensureSimulationRows();
   if (typeof activeMachineUsesAutocolCommands === "function" && activeMachineUsesAutocolCommands()) normalizeAutocolSimulationLines();
+  state.simulation.lines = enforceUniqueServoTableAngles(state.simulation.lines);
   return state.simulation.lines.map((row, index) => ({
     ...row,
     simulationSourceIndex: index,
