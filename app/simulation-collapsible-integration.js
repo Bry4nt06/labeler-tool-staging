@@ -305,16 +305,17 @@
 
     drawer.querySelectorAll("input,select,textarea,button").forEach((control) => {
       if (control.id === "closeApplicationSetup") {
-        control.disabled = false;
+        if (control.disabled) control.disabled = false;
         return;
       }
       if (locked) {
         if (!control.hasAttribute("data-locked-builder-was-disabled")) {
           control.dataset.lockedBuilderWasDisabled = String(control.disabled);
         }
-        control.disabled = true;
+        if (!control.disabled) control.disabled = true;
       } else if (control.hasAttribute("data-locked-builder-was-disabled")) {
-        control.disabled = control.dataset.lockedBuilderWasDisabled === "true";
+        const previous = control.dataset.lockedBuilderWasDisabled === "true";
+        if (control.disabled !== previous) control.disabled = previous;
         delete control.dataset.lockedBuilderWasDisabled;
       }
     });
@@ -327,14 +328,22 @@
 
     const locked = activeMapLocked();
     const hidden = panelManuallyHidden();
-    if (!hidden) button.dataset.developerHidden = "false";
-    button.disabled = false;
-    button.setAttribute("aria-disabled", "false");
-    button.textContent = "Map Builder";
-    button.title = locked
+    if (!hidden && button.dataset.developerHidden !== "false") button.dataset.developerHidden = "false";
+    if (button.disabled) button.disabled = false;
+    if (button.getAttribute("aria-disabled") !== "false") button.setAttribute("aria-disabled", "false");
+    if (button.textContent !== "Map Builder") button.textContent = "Map Builder";
+    const desiredTitle = locked
       ? "Open Map Builder in read-only mode. Unlock the map in Settings to make changes."
       : "Open Map Builder";
-    button.classList.toggle("locked-map-builder-view", locked);
+    if (button.title !== desiredTitle) button.title = desiredTitle;
+    if (button.classList.contains("locked-map-builder-view") !== locked) {
+      button.classList.toggle("locked-map-builder-view", locked);
+    }
+
+    const workspaceNote = document.querySelector("#workspaceControlsCard > .workspace-controls-note:last-child");
+    const desiredNote = "Locked maps remain available in Map Builder as a read-only view. Unlock the selected map in Settings to make changes.";
+    if (workspaceNote && workspaceNote.textContent.trim() !== desiredNote) workspaceNote.textContent = desiredNote;
+
     applyDrawerReadOnly();
   }
 
