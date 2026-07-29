@@ -7,7 +7,8 @@
     "app/map-object-wipe-definition-integration.js?v=0.9.3-object-wipes",
     "app/apl-single-cycle-transition-guard.js?v=0.9.3-dual-neck-pad-cycle",
     "app/cold-glue-center-out-brush-integration.js?v=0.9.3-cold-glue-center-out",
-    "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact"
+    "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact",
+    "app/optimizer-brush-channel-expansion-integration.js?v=0.9.3-brush-channel-contact"
   ];
 
   function loadScript(source) {
