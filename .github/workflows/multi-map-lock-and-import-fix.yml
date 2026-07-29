@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/multi-map-lock-and-import-fix.yml
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -30,9 +31,6 @@ jobs:
                   raise SystemExit(f"Expected block not found: {label}")
               return text.replace(old, new, 1)
 
-          # ------------------------------------------------------------------
-          # Map Access & Workspace: multi-select locking with lock indicators.
-          # ------------------------------------------------------------------
           path = Path("app/workspace-developer-integration.js")
           text = path.read_text(encoding="utf-8")
 
@@ -313,7 +311,6 @@ jobs:
           )
           path.write_text(text, encoding="utf-8")
 
-          # Keep the read-only overlay from disabling safe map navigation/export.
           path = Path("app/simulation-collapsible-integration.js")
           text = path.read_text(encoding="utf-8")
           text = replace_once(
@@ -327,34 +324,16 @@ jobs:
           )
           path.write_text(text, encoding="utf-8")
 
-          # ------------------------------------------------------------------
-          # Dedicated map JSON import and format-aware fault import messaging.
-          # ------------------------------------------------------------------
           path = Path("index.html")
           text = path.read_text(encoding="utf-8")
-          text = replace_once(
-              text,
-              '<label class="file-action">Import Fault JSON<input id="importFaultConfig" type="file" accept="application/json,.json" /></label>',
-              '<label class="file-action">Import Fault Limits<input id="importFaultConfig" type="file" accept="application/json,.json" /></label>',
-              "fault import label"
-          )
-          text = replace_once(
-              text,
-              '<button id="exportMachineMap" type="button" class="secondary-button">Export Selected Map</button><button id="deleteMachineMap" type="button" class="danger">Delete Map</button>',
-              '<button id="exportMachineMap" type="button" class="secondary-button">Export Selected Map</button><label class="file-action">Import Map<input id="importMachineMap" type="file" accept="application/json,.json" /></label><button id="deleteMachineMap" type="button" class="danger">Delete Map</button>',
-              "Map Builder import control"
-          )
+          text = replace_once(text, '<label class="file-action">Import Fault JSON<input id="importFaultConfig" type="file" accept="application/json,.json" /></label>', '<label class="file-action">Import Fault Limits<input id="importFaultConfig" type="file" accept="application/json,.json" /></label>', "fault import label")
+          text = replace_once(text, '<button id="exportMachineMap" type="button" class="secondary-button">Export Selected Map</button><button id="deleteMachineMap" type="button" class="danger">Delete Map</button>', '<button id="exportMachineMap" type="button" class="secondary-button">Export Selected Map</button><label class="file-action">Import Map<input id="importMachineMap" type="file" accept="application/json,.json" /></label><button id="deleteMachineMap" type="button" class="danger">Delete Map</button>', "Map Builder import control")
           text = text.replace("0.9.2", "0.9.3")
           path.write_text(text, encoding="utf-8")
 
           path = Path("app/defaults.js")
           text = path.read_text(encoding="utf-8")
-          text = replace_once(
-              text,
-              '  exportMachineMap: document.querySelector("#exportMachineMap"),\n',
-              '  exportMachineMap: document.querySelector("#exportMachineMap"),\n  importMachineMap: document.querySelector("#importMachineMap"),\n',
-              "importMachineMap element"
-          )
+          text = replace_once(text, '  exportMachineMap: document.querySelector("#exportMachineMap"),\n', '  exportMachineMap: document.querySelector("#exportMachineMap"),\n  importMachineMap: document.querySelector("#importMachineMap"),\n', "importMachineMap element")
           path.write_text(text, encoding="utf-8")
 
           path = Path("app/wipe-down-builder.js")
@@ -363,17 +342,11 @@ jobs:
 
           function machineMapRecordsFromImport(documentData) {
             if (!documentData || typeof documentData !== "object") return [];
-            if (documentData.format === "servoforge-machine-map" && documentData.map && typeof documentData.map === "object") {
-              return [documentData.map];
-            }
-            if (documentData.format === "labeler-tool-portable-settings" && Array.isArray(documentData.settings?.mapLibrary)) {
-              return documentData.settings.mapLibrary;
-            }
+            if (documentData.format === "servoforge-machine-map" && documentData.map && typeof documentData.map === "object") return [documentData.map];
+            if (documentData.format === "labeler-tool-portable-settings" && Array.isArray(documentData.settings?.mapLibrary)) return documentData.settings.mapLibrary;
             if (Array.isArray(documentData.mapLibrary)) return documentData.mapLibrary;
             if (documentData.map && typeof documentData.map === "object") return [documentData.map];
-            if (Array.isArray(documentData.objects) && (documentData.machineType || documentData.applicationMode || documentData.schemaVersion)) {
-              return [documentData];
-            }
+            if (Array.isArray(documentData.objects) && (documentData.machineType || documentData.applicationMode || documentData.schemaVersion)) return [documentData];
             return [];
           }
 
@@ -384,22 +357,13 @@ jobs:
               try {
                 const documentData = JSON.parse(String(reader.result));
                 const records = machineMapRecordsFromImport(documentData);
-                if (!records.length) {
-                  throw new Error("This JSON file does not contain a ServoForge machine map or map library.");
-                }
-
+                if (!records.length) throw new Error("This JSON file does not contain a ServoForge machine map or map library.");
                 const imported = [];
                 records.forEach((source, index) => {
-                  const map = createMachineMap({
-                    ...deepClone(source),
-                    id: uniqueMapId("machine-map"),
-                    name: uniqueMapName(String(source?.name || `Imported Map ${index + 1}`)),
-                    isTemplate: false
-                  });
+                  const map = createMachineMap({ ...deepClone(source), id: uniqueMapId("machine-map"), name: uniqueMapName(String(source?.name || `Imported Map ${index + 1}`)), isTemplate: false });
                   state.mapLibrary.push(map);
                   imported.push(map);
                 });
-
                 clearServoSimulationForSelectedMap();
                 loadMachineMapIntoRuntime(imported[0], true);
                 saveCurrentSettings();
@@ -419,12 +383,7 @@ jobs:
           if marker not in text:
               raise SystemExit("Map import insertion marker was not found")
           text = text.replace(marker, import_code + marker, 1)
-          text = replace_once(
-              text,
-              '  els.exportMachineMap?.addEventListener("click", exportSelectedMachineMap);\n',
-              '  els.exportMachineMap?.addEventListener("click", exportSelectedMachineMap);\n  els.importMachineMap?.addEventListener("change", () => importMachineMapFile(els.importMachineMap.files?.[0]));\n',
-              "Map Builder import binding"
-          )
+          text = replace_once(text, '  els.exportMachineMap?.addEventListener("click", exportSelectedMachineMap);\n', '  els.exportMachineMap?.addEventListener("click", exportSelectedMachineMap);\n  els.importMachineMap?.addEventListener("change", () => importMachineMapFile(els.importMachineMap.files?.[0]));\n', "Map Builder import binding")
           path.write_text(text, encoding="utf-8")
 
           path = Path("app/persistence.js")
@@ -442,24 +401,18 @@ jobs:
 
           '''
           text = replace_once(text, "\nfunction applyFaultConfig(config) {", "\n" + helper + "function applyFaultConfig(config) {", "fault import format helper")
-          old_fault_load = '''      applyFaultConfig(JSON.parse(String(reader.result)));
-                saveCurrentSettings();'''
-          new_fault_load = '''      const documentData = JSON.parse(String(reader.result));
+          text = replace_once(text, '''      applyFaultConfig(JSON.parse(String(reader.result)));
+                saveCurrentSettings();''', '''      const documentData = JSON.parse(String(reader.result));
                 if (looksLikeMachineMapDocument(documentData)) {
                   throw new Error("This file contains machine-map or settings data. Use Map Builder → Import Map instead.");
                 }
                 applyFaultConfig(documentData);
-                saveCurrentSettings();'''
-          text = replace_once(text, old_fault_load, new_fault_load, "fault import format detection")
+                saveCurrentSettings();''', "fault import format detection")
           path.write_text(text, encoding="utf-8")
 
-          # ------------------------------------------------------------------
-          # Version/cache alignment for a clean staging refresh.
-          # ------------------------------------------------------------------
           for filename in ["service-worker.js", "app/update-manager.js"]:
               path = Path(filename)
-              text = path.read_text(encoding="utf-8").replace("0.9.2", "0.9.3")
-              path.write_text(text, encoding="utf-8")
+              path.write_text(path.read_text(encoding="utf-8").replace("0.9.2", "0.9.3"), encoding="utf-8")
 
           path = Path("app/bootstrap.js")
           text = path.read_text(encoding="utf-8")
@@ -477,19 +430,7 @@ jobs:
           notes["currentVersion"] = "0.9.3"
           notes["generatedAt"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
           notes["releases"] = [release for release in notes.get("releases", []) if release.get("version") != "0.9.3"]
-          notes["releases"].insert(0, {
-              "version": "0.9.3",
-              "milestone": 12,
-              "title": "Multi-Map Access Controls and Map Import",
-              "summary": "Allows multiple saved maps to be locked or unlocked together and separates machine-map JSON import from fault-limit import.",
-              "changes": [
-                  "Use a multi-select map list with separate Lock Selected and Unlock Selected actions.",
-                  "Show a lock symbol beside every locked map in Map Access & Workspace.",
-                  "Keep locked maps selectable in Map Builder while enforcing read-only editing until Settings unlocks them.",
-                  "Add Import Map beside Export Selected Map and accept single-map exports, raw maps, portable settings map libraries, and full-state map libraries.",
-                  "Detect map/settings JSON mistakenly chosen under Import Fault Limits and direct the operator to the correct importer."
-              ]
-          })
+          notes["releases"].insert(0, {"version":"0.9.3","milestone":12,"title":"Multi-Map Access Controls and Map Import","summary":"Allows multiple saved maps to be locked or unlocked together and separates machine-map JSON import from fault-limit import.","changes":["Use a multi-select map list with separate Lock Selected and Unlock Selected actions.","Show a lock symbol beside every locked map in Map Access & Workspace.","Keep locked maps selectable in Map Builder while enforcing read-only editing until Settings unlocks them.","Add Import Map beside Export Selected Map and accept single-map exports, raw maps, portable settings map libraries, and full-state map libraries.","Detect map/settings JSON mistakenly chosen under Import Fault Limits and direct the operator to the correct importer."]})
           notes_path.write_text(json.dumps(notes, indent=2) + "\n", encoding="utf-8")
 
       - name: Validate JavaScript and JSON
