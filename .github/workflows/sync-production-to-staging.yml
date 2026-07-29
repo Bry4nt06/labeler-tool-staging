@@ -1,0 +1,92 @@
+name: Sync production app into staging
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/sync-production-to-staging.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out staging
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check out production deployment
+        uses: actions/checkout@v4
+        with:
+          repository: Bry4nt06/labeler-tool-app
+          ref: main
+          path: _production_source
+
+      - name: Mirror production app files
+        shell: bash
+        run: |
+          rsync -a --delete \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '_production_source' \
+            _production_source/ ./
+          rm -rf _production_source
+
+      - name: Preserve staging deployment identity
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+          import re
+
+          index = Path('index.html')
+          html = index.read_text(encoding='utf-8')
+          html = html.replace('<title>ServoForge Labeler</title>', '<title>ServoForge Labeler — STAGING</title>')
+          banner = '<div class="staging-environment-banner" role="status">STAGING / TEST BUILD — NOT PRODUCTION</div>'
+          if banner not in html:
+              html = html.replace('<body><main class="app">', f'<body>{banner}<main class="app">', 1)
+          index.write_text(html, encoding='utf-8')
+
+          worker = Path('service-worker.js')
+          worker_text = worker.read_text(encoding='utf-8')
+          worker_text = re.sub(r'const CACHE_NAME = "servoforge-labeler-(?:staging-)?v([^\"]+)";', r'const CACHE_NAME = "servoforge-labeler-staging-v\1";', worker_text)
+          worker_text = worker_text.replace('const CACHE_PREFIX = "servoforge-labeler-";', 'const CACHE_PREFIX = "servoforge-labeler-staging-";')
+          worker.write_text(worker_text, encoding='utf-8')
+
+          recovery = Path('recovery.html')
+          if recovery.exists():
+              recovery_text = recovery.read_text(encoding='utf-8')
+              recovery_text = recovery_text.replace('const CACHE_PREFIX = "servoforge-labeler-";', 'const CACHE_PREFIX = "servoforge-labeler-staging-";')
+              recovery_text = recovery_text.replace('The production application shell returned', 'The staging application shell returned')
+              recovery.write_text(recovery_text, encoding='utf-8')
+
+          manifest_path = Path('update-manifest.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          manifest['releaseUrl'] = 'https://bry4nt06.github.io/labeler-tool-staging/'
+          manifest['downloadUrl'] = 'https://bry4nt06.github.io/labeler-tool-staging/'
+          manifest['notes'] = f"STAGING baseline synchronized from production ServoForge {manifest.get('version', '')}."
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+
+          notes_path = Path('release-notes.json')
+          if notes_path.exists():
+              notes = json.loads(notes_path.read_text(encoding='utf-8'))
+              notes['environment'] = 'staging'
+              notes_path.write_text(json.dumps(notes, indent=2) + '\n', encoding='utf-8')
+
+      - name: Remove one-time workflow and commit sync
+        shell: bash
+        run: |
+          rm -f .github/workflows/sync-production-to-staging.yml
+          git config user.name "ServoForge Sync"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No production differences found."
+            exit 0
+          fi
+          git commit -m "Sync production 0.9.1 baseline into staging"
+          git push origin main
