@@ -1,7 +1,7 @@
 "use strict";
 
-const RELEASE_VERSION = "0.9.1";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.1";
+const RELEASE_VERSION = "0.9.2";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 const UPDATE_MANIFEST_URL = new URL("./update-manifest.json", self.registration.scope).href;
@@ -57,6 +57,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/program-optimizer-integration.js",
   "./app/release-readiness-integration.js",
   "./app/diagnostics-workspace-integration.js",
+  "./app/workspace-developer-integration.js",
   "./app/incremental-rotation-integration.js",
   "./app/simulation-collapsible-integration.js",
   "./app/update-manager.js",

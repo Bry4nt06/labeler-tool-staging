@@ -1,7 +1,7 @@
 "use strict";
 
 (function installServoForgeUpdateManager() {
-  const RELEASE_VERSION = "0.9.1";
+  const RELEASE_VERSION = "0.9.2";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
@@ -149,9 +149,10 @@
 })();
 
 (function loadStagingFeatureModules() {
-  const RELEASE_VERSION = "0.9.1";
+  const RELEASE_VERSION = "0.9.2";
   const modules = [
     "app/diagnostics-workspace-integration.js",
+    "app/workspace-developer-integration.js",
     "drivers/planning/incremental-rotation-driver.js",
     "app/incremental-rotation-integration.js",
     "app/simulation-collapsible-integration.js"
@@ -235,6 +236,7 @@
     "app/program-optimizer-integration.js",
     "app/release-readiness-integration.js",
     "app/diagnostics-workspace-integration.js",
+    "app/workspace-developer-integration.js",
     "app/incremental-rotation-integration.js",
     "app/simulation-collapsible-integration.js",
     "app/update-manager.js",
@@ -281,7 +283,7 @@
 
   function replaceAssetResult(report) {
     if (!report || !Array.isArray(report.results)) return report;
-    const expectedVersion = report.version || window.SERVOFORGE_RELEASE_VERSION || "0.9.1";
+    const expectedVersion = report.version || window.SERVOFORGE_RELEASE_VERSION || "0.9.2";
     const assets = assetReport(expectedVersion);
     const replacement = {
       id: "version-assets",

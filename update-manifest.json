@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.9.1",
+  "version": "0.9.2",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING baseline synchronized from production ServoForge 0.9.1."
+  "notes": "STAGING 0.9.2 adds ordered workspace tabs, outside-click panel closing, Developer Mode, panel visibility controls, and read-only locked maps."
 }
