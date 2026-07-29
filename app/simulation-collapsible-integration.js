@@ -4,24 +4,9 @@
   const STORAGE_KEY = "servoforge-simulation-panel-state-v1";
   const RETRY_MS = 25;
   const DEFINITIONS = Object.freeze([
-    {
-      key: "runtime",
-      panelSelector: ".simulator-runtime",
-      headSelector: ".simulator-runtime-head",
-      defaultOpen: true
-    },
-    {
-      key: "replay",
-      panelSelector: ".servo-replay-panel",
-      headSelector: ".servo-replay-head",
-      defaultOpen: false
-    },
-    {
-      key: "library",
-      panelSelector: ".servo-profile-library",
-      headSelector: ".servo-profile-library-head",
-      defaultOpen: false
-    }
+    { key: "runtime", panelSelector: ".simulator-runtime", headSelector: ".simulator-runtime-head", defaultOpen: true },
+    { key: "replay", panelSelector: ".servo-replay-panel", headSelector: ".servo-replay-head", defaultOpen: false },
+    { key: "library", panelSelector: ".servo-profile-library", headSelector: ".servo-profile-library-head", defaultOpen: false }
   ]);
 
   let observer = null;
@@ -40,17 +25,13 @@
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch {
-      // Collapsing still works for the current page when storage is unavailable.
+      // Panel collapsing still works when storage is unavailable.
     }
   }
 
   function sectionIsOpen(key, fallback) {
     const saved = readState();
     return typeof saved[key] === "boolean" ? saved[key] : fallback;
-  }
-
-  function persistSectionState(key, open) {
-    writeState({ ...readState(), [key]: Boolean(open) });
   }
 
   function setSectionOpen(panel, open, persist = true) {
@@ -66,11 +47,7 @@
     if (body) body.hidden = !resolved;
     if (head) head.setAttribute("aria-expanded", String(resolved));
     if (caret) caret.textContent = resolved ? "▾" : "▸";
-    if (persist && key) persistSectionState(key, resolved);
-  }
-
-  function toggleSection(panel) {
-    setSectionOpen(panel, panel.classList.contains("is-collapsed"));
+    if (persist && key) writeState({ ...readState(), [key]: resolved });
   }
 
   function bindHead(panel, head) {
@@ -88,14 +65,15 @@
       head.prepend(caret);
     }
 
+    const toggle = () => setSectionOpen(panel, panel.classList.contains("is-collapsed"));
     head.addEventListener("click", (event) => {
       if (event.target.closest("button,input,select,textarea,a,label")) return;
-      toggleSection(panel);
+      toggle();
     });
     head.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
-      toggleSection(panel);
+      toggle();
     });
   }
 
@@ -104,8 +82,7 @@
     if (!panel) return;
 
     if (panel.dataset.simulationCollapsible === "true") {
-      const savedOpen = sectionIsOpen(definition.key, definition.defaultOpen);
-      setSectionOpen(panel, savedOpen, false);
+      setSectionOpen(panel, sectionIsOpen(definition.key, definition.defaultOpen), false);
       return;
     }
 
@@ -130,7 +107,7 @@
     DEFINITIONS.forEach((definition) => {
       const panel = host.querySelector(definition.panelSelector);
       if (panel) setSectionOpen(panel, open);
-      else persistSectionState(definition.key, open);
+      else writeState({ ...readState(), [definition.key]: Boolean(open) });
     });
   }
 
@@ -178,14 +155,9 @@
       .simulation-collapsible-head{position:relative;display:grid!important;grid-template-columns:auto minmax(0,1fr) auto;align-items:start!important;gap:7px!important;margin:0!important;padding:0!important;cursor:pointer;user-select:none;outline:none}
       .simulation-collapsible-head:focus-visible{box-shadow:0 0 0 2px var(--green);border-radius:5px}
       .simulation-collapse-caret{display:grid;place-items:center;width:17px;height:17px;margin-top:1px;border:1px solid var(--line);border-radius:4px;background:var(--input);color:var(--green);font-size:10px;line-height:1}
-      .simulation-collapsible-body{margin-top:7px}
-      .simulation-collapsible-body[hidden]{display:none!important}
-      .simulation-collapsible-panel.is-collapsed{padding-bottom:8px}
-      .simulation-collapsible-panel.is-collapsed .simulation-collapsible-head p{display:none}
-      .simulation-collapsible-panel.is-collapsed .simulator-runtime-badge,
-      .simulation-collapsible-panel.is-collapsed .servo-replay-badge,
-      .simulation-collapsible-panel.is-collapsed .servo-profile-library-head>span{align-self:center}
-      @media(max-width:620px){.simulation-collapse-toolbar{align-items:flex-start}.simulation-collapse-toolbar>div{flex-wrap:wrap;justify-content:flex-end}.simulation-collapsible-head{grid-template-columns:auto minmax(0,1fr)}.simulation-collapsible-head>.simulator-runtime-badge,.simulation-collapsible-head>.servo-replay-badge,.simulation-collapsible-head>.servo-profile-library-head>span{grid-column:2;justify-self:start}}
+      .simulation-collapsible-body{margin-top:7px}.simulation-collapsible-body[hidden]{display:none!important}
+      .simulation-collapsible-panel.is-collapsed{padding-bottom:8px}.simulation-collapsible-panel.is-collapsed .simulation-collapsible-head p{display:none}
+      @media(max-width:620px){.simulation-collapse-toolbar{align-items:flex-start}.simulation-collapse-toolbar>div{flex-wrap:wrap;justify-content:flex-end}.simulation-collapsible-head{grid-template-columns:auto minmax(0,1fr)}}
     `;
     document.head.appendChild(style);
   }
@@ -207,11 +179,8 @@
     window.setTimeout(waitForSimulation, RETRY_MS);
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", waitForSimulation, { once: true });
-  } else {
-    waitForSimulation();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", waitForSimulation, { once: true });
+  else waitForSimulation();
 })();
 
 (function stabilizeWorkspaceTabInsertion() {
@@ -262,16 +231,12 @@
   function activeMapLocked() {
     if (typeof activeMachineMap !== "function") return false;
     const map = activeMachineMap();
-    const lockedIds = Array.isArray(preferences().lockedMapIds)
-      ? preferences().lockedMapIds.map(String)
-      : [];
+    const lockedIds = Array.isArray(preferences().lockedMapIds) ? preferences().lockedMapIds.map(String) : [];
     return Boolean(map?.id && lockedIds.includes(String(map.id)));
   }
 
   function panelManuallyHidden() {
-    const hiddenPanels = Array.isArray(preferences().hiddenPanels)
-      ? preferences().hiddenPanels.map(String)
-      : [];
+    const hiddenPanels = Array.isArray(preferences().hiddenPanels) ? preferences().hiddenPanels.map(String) : [];
     return hiddenPanels.includes("mapBuilder");
   }
 
@@ -303,22 +268,37 @@
     }
     notice.hidden = !locked;
 
+    const closeButton = drawer.querySelector("#closeApplicationSetup");
+    if (closeButton?.disabled) closeButton.disabled = false;
+
     drawer.querySelectorAll("input,select,textarea,button").forEach((control) => {
-      if (control.id === "closeApplicationSetup") {
-        if (control.disabled) control.disabled = false;
+      if (control.id === "closeApplicationSetup") return;
+
+      if (locked) {
+        if (!control.disabled) {
+          control.disabled = true;
+          control.dataset.lockedBuilderOverlay = "true";
+        }
         return;
       }
-      if (locked) {
-        if (!control.hasAttribute("data-locked-builder-was-disabled")) {
-          control.dataset.lockedBuilderWasDisabled = String(control.disabled);
-        }
-        if (!control.disabled) control.disabled = true;
-      } else if (control.hasAttribute("data-locked-builder-was-disabled")) {
-        const previous = control.dataset.lockedBuilderWasDisabled === "true";
-        if (control.disabled !== previous) control.disabled = previous;
+
+      if (control.hasAttribute("data-locked-builder-overlay")) {
+        delete control.dataset.lockedBuilderOverlay;
+        if (!control.hasAttribute("data-developer-was-disabled")) control.disabled = false;
+      }
+
+      if (control.hasAttribute("data-locked-builder-was-disabled")) {
         delete control.dataset.lockedBuilderWasDisabled;
+        if (!control.hasAttribute("data-developer-was-disabled")) control.disabled = false;
       }
     });
+
+    if (!locked) {
+      const mapName = drawer.querySelector("#mapName");
+      const saveMap = drawer.querySelector("#saveMachineMap");
+      if (mapName && !mapName.hasAttribute("data-developer-was-disabled")) mapName.disabled = false;
+      if (saveMap && !saveMap.hasAttribute("data-developer-was-disabled")) saveMap.disabled = false;
+    }
   }
 
   function restoreBuilderAccess() {
@@ -332,13 +312,12 @@
     if (button.disabled) button.disabled = false;
     if (button.getAttribute("aria-disabled") !== "false") button.setAttribute("aria-disabled", "false");
     if (button.textContent !== "Map Builder") button.textContent = "Map Builder";
+
     const desiredTitle = locked
       ? "Open Map Builder in read-only mode. Unlock the map in Settings to make changes."
       : "Open Map Builder";
     if (button.title !== desiredTitle) button.title = desiredTitle;
-    if (button.classList.contains("locked-map-builder-view") !== locked) {
-      button.classList.toggle("locked-map-builder-view", locked);
-    }
+    button.classList.toggle("locked-map-builder-view", locked);
 
     const workspaceNote = document.querySelector("#workspaceControlsCard > .workspace-controls-note:last-child");
     const desiredNote = "Locked maps remain available in Map Builder as a read-only view. Unlock the selected map in Settings to make changes.";
@@ -402,9 +381,7 @@
     }
 
     if (drawer && !drawerObserver) {
-      drawerObserver = new MutationObserver(() => {
-        if (activeMapLocked()) window.requestAnimationFrame(applyDrawerReadOnly);
-      });
+      drawerObserver = new MutationObserver(() => window.requestAnimationFrame(applyDrawerReadOnly));
       drawerObserver.observe(drawer, { childList: true, subtree: true });
     }
   }
@@ -426,9 +403,6 @@
     window.setTimeout(waitForApplication, RETRY_MS);
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", waitForApplication, { once: true });
-  } else {
-    waitForApplication();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", waitForApplication, { once: true });
+  else waitForApplication();
 })();
