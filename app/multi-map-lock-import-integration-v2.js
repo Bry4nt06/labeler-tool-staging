@@ -24,7 +24,7 @@
   }
 
   function html(value) {
-    return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function chosenIds(select) {
@@ -40,7 +40,7 @@
     if (document.querySelector("#multiMapLockImportV2Styles")) return;
     const style = document.createElement("style");
     style.id = "multiMapLockImportV2Styles";
-    style.textContent = `#workspaceControlsCard .workspace-map-access{grid-template-columns:minmax(0,1fr) 180px!important;align-items:stretch!important}#workspaceMapSelect[multiple]{width:100%;height:auto!important;min-height:154px;padding:4px}#workspaceMapSelect option{padding:5px 7px}.workspace-map-actions{display:grid;gap:7px;align-content:end}.workspace-map-actions button{width:100%;min-width:0;min-height:38px;height:auto!important;white-space:normal!important}.workspace-map-selection-help{display:block;margin-top:2px;color:var(--muted);font-size:9px;line-height:1.35}.map-library-actions .map-import-action{display:inline-flex;align-items:center;justify-content:center;min-height:34px}@media(max-width:800px){#workspaceControlsCard .workspace-map-access{grid-template-columns:1fr!important}}`;
+    style.textContent = `#workspaceControlsCard .workspace-map-access{grid-template-columns:minmax(0,1fr) 180px!important;align-items:stretch!important}#workspaceMapSelect[multiple]{width:100%;height:auto!important;min-height:154px;padding:4px}#workspaceMapSelect option{padding:5px 7px}.workspace-map-actions{display:grid;gap:7px;align-content:end}.workspace-map-actions button{width:100%;min-width:0;min-height:38px;height:auto!important;white-space:normal!important}.workspace-map-selection-help{display:block;margin-top:2px;color:var(--muted);font-size:9px;line-height:1.35}.map-library-actions .map-import-action,.top-settings-panel .settings-map-import-action{display:inline-flex;align-items:center;justify-content:center;min-height:34px}.top-settings-panel .settings-map-import-action{width:100%;box-sizing:border-box}@media(max-width:800px){#workspaceControlsCard .workspace-map-access{grid-template-columns:1fr!important}}`;
     document.head.appendChild(style);
   }
 
@@ -117,6 +117,8 @@
     renderSettingsOptions();
     renderSummary();
     renderBuilderOptions();
+    ensureMapImport();
+    ensureSettingsMapImport();
     if (!optionObserver) {
       optionObserver = new MutationObserver(schedule);
       optionObserver.observe(select, { childList: true });
@@ -165,6 +167,7 @@
     if (data.format === "servoforge-machine-map" && data.map && typeof data.map === "object") return [data.map];
     if (data.format === "labeler-tool-portable-settings" && Array.isArray(data.settings?.mapLibrary)) return data.settings.mapLibrary;
     if (Array.isArray(data.mapLibrary)) return data.mapLibrary;
+    if (Array.isArray(data.settings?.mapLibrary)) return data.settings.mapLibrary;
     if (data.map && typeof data.map === "object") return [data.map];
     if (Array.isArray(data.objects) && (data.machineType || data.applicationMode || data.schemaVersion)) return [data];
     return [];
@@ -173,6 +176,7 @@
   function importMaps(data) {
     const records = mapRecords(data);
     if (!records.length) throw new Error("This JSON file does not contain a ServoForge machine map or map library.");
+    if (!Array.isArray(state.mapLibrary)) state.mapLibrary = [];
     const imported = [];
     records.forEach((source, index) => {
       const map = createMachineMap({ ...deepClone(source), id: uniqueMapId("machine-map"), name: uniqueMapName(String(source?.name || `Imported Map ${index + 1}`)), isTemplate: false });
@@ -188,24 +192,88 @@
     return imported;
   }
 
+  async function readJsonFile(file) {
+    if (!file) throw new Error("Select a JSON file first.");
+    try {
+      return JSON.parse(await file.text());
+    } catch (error) {
+      throw new Error(`The selected file is not valid JSON: ${error.message}`);
+    }
+  }
+
+  async function importMapFile(file, input) {
+    try {
+      const imported = importMaps(await readJsonFile(file));
+      window.alert(`${imported.length} map${imported.length === 1 ? "" : "s"} imported successfully. The imported map is now selected in Map Builder.`);
+    } catch (error) {
+      window.alert(`Unable to import map: ${error.message}`);
+    } finally {
+      if (input) input.value = "";
+    }
+  }
+
   function ensureMapImport() {
     const exportButton = document.querySelector("#exportMachineMap");
-    if (!exportButton || document.querySelector("#importMachineMap")) return;
-    const action = document.createElement("label");
-    action.className = "file-action map-import-action";
-    action.innerHTML = 'Import Map<input id="importMachineMap" type="file" accept="application/json,.json">';
-    exportButton.insertAdjacentElement("afterend", action);
-    action.querySelector("input")?.addEventListener("change", async (event) => {
-      const input = event.currentTarget;
+    if (!exportButton) return;
+    let input = document.querySelector("#importMachineMap");
+    if (!input) {
+      const action = document.createElement("label");
+      action.className = "file-action map-import-action";
+      action.innerHTML = 'Import Map JSON<input id="importMachineMap" type="file" accept="application/json,.json">';
+      exportButton.insertAdjacentElement("afterend", action);
+      input = action.querySelector("input");
+    }
+    if (input && input.dataset.mapImportBound !== "true") {
+      input.dataset.mapImportBound = "true";
+      input.addEventListener("change", () => importMapFile(input.files?.[0], input));
+    }
+  }
+
+  function ensureSettingsMapImport() {
+    const settingsInput = document.querySelector("#importSettings");
+    const settingsLabel = settingsInput?.closest("label");
+    if (!settingsLabel) return;
+    let input = document.querySelector("#importMachineMapSettings");
+    if (!input) {
+      const action = document.createElement("label");
+      action.className = "file-action settings-map-import-action";
+      action.innerHTML = 'Import Map JSON<input id="importMachineMapSettings" type="file" accept="application/json,.json">';
+      settingsLabel.insertAdjacentElement("afterend", action);
+      input = action.querySelector("input");
+    }
+    if (input && input.dataset.mapImportBound !== "true") {
+      input.dataset.mapImportBound = "true";
+      input.addEventListener("change", () => importMapFile(input.files?.[0], input));
+    }
+  }
+
+  function bindSettingsImportRouter() {
+    if (document.documentElement.dataset.settingsImportRouterV2Bound === "true") return;
+    document.documentElement.dataset.settingsImportRouterV2Bound = "true";
+    document.addEventListener("change", async (event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || input.id !== "importSettings") return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
       const file = input.files?.[0];
       if (!file) return;
       try {
-        const imported = importMaps(JSON.parse(await file.text()));
-        window.alert(`${imported.length} map${imported.length === 1 ? "" : "s"} imported successfully.`);
+        const data = await readJsonFile(file);
+        if (data?.format === "labeler-tool-portable-settings" && Number(data?.version) === 1) {
+          if (typeof importPortableSettingsFile !== "function") throw new Error("The portable settings importer is unavailable.");
+          importPortableSettingsFile(file);
+          return;
+        }
+        const records = mapRecords(data);
+        if (!records.length) throw new Error("This is neither a Labeler Tool portable settings backup nor a ServoForge map export.");
+        const imported = importMaps(data);
+        window.alert(`${imported.length} map${imported.length === 1 ? "" : "s"} recognized and imported. The imported map is now selected in Map Builder.`);
       } catch (error) {
-        window.alert(`Unable to import map: ${error.message}`);
-      } finally { input.value = ""; }
-    });
+        window.alert(`Unable to import settings or map: ${error.message}`);
+      } finally {
+        input.value = "";
+      }
+    }, true);
   }
 
   function bindFaultImport() {
@@ -219,7 +287,7 @@
       const file = input.files?.[0];
       if (!file) return;
       try {
-        const data = JSON.parse(await file.text());
+        const data = await readJsonFile(file);
         const maps = mapRecords(data);
         if (maps.length) {
           const imported = importMaps(data);
@@ -241,10 +309,12 @@
     installed = true;
     styles();
     bindLockControls();
+    bindSettingsImportRouter();
     ensureMapImport();
+    ensureSettingsMapImport();
     bindFaultImport();
     enhance();
-    window.setTimeout(() => { ensureMapImport(); bindFaultImport(); schedule(); }, 500);
+    window.setTimeout(() => { ensureMapImport(); ensureSettingsMapImport(); bindFaultImport(); schedule(); }, 500);
     return true;
   }
 
