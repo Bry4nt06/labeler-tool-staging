@@ -1,0 +1,516 @@
+name: Multi-map locking and map import fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/multi-map-lock-and-import-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply workspace and import updates
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+          import re
+          from datetime import datetime, timezone
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f"Expected block not found: {label}")
+              return text.replace(old, new, 1)
+
+          # ------------------------------------------------------------------
+          # Map Access & Workspace: multi-select locking with lock indicators.
+          # ------------------------------------------------------------------
+          path = Path("app/workspace-developer-integration.js")
+          text = path.read_text(encoding="utf-8")
+
+          css_pattern = re.compile(r'''      \.workspace-map-access\{.*?      \.workspace-lock-summary\{''', re.S)
+          css_replacement = '''      .workspace-map-access{
+                display:grid;
+                grid-template-columns:minmax(0,1fr) 180px;
+                gap:10px;
+                align-items:stretch;
+                min-width:0;
+                padding:11px;
+                border:1px solid var(--line);
+                border-radius:8px;
+                background:var(--panel);
+              }
+
+              .workspace-map-access label{
+                display:grid;
+                gap:5px;
+                min-width:0;
+                color:var(--muted);
+                font-size:10px;
+              }
+
+              .workspace-map-access select{
+                width:100%;
+                min-width:0;
+                min-height:154px;
+                padding:4px;
+              }
+
+              .workspace-map-access select option{padding:5px 7px}
+
+              .workspace-map-actions{
+                display:grid;
+                gap:7px;
+                align-content:end;
+                min-width:0;
+              }
+
+              .workspace-map-actions button{
+                width:100%;
+                min-width:0;
+                min-height:38px;
+                height:auto;
+                white-space:normal;
+              }
+
+              .workspace-lock-summary{'''
+          text, count = css_pattern.subn(css_replacement, text, count=1)
+          if count != 1:
+              raise SystemExit("Workspace map-access CSS block was not replaced")
+
+          old_card = '''      <div class="workspace-map-access">
+                <label>Selected map<select id="workspaceMapSelect"></select></label>
+                <button id="workspaceToggleMapLock" type="button">Lock Selected Map</button>
+              </div>
+              <div class="workspace-lock-summary">
+                <span id="workspaceMapLockState" class="workspace-lock-state" data-state="editable">Editable</span>
+                <small id="workspaceMapLockHelp" class="workspace-controls-note">The selected map can be edited normally.</small>
+              </div>'''
+          new_card = '''      <div class="workspace-map-access">
+                <label>Maps to lock or unlock
+                  <select id="workspaceMapSelect" multiple size="7" aria-describedby="workspaceMapSelectionHelp"></select>
+                  <small id="workspaceMapSelectionHelp" class="workspace-controls-note">Hold Ctrl on Windows or Command on Mac to select multiple maps.</small>
+                </label>
+                <div class="workspace-map-actions">
+                  <button id="workspaceLockSelectedMaps" type="button">Lock Selected</button>
+                  <button id="workspaceUnlockSelectedMaps" type="button" class="secondary-button">Unlock Selected</button>
+                </div>
+              </div>
+              <div class="workspace-lock-summary">
+                <span id="workspaceMapLockState" class="workspace-lock-state" data-state="editable">0 Locked</span>
+                <small id="workspaceMapLockHelp" class="workspace-controls-note">Select one or more maps, then choose Lock Selected or Unlock Selected.</small>
+              </div>'''
+          text = replace_once(text, old_card, new_card, "workspace multi-select card")
+
+          function_pattern = re.compile(r'''  function mapOptions\(selectedId\) \{.*?\n  function ensureLockedMapViewer\(\) \{''', re.S)
+          function_replacement = '''  function selectedMapIds(select) {
+            return select
+              ? [...select.selectedOptions].map((option) => String(option.value || "")).filter(Boolean)
+              : [];
+          }
+
+          function mapOptions(selectedIds = []) {
+            const selected = new Set((Array.isArray(selectedIds) ? selectedIds : [selectedIds]).map(String));
+            const lockedIds = new Set(preferences().lockedMapIds);
+            return (state.mapLibrary || []).map((map) => {
+              const id = String(map.id);
+              const selectedAttribute = selected.has(id) ? " selected" : "";
+              const lock = lockedIds.has(id) ? "🔒 " : "";
+              return `<option value="${escapeHtml(id)}"${selectedAttribute}>${lock}${escapeHtml(map.name || "Machine Map")}</option>`;
+            }).join("");
+          }
+
+          function updateSelectedMapStatus(card) {
+            const mapSelect = card.querySelector("#workspaceMapSelect");
+            const selectedIds = selectedMapIds(mapSelect);
+            const lockedIds = new Set(preferences().lockedMapIds);
+            const selectedLockedCount = selectedIds.filter((id) => lockedIds.has(id)).length;
+            const lockAction = card.querySelector("#workspaceLockSelectedMaps");
+            const unlockAction = card.querySelector("#workspaceUnlockSelectedMaps");
+            const badge = card.querySelector("#workspaceMapLockState");
+            const help = card.querySelector("#workspaceMapLockHelp");
+
+            if (lockAction) lockAction.disabled = !selectedIds.length || selectedLockedCount === selectedIds.length;
+            if (unlockAction) unlockAction.disabled = selectedLockedCount === 0;
+            if (badge) {
+              badge.textContent = `${lockedIds.size} Locked`;
+              badge.dataset.state = lockedIds.size ? "locked" : "editable";
+            }
+            if (help) {
+              help.textContent = selectedIds.length
+                ? `${selectedIds.length} selected • ${selectedLockedCount} already locked. Locked maps can only be changed after they are unlocked here.`
+                : "Select one or more maps, then choose Lock Selected or Unlock Selected.";
+            }
+          }
+
+          function renderWorkspaceCard() {
+            const card = ensureWorkspaceCard();
+            if (!card) return;
+
+            const mapSelect = card.querySelector("#workspaceMapSelect");
+            const previousSelection = selectedMapIds(mapSelect);
+            const desiredSelection = previousSelection.length
+              ? previousSelection
+              : state.activeMapId ? [String(state.activeMapId)] : [];
+            mapSelect.innerHTML = mapOptions(desiredSelection);
+
+            if (!selectedMapIds(mapSelect).length && state.activeMapId) {
+              const activeOption = [...mapSelect.options].find((option) => option.value === String(state.activeMapId));
+              if (activeOption) activeOption.selected = true;
+            }
+
+            updateSelectedMapStatus(card);
+
+            const hiddenPanels = new Set(preferences().hiddenPanels);
+            card.querySelector("#workspacePanelToggles").innerHTML = PANEL_DEFINITIONS.map(([id, label]) => {
+              const checked = hiddenPanels.has(id) ? " checked" : "";
+              return `
+                <label class="workspace-panel-toggle">
+                  <input type="checkbox" data-developer-panel="${id}"${checked}>
+                  <span>Hide ${escapeHtml(label)}</span>
+                </label>`;
+            }).join("");
+          }
+
+          function ensureLockedMapViewer() {'''
+          text, count = function_pattern.subn(function_replacement, text, count=1)
+          if count != 1:
+              raise SystemExit("Workspace map option/status functions were not replaced")
+
+          read_only_pattern = re.compile(r'''  function setControlReadOnly\(control, locked\) \{.*?\n  function syncTabState\(\) \{''', re.S)
+          read_only_replacement = '''  function setControlReadOnly(control, locked) {
+            const supported = control instanceof HTMLInputElement
+              || control instanceof HTMLSelectElement
+              || control instanceof HTMLTextAreaElement
+              || control instanceof HTMLButtonElement;
+
+            if (!supported) return;
+            if (control.matches("[data-open-diagnostics],[data-open-simulation],#closeApplicationSetup,#mapLibrarySelect,#exportMachineMap")) {
+              if (control.hasAttribute("data-developer-was-disabled")) delete control.dataset.developerWasDisabled;
+              control.disabled = false;
+              return;
+            }
+
+            if (locked) {
+              if (!control.hasAttribute("data-developer-was-disabled")) {
+                control.dataset.developerWasDisabled = String(control.disabled);
+              }
+              control.disabled = true;
+            } else if (control.hasAttribute("data-developer-was-disabled")) {
+              control.disabled = control.dataset.developerWasDisabled === "true";
+              delete control.dataset.developerWasDisabled;
+            }
+          }
+
+          function applyReadOnlyState() {
+            const locked = mapIsLocked();
+            if (locked) state.mapLocked = true;
+
+            const builderTab = document.querySelector("#wipeDownBuilderButton");
+            if (builderTab) {
+              builderTab.disabled = false;
+              builderTab.setAttribute("aria-disabled", "false");
+              builderTab.textContent = "Map Builder";
+              builderTab.title = locked
+                ? "Open Map Builder in read-only mode. Unlock this map in Settings to make changes."
+                : "Open Map Builder";
+              builderTab.classList.toggle("locked-map-builder-view", locked);
+            }
+
+            const mapLock = document.querySelector("#mapLockToggle");
+            if (mapLock) {
+              mapLock.dataset.developerReadonly = String(locked);
+              mapLock.disabled = locked;
+              if (locked) {
+                mapLock.setAttribute("aria-pressed", "true");
+                mapLock.textContent = "Read Only";
+              } else if (mapLock.textContent === "Read Only") {
+                mapLock.textContent = state.mapLocked === false ? "Unlocked" : "Locked";
+              }
+            }
+
+            const controls = [
+              document.querySelector("#undoMapEdit"),
+              ...["#specs", "#buildInputs", "#program", "#applicationSetupDialog"].flatMap((selector) => {
+                const surface = document.querySelector(selector);
+                if (!surface) return [];
+                surface.classList.toggle("read-only-surface", locked);
+                return [...surface.querySelectorAll("input,select,textarea,button")];
+              })
+            ].filter(Boolean);
+            controls.forEach((control) => setControlReadOnly(control, locked));
+
+            const activeName = document.querySelector("#activeMapName");
+            let indicator = document.querySelector("#mapReadOnlyIndicator");
+            if (locked && activeName && !indicator) {
+              indicator = document.createElement("span");
+              indicator.id = "mapReadOnlyIndicator";
+              indicator.className = "map-read-only-indicator";
+              indicator.textContent = "READ ONLY";
+              activeName.insertAdjacentElement("afterend", indicator);
+            }
+            if (indicator) indicator.hidden = !locked;
+          }
+
+          function syncTabState() {'''
+          text, count = read_only_pattern.subn(read_only_replacement, text, count=1)
+          if count != 1:
+              raise SystemExit("Workspace read-only functions were not replaced")
+
+          old_actions = '''    card.querySelector("#workspaceToggleMapLock")?.addEventListener("click", () => {
+                const selectedId = String(card.querySelector("#workspaceMapSelect")?.value || "");
+                if (!selectedId) return;
+
+                const next = preferences();
+                next.lockedMapIds = next.lockedMapIds.includes(selectedId)
+                  ? next.lockedMapIds.filter((id) => id !== selectedId)
+                  : [...next.lockedMapIds, selectedId];
+
+                savePreferences(next);
+                scheduleApply();
+              });'''
+          new_actions = '''    card.querySelector("#workspaceLockSelectedMaps")?.addEventListener("click", () => {
+                const selectedIds = selectedMapIds(card.querySelector("#workspaceMapSelect"));
+                if (!selectedIds.length) return;
+                const next = preferences();
+                next.lockedMapIds = [...new Set([...next.lockedMapIds, ...selectedIds])];
+                savePreferences(next);
+                scheduleApply();
+              });
+
+              card.querySelector("#workspaceUnlockSelectedMaps")?.addEventListener("click", () => {
+                const selectedIds = new Set(selectedMapIds(card.querySelector("#workspaceMapSelect")));
+                if (!selectedIds.size) return;
+                const next = preferences();
+                next.lockedMapIds = next.lockedMapIds.filter((id) => !selectedIds.has(String(id)));
+                savePreferences(next);
+                scheduleApply();
+              });'''
+          text = replace_once(text, old_actions, new_actions, "workspace multi-map actions")
+
+          old_builder_click = '''      builder.addEventListener("click", () => {
+                window.setTimeout(() => {
+                  if (mapIsLocked()) closeBuilder();
+                  syncTabState();
+                }, 0);
+              });'''
+          new_builder_click = '''      builder.addEventListener("click", () => {
+                window.setTimeout(syncTabState, 0);
+              });'''
+          text = replace_once(text, old_builder_click, new_builder_click, "locked Map Builder access")
+          text = text.replace(
+              "Locked maps load in read-only mode. Map Builder stays visible but is disabled, and map,\n        specification, Build Input, and Servo Program editing are disabled.",
+              "Locked maps remain selectable in Map Builder as read-only records. Unlock them here before changing map, specification, Build Input, or Servo Program data.",
+              1
+          )
+          path.write_text(text, encoding="utf-8")
+
+          # Keep the read-only overlay from disabling safe map navigation/export.
+          path = Path("app/simulation-collapsible-integration.js")
+          text = path.read_text(encoding="utf-8")
+          text = replace_once(
+              text,
+              '''      if (control.id === "closeApplicationSetup") return;''',
+              '''      if (["closeApplicationSetup", "mapLibrarySelect", "exportMachineMap"].includes(control.id)) {
+                if (control.disabled) control.disabled = false;
+                return;
+              }''',
+              "safe controls in locked Map Builder"
+          )
+          path.write_text(text, encoding="utf-8")
+
+          # ------------------------------------------------------------------
+          # Dedicated map JSON import and format-aware fault import messaging.
+          # ------------------------------------------------------------------
+          path = Path("index.html")
+          text = path.read_text(encoding="utf-8")
+          text = replace_once(
+              text,
+              '<label class="file-action">Import Fault JSON<input id="importFaultConfig" type="file" accept="application/json,.json" /></label>',
+              '<label class="file-action">Import Fault Limits<input id="importFaultConfig" type="file" accept="application/json,.json" /></label>',
+              "fault import label"
+          )
+          text = replace_once(
+              text,
+              '<button id="exportMachineMap" type="button" class="secondary-button">Export Selected Map</button><button id="deleteMachineMap" type="button" class="danger">Delete Map</button>',
+              '<button id="exportMachineMap" type="button" class="secondary-button">Export Selected Map</button><label class="file-action">Import Map<input id="importMachineMap" type="file" accept="application/json,.json" /></label><button id="deleteMachineMap" type="button" class="danger">Delete Map</button>',
+              "Map Builder import control"
+          )
+          text = text.replace("0.9.2", "0.9.3")
+          path.write_text(text, encoding="utf-8")
+
+          path = Path("app/defaults.js")
+          text = path.read_text(encoding="utf-8")
+          text = replace_once(
+              text,
+              '  exportMachineMap: document.querySelector("#exportMachineMap"),\n',
+              '  exportMachineMap: document.querySelector("#exportMachineMap"),\n  importMachineMap: document.querySelector("#importMachineMap"),\n',
+              "importMachineMap element"
+          )
+          path.write_text(text, encoding="utf-8")
+
+          path = Path("app/wipe-down-builder.js")
+          text = path.read_text(encoding="utf-8")
+          import_code = r'''
+
+          function machineMapRecordsFromImport(documentData) {
+            if (!documentData || typeof documentData !== "object") return [];
+            if (documentData.format === "servoforge-machine-map" && documentData.map && typeof documentData.map === "object") {
+              return [documentData.map];
+            }
+            if (documentData.format === "labeler-tool-portable-settings" && Array.isArray(documentData.settings?.mapLibrary)) {
+              return documentData.settings.mapLibrary;
+            }
+            if (Array.isArray(documentData.mapLibrary)) return documentData.mapLibrary;
+            if (documentData.map && typeof documentData.map === "object") return [documentData.map];
+            if (Array.isArray(documentData.objects) && (documentData.machineType || documentData.applicationMode || documentData.schemaVersion)) {
+              return [documentData];
+            }
+            return [];
+          }
+
+          function importMachineMapFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.addEventListener("load", () => {
+              try {
+                const documentData = JSON.parse(String(reader.result));
+                const records = machineMapRecordsFromImport(documentData);
+                if (!records.length) {
+                  throw new Error("This JSON file does not contain a ServoForge machine map or map library.");
+                }
+
+                const imported = [];
+                records.forEach((source, index) => {
+                  const map = createMachineMap({
+                    ...deepClone(source),
+                    id: uniqueMapId("machine-map"),
+                    name: uniqueMapName(String(source?.name || `Imported Map ${index + 1}`)),
+                    isTemplate: false
+                  });
+                  state.mapLibrary.push(map);
+                  imported.push(map);
+                });
+
+                clearServoSimulationForSelectedMap();
+                loadMachineMapIntoRuntime(imported[0], true);
+                saveCurrentSettings();
+                render();
+                renderWipeDownBuilder();
+                window.alert(`${imported.length} map${imported.length === 1 ? "" : "s"} imported successfully. Imported maps remain editable until you lock them in Settings.`);
+              } catch (error) {
+                window.alert(`Unable to import map: ${error.message}`);
+              } finally {
+                if (els.importMachineMap) els.importMachineMap.value = "";
+              }
+            });
+            reader.readAsText(file);
+          }
+          '''
+          marker = "\nfunction clearServoSimulationForSelectedMap() {"
+          if marker not in text:
+              raise SystemExit("Map import insertion marker was not found")
+          text = text.replace(marker, import_code + marker, 1)
+          text = replace_once(
+              text,
+              '  els.exportMachineMap?.addEventListener("click", exportSelectedMachineMap);\n',
+              '  els.exportMachineMap?.addEventListener("click", exportSelectedMachineMap);\n  els.importMachineMap?.addEventListener("change", () => importMachineMapFile(els.importMachineMap.files?.[0]));\n',
+              "Map Builder import binding"
+          )
+          path.write_text(text, encoding="utf-8")
+
+          path = Path("app/persistence.js")
+          text = path.read_text(encoding="utf-8")
+          helper = '''
+          function looksLikeMachineMapDocument(documentData) {
+            if (!documentData || typeof documentData !== "object") return false;
+            return documentData.format === "servoforge-machine-map"
+              || documentData.format === "labeler-tool-portable-settings"
+              || Array.isArray(documentData.mapLibrary)
+              || Array.isArray(documentData.settings?.mapLibrary)
+              || Boolean(documentData.map && typeof documentData.map === "object")
+              || Boolean(Array.isArray(documentData.objects) && (documentData.machineType || documentData.applicationMode || documentData.schemaVersion));
+          }
+
+          '''
+          text = replace_once(text, "\nfunction applyFaultConfig(config) {", "\n" + helper + "function applyFaultConfig(config) {", "fault import format helper")
+          old_fault_load = '''      applyFaultConfig(JSON.parse(String(reader.result)));
+                saveCurrentSettings();'''
+          new_fault_load = '''      const documentData = JSON.parse(String(reader.result));
+                if (looksLikeMachineMapDocument(documentData)) {
+                  throw new Error("This file contains machine-map or settings data. Use Map Builder → Import Map instead.");
+                }
+                applyFaultConfig(documentData);
+                saveCurrentSettings();'''
+          text = replace_once(text, old_fault_load, new_fault_load, "fault import format detection")
+          path.write_text(text, encoding="utf-8")
+
+          # ------------------------------------------------------------------
+          # Version/cache alignment for a clean staging refresh.
+          # ------------------------------------------------------------------
+          for filename in ["service-worker.js", "app/update-manager.js"]:
+              path = Path(filename)
+              text = path.read_text(encoding="utf-8").replace("0.9.2", "0.9.3")
+              path.write_text(text, encoding="utf-8")
+
+          path = Path("app/bootstrap.js")
+          text = path.read_text(encoding="utf-8")
+          text = re.sub(r'const STAGING_RELEASE_VERSION = "[^"]+";', 'const STAGING_RELEASE_VERSION = "0.9.3";', text, count=1)
+          path.write_text(text, encoding="utf-8")
+
+          manifest_path = Path("update-manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          manifest["version"] = "0.9.3"
+          manifest["notes"] = "STAGING 0.9.3 adds multi-select map locking, lock indicators, dedicated machine-map JSON import, and format-aware fault-limit imports."
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+          notes_path = Path("release-notes.json")
+          notes = json.loads(notes_path.read_text(encoding="utf-8"))
+          notes["currentVersion"] = "0.9.3"
+          notes["generatedAt"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+          notes["releases"] = [release for release in notes.get("releases", []) if release.get("version") != "0.9.3"]
+          notes["releases"].insert(0, {
+              "version": "0.9.3",
+              "milestone": 12,
+              "title": "Multi-Map Access Controls and Map Import",
+              "summary": "Allows multiple saved maps to be locked or unlocked together and separates machine-map JSON import from fault-limit import.",
+              "changes": [
+                  "Use a multi-select map list with separate Lock Selected and Unlock Selected actions.",
+                  "Show a lock symbol beside every locked map in Map Access & Workspace.",
+                  "Keep locked maps selectable in Map Builder while enforcing read-only editing until Settings unlocks them.",
+                  "Add Import Map beside Export Selected Map and accept single-map exports, raw maps, portable settings map libraries, and full-state map libraries.",
+                  "Detect map/settings JSON mistakenly chosen under Import Fault Limits and direct the operator to the correct importer."
+              ]
+          })
+          notes_path.write_text(json.dumps(notes, indent=2) + "\n", encoding="utf-8")
+
+      - name: Validate JavaScript and JSON
+        run: |
+          node --check app/workspace-developer-integration.js
+          node --check app/simulation-collapsible-integration.js
+          node --check app/defaults.js
+          node --check app/wipe-down-builder.js
+          node --check app/persistence.js
+          node --check app/bootstrap.js
+          node --check app/update-manager.js
+          python -m json.tool update-manifest.json >/dev/null
+          python -m json.tool release-notes.json >/dev/null
+
+      - name: Remove one-time workflow
+        run: rm -f .github/workflows/multi-map-lock-and-import-fix.yml
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html service-worker.js update-manifest.json release-notes.json app/defaults.js app/persistence.js app/wipe-down-builder.js app/bootstrap.js app/update-manager.js app/workspace-developer-integration.js app/simulation-collapsible-integration.js .github/workflows/multi-map-lock-and-import-fix.yml
+          git commit -m "Add multi-map locking and dedicated map import"
+          git push
