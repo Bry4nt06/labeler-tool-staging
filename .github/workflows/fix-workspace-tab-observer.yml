@@ -1,0 +1,117 @@
+name: Fix workspace tab observer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/fix-workspace-tab-observer.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply idempotent tab ordering hotfix
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          from datetime import datetime, timezone
+
+          path = Path("app/workspace-developer-integration.js")
+          text = path.read_text(encoding="utf-8")
+          old = '''  function orderedTabButtons() {
+            const tabs = document.querySelector(".tabs");
+            const builder = document.querySelector("#wipeDownBuilderButton");
+            if (!tabs || !builder) return;
+            builder.classList.remove("compact-builder-button", "secondary-button", "compact-map-button");
+            builder.classList.add("tab", "map-builder-tab");
+            builder.textContent = "Map Builder";
+            builder.removeAttribute("data-tab");
+            const normalTabs = ["specs", "buildInputs", "program", "simulation", "diagnostics"]
+              .map((id) => tabs.querySelector(`[data-tab="${id}"]`))
+              .filter(Boolean);
+            const anchor = tabs.querySelector(".simulation-actions-spacer") || tabs.firstElementChild;
+            [builder, ...normalTabs].forEach((button) => tabs.insertBefore(button, anchor));
+          }'''
+          new = '''  function orderedTabButtons() {
+            const tabs = document.querySelector(".tabs");
+            const builder = document.querySelector("#wipeDownBuilderButton");
+            if (!tabs || !builder) return;
+            builder.classList.remove("compact-builder-button", "secondary-button", "compact-map-button");
+            builder.classList.add("tab", "map-builder-tab");
+            builder.textContent = "Map Builder";
+            builder.removeAttribute("data-tab");
+            const normalTabs = ["specs", "buildInputs", "program", "simulation", "diagnostics"]
+              .map((id) => tabs.querySelector(`[data-tab="${id}"]`))
+              .filter(Boolean);
+            const desired = [builder, ...normalTabs];
+            const current = [...tabs.children].filter((child) => desired.includes(child));
+            if (desired.length === current.length && desired.every((button, index) => current[index] === button)) return;
+            const anchor = tabs.querySelector(".simulation-actions-spacer") || null;
+            const fragment = document.createDocumentFragment();
+            desired.forEach((button) => fragment.appendChild(button));
+            tabs.insertBefore(fragment, anchor);
+          }'''
+          if old not in text:
+              raise SystemExit("Expected orderedTabButtons block was not found.")
+          path.write_text(text.replace(old, new), encoding="utf-8")
+
+          for filename in ["index.html", "app/update-manager.js", "service-worker.js"]:
+              file_path = Path(filename)
+              file_path.write_text(file_path.read_text(encoding="utf-8").replace("0.9.2", "0.9.3"), encoding="utf-8")
+
+          manifest_path = Path("update-manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          manifest["version"] = "0.9.3"
+          manifest["notes"] = "STAGING 0.9.3 stabilizes ordered workspace tabs while retaining Developer Mode, outside-click closing, panel visibility, and read-only locked maps."
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+          notes_path = Path("release-notes.json")
+          notes = json.loads(notes_path.read_text(encoding="utf-8"))
+          notes["currentVersion"] = "0.9.3"
+          notes["generatedAt"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+          release = {
+              "version": "0.9.3",
+              "milestone": 12,
+              "title": "Workspace Tab Stability Hotfix",
+              "summary": "Makes the requested workspace-tab ordering idempotent so diagnostics rendering and other DOM updates cannot repeatedly reorder the same controls.",
+              "changes": [
+                  "Reorder the workspace tabs only when their current sequence differs from the requested sequence.",
+                  "Prevent the workspace mutation observer from retriggering itself on an already-correct tab row."
+              ]
+          }
+          notes["releases"] = [entry for entry in notes.get("releases", []) if entry.get("version") != "0.9.3"]
+          notes["releases"].insert(0, release)
+          notes_path.write_text(json.dumps(notes, indent=2) + "\n", encoding="utf-8")
+
+          Path(".github/workflows/fix-workspace-tab-observer.yml").unlink(missing_ok=True)
+          PY
+
+      - name: Validate hotfix
+        shell: bash
+        run: |
+          node --check app/workspace-developer-integration.js
+          node --check app/update-manager.js
+          node --check service-worker.js
+          python -m json.tool update-manifest.json >/dev/null
+          python -m json.tool release-notes.json >/dev/null
+          grep -q 'desired.every' app/workspace-developer-integration.js
+          grep -q 'application-version" content="0.9.3' index.html
+          git diff --check
+
+      - name: Commit hotfix
+        shell: bash
+        run: |
+          git config user.name "ServoForge Staging Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Stabilize workspace tab ordering"
+          git push origin HEAD:main
