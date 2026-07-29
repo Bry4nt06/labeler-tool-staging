@@ -242,3 +242,184 @@
   guardedInsertBefore.workspaceTabStabilityGuard = true;
   Node.prototype.insertBefore = guardedInsertBefore;
 })();
+
+(function keepLockedMapBuilderAccessible() {
+  const PREFS_KEY = "servoforge-developer-preferences-v1";
+  const RETRY_MS = 50;
+  let applyPending = false;
+  let buttonObserver = null;
+  let drawerObserver = null;
+
+  function preferences() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+      return saved && typeof saved === "object" ? saved : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function activeMapLocked() {
+    if (typeof activeMachineMap !== "function") return false;
+    const map = activeMachineMap();
+    const lockedIds = Array.isArray(preferences().lockedMapIds)
+      ? preferences().lockedMapIds.map(String)
+      : [];
+    return Boolean(map?.id && lockedIds.includes(String(map.id)));
+  }
+
+  function panelManuallyHidden() {
+    const hiddenPanels = Array.isArray(preferences().hiddenPanels)
+      ? preferences().hiddenPanels.map(String)
+      : [];
+    return hiddenPanels.includes("mapBuilder");
+  }
+
+  function installStyles() {
+    if (document.querySelector("#lockedMapBuilderAccessStyles")) return;
+    const style = document.createElement("style");
+    style.id = "lockedMapBuilderAccessStyles";
+    style.textContent = `
+      .map-builder-tab.locked-map-builder-view{border-color:#d79a3c;color:#ffc56b}
+      .locked-builder-notice{margin:0 12px 10px;padding:9px 11px;border:1px solid #d79a3c;border-radius:7px;background:color-mix(in srgb,var(--panel) 84%,#d79a3c 16%);color:#ffc56b;font-size:10px;font-weight:700;line-height:1.35}
+      .locked-builder-notice[hidden]{display:none!important}
+    `;
+    document.head.appendChild(style);
+  }
+
+  function applyDrawerReadOnly() {
+    const drawer = document.querySelector("#applicationSetupDialog");
+    if (!drawer) return;
+    const locked = activeMapLocked();
+    drawer.classList.toggle("read-only-surface", locked);
+
+    let notice = drawer.querySelector("#lockedBuilderNotice");
+    if (!notice) {
+      notice = document.createElement("div");
+      notice.id = "lockedBuilderNotice";
+      notice.className = "locked-builder-notice";
+      notice.textContent = "Read-only map: you can inspect this Map Builder setup, but changes are disabled until the map is unlocked in Settings.";
+      drawer.querySelector(".dialog-head")?.insertAdjacentElement("afterend", notice);
+    }
+    notice.hidden = !locked;
+
+    drawer.querySelectorAll("input,select,textarea,button").forEach((control) => {
+      if (control.id === "closeApplicationSetup") {
+        control.disabled = false;
+        return;
+      }
+      if (locked) {
+        if (!control.hasAttribute("data-locked-builder-was-disabled")) {
+          control.dataset.lockedBuilderWasDisabled = String(control.disabled);
+        }
+        control.disabled = true;
+      } else if (control.hasAttribute("data-locked-builder-was-disabled")) {
+        control.disabled = control.dataset.lockedBuilderWasDisabled === "true";
+        delete control.dataset.lockedBuilderWasDisabled;
+      }
+    });
+  }
+
+  function restoreBuilderAccess() {
+    applyPending = false;
+    const button = document.querySelector("#wipeDownBuilderButton");
+    if (!button) return;
+
+    const locked = activeMapLocked();
+    const hidden = panelManuallyHidden();
+    if (!hidden) button.dataset.developerHidden = "false";
+    button.disabled = false;
+    button.setAttribute("aria-disabled", "false");
+    button.textContent = "Map Builder";
+    button.title = locked
+      ? "Open Map Builder in read-only mode. Unlock the map in Settings to make changes."
+      : "Open Map Builder";
+    button.classList.toggle("locked-map-builder-view", locked);
+    applyDrawerReadOnly();
+  }
+
+  function scheduleRestore() {
+    if (applyPending) return;
+    applyPending = true;
+    window.requestAnimationFrame(restoreBuilderAccess);
+  }
+
+  function setBuilderOpen(open) {
+    const resolved = Boolean(open);
+    const drawer = document.querySelector("#applicationSetupDialog");
+    const rail = document.querySelector("#mapRightRail");
+    const reference = document.querySelector("#labelerMapReference");
+
+    state.wipeBuilderOpen = resolved;
+    if (drawer) drawer.hidden = !resolved;
+    rail?.classList.toggle("builder-open", resolved);
+    reference?.classList.toggle("builder-open", resolved);
+
+    if (resolved) {
+      if (typeof ensurePersistentApplicationMaps === "function") ensurePersistentApplicationMaps();
+      if (typeof renderWipeDownBuilder === "function") renderWipeDownBuilder();
+      window.requestAnimationFrame(applyDrawerReadOnly);
+    }
+    if (typeof saveCurrentSettings === "function") saveCurrentSettings();
+  }
+
+  function bindLockedBuilderClick() {
+    if (document.documentElement.dataset.lockedBuilderAccessBound === "true") return;
+    document.documentElement.dataset.lockedBuilderAccessBound = "true";
+
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest?.("#wipeDownBuilderButton");
+      if (!button || !activeMapLocked()) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const drawer = document.querySelector("#applicationSetupDialog");
+      const currentlyOpen = Boolean(state.wipeBuilderOpen && drawer?.hidden === false);
+      setBuilderOpen(!currentlyOpen);
+      scheduleRestore();
+    }, true);
+  }
+
+  function installObservers() {
+    const button = document.querySelector("#wipeDownBuilderButton");
+    const drawer = document.querySelector("#applicationSetupDialog");
+
+    if (button && !buttonObserver) {
+      buttonObserver = new MutationObserver(scheduleRestore);
+      buttonObserver.observe(button, {
+        attributes: true,
+        attributeFilter: ["disabled", "aria-disabled", "title", "data-developer-hidden"],
+        childList: true
+      });
+    }
+
+    if (drawer && !drawerObserver) {
+      drawerObserver = new MutationObserver(() => {
+        if (activeMapLocked()) window.requestAnimationFrame(applyDrawerReadOnly);
+      });
+      drawerObserver.observe(drawer, { childList: true, subtree: true });
+    }
+  }
+
+  function install() {
+    if (typeof state === "undefined" || typeof activeMachineMap !== "function") return false;
+    if (!document.querySelector("#wipeDownBuilderButton") || !document.querySelector("#applicationSetupDialog")) return false;
+    installStyles();
+    bindLockedBuilderClick();
+    installObservers();
+    restoreBuilderAccess();
+    window.setTimeout(scheduleRestore, 250);
+    window.setTimeout(scheduleRestore, 1000);
+    return true;
+  }
+
+  function waitForApplication() {
+    if (install()) return;
+    window.setTimeout(waitForApplication, RETRY_MS);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", waitForApplication, { once: true });
+  } else {
+    waitForApplication();
+  }
+})();
