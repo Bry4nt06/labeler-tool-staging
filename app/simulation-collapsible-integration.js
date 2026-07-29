@@ -5,6 +5,7 @@
     "app/simulation-collapsible-core.js?v=0.9.3-direct",
     "app/multi-map-lock-import-integration-v2.js?v=0.9.3-map-import-router",
     "app/map-object-wipe-definition-integration.js?v=0.9.3-object-wipes",
+    "app/apl-single-cycle-transition-guard.js?v=0.9.3-dual-neck-pad-cycle",
     "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact"
   ];
 
