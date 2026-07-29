@@ -213,3 +213,32 @@
     waitForSimulation();
   }
 })();
+
+(function stabilizeWorkspaceTabInsertion() {
+  if (Node.prototype.insertBefore.workspaceTabStabilityGuard) return;
+  const originalInsertBefore = Node.prototype.insertBefore;
+
+  function requestedOrderIsAlreadyApplied(tabs) {
+    if (!(tabs instanceof Element) || !tabs.matches(".tabs")) return false;
+    const builder = tabs.querySelector("#wipeDownBuilderButton");
+    if (!builder) return false;
+    const desired = [builder, ...["specs", "buildInputs", "program", "simulation", "diagnostics"]
+      .map((id) => tabs.querySelector(`[data-tab="${id}"]`))
+      .filter(Boolean)];
+    const current = [...tabs.children].filter((child) => desired.includes(child));
+    return desired.length === current.length && desired.every((button, index) => current[index] === button);
+  }
+
+  const guardedInsertBefore = function guardedWorkspaceInsertBefore(newNode, referenceNode) {
+    const tabMove = this instanceof Element
+      && this.matches(".tabs")
+      && newNode instanceof Element
+      && newNode.classList.contains("tab")
+      && referenceNode?.classList?.contains("simulation-actions-spacer");
+    if (tabMove && requestedOrderIsAlreadyApplied(this)) return newNode;
+    return originalInsertBefore.call(this, newNode, referenceNode);
+  };
+
+  guardedInsertBefore.workspaceTabStabilityGuard = true;
+  Node.prototype.insertBefore = guardedInsertBefore;
+})();
