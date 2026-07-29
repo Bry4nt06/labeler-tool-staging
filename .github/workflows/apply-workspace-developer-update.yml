@@ -1,0 +1,114 @@
+name: Apply workspace and developer controls
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-workspace-developer-update.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply ServoForge staging update
+        shell: bash
+        run: |
+          python - <<'PYCODE'
+          from pathlib import Path
+          import base64
+          import gzip
+          import json
+          from datetime import datetime, timezone
+
+          version = "0.9.2"
+          integration_payload = "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"
+          integration_path = Path("app/workspace-developer-integration.js")
+          integration_path.write_bytes(gzip.decompress(base64.b64decode(integration_payload)))
+
+          index_path = Path("index.html")
+          index_text = index_path.read_text(encoding="utf-8").replace("0.9.1", version)
+          index_path.write_text(index_text, encoding="utf-8")
+
+          manager_path = Path("app/update-manager.js")
+          manager_text = manager_path.read_text(encoding="utf-8").replace("0.9.1", version)
+          module_line = '    "app/workspace-developer-integration.js",'
+          diagnostics_line = '    "app/diagnostics-workspace-integration.js",'
+          if module_line not in manager_text:
+              manager_text = manager_text.replace(diagnostics_line, diagnostics_line + "\n" + module_line)
+          manager_path.write_text(manager_text, encoding="utf-8")
+
+          worker_path = Path("service-worker.js")
+          worker_text = worker_path.read_text(encoding="utf-8").replace("0.9.1", version)
+          asset_line = '  "./app/workspace-developer-integration.js",'
+          diagnostics_asset = '  "./app/diagnostics-workspace-integration.js",'
+          if asset_line not in worker_text:
+              worker_text = worker_text.replace(diagnostics_asset, diagnostics_asset + "\n" + asset_line)
+          worker_path.write_text(worker_text, encoding="utf-8")
+
+          manifest_path = Path("update-manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          manifest["version"] = version
+          manifest["releaseUrl"] = "https://bry4nt06.github.io/labeler-tool-staging/"
+          manifest["downloadUrl"] = manifest["releaseUrl"]
+          manifest["notes"] = "STAGING 0.9.2 adds ordered workspace tabs, outside-click panel closing, Developer Mode, panel visibility controls, and read-only locked maps."
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+          notes_path = Path("release-notes.json")
+          notes = json.loads(notes_path.read_text(encoding="utf-8"))
+          notes["environment"] = "staging"
+          notes["currentVersion"] = version
+          notes["generatedAt"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+          release = {
+              "version": version,
+              "milestone": 12,
+              "title": "Workspace Navigation and Developer Controls",
+              "summary": "Moves Map Builder into the primary workspace tabs and adds locally authenticated developer controls for panel visibility and read-only map locking.",
+              "changes": [
+                  "Order the primary navigation as Map Builder, Specs, Build Inputs, Servo Program, Servo Simulation, and Diagnostics.",
+                  "Close Settings, Map Builder, map-reference, wipe-data, and open builder detail panels when the user clicks outside them.",
+                  "Create a first-use Developer Mode login with locally hashed credentials and session-only unlocking.",
+                  "Allow Developer Mode to hide or restore operator panels without modifying saved map data.",
+                  "Allow selected maps to be locked and loaded from a Locked Maps dropdown in read-only mode.",
+                  "Hide Map Builder and disable specification, Build Input, Servo Program, and direct map editing while a locked map is active."
+              ]
+          }
+          notes["releases"] = [entry for entry in notes.get("releases", []) if entry.get("version") != version]
+          notes["releases"].insert(0, release)
+          notes_path.write_text(json.dumps(notes, indent=2) + "\n", encoding="utf-8")
+
+          workflow_path = Path(".github/workflows/apply-workspace-developer-update.yml")
+          workflow_path.unlink(missing_ok=True)
+          PYCODE
+
+      - name: Validate updated application files
+        shell: bash
+        run: |
+          node --check app/workspace-developer-integration.js
+          node --check app/update-manager.js
+          node --check service-worker.js
+          python -m json.tool update-manifest.json >/dev/null
+          python -m json.tool release-notes.json >/dev/null
+          grep -q 'workspace-developer-integration.js' app/update-manager.js
+          grep -q 'workspace-developer-integration.js' service-worker.js
+          grep -q 'application-version" content="0.9.2' index.html
+          git diff --check
+
+      - name: Commit synchronized staging update
+        shell: bash
+        run: |
+          git config user.name "ServoForge Staging Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Add workspace tabs and developer map controls"
+          git push origin HEAD:main
