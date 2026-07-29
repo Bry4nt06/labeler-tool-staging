@@ -20,11 +20,7 @@ function validate() {
   const segments = programSegments(state.program);
   for (let i = 1; i < segments.length; i += 1) {
     if (segments[i].tableAngle <= segments[i - 1].tableAngle) {
-      notes.push(["bad", `Servo table angles must increase by at least 0.5°; HMI ${segments[i].hmi} is too close to or behind the preceding setpoint.`]);
-      break;
-    }
-    if (segments[i].tableAngle - segments[i - 1].tableAngle < 0.5 - 0.0001) {
-      notes.push(["bad", `Servo table angles must increase by at least 0.5°; HMI ${segments[i].hmi} is too close to the preceding setpoint.`]);
+      notes.push(["bad", `Servo table angle does not increase at HMI ${segments[i].hmi}.`]);
       break;
     }
   }

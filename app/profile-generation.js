@@ -374,11 +374,9 @@ function generatedColdGlueFixedProfile() {
     if (!wipe) return null;
     const channels = stationObjects.filter((item) => item.kind === "brush-channel");
     if (channels.length) {
-      // Cold Glue is center-tacked for every label. A staggered channel wipes
-      // the first loose half, holds the bottle while both brushes oppose it,
-      // then reverses through the remaining one-sided brush to wipe the other
-      // half. Neither stage should rotate a complete label length.
-      const requiredRotation = Math.max(0, num(wipe.labelDeg, 0));
+      const firstHalfRequired = Math.max(0, num(wipe.labelDeg, 0) / 2 + num(wipe.overWipeDeg, 0));
+      const reverseRequired = Math.max(0, num(wipe.labelDeg, 0) + num(wipe.overWipeDeg, 0) * 2);
+      const requiredRotation = firstHalfRequired + reverseRequired;
       let moves = [];
       channels.forEach((channel) => {
         const outerStart = num(channel.outerStart, channel.start);
@@ -404,24 +402,25 @@ function generatedColdGlueFixedProfile() {
       });
       const issues = [];
       const candidates = moves.filter((move) => move.stage === "outer" || move.stage === "inner").sort((a, b) => a.start - b.start);
-      // Use every available degree of one-sided brush contact at the fastest
-      // non-faulting speed. The configured threshold itself is a fault
-      // boundary, so retain 0.1 ratio of headroom after one-decimal rounding.
-      const plannedRatio = Math.max(0.01, state.maxMoveRatio - 0.1);
+      const totalOpenSpan = candidates.reduce((sum, move) => sum + move.end - move.start, 0);
+      const safeRatio = state.maxMoveRatio * 0.9;
+      const plannedRatio = totalOpenSpan > 0 ? Math.min(safeRatio, requiredRotation / totalOpenSpan) : 0;
+      const initialDirection = candidates[0]?.direction || 1;
+      let firstRemaining = firstHalfRequired;
+      let reverseRemaining = reverseRequired;
       const allocated = candidates.map((move) => {
-        const outside = move.stage === "outer";
-        return {
-          ...move,
-          rotation: (move.end - move.start) * plannedRatio,
-          ratio: plannedRatio,
-          direction: outside ? 1 : -1,
-          rotationSense: outside ? "clockwise" : "counter-clockwise",
-          centerTackStage: outside ? "outside-maximum-wipe" : "inside-maximum-wipe"
-        };
+        const reversing = firstRemaining <= 0.001;
+        const remaining = reversing ? reverseRemaining : firstRemaining;
+        const rotation = Math.min(remaining, (move.end - move.start) * plannedRatio);
+        if (reversing) reverseRemaining -= rotation;
+        else firstRemaining -= rotation;
+        return { ...move, rotation, ratio: plannedRatio, direction: reversing ? -initialDirection : initialDirection, centerTackStage: reversing ? "reverse-to-second-edge" : "first-half-to-edge" };
       });
       const candidateSet = new Set(candidates);
       moves = [...moves.filter((move) => !candidateSet.has(move)), ...allocated].sort((a, b) => a.start - b.start);
+      const remainingRotation = Math.max(0, firstRemaining) + Math.max(0, reverseRemaining);
       if (requiredRotation > 0.001 && !candidates.length && !channels.every((channel) => channel.holdBottleAngle)) issues.push({ level: "bad", code: "cold-glue-channel-closed", message: "The Brush Channel has no open one-sided brush length available to wipe the label." });
+      else if (remainingRotation > 0.001 && candidates.length) issues.push({ level: "bad", code: "cold-glue-channel-capacity", message: `The open Brush Channel length is short by ${remainingRotation.toFixed(1)} deg of bottle rotation.` });
       return { labelDeg: wipe.labelDeg, overWipeDeg: wipe.overWipeDeg, channelMoves: moves, issues };
     }
     const brushes = stationObjects.filter((item) => item.kind === "brush");
@@ -571,20 +570,16 @@ function generatedColdGlueFixedProfile() {
         .sort((a, b) => num(a.start, 0) - num(b.start, 0));
       const firstBrush = allBrushAllocations[0];
       if (firstBrush && !aggregateAlreadyPassed) {
-        const firstWipe = allBrushAllocations.find((allocation) => num(allocation.rotation, 0) > 0.001);
-        const opposedHold = allBrushAllocations.find((allocation) => allocation.stage === "opposed");
-        const flowFacingPlate = firstWipe && opposedHold && coldGlueDriver?.brushEntryTarget
-          ? coldGlueDriver.brushEntryTarget(num(opposedHold.holdAngle, 90), firstWipe.rotation, firstWipe.direction)
-          : coldGlueDriver?.flowFacingTarget
-            ? coldGlueDriver.flowFacingTarget(plate, mapDirection, stationPlan.labelDeg)
-            : applicationTargets[section] + (mapDirection === "ccw" ? -90 : 90);
+        const flowFacingPlate = coldGlueDriver?.flowFacingTarget
+          ? coldGlueDriver.flowFacingTarget(plate, mapDirection, stationPlan.labelDeg)
+          : applicationTargets[section] + (mapDirection === "ccw" ? -90 : 90);
         const brushEntryTable = firstBrush.start - Math.max(0, num(stationPlan.brushEntryLeadDeg, 0));
         const alignmentExtra = { station, section, brushEntryAlignment: true, mapDirection, flowFacingOffsetDeg: mapDirection === "ccw" ? 90 : -90 };
         if (stationPlan.fullWrap) {
           const alignmentStart = Math.max(lastTable + 0.5, brushEntryTable - plateTravelTo(flowFacingPlate) / Math.max(0.1, Math.min(state.maxMoveRatio * 0.9, 7.5)));
-          moveInWindow(alignmentStart, brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Pre-Orient for 90° Brush Channel`, alignmentExtra);
+          moveInWindow(alignmentStart, brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Face Bottle With Flow Before Brush Channel`, alignmentExtra);
         } else {
-          moveToReference(brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Pre-Orient for 90° Brush Channel`, alignmentExtra);
+          moveToReference(brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Face Bottle With Flow Before Brush Channel`, alignmentExtra);
         }
       }
 
@@ -593,9 +588,7 @@ function generatedColdGlueFixedProfile() {
           if (allocation.stage === "opposed") {
             const holdAngle = allocation.holdCurrent ? plate : num(allocation.holdAngle, 90);
             const action = `${sectionLabel(section)} Brush Channel ${allocation.configuredHold ? "Configured" : "Opposed"} Hold at ${finishAngle(holdAngle)}°`;
-            if (!allocation.holdCurrent || Math.abs(holdAngle - plate) > 0.001) {
-              moveToReferenceWithoutExtraLap(allocation.start, holdAngle, action, { station, section, brushStage: "opposed", channelHold: true, holdAngle });
-            }
+            moveToReferenceWithoutExtraLap(allocation.start, holdAngle, action, { station, section, brushStage: "opposed", channelHold: true, holdAngle });
             applyMove(allocation.start, allocation.end, 0, 0, action, { station, section, brushStage: "opposed", channelHold: true, holdAngle });
           } else if (allocation.rotation > 0.001) {
             applyMove(allocation.start, allocation.end, allocation.rotation, allocation.direction, `${sectionLabel(section)} ${allocation.stage === "outer" ? "Outside" : "Inside"} Brush Channel Wipe-Down`, { station, section, brushStage: allocation.stage, plannedRotation: allocation.rotation, plannedRatio: allocation.ratio });
@@ -892,12 +885,18 @@ function generatedAplMapDrivenProfile(machineMap) {
       }
       if (outside) moves.push(applyTurn(outside.start, outside.end, longNeckPlan?.outsideRotation ?? required, `Wipe Turn 1 ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: "outer" }));
       if (inside) {
-        // Finish the neck reversal while the bottle is physically touching the
-        // inside roller. The following station iteration creates a separate
-        // orientation move for the next label; merging that target here would
-        // spread part of the neck wipe into the open gap after this roller.
-        const secondRotation = -(longNeckPlan?.insideRotation ?? required);
-        moves.push(applyTurn(inside.start, inside.end, secondRotation, `Wipe Turn 2 ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: "inner" }));
+        // At the neck-to-body boundary, finish the neck wipe at the body's
+        // required bottle angle. The terminal CMD 3 is a Rest, so the next
+        // body wipe starts directly from that orientation without a setup row.
+        const neckToBody = section === "neck" && sectionBoundary?.section === "body";
+        const nextWipeStart = neckToBody
+          ? Math.min(...(nextEntry?.[1] || []).filter((item) => item.kind === "roller" || item.kind === "pad").map((item) => num(item.start, Infinity)))
+          : NaN;
+        const transitionEnd = Number.isFinite(nextWipeStart) ? nextWipeStart - 1.5 : inside.end;
+        const secondRotation = neckToBody ? sectionBoundary.plateAngle - plate : -(longNeckPlan?.insideRotation ?? required);
+        moves.push(applyTurn(inside.start, transitionEnd, secondRotation, `Wipe Turn 2 ${sectionLabel(section)} - Agg ${station}`, {
+          station, section, stage: "inner", endAction: neckToBody ? "Rest" : undefined, phaseTransition: neckToBody ? "neck-to-body" : undefined
+        }));
       }
     } else {
       const outsidePad = contactRange(preferredObjects.filter((item) => item.side !== "inner"));
@@ -1145,27 +1144,11 @@ function generatedServoProfile() {
   return rows;
 }
 
-function enforceUniqueServoTableAngles(rows, minimumStep = 0.5) {
-  const step = Math.max(0.5, Math.abs(num(minimumStep, 0.5)));
-  let previous = -Infinity;
-  return (Array.isArray(rows) ? rows : []).map((row) => {
-    const requested = num(row?.tableAngle, Number.isFinite(previous) ? previous + step : 0);
-    const tableAngle = Number.isFinite(previous)
-      ? finishAngle(Math.max(requested, previous + step))
-      : finishAngle(requested);
-    previous = tableAngle;
-    return { ...row, tableAngle };
-  });
-}
-
 function applyGeneratedServoProfile() {
-  // Finalize table ordering after every brand-specific and machine-specific
-  // generator has run. Separate servo instructions must never share a bottle
-  // table setpoint; every HMI setpoint requires at least 0.5 degree.
-  const generated = enforceUniqueServoTableAngles(applyMachineTypeProfileFraming(generatedServoProfile()));
+  const generated = applyMachineTypeProfileFraming(generatedServoProfile());
   const profileKey = servoOverrideProfileKey();
   const overrides = state.servoOverrides?.[profileKey] || {};
-  const requested = generated.map((row, index) => {
+  state.program = generated.map((row, index) => {
     const override = overrides[String(row.plc ?? index)] || {};
     return {
       ...row,
@@ -1176,13 +1159,6 @@ function applyGeneratedServoProfile() {
       tableAngleOverride: Number.isFinite(Number(override.tableAngle)) ? Number(override.tableAngle) : null,
       plateAngleOverride: Number.isFinite(Number(override.plateAngle)) ? Number(override.plateAngle) : null
     };
-  });
-  state.program = enforceUniqueServoTableAngles(requested);
-  state.program.forEach((row, index) => {
-    if (!Number.isFinite(Number(requested[index]?.tableAngleOverride))) return;
-    const rowKey = String(row.plc ?? index);
-    overrides[rowKey] = { ...(overrides[rowKey] || {}), tableAngle: row.tableAngle };
-    row.tableAngleOverride = row.tableAngle;
   });
 }
 
