@@ -1,10 +1,10 @@
 "use strict";
 
-(function installWorkspaceDeveloperControls() {
+(function installWorkspaceControls() {
   const RETRY_MS = 50;
   const PREFS_KEY = "servoforge-developer-preferences-v1";
-  const AUTH_KEY = "servoforge-developer-auth-v1";
-  const SESSION_KEY = "servoforge-developer-session-v1";
+  const LEGACY_AUTH_KEY = "servoforge-developer-auth-v1";
+  const LEGACY_SESSION_KEY = "servoforge-developer-session-v1";
   const PANEL_DEFINITIONS = Object.freeze([
     ["mapBuilder", "Map Builder"],
     ["specs", "Specs"],
@@ -41,43 +41,9 @@
     localStorage.setItem(PREFS_KEY, JSON.stringify(next));
   }
 
-  function authRecord() {
-    return readJson(localStorage, AUTH_KEY, null);
-  }
-
-  function developerUnlocked() {
-    return sessionStorage.getItem(SESSION_KEY) === "unlocked";
-  }
-
-  function bytesToHex(buffer) {
-    return [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-  }
-
-  function randomSalt() {
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-  }
-
-  async function passwordDigest(password, salt) {
-    if (!globalThis.crypto?.subtle) throw new Error("Secure browser hashing is unavailable.");
-    const payload = new TextEncoder().encode(`${salt}:${password}`);
-    return bytesToHex(await crypto.subtle.digest("SHA-256", payload));
-  }
-
-  async function createLogin(password, confirmation) {
-    if (password.length < 8) throw new Error("Use at least 8 characters for the developer password.");
-    if (password !== confirmation) throw new Error("The password confirmation does not match.");
-    const salt = randomSalt();
-    const digest = await passwordDigest(password, salt);
-    localStorage.setItem(AUTH_KEY, JSON.stringify({ version: 1, salt, digest, createdAt: new Date().toISOString() }));
-    sessionStorage.setItem(SESSION_KEY, "unlocked");
-  }
-
-  async function verifyLogin(password) {
-    const record = authRecord();
-    if (!record?.salt || !record?.digest) return false;
-    return (await passwordDigest(password, record.salt)) === record.digest;
+  function clearLegacyLogin() {
+    localStorage.removeItem(LEGACY_AUTH_KEY);
+    sessionStorage.removeItem(LEGACY_SESSION_KEY);
   }
 
   function escapeHtml(value) {
@@ -98,68 +64,93 @@
   }
 
   function installStyles() {
-    if (document.querySelector("#workspaceDeveloperStyles")) return;
+    if (document.querySelector("#workspaceControlsStyles")) return;
+    document.querySelector("#workspaceDeveloperStyles")?.remove();
     const style = document.createElement("style");
-    style.id = "workspaceDeveloperStyles";
+    style.id = "workspaceControlsStyles";
     style.textContent = `
       .map-toolbar #wipeDownBuilderButton{display:none}
-      .developer-mode-card{display:grid;gap:8px;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}
-      .developer-mode-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-      .developer-mode-head strong,.developer-mode-head small{display:block}
-      .developer-mode-head small,.developer-mode-note{color:var(--muted);font-size:9px;line-height:1.35}
-      .developer-mode-status{padding:3px 7px;border:1px solid var(--line);border-radius:999px;font-size:9px;font-weight:800}
-      .developer-mode-status[data-state="unlocked"]{border-color:var(--green);color:var(--green)}
-      .developer-login-grid,.developer-feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-      .developer-login-grid label,.developer-feature-grid label{display:grid;gap:3px;min-width:0}
-      .developer-login-actions,.developer-map-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:end}
-      .developer-feature-panel{display:grid;gap:9px;padding-top:8px;border-top:1px solid var(--line)}
-      .developer-panel-toggles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
-      .developer-panel-toggle{display:flex!important;grid-template-columns:none!important;align-items:center;gap:6px;padding:6px;border:1px solid var(--line);border-radius:7px;background:var(--input);font-size:9px}
-      .locked-map-viewer{display:flex;align-items:end;gap:7px;margin-left:auto}
-      .locked-map-viewer label{display:grid;gap:2px;color:var(--muted);font-size:8px}
-      .locked-map-viewer select{min-width:180px;max-width:280px}
-      .locked-map-badge,.map-read-only-indicator{padding:3px 7px;border:1px solid #d79a3c;border-radius:999px;color:#ffc56b;font-size:8px;font-weight:800;white-space:nowrap}
-      .map-read-only-indicator{margin-left:7px}
+      .top-settings-panel{width:min(620px,calc(100vw - 24px))!important;max-height:min(82vh,760px);overflow:auto;align-content:start}
+      .workspace-controls-card{grid-column:1/-1;display:grid;gap:12px;min-width:0;margin-top:4px;padding:13px;border:1px solid var(--line);border-radius:10px;background:var(--panel-hi)}
+      .workspace-controls-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+      .workspace-controls-head strong,.workspace-controls-head small{display:block}
+      .workspace-controls-head small,.workspace-controls-note{margin-top:3px;color:var(--muted);font-size:10px;line-height:1.4}
+      .workspace-map-access{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;padding:11px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+      .workspace-map-access label{display:grid;gap:5px;min-width:0;color:var(--muted);font-size:10px}
+      .workspace-map-access select{width:100%;min-width:0;height:38px}
+      .workspace-map-access button{min-width:158px;height:38px;white-space:nowrap}
+      .workspace-lock-summary{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center}
+      .workspace-lock-state{padding:4px 8px;border:1px solid var(--green);border-radius:999px;color:var(--green);font-size:9px;font-weight:800;white-space:nowrap}
+      .workspace-lock-state[data-state="locked"]{border-color:#d79a3c;color:#ffc56b}
+      .workspace-panel-visibility{border-top:1px solid var(--line);padding-top:10px}
+      .workspace-panel-visibility>summary{cursor:pointer;font-weight:700;list-style:none}
+      .workspace-panel-visibility>summary::-webkit-details-marker{display:none}
+      .workspace-panel-visibility>summary::after{content:"+";float:right;color:var(--green)}
+      .workspace-panel-visibility[open]>summary::after{content:"−"}
+      .workspace-panel-toggles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:9px}
+      .workspace-panel-toggle{display:flex!important;grid-template-columns:none!important;align-items:center;gap:8px;min-width:0;padding:8px 9px;border:1px solid var(--line);border-radius:7px;background:var(--input);font-size:10px;line-height:1.25}
+      .workspace-panel-toggle input{flex:0 0 auto}
+      .locked-map-viewer{grid-area:locked;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px;width:100%;min-width:0;margin:0;padding-top:8px;border-top:1px solid var(--line)}
+      .locked-map-viewer label{display:grid;gap:4px;min-width:0;color:var(--muted);font-size:9px}
+      .locked-map-viewer select{width:100%;min-width:0;max-width:none;height:34px}
+      .locked-map-badge,.map-read-only-indicator{max-width:100%;padding:4px 8px;border:1px solid #d79a3c;border-radius:999px;color:#ffc56b;font-size:9px;font-weight:800;line-height:1.2;white-space:normal;overflow-wrap:anywhere}
+      .map-read-only-indicator{margin-left:0}
       .read-only-surface input:disabled,.read-only-surface select:disabled,.read-only-surface textarea:disabled,.read-only-surface button:disabled{cursor:not-allowed;opacity:.62}
       #mapLockToggle[data-developer-readonly="true"]{border-color:#d79a3c;color:#ffc56b;cursor:not-allowed}
       [data-developer-hidden="true"]{display:none!important}
-      @media(max-width:760px){.developer-login-grid,.developer-feature-grid,.developer-panel-toggles{grid-template-columns:1fr}.locked-map-viewer{width:100%;margin-left:0}.locked-map-viewer label{flex:1}.locked-map-viewer select{width:100%;min-width:0}}
+      .map-area{min-width:0}
+      .map-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"heading toolbar" "locked locked";align-items:center;gap:8px 12px;min-width:0}
+      .map-heading{grid-area:heading;display:flex;align-items:baseline;flex-wrap:wrap;min-width:0;gap:7px 9px}
+      .map-heading h2{margin:0;flex:0 0 auto}
+      .active-map-name{max-width:100%!important;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .map-toolbar{grid-area:toolbar;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;min-width:0;max-width:100%}
+      .map-toolbar button{flex:0 1 auto;max-width:100%;white-space:normal;line-height:1.15}
+      @media(max-width:800px){
+        .top-settings-panel{width:min(520px,calc(100vw - 20px))!important;grid-template-columns:1fr}
+        .top-settings-panel>*{grid-column:1/-1!important}
+        .workspace-map-access{grid-template-columns:1fr}
+        .workspace-map-access button{width:100%;min-width:0}
+        .workspace-panel-toggles{grid-template-columns:1fr}
+        .map-head{grid-template-columns:1fr;grid-template-areas:"heading" "toolbar" "locked";align-items:stretch}
+        .map-toolbar{justify-content:flex-start}
+        .map-toolbar button{flex:1 1 120px}
+      }
+      @media(max-width:480px){
+        .locked-map-viewer{grid-template-columns:1fr;align-items:stretch}
+        .locked-map-badge{justify-self:start}
+        .map-toolbar button{flex-basis:100%}
+      }
     `;
     document.head.appendChild(style);
   }
 
-  function ensureDeveloperCard() {
+  function ensureWorkspaceCard() {
     const panel = document.querySelector(".top-settings-panel");
     if (!panel) return null;
-    let card = panel.querySelector("#developerModeCard");
+    document.querySelector("#developerModeCard")?.remove();
+    let card = panel.querySelector("#workspaceControlsCard");
     if (card) return card;
 
     card = document.createElement("section");
-    card.id = "developerModeCard";
-    card.className = "developer-mode-card";
+    card.id = "workspaceControlsCard";
+    card.className = "workspace-controls-card";
     card.innerHTML = `
-      <div class="developer-mode-head">
-        <div><strong>Developer Mode</strong><small>Unlock protected staging controls, map locks, and panel visibility.</small></div>
-        <span id="developerModeStatus" class="developer-mode-status" data-state="locked">Locked</span>
+      <div class="workspace-controls-head">
+        <div><strong>Map Access & Workspace</strong><small>Lock saved maps as read-only and control which workspace panels are visible.</small></div>
       </div>
-      <div class="developer-login-grid">
-        <label>Password<input id="developerPassword" type="password" autocomplete="current-password"></label>
-        <label id="developerConfirmLabel" hidden>Confirm password<input id="developerPasswordConfirm" type="password" autocomplete="new-password"></label>
+      <div class="workspace-map-access">
+        <label>Selected map<select id="workspaceMapSelect"></select></label>
+        <button id="workspaceToggleMapLock" type="button">Lock Selected Map</button>
       </div>
-      <div class="developer-login-actions">
-        <button id="developerLoginAction" type="button">Unlock Developer Mode</button>
-        <button id="developerLockAction" type="button" class="secondary-button" hidden>Lock Developer Mode</button>
-        <button id="developerChangePassword" type="button" class="secondary-button" hidden>Change Login</button>
+      <div class="workspace-lock-summary">
+        <span id="workspaceMapLockState" class="workspace-lock-state" data-state="editable">Editable</span>
+        <small id="workspaceMapLockHelp" class="workspace-controls-note">The selected map can be edited normally.</small>
       </div>
-      <div id="developerLoginMessage" class="developer-mode-note" aria-live="polite">Developer access is stored locally on this browser and unlocks only for the current session.</div>
-      <div id="developerFeaturePanel" class="developer-feature-panel" hidden>
-        <div class="developer-feature-grid">
-          <label>Map access<select id="developerMapSelect"></select></label>
-          <div class="developer-map-actions"><button id="developerToggleMapLock" type="button">Lock Selected Map</button></div>
-        </div>
-        <div><strong>Panel visibility</strong><div id="developerPanelToggles" class="developer-panel-toggles"></div></div>
-        <small class="developer-mode-note">Locked maps load in read-only mode. Map Builder is hidden and map, specification, Build Input, and Servo Program editing are disabled.</small>
-      </div>`;
+      <details class="workspace-panel-visibility">
+        <summary>Panel visibility</summary>
+        <div id="workspacePanelToggles" class="workspace-panel-toggles"></div>
+      </details>
+      <small class="workspace-controls-note">Locked maps load in read-only mode. Map Builder is hidden and map, specification, Build Input, and Servo Program editing are disabled.</small>`;
 
     const feedback = panel.querySelector("#giveFeedback");
     if (feedback) feedback.insertAdjacentElement("beforebegin", card);
@@ -172,36 +163,26 @@
     return (state.mapLibrary || []).map((map) => `<option value="${escapeHtml(map.id)}"${String(map.id) === String(selectedId) ? " selected" : ""}>${locked.has(String(map.id)) ? "🔒 " : ""}${escapeHtml(map.name || "Machine Map")}</option>`).join("");
   }
 
-  function renderDeveloperCard() {
-    const card = ensureDeveloperCard();
+  function renderWorkspaceCard() {
+    const card = ensureWorkspaceCard();
     if (!card) return;
-    const unlocked = developerUnlocked();
-    const hasLogin = Boolean(authRecord());
-    const status = card.querySelector("#developerModeStatus");
-    const loginButton = card.querySelector("#developerLoginAction");
-    const lockButton = card.querySelector("#developerLockAction");
-    const changeButton = card.querySelector("#developerChangePassword");
-    const confirmLabel = card.querySelector("#developerConfirmLabel");
-    const featurePanel = card.querySelector("#developerFeaturePanel");
-
-    status.textContent = unlocked ? "Unlocked" : hasLogin ? "Locked" : "Setup Required";
-    status.dataset.state = unlocked ? "unlocked" : "locked";
-    loginButton.hidden = unlocked;
-    loginButton.textContent = hasLogin ? "Unlock Developer Mode" : "Create Developer Login";
-    lockButton.hidden = !unlocked;
-    changeButton.hidden = !unlocked;
-    confirmLabel.hidden = hasLogin || unlocked;
-    featurePanel.hidden = !unlocked;
-
-    if (!unlocked) return;
-    const mapSelect = card.querySelector("#developerMapSelect");
+    const mapSelect = card.querySelector("#workspaceMapSelect");
     const selectedId = mapSelect?.value || state.activeMapId;
     mapSelect.innerHTML = mapOptions(selectedId);
+    if (![...mapSelect.options].some((option) => option.value === String(selectedId))) mapSelect.value = String(state.activeMapId || "");
+
     const selectedLocked = preferences().lockedMapIds.includes(String(mapSelect.value || state.activeMapId));
-    card.querySelector("#developerToggleMapLock").textContent = selectedLocked ? "Unlock Selected Map" : "Lock Selected Map";
-    card.querySelector("#developerPanelToggles").innerHTML = PANEL_DEFINITIONS.map(([id, label]) => {
+    card.querySelector("#workspaceToggleMapLock").textContent = selectedLocked ? "Unlock Selected Map" : "Lock Selected Map";
+    const stateBadge = card.querySelector("#workspaceMapLockState");
+    stateBadge.textContent = selectedLocked ? "Read Only" : "Editable";
+    stateBadge.dataset.state = selectedLocked ? "locked" : "editable";
+    card.querySelector("#workspaceMapLockHelp").textContent = selectedLocked
+      ? "The selected map is protected from changes until it is unlocked here."
+      : "The selected map can be edited normally.";
+
+    card.querySelector("#workspacePanelToggles").innerHTML = PANEL_DEFINITIONS.map(([id, label]) => {
       const checked = preferences().hiddenPanels.includes(id) ? " checked" : "";
-      return `<label class="developer-panel-toggle"><input type="checkbox" data-developer-panel="${id}"${checked}> Hide ${label}</label>`;
+      return `<label class="workspace-panel-toggle"><input type="checkbox" data-developer-panel="${id}"${checked}> Hide ${label}</label>`;
     }).join("");
   }
 
@@ -233,7 +214,7 @@
     viewer.hidden = maps.length === 0;
     const select = viewer.querySelector("select");
     select.innerHTML = maps.map((map) => `<option value="${escapeHtml(map.id)}">${escapeHtml(map.name || "Machine Map")}</option>`).join("");
-    if (maps.some((map) => String(map.id) === String(state.activeMapId))) select.value = state.activeMapId;
+    if (maps.some((map) => String(map.id) === String(state.activeMapId))) select.value = String(state.activeMapId);
   }
 
   function orderTabs() {
@@ -355,7 +336,7 @@
     renderLockedMapViewer();
     applyPanelVisibility();
     applyReadOnlyState();
-    renderDeveloperCard();
+    renderWorkspaceCard();
     bindDynamicControls();
     syncTabState();
   }
@@ -392,55 +373,25 @@
     }, true);
   }
 
-  function bindDeveloperCard() {
-    const card = ensureDeveloperCard();
+  function bindWorkspaceCard() {
+    const card = ensureWorkspaceCard();
     if (!card || card.dataset.workspaceBound === "true") return;
     card.dataset.workspaceBound = "true";
 
-    card.querySelector("#developerLoginAction").addEventListener("click", async () => {
-      const message = card.querySelector("#developerLoginMessage");
-      try {
-        const password = String(card.querySelector("#developerPassword").value || "");
-        const confirmation = String(card.querySelector("#developerPasswordConfirm").value || "");
-        if (authRecord()) {
-          if (!(await verifyLogin(password))) throw new Error("Incorrect developer password.");
-          sessionStorage.setItem(SESSION_KEY, "unlocked");
-        } else {
-          await createLogin(password, confirmation);
-        }
-        message.textContent = "Developer Mode unlocked for this browser session.";
-        scheduleApply();
-      } catch (error) {
-        message.textContent = error.message;
-      }
-    });
-
-    card.querySelector("#developerLockAction").addEventListener("click", () => {
-      sessionStorage.removeItem(SESSION_KEY);
-      scheduleApply();
-    });
-
-    card.querySelector("#developerChangePassword").addEventListener("click", async () => {
-      const password = window.prompt("Enter the new developer password (minimum 8 characters):", "");
-      if (password == null) return;
-      const confirmation = window.prompt("Confirm the new developer password:", "");
-      if (confirmation == null) return;
-      try {
-        await createLogin(password, confirmation);
-        card.querySelector("#developerLoginMessage").textContent = "Developer login updated.";
-        scheduleApply();
-      } catch (error) {
-        card.querySelector("#developerLoginMessage").textContent = error.message;
-      }
-    });
-
     card.addEventListener("change", (event) => {
-      const mapSelect = event.target.closest("#developerMapSelect");
+      const mapSelect = event.target.closest("#workspaceMapSelect");
       if (mapSelect) {
         const selectedLocked = preferences().lockedMapIds.includes(String(mapSelect.value));
-        card.querySelector("#developerToggleMapLock").textContent = selectedLocked ? "Unlock Selected Map" : "Lock Selected Map";
+        card.querySelector("#workspaceToggleMapLock").textContent = selectedLocked ? "Unlock Selected Map" : "Lock Selected Map";
+        const stateBadge = card.querySelector("#workspaceMapLockState");
+        stateBadge.textContent = selectedLocked ? "Read Only" : "Editable";
+        stateBadge.dataset.state = selectedLocked ? "locked" : "editable";
+        card.querySelector("#workspaceMapLockHelp").textContent = selectedLocked
+          ? "The selected map is protected from changes until it is unlocked here."
+          : "The selected map can be edited normally.";
         return;
       }
+
       const panelToggle = event.target.closest("[data-developer-panel]");
       if (!panelToggle) return;
       const next = preferences();
@@ -452,8 +403,8 @@
       scheduleApply();
     });
 
-    card.querySelector("#developerToggleMapLock").addEventListener("click", () => {
-      const selectedId = String(card.querySelector("#developerMapSelect").value || "");
+    card.querySelector("#workspaceToggleMapLock").addEventListener("click", () => {
+      const selectedId = String(card.querySelector("#workspaceMapSelect").value || "");
       if (!selectedId) return;
       const next = preferences();
       next.lockedMapIds = next.lockedMapIds.includes(selectedId)
@@ -465,7 +416,7 @@
   }
 
   function bindDynamicControls() {
-    bindDeveloperCard();
+    bindWorkspaceCard();
     const builder = document.querySelector("#wipeDownBuilderButton");
     if (builder && builder.dataset.workspaceBound !== "true") {
       builder.dataset.workspaceBound = "true";
@@ -488,7 +439,7 @@
   function wrapFunction(name) {
     const original = window[name];
     if (typeof original !== "function" || original.workspaceDeveloperWrapped) return;
-    const wrapped = function workspaceDeveloperWrappedFunction(...args) {
+    const wrapped = function workspaceControlsWrappedFunction(...args) {
       const result = original.apply(this, args);
       scheduleApply();
       return result;
@@ -502,6 +453,7 @@
     if (installed) return true;
     if (typeof state === "undefined" || typeof activeMachineMap !== "function" || !document.querySelector(".tabs")) return false;
     installed = true;
+    clearLegacyLogin();
     installStyles();
     installOutsideClickClosing();
     ["loadMachineMapIntoRuntime", "render", "renderSpecs", "renderBuildInputs", "renderProgram"].forEach(wrapFunction);
