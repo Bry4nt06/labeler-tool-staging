@@ -5,6 +5,7 @@
   const EPSILON = 0.001;
   const FULL_CYCLE = 360;
   const MAX_SAFE_TURN = 359;
+  const CHANNEL_ENTRY_ANGLE = 90;
   let installed = false;
 
   function finite(value, fallback = 0) {
@@ -18,6 +19,12 @@
 
   function finish(value) {
     return typeof finishAngle === "function" ? finishAngle(value) : Math.round(finite(value, 0) * 10) / 10;
+  }
+
+  function nearestEquivalent(target, reference) {
+    const base = finite(target, 0);
+    const current = finite(reference, base);
+    return base + FULL_CYCLE * Math.round((current - base) / FULL_CYCLE);
   }
 
   function stationObjects(map, station) {
@@ -119,7 +126,7 @@
 
   function installCenterOutDriverRules() {
     const driver = window.LabelerColdGlueMotionDriver;
-    if (!driver || driver.centerOutSafetyInstalled) return Boolean(driver);
+    if (!driver || driver.centerOutSafetyInstalledV2) return Boolean(driver);
 
     driver.createPlan = function createCenterOutBrushPlan(options = {}) {
       const labelDeg = Math.max(0, finite(options.labelDeg, 0));
@@ -129,9 +136,29 @@
       const maxRatio = Math.max(0.1, finite(options.maxRatio, 21));
       const safetyFactor = Math.max(0.25, Math.min(0.98, finite(options.safetyFactor, 0.9)));
       const segments = brushSegments(options.brushes || [], 0);
+      const channelEntry = segments[0]?.stage === "opposed";
       const firstSingleIndex = segments.findIndex((segment) => segment.stage === "outer" || segment.stage === "inner");
       const issues = [];
       const process = [];
+      const holds = [];
+
+      if (channelEntry) {
+        const holdEnd = firstSingleIndex >= 0 ? segments[firstSingleIndex].start : segments.filter((segment) => segment.stage === "opposed").at(-1)?.end;
+        if (Number.isFinite(holdEnd)) {
+          holds.push({
+            id: "cold-glue-opposed-channel-hold",
+            role: "hold",
+            stage: "opposed",
+            start: segments[0].start,
+            end: holdEnd,
+            span: Math.max(0, holdEnd - segments[0].start),
+            holdAngle: CHANNEL_ENTRY_ANGLE,
+            holdBottleAngle: true,
+            holdCurrent: false,
+            channelEntryAngle: CHANNEL_ENTRY_ANGLE
+          });
+        }
+      }
 
       if (requestedSideTurn >= FULL_CYCLE - EPSILON) {
         issues.push({
@@ -145,7 +172,7 @@
         issues.push({
           level: "bad",
           code: "cold-glue-center-out-runout-missing",
-          message: "The opposed brush channel has no one-sided exit length. Stagger or extend one brush so the servo can wipe from the center-line tack toward one label edge."
+          message: "The opposed brush channel has no one-sided exit length. Stagger or extend one brush so the servo can wipe from the 90° channel reference toward one label edge."
         });
       } else {
         const side = segments[firstSingleIndex].stage;
@@ -174,7 +201,8 @@
             rotation,
             ratio: rotation / span,
             direction,
-            centerOutFromApplication: true
+            centerOutFromApplication: true,
+            channelEntryAngle: channelEntry ? CHANNEL_ENTRY_ANGLE : null
           });
           remaining -= rotation;
         }
@@ -193,7 +221,8 @@
         totalRotation: sideTurn,
         fullWrap: false,
         centerOutFromApplication: true,
-        simultaneousOppositeWipe: segments.some((segment) => segment.stage === "opposed"),
+        simultaneousOppositeWipe: channelEntry,
+        channelEntryAngle: channelEntry ? CHANNEL_ENTRY_ANGLE : null,
         brushEntryLeadDeg: 0,
         finalPlateTravel: process.reduce((sum, allocation) => sum + allocation.direction * allocation.rotation, 0),
         partialCoveragePercent: 50,
@@ -201,14 +230,15 @@
         finalRequired: 0,
         process,
         final: [],
-        holds: [],
+        holds,
         issues
       };
     };
 
-    driver.flowFacingTarget = (applicationPlateDeg) => finite(applicationPlateDeg, 0);
+    driver.flowFacingTarget = () => CHANNEL_ENTRY_ANGLE;
     driver.applicationTarget = (baseTargetDeg) => finite(baseTargetDeg, 0);
     driver.centerOutSafetyInstalled = true;
+    driver.centerOutSafetyInstalledV2 = true;
     return true;
   }
 
@@ -261,14 +291,66 @@
       pushRow(output, 7, turnStart, plate, `Turn to Neck Center-Line Application - Agg ${station}`, { station, section: "neck", centerLineApplication: true });
       plate = centerPlate;
       pushRow(output, 3, applicationTable, plate, `Hold Neck Center-Line Application - Agg ${station}`, { station, section: "neck", centerLineApplication: true });
-      lastTable = applicationTable;
-    } else {
-      lastTable = applicationTable;
     }
+    lastTable = applicationTable;
 
     const objects = stationObjects(map, station);
     const segments = brushSegments(objects, applicationTable);
+    if (!segments.length) {
+      appendIssue({
+        level: "bad",
+        code: "cold-glue-no-brushes",
+        station,
+        section: "neck",
+        message: `Aggregate ${station} has no usable Cold Glue brush surface after the label application point.`
+      });
+      return output;
+    }
+
+    const channelEntry = segments[0]?.stage === "opposed";
     const firstSingleIndex = segments.findIndex((segment) => segment.stage === "outer" || segment.stage === "inner");
+
+    if (channelEntry) {
+      const brushEntryTable = segments[0].start;
+      const entryPlate = nearestEquivalent(CHANNEL_ENTRY_ANGLE, plate);
+      const entryRotation = entryPlate - plate;
+      const availableSpan = Math.max(EPSILON, brushEntryTable - lastTable);
+      const requiredSpan = Math.abs(entryRotation) / safeRatio;
+      const turnStart = Math.max(lastTable + 0.1, brushEntryTable - requiredSpan);
+      const actualSpan = Math.max(EPSILON, brushEntryTable - turnStart);
+      const entryRatio = Math.abs(entryRotation) / actualSpan;
+
+      if (Math.abs(entryRotation) > EPSILON) {
+        pushRow(output, 7, turnStart, plate, `Turn to 90° Cold Glue Brush Channel Entry - Agg ${station}`, {
+          station,
+          section: "neck",
+          brushStage: "channel-entry",
+          channelEntryAngle: CHANNEL_ENTRY_ANGLE,
+          plannedRotation: entryRotation,
+          plannedRatio: entryRatio
+        });
+        plate = entryPlate;
+        pushRow(output, 3, brushEntryTable, plate, `Hold 90° Through Opposed Cold Glue Brush Channel - Agg ${station}`, {
+          station,
+          section: "neck",
+          brushStage: "opposed",
+          channelHold: true,
+          holdAngle: CHANNEL_ENTRY_ANGLE,
+          channelEntryAngle: CHANNEL_ENTRY_ANGLE
+        });
+      }
+      lastTable = brushEntryTable;
+
+      if (requiredSpan > availableSpan + EPSILON || entryRatio >= finite(state?.maxMoveRatio, 21)) {
+        appendIssue({
+          level: "bad",
+          code: "cold-glue-channel-entry-window",
+          station,
+          section: "neck",
+          message: `Aggregate ${station} does not provide enough table travel after label application to reach the required 90° brush-channel entry before contact. Move the channel later or provide at least ${requiredSpan.toFixed(1)}° of table travel.`
+        });
+      }
+    }
 
     if (requestedSideTurn >= FULL_CYCLE - EPSILON) {
       appendIssue({
@@ -286,7 +368,7 @@
         code: "cold-glue-center-out-runout-missing",
         station,
         section: "neck",
-        message: `Aggregate ${station} has opposed brushes but no one-sided brush runout. Stagger or extend one brush so the bottle can turn from the center-line tack toward that brush's label edge without crossing to the opposite edge.`
+        message: `Aggregate ${station} holds the bottle at 90° through the opposed brushes, but both brushes end together. Stagger or extend one brush so the bottle can turn from 90° toward that brush's label edge without crossing to the opposite edge.`
       });
       return output;
     }
@@ -324,12 +406,13 @@
       if (rotation <= EPSILON) return;
       const start = Math.max(segment.start, lastTable);
       const end = Math.max(start + EPSILON, segment.end);
-      pushRow(output, 7, start, plate, `Cold Glue Neck Center-Out — ${side === "inner" ? "Inside" : "Outside"} Brush - Agg ${station}`, {
+      pushRow(output, 7, start, plate, `${channelEntry ? "Cold Glue Neck 90° Channel Exit" : "Cold Glue Neck Center-Out"} — ${side === "inner" ? "Inside" : "Outside"} Brush - Agg ${station}`, {
         station,
         section: "neck",
         brushStage: side,
         brushSide: side,
         centerOutFromApplication: true,
+        channelEntryAngle: channelEntry ? CHANNEL_ENTRY_ANGLE : null,
         plannedRotation: rotation,
         plannedRatio: rotation / Math.max(EPSILON, end - start)
       });
@@ -340,6 +423,7 @@
         brushStage: `${side}-complete`,
         brushSide: side,
         centerOutFromApplication: true,
+        channelEntryAngle: channelEntry ? CHANNEL_ENTRY_ANGLE : null,
         plannedRotation: rotation,
         plannedRatio: rotation / Math.max(EPSILON, end - start)
       });
@@ -405,7 +489,7 @@
 
   function wrapGenerator() {
     const original = window.generatedColdGlueFixedProfile;
-    if (typeof original !== "function" || original.coldGlueCenterOutWrapped) return false;
+    if (typeof original !== "function" || original.coldGlueCenterOutWrappedV2) return false;
     const wrapped = function generatedColdGlueCenterOutProfile(...args) {
       installCenterOutDriverRules();
       const runtimeObjects = Array.isArray(state?.coldGlueMap) ? state.coldGlueMap : null;
@@ -418,6 +502,7 @@
       }
     };
     wrapped.coldGlueCenterOutWrapped = true;
+    wrapped.coldGlueCenterOutWrappedV2 = true;
     wrapped.originalGenerator = original;
     window.generatedColdGlueFixedProfile = wrapped;
     try { generatedColdGlueFixedProfile = wrapped; } catch { /* global binding may be read-only */ }
