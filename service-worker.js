@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-three-gripper-cold-glue";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-station-safe-cold-glue";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -67,7 +67,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/cold-glue-gripper-channel-integration.js",
   "./app/cold-glue-parameter-editor-integration.js",
   "./app/cold-glue-neck-left-right-integration.js",
-  "./app/cold-glue-gripper-sequence-integration.js",
+  "./app/cold-glue-gripper-sequence-integration-v2.js",
   "./app/optimizer-map-contact-integration.js",
   "./app/optimizer-brush-channel-expansion-integration.js",
   "./app/update-manager.js",
@@ -123,7 +123,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((names) => Promise.all(names.filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME).map((name) => caches.delete(name))))
+      .then((names) => Promise.all(names.filter((name) => names.startsWith ? false : name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME).map((name) => caches.delete(name))))
       .then(() => self.clients.claim())
   );
 });
