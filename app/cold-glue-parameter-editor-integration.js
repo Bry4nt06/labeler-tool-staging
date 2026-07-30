@@ -7,7 +7,7 @@
   const VALID_WIPE_ORDERS = new Set(["left-right", "right-left"]);
   let observer = null;
   let decoratePending = false;
-  let migrationComplete = false;
+  let migratedMapId = "";
 
   function finite(value, fallback = 0) {
     const parsed = Number(value);
@@ -99,7 +99,7 @@
       try { if (typeof syncApplicationMapToLegacyState === "function") syncApplicationMapToLegacyState(); } catch { }
       try { if (typeof saveCurrentSettings === "function") saveCurrentSettings(); } catch { }
     }
-    migrationComplete = true;
+    migratedMapId = String(map.id || "active-cold-glue-map");
     return changed;
   }
 
@@ -150,7 +150,7 @@
     const map = activeMap();
     const list = document.querySelector("#wipeBuilderList");
     if (!map || map.applicationMode !== "cold-glue" || !list) return;
-    if (!migrationComplete) migrateActiveMap();
+    if (migratedMapId !== String(map.id || "active-cold-glue-map")) migrateActiveMap();
 
     list.querySelectorAll(".wipe-builder-row[data-builder-object-id]").forEach((row) => {
       const item = map.objects?.find((entry) => String(entry.id) === String(row.dataset.builderObjectId));
@@ -218,7 +218,7 @@
       normalizeObject(item, map);
       refreshMotion();
       if (persist) {
-        migrationComplete = true;
+        migratedMapId = String(map.id || "active-cold-glue-map");
         scheduleDecorate();
       }
     };
