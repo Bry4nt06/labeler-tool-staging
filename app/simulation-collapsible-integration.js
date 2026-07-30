@@ -11,7 +11,7 @@
     "app/cold-glue-gripper-channel-integration.js?v=0.9.3-gripper-label-length",
     "app/cold-glue-parameter-editor-integration.js?v=0.9.3-cold-glue-parameters",
     "app/cold-glue-neck-left-right-integration.js?v=0.9.3-neck-parameter-driven-v2",
-    "app/cold-glue-gripper-sequence-integration.js?v=0.9.3-three-grippers-v1",
+    "app/cold-glue-gripper-sequence-integration-v2.js?v=0.9.3-station-safe-grippers-v2",
     "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact",
     "app/optimizer-brush-channel-expansion-integration.js?v=0.9.3-brush-channel-contact"
   ];
