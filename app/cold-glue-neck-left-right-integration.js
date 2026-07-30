@@ -5,11 +5,10 @@
   const EPSILON = 0.001;
   const FULL_CYCLE = 360;
   const MIN_ROW_GAP = 0.1;
-  const GRIPPER_CENTERLINE_ANGLE = 0;
-  const NECK_OVERWIPE_MM = 5;
+  const DEFAULT_CENTERLINE_ANGLE = 0;
+  const DEFAULT_OVERWIPE_MM = 5;
+  const DEFAULT_PRESS_TABLE_DEG = 1.5;
   const MAX_SAFE_CONTACT_TURN = 359;
-  const LEFT_BRUSH_SIDE = "outer";
-  const RIGHT_BRUSH_SIDE = "inner";
   let installed = false;
 
   function finite(value, fallback = 0) {
@@ -43,6 +42,11 @@
     return value;
   }
 
+  function objectSection(item) {
+    const value = String(item?.labelSection || "auto");
+    return ["auto", "neck", "body", "back", "none"].includes(value) ? value : "auto";
+  }
+
   function activeObjects(map) {
     const runtime = Array.isArray(state?.coldGlueMap) ? state.coldGlueMap : [];
     const saved = Array.isArray(map?.objects) ? map.objects : [];
@@ -53,46 +57,74 @@
   }
 
   function gripperForStation(map, station) {
-    return activeObjects(map).find((item) =>
+    const candidates = activeObjects(map).filter((item) =>
       ["gripper", "pallet"].includes(String(item?.kind || ""))
       && Number(item?.station) === Number(station)
-    ) || null;
+      && ["auto", "neck"].includes(objectSection(item))
+    );
+    return candidates.find((item) => objectSection(item) === "neck") || candidates[0] || null;
   }
 
   function brushObjectsForStation(map, station) {
     return activeObjects(map).filter((item) =>
       Number(item?.station) === Number(station)
       && (item?.kind === "brush" || item?.kind === "brush-channel")
+      && ["auto", "neck"].includes(objectSection(item))
     );
+  }
+
+  function defaultWipeSide(physicalSide) {
+    return physicalSide === "inner" ? "right" : "left";
   }
 
   function expandBrushes(objects, minimumTable) {
     return objects.flatMap((item, index) => {
-      const normalizeRange = (side, startValue, endValue, suffix) => {
+      const normalizeRange = ({ physicalSide, wipeSide, pressEnabled, startValue, endValue, suffix }) => {
         const start = atOrAfter(startValue, minimumTable);
         let end = atOrAfter(endValue, start + EPSILON);
         while (end <= start + EPSILON) end += FULL_CYCLE;
         return {
           id: `${item?.id || `brush-${index}`}-${suffix}`,
-          side,
+          sourceId: item?.id || `brush-${index}`,
+          physicalSide,
+          wipeSide: ["left", "right", "none"].includes(String(wipeSide)) ? String(wipeSide) : defaultWipeSide(physicalSide),
+          pressEnabled: Boolean(pressEnabled),
           start,
           end
         };
       };
 
       if (item?.kind === "brush-channel") {
+        const pressEnabled = item.pressLooseSides !== false;
         return [
-          normalizeRange("outer", finite(item.outerStart, item.start), finite(item.outerEnd, item.end), "outer"),
-          normalizeRange("inner", finite(item.innerStart, item.start), finite(item.innerEnd, item.end), "inner")
+          normalizeRange({
+            physicalSide: "outer",
+            wipeSide: item.outerNeckWipeSide || "left",
+            pressEnabled,
+            startValue: finite(item.outerStart, item.start),
+            endValue: finite(item.outerEnd, item.end),
+            suffix: "outer"
+          }),
+          normalizeRange({
+            physicalSide: "inner",
+            wipeSide: item.innerNeckWipeSide || "right",
+            pressEnabled,
+            startValue: finite(item.innerStart, item.start),
+            endValue: finite(item.innerEnd, item.end),
+            suffix: "inner"
+          })
         ];
       }
 
-      return [normalizeRange(
-        item?.side === "inner" ? "inner" : "outer",
-        finite(item?.start, 0),
-        finite(item?.end, finite(item?.start, 0) + 1),
-        item?.side === "inner" ? "inner" : "outer"
-      )];
+      const physicalSide = item?.side === "inner" ? "inner" : "outer";
+      return [normalizeRange({
+        physicalSide,
+        wipeSide: item.neckWipeSide || defaultWipeSide(physicalSide),
+        pressEnabled: item.pressLooseSide !== false,
+        startValue: finite(item?.start, 0),
+        endValue: finite(item?.end, finite(item?.start, 0) + 1),
+        suffix: physicalSide
+      })];
     }).sort((a, b) => a.start - b.start || a.end - b.end);
   }
 
@@ -107,7 +139,7 @@
         previous.end = Math.max(previous.end, range.end);
         previous.ids.push(range.id);
       } else {
-        merged.push({ start: range.start, end: range.end, side: range.side, ids: [range.id] });
+        merged.push({ start: range.start, end: range.end, ids: [range.id] });
       }
     });
     return merged;
@@ -119,10 +151,10 @@
       rightRanges.forEach((right) => {
         const start = Math.max(left.start, right.start);
         const end = Math.min(left.end, right.end);
-        if (end > start + EPSILON) result.push({ start, end });
+        if (end > start + EPSILON) result.push({ start, end, id: `opposed-${left.ids?.[0] || "left"}-${right.ids?.[0] || "right"}` });
       });
     });
-    return mergeRanges(result.map((range, index) => ({ ...range, side: "opposed", id: `opposed-${index}` })));
+    return mergeRanges(result);
   }
 
   function appendIssue(issue) {
@@ -148,17 +180,18 @@
     });
   }
 
-  function selectedNeckGeometry() {
+  function selectedNeckGeometry(gripper) {
     const wipe = typeof sectionWipePlan === "function" ? sectionWipePlan("neck") : null;
     const label = typeof selectedLabelSpec === "function" ? selectedLabelSpec() : null;
     const circumferenceMm = finite(label?.neckBottomCircumferenceMm, NaN);
     const labelDeg = Math.max(0, finite(wipe?.labelDeg, 0));
     const geometry = window.LabelerGeometryDriver;
+    const overWipeMm = Math.max(0, finite(gripper?.neckOverWipeMm, DEFAULT_OVERWIPE_MM));
     const overWipeDeg = Number.isFinite(circumferenceMm) && circumferenceMm > 0 && geometry?.degreesFromMm
-      ? Math.max(0, finite(geometry.degreesFromMm(NECK_OVERWIPE_MM, circumferenceMm), 0))
+      ? Math.max(0, finite(geometry.degreesFromMm(overWipeMm, circumferenceMm), 0))
       : 0;
     const stageRequired = labelDeg / 2 + overWipeDeg;
-    return { labelDeg, circumferenceMm, overWipeMm: NECK_OVERWIPE_MM, overWipeDeg, stageRequired };
+    return { labelDeg, circumferenceMm, overWipeMm, overWipeDeg, stageRequired };
   }
 
   function tableAngleForGripper(map, station, minimumTable, originalBlock) {
@@ -190,7 +223,6 @@
     signedRotation,
     safeRatio,
     station,
-    side,
     stageName,
     action,
     completionAction,
@@ -217,7 +249,6 @@
         station,
         section: "neck",
         brushStage: stageName,
-        brushSide: side,
         neckWipeSide: stageName,
         wipeOutward: true,
         overWipeMm: geometry.overWipeMm,
@@ -231,7 +262,6 @@
         station,
         section: "neck",
         brushStage: `${stageName}-complete`,
-        brushSide: side,
         neckWipeSide: stageName,
         wipeOutward: true,
         overWipeMm: geometry.overWipeMm,
@@ -252,7 +282,9 @@
     const brushes = brushObjectsForStation(map, station);
     if (!brushes.length) return originalBlock;
 
-    const geometry = selectedNeckGeometry();
+    const gripperReference = tableAngleForGripper(map, station, finite(previousRow?.tableAngle, 0) + MIN_ROW_GAP, originalBlock);
+    const gripper = gripperReference.gripper;
+    const geometry = selectedNeckGeometry(gripper);
     if (geometry.labelDeg <= EPSILON) return originalBlock;
 
     const hardLimit = Math.max(0.1, finite(state?.maxMoveRatio, 21));
@@ -261,60 +293,98 @@
     let lastTable = finite(previousRow?.tableAngle, 0);
     let plate = finite(previousRow?.plateAngle, finite(state?.buildInputs?.plateStartPositionDeg, 0));
 
-    const gripperReference = tableAngleForGripper(map, station, lastTable + MIN_ROW_GAP, originalBlock);
     const gripperTable = gripperReference.tableAngle;
-    const centerPlate = nearestEquivalent(GRIPPER_CENTERLINE_ANGLE, plate);
+    const centerlineAngle = finite(gripper?.applicationPlateAngleDeg, DEFAULT_CENTERLINE_ANGLE);
+    const centerPlate = nearestEquivalent(centerlineAngle, plate);
     const centerRotation = centerPlate - plate;
+    const alignmentLead = Math.max(0, finite(gripper?.alignmentLeadTableDeg, 360 / Math.max(1, finite(map?.headCount, 60))));
+    const alignmentTable = Math.max(lastTable + MIN_ROW_GAP, gripperTable - alignmentLead);
 
-    if (!gripperReference.gripper) {
+    if (!gripper) {
       appendIssue({
         level: "warn",
         code: "cold-glue-neck-gripper-fallback",
         station,
         section: "neck",
-        message: `Aggregate ${station} has no Gripper / Spender Plate object. The aggregate location was used as the neck-label centerline reference.`
+        message: `Aggregate ${station} has no Neck Gripper / Spender Plate object. The aggregate location and 0° bottle reference were used.`
       });
     }
 
     if (Math.abs(centerRotation) > EPSILON) {
-      const availableSpan = Math.max(EPSILON, gripperTable - lastTable);
+      const availableSpan = Math.max(EPSILON, alignmentTable - lastTable);
       const requiredSpan = Math.abs(centerRotation) / safeRatio;
-      const turnStart = Math.max(lastTable, gripperTable - requiredSpan);
-      const actualSpan = Math.max(EPSILON, gripperTable - turnStart);
-      pushRow(output, 7, turnStart, plate, `Align Neck Label Centerline at Gripper - Agg ${station}`, {
+      const turnStart = Math.max(lastTable, alignmentTable - requiredSpan);
+      const actualSpan = Math.max(EPSILON, alignmentTable - turnStart);
+      pushRow(output, 7, turnStart, plate, `Align Neck Label to Gripper Centerline Before Application - Agg ${station}`, {
         station,
         section: "neck",
         brushStage: "gripper-centerline",
         gripperCenterline: true,
+        gripperTableAngle: finish(gripperTable),
+        alignmentCompleteTableAngle: finish(alignmentTable),
+        applicationPlateAngleDeg: centerlineAngle,
         plannedRotation: centerRotation,
         plannedRatio: Math.abs(centerRotation) / actualSpan
       });
       plate = centerPlate;
+      pushRow(output, 3, alignmentTable, centerPlate, `Hold Neck Label Centerline Approaching Gripper - Agg ${station}`, {
+        station,
+        section: "neck",
+        brushStage: "gripper-approach-hold",
+        gripperCenterline: true,
+        applicationPlateAngleDeg: centerlineAngle
+      });
       if (requiredSpan > availableSpan + EPSILON) {
         appendIssue({
           level: "bad",
           code: "cold-glue-neck-gripper-window",
           station,
           section: "neck",
-          message: `Aggregate ${station} does not provide enough table travel to reach the gripper centerline before neck-label application.`
+          message: `Aggregate ${station} does not provide enough table travel to finish centerline alignment ${alignmentLead.toFixed(1)}° before the gripper.`
         });
       }
     }
 
-    pushRow(output, 3, gripperTable, centerPlate, `Hold Neck Label Centerline at Gripper - Agg ${station}`, {
+    pushRow(output, 3, gripperTable, centerPlate, `Hold Neck Label Centerline Through Gripper Application - Agg ${station}`, {
       station,
       section: "neck",
       brushStage: "gripper-application",
-      gripperCenterline: true
+      gripperCenterline: true,
+      applicationPlateAngleDeg: centerlineAngle,
+      alignmentLeadTableDeg: alignmentLead
     });
     lastTable = gripperTable;
     plate = centerPlate;
 
     const expanded = expandBrushes(brushes, gripperTable + EPSILON);
-    const outerRanges = mergeRanges(expanded.filter((range) => range.side === LEFT_BRUSH_SIDE));
-    const innerRanges = mergeRanges(expanded.filter((range) => range.side === RIGHT_BRUSH_SIDE));
-    const opposedRanges = intersections(outerRanges, innerRanges);
+    const leftRanges = mergeRanges(expanded.filter((range) => range.wipeSide === "left"));
+    const rightRanges = mergeRanges(expanded.filter((range) => range.wipeSide === "right"));
+    const outerPressRanges = mergeRanges(expanded.filter((range) => range.physicalSide === "outer" && range.pressEnabled));
+    const innerPressRanges = mergeRanges(expanded.filter((range) => range.physicalSide === "inner" && range.pressEnabled));
+    const opposedRanges = intersections(outerPressRanges, innerPressRanges);
     const opposed = opposedRanges.find((range) => range.end > gripperTable + EPSILON);
+
+    if (!leftRanges.length) {
+      appendIssue({
+        level: "bad",
+        code: "cold-glue-neck-left-brush-missing",
+        station,
+        section: "neck",
+        side: "left",
+        message: `Aggregate ${station} has no Cold Glue brush assigned to the left neck-label wing.`
+      });
+    }
+    if (!rightRanges.length) {
+      appendIssue({
+        level: "bad",
+        code: "cold-glue-neck-right-brush-missing",
+        station,
+        section: "neck",
+        side: "right",
+        message: `Aggregate ${station} has no Cold Glue brush assigned to the right neck-label wing.`
+      });
+    }
+    if (!leftRanges.length || !rightRanges.length) return output;
 
     if (!opposed) {
       appendIssue({
@@ -322,14 +392,15 @@
         code: "cold-glue-neck-opposed-press-missing",
         station,
         section: "neck",
-        message: `Aggregate ${station} has no overlapping inside/outside brush section to press both loose neck-label sides down before wiping.`
+        message: `Aggregate ${station} has no overlapping inside/outside brush section enabled to press both loose neck-label sides down before wiping.`
       });
       return output;
     }
 
     const brushEntry = Math.max(opposed.start, lastTable + MIN_ROW_GAP);
     const opposedSpan = Math.max(0, opposed.end - brushEntry);
-    const pressSpan = Math.min(opposedSpan, Math.max(0.5, Math.min(2, opposedSpan * 0.2)));
+    const requestedPressSpan = Math.max(0.1, finite(gripper?.neckPressTableDeg, DEFAULT_PRESS_TABLE_DEG));
+    const pressSpan = Math.min(opposedSpan, requestedPressSpan);
     const pressEnd = brushEntry + pressSpan;
 
     pushRow(output, 3, brushEntry, plate, `Press Both Loose Neck Label Sides Down - Agg ${station}`, {
@@ -337,10 +408,21 @@
       section: "neck",
       brushStage: "press-both-sides",
       channelHold: true,
-      holdAngle: GRIPPER_CENTERLINE_ANGLE,
+      holdAngle: centerlineAngle,
+      pressTableDeg: pressSpan,
       objectIds: opposed.ids || []
     });
     lastTable = pressEnd;
+
+    if (pressSpan + EPSILON < requestedPressSpan) {
+      appendIssue({
+        level: "bad",
+        code: "cold-glue-neck-press-capacity",
+        station,
+        section: "neck",
+        message: `Aggregate ${station} opposed brush overlap provides only ${pressSpan.toFixed(1)}° of the requested ${requestedPressSpan.toFixed(1)}° both-sides press distance.`
+      });
+    }
 
     if (geometry.stageRequired >= FULL_CYCLE - EPSILON || geometry.stageRequired * 2 >= FULL_CYCLE - EPSILON) {
       appendIssue({
@@ -352,63 +434,43 @@
       });
     }
 
-    const leftRequired = Math.min(MAX_SAFE_CONTACT_TURN, geometry.stageRequired);
-    const leftWindows = outerRanges.filter((range) => range.end > lastTable + MIN_ROW_GAP);
-    const left = allocateMotion({
-      rows: output,
-      windows: leftWindows,
-      currentTable: lastTable,
-      currentPlate: plate,
-      signedRotation: -leftRequired,
-      safeRatio,
-      station,
-      side: LEFT_BRUSH_SIDE,
-      stageName: "left",
-      action: `Wipe Neck Label Left Side Outward + ${NECK_OVERWIPE_MM} mm - Agg ${station}`,
-      completionAction: `Hold at Left Neck Label Over-Wipe Edge - Agg ${station}`,
-      geometry
-    });
-    lastTable = left.table;
-    plate = left.plate;
+    const order = gripper?.neckWipeOrder === "right-left" ? ["right", "left"] : ["left", "right"];
+    const windowsBySide = { left: leftRanges, right: rightRanges };
+    const directionBySide = { left: -1, right: 1 };
+    const results = {};
 
-    if (left.remaining > EPSILON) {
-      appendIssue({
-        level: "bad",
-        code: "cold-glue-neck-left-capacity",
+    order.forEach((side, index) => {
+      const required = Math.min(MAX_SAFE_CONTACT_TURN, geometry.stageRequired * (index === 0 ? 1 : 2));
+      const stage = allocateMotion({
+        rows: output,
+        windows: windowsBySide[side].filter((range) => range.end > lastTable + MIN_ROW_GAP),
+        currentTable: lastTable,
+        currentPlate: plate,
+        signedRotation: directionBySide[side] * required,
+        safeRatio,
         station,
-        section: "neck",
-        side: LEFT_BRUSH_SIDE,
-        message: `Aggregate ${station} left/outside brush contact is short by ${left.remaining.toFixed(1)}° of bottle rotation for the left half of the neck label plus ${NECK_OVERWIPE_MM} mm over-wipe.`
+        stageName: side,
+        action: `Wipe Neck Label ${side === "left" ? "Left" : "Right"} Side Outward + ${geometry.overWipeMm} mm - Agg ${station}`,
+        completionAction: `Hold at ${side === "left" ? "Left" : "Right"} Neck Label Over-Wipe Edge - Agg ${station}`,
+        geometry
       });
-    }
-
-    const rightRequired = Math.min(MAX_SAFE_CONTACT_TURN, geometry.stageRequired * 2);
-    const rightWindows = innerRanges.filter((range) => range.end > lastTable + MIN_ROW_GAP);
-    const right = allocateMotion({
-      rows: output,
-      windows: rightWindows,
-      currentTable: lastTable,
-      currentPlate: plate,
-      signedRotation: rightRequired,
-      safeRatio,
-      station,
-      side: RIGHT_BRUSH_SIDE,
-      stageName: "right",
-      action: `Wipe Neck Label Right Side Outward + ${NECK_OVERWIPE_MM} mm - Agg ${station}`,
-      completionAction: `Hold at Right Neck Label Over-Wipe Edge - Agg ${station}`,
-      geometry
+      results[side] = stage;
+      lastTable = stage.table;
+      plate = stage.plate;
     });
 
-    if (right.remaining > EPSILON) {
+    ["left", "right"].forEach((side) => {
+      const remaining = results[side]?.remaining;
+      if (!(remaining > EPSILON)) return;
       appendIssue({
         level: "bad",
-        code: "cold-glue-neck-right-capacity",
+        code: `cold-glue-neck-${side}-capacity`,
         station,
         section: "neck",
-        side: RIGHT_BRUSH_SIDE,
-        message: `Aggregate ${station} right/inside brush contact is short by ${right.remaining.toFixed(1)}° of bottle rotation. Extend the right brush; the tool will not rotate through a no-contact gap.`
+        side,
+        message: `Aggregate ${station} ${side} neck-label brush contact is short by ${remaining.toFixed(1)}° of bottle rotation. Extend or reposition the brush assigned to the ${side} wing; the tool will not rotate through a no-contact gap.`
       });
-    }
+    });
 
     return output;
   }
@@ -456,7 +518,10 @@
         "cold-glue-neck-gripper-fallback",
         "cold-glue-neck-gripper-window",
         "cold-glue-neck-opposed-press-missing",
+        "cold-glue-neck-press-capacity",
         "cold-glue-neck-full-turn-blocked",
+        "cold-glue-neck-left-brush-missing",
+        "cold-glue-neck-right-brush-missing",
         "cold-glue-neck-left-capacity",
         "cold-glue-neck-right-capacity"
       ]);
@@ -485,11 +550,12 @@
 
   function wrapGenerator() {
     const original = window.generatedColdGlueFixedProfile;
-    if (typeof original !== "function" || original.coldGlueNeckLeftRightWrapped) return false;
+    if (typeof original !== "function" || original.coldGlueNeckLeftRightWrappedV2) return false;
     const wrapped = function generatedColdGlueNeckLeftRightProfile(...args) {
       return applyNeckTwoSideMotion(original.apply(this, args), currentMap());
     };
     wrapped.coldGlueNeckLeftRightWrapped = true;
+    wrapped.coldGlueNeckLeftRightWrappedV2 = true;
     wrapped.originalGenerator = original;
     window.generatedColdGlueFixedProfile = wrapped;
     try { generatedColdGlueFixedProfile = wrapped; } catch { /* global binding may be read-only */ }
