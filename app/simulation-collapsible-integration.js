@@ -9,6 +9,7 @@
     "app/cold-glue-label-geometry-fallback-integration.js?v=0.9.3-cold-glue-shared-geometry",
     "app/cold-glue-center-out-brush-integration.js?v=0.9.3-cold-glue-channel-90",
     "app/cold-glue-gripper-channel-integration.js?v=0.9.3-gripper-label-length",
+    "app/cold-glue-neck-left-right-integration.js?v=0.9.3-neck-left-right-5mm",
     "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact",
     "app/optimizer-brush-channel-expansion-integration.js?v=0.9.3-brush-channel-contact"
   ];
