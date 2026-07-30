@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-neck-left-right-5mm";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-cold-glue-parameter-model";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -65,6 +65,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/cold-glue-label-geometry-fallback-integration.js",
   "./app/cold-glue-center-out-brush-integration.js",
   "./app/cold-glue-gripper-channel-integration.js",
+  "./app/cold-glue-parameter-editor-integration.js",
   "./app/cold-glue-neck-left-right-integration.js",
   "./app/optimizer-map-contact-integration.js",
   "./app/optimizer-brush-channel-expansion-integration.js",
