@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-cold-glue-channel-90";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-gripper-label-length";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -64,6 +64,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/apl-single-cycle-transition-guard.js",
   "./app/cold-glue-label-geometry-fallback-integration.js",
   "./app/cold-glue-center-out-brush-integration.js",
+  "./app/cold-glue-gripper-channel-integration.js",
   "./app/optimizer-map-contact-integration.js",
   "./app/optimizer-brush-channel-expansion-integration.js",
   "./app/update-manager.js",
