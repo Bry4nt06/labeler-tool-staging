@@ -7,7 +7,7 @@
     "app/map-object-wipe-definition-integration.js?v=0.9.3-object-wipes",
     "app/apl-single-cycle-transition-guard.js?v=0.9.3-dual-neck-pad-cycle",
     "app/cold-glue-label-geometry-fallback-integration.js?v=0.9.3-cold-glue-shared-geometry",
-    "app/cold-glue-center-out-brush-integration.js?v=0.9.3-cold-glue-center-out",
+    "app/cold-glue-center-out-brush-integration.js?v=0.9.3-cold-glue-channel-90",
     "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact",
     "app/optimizer-brush-channel-expansion-integration.js?v=0.9.3-brush-channel-contact"
   ];
@@ -28,7 +28,7 @@
       script.src = `./${source}`;
       script.async = false;
       script.addEventListener("load", () => { script.dataset.loaded = "true"; resolve(); }, { once: true });
-      script.addEventListener("error", () => reject(new Error(`Unable to load ${source}.`)), { once: true });
+      script.addEventListener("error", reject, { once: true });
       document.body.appendChild(script);
     });
   }
