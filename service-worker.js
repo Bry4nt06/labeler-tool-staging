@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-map-object-drilldown-v2";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-no-neck-body-back";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -64,6 +64,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/multi-map-lock-import-integration-v2.js",
   "./app/map-object-wipe-definition-integration.js",
   "./app/apl-single-cycle-transition-guard.js",
+  "./app/apl-body-back-two-label-transition-integration.js",
   "./app/cold-glue-label-geometry-fallback-integration.js",
   "./app/cold-glue-center-out-brush-integration.js",
   "./app/cold-glue-gripper-channel-integration.js",
