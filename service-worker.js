@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-no-neck-body-back-v3";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-back-wipe-direction-v4";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -65,6 +65,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/map-object-wipe-definition-integration.js",
   "./app/apl-single-cycle-transition-guard.js",
   "./app/apl-body-back-two-label-transition-integration.js",
+  "./app/apl-back-wipe-direction-correction-integration.js",
   "./app/cold-glue-label-geometry-fallback-integration.js",
   "./app/cold-glue-center-out-brush-integration.js",
   "./app/cold-glue-gripper-channel-integration.js",
