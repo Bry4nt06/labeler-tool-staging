@@ -4,6 +4,7 @@
   const modules = [
     "app/simulation-collapsible-core.js?v=0.9.3-direct",
     "app/servo-replay-loop-controls-integration.js?v=0.9.3-replay-icons-loop",
+    "app/release-readiness-staging-alignment-integration.js?v=0.9.3-staging-readiness",
     "app/multi-map-lock-import-integration-v2.js?v=0.9.3-map-import-router",
     "app/map-object-wipe-definition-integration.js?v=0.9.3-object-wipes",
     "app/apl-single-cycle-transition-guard.js?v=0.9.3-dual-neck-pad-cycle",
@@ -13,6 +14,7 @@
     "app/cold-glue-parameter-editor-integration.js?v=0.9.3-cold-glue-parameters",
     "app/cold-glue-neck-left-right-integration.js?v=0.9.3-neck-parameter-driven-v2",
     "app/cold-glue-gripper-sequence-integration-v2.js?v=0.9.3-station-safe-grippers-v2",
+    "app/map-builder-station-authority-integration.js?v=0.9.3-station-authority",
     "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact",
     "app/optimizer-brush-channel-expansion-integration.js?v=0.9.3-brush-channel-contact"
   ];
