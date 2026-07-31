@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-readiness-observer-fix";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-map-object-builder-selection";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -71,6 +71,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/cold-glue-neck-left-right-integration.js",
   "./app/cold-glue-gripper-sequence-integration-v2.js",
   "./app/map-builder-station-authority-integration.js",
+  "./app/map-object-builder-selection-integration.js",
   "./app/optimizer-map-contact-integration.js",
   "./app/optimizer-brush-channel-expansion-integration.js",
   "./app/update-manager.js",
