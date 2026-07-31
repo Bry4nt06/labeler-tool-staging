@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-replay-icons-loop";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-readiness-station-authority";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -60,6 +60,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/simulation-collapsible-integration.js",
   "./app/simulation-collapsible-core.js",
   "./app/servo-replay-loop-controls-integration.js",
+  "./app/release-readiness-staging-alignment-integration.js",
   "./app/multi-map-lock-import-integration-v2.js",
   "./app/map-object-wipe-definition-integration.js",
   "./app/apl-single-cycle-transition-guard.js",
@@ -69,6 +70,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/cold-glue-parameter-editor-integration.js",
   "./app/cold-glue-neck-left-right-integration.js",
   "./app/cold-glue-gripper-sequence-integration-v2.js",
+  "./app/map-builder-station-authority-integration.js",
   "./app/optimizer-map-contact-integration.js",
   "./app/optimizer-brush-channel-expansion-integration.js",
   "./app/update-manager.js",
