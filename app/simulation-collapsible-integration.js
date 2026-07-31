@@ -15,6 +15,7 @@
     "app/cold-glue-neck-left-right-integration.js?v=0.9.3-neck-parameter-driven-v2",
     "app/cold-glue-gripper-sequence-integration-v2.js?v=0.9.3-station-safe-grippers-v2",
     "app/map-builder-station-authority-integration.js?v=0.9.3-station-authority",
+    "app/map-object-builder-selection-integration.js?v=0.9.3-map-object-builder-selection",
     "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact",
     "app/optimizer-brush-channel-expansion-integration.js?v=0.9.3-brush-channel-contact"
   ];
