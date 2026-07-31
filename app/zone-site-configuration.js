@@ -75,5 +75,45 @@ function bindZoneSiteDeveloperMenu() {
   removeDeprecatedLocationControls();
 }
 
+function bindRetiredLocationPromptGuard() {
+  if (document.documentElement.dataset.retiredLocationPromptGuard === "true") return;
+  document.documentElement.dataset.retiredLocationPromptGuard = "true";
+  document.addEventListener("click", (event) => {
+    const saveButton = event.target.closest?.("#saveMachineMap");
+    if (saveButton) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      purgeDeprecatedMapLocationMetadata();
+      if (typeof saveMapDefinitionFromControls === "function") {
+        saveMapDefinitionFromControls({ type: "input" });
+        purgeDeprecatedMapLocationMetadata();
+        if (typeof saveCurrentSettings === "function") saveCurrentSettings();
+        if (typeof renderWipeDownBuilder === "function") renderWipeDownBuilder();
+      }
+      return;
+    }
+
+    const deleteButton = event.target.closest?.("#deleteMachineMap");
+    if (!deleteButton) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (!Array.isArray(state.mapLibrary) || state.mapLibrary.length <= 1) {
+      window.alert("At least one machine map must remain in the library.");
+      return;
+    }
+    const index = state.mapLibrary.findIndex((map) => map.id === state.activeMapId);
+    const map = state.mapLibrary[index];
+    if (!map || !window.confirm(`Delete map "${map.name}"? This cannot be undone.`)) return;
+    state.mapLibrary.splice(index, 1);
+    purgeDeprecatedMapLocationMetadata();
+    const replacement = state.mapLibrary[Math.max(0, index - 1)] || state.mapLibrary[0];
+    if (typeof clearServoSimulationForSelectedMap === "function") clearServoSimulationForSelectedMap();
+    if (typeof loadMachineMapIntoRuntime === "function") loadMachineMapIntoRuntime(replacement, true);
+    if (typeof saveCurrentSettings === "function") saveCurrentSettings();
+    if (typeof renderWipeDownBuilder === "function") renderWipeDownBuilder();
+  }, true);
+}
+
 purgeDeprecatedMapLocationMetadata();
 removeDeprecatedLocationControls();
+bindRetiredLocationPromptGuard();
