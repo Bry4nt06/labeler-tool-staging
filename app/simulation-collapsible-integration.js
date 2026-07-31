@@ -8,6 +8,7 @@
     "app/multi-map-lock-import-integration-v2.js?v=0.9.3-map-import-router",
     "app/map-object-wipe-definition-integration.js?v=0.9.3-object-wipes",
     "app/apl-single-cycle-transition-guard.js?v=0.9.3-dual-neck-pad-cycle",
+    "app/apl-body-back-two-label-transition-integration.js?v=0.9.3-no-neck-body-back",
     "app/cold-glue-label-geometry-fallback-integration.js?v=0.9.3-cold-glue-shared-geometry",
     "app/cold-glue-center-out-brush-integration.js?v=0.9.3-cold-glue-channel-90",
     "app/cold-glue-gripper-channel-integration.js?v=0.9.3-gripper-label-length",
