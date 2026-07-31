@@ -6,6 +6,7 @@
     "app/servo-replay-loop-controls-integration.js?v=0.9.3-replay-icons-loop",
     "app/release-readiness-staging-alignment-integration.js?v=0.9.3-staging-readiness-v2",
     "app/spec-row-duplicate-integration.js?v=0.9.3-spec-row-duplicate",
+    "app/remove-zone-site-integration.js?v=0.9.3-global-map-library",
     "app/multi-map-lock-import-integration-v2.js?v=0.9.3-map-import-router",
     "app/map-object-wipe-definition-integration.js?v=0.9.3-object-wipes",
     "app/apl-single-cycle-transition-guard.js?v=0.9.3-dual-neck-pad-cycle",
