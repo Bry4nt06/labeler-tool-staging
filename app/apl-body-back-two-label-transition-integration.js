@@ -1,265 +1,431 @@
 "use strict";
 
-(function installAplBodyBackTwoLabelTransitionFix() {
+(function installAplNoNeckBodyBackProfile() {
   const RETRY_MS = 50;
   const EPSILON = 0.001;
   let installed = false;
 
-  function finite(value, fallback = 0) {
+  function number(value, fallback = NaN) {
+    if (value === null || value === undefined || value === "") return fallback;
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
   }
 
-  function finish(value) {
+  function rounded(value) {
     return typeof finishAngle === "function"
       ? finishAngle(value)
-      : Math.round(finite(value, 0) * 10) / 10;
+      : Math.round(number(value, 0) * 10) / 10;
+  }
+
+  function circularDistance(left, right) {
+    return Math.abs(((number(left, 0) - number(right, 0) + 540) % 360) - 180);
   }
 
   function nearestEquivalent(target, reference) {
-    const base = finite(target, 0);
-    const current = finite(reference, base);
+    const base = number(target, 0);
+    const current = number(reference, base);
     return base + 360 * Math.round((current - base) / 360);
   }
 
-  function activeMap() {
-    try {
-      return typeof activeMachineMap === "function" ? activeMachineMap() : null;
-    } catch {
-      return null;
-    }
-  }
-
-  function isNoNeckBodyBackProgram() {
-    if (state.applicationMode !== "apl" || typeof selectedLabelApplicationState !== "function") return false;
+  function isTargetProgram() {
+    if (typeof state === "undefined"
+      || state.applicationMode !== "apl"
+      || typeof selectedLabelApplicationState !== "function") return false;
     const applications = selectedLabelApplicationState();
     return Boolean(!applications.neck && applications.body && applications.back);
   }
 
-  function stationSectionMap(map) {
+  function stationSections(machineMap) {
     try {
-      return typeof inferAplStationSections === "function" ? inferAplStationSections(map) : {};
+      return typeof inferAplStationSections === "function"
+        ? inferAplStationSections(machineMap)
+        : { ...(machineMap?.stationSections || {}) };
     } catch {
-      return {};
+      return { ...(machineMap?.stationSections || {}) };
     }
   }
 
-  function activeStationSequence(map) {
-    const sections = stationSectionMap(map);
-    const applications = selectedLabelApplicationState();
-    const stations = [...new Set((map?.objects || [])
-      .filter((item) => item.kind === "roller" || item.kind === "pad")
-      .filter((item) => typeof isStationEnabled !== "function" || isStationEnabled(map, Number(item.station)))
-      .map((item) => Number(item.station))
-      .filter((station) => Number.isFinite(station) && station >= 1 && station <= 6))]
-      .sort((left, right) => left - right);
-
-    return stations.map((station) => {
-      const section = String(sections[String(station)] || (typeof labelSectionForStation === "function" ? labelSectionForStation(station) : ""));
-      return { station, section };
-    }).filter((entry) => (entry.section === "body" || entry.section === "back") && applications[entry.section]);
-  }
-
-  function actionPattern(turn, section, station) {
-    return new RegExp(`Wipe\\s+Turn\\s+${turn}\\s+${section}\\s*-\\s*Agg\\s*${station}(?:\\D|$)`, "i");
-  }
-
-  function applicationPattern(section, station) {
-    return new RegExp(`(?:Turn|Hold).*${section}\\s+Application\\s*-\\s*Agg\\s*${station}(?:\\D|$)`, "i");
-  }
-
-  function findRow(rows, pattern, start = 0) {
-    for (let index = Math.max(0, start); index < rows.length; index += 1) {
-      if (pattern.test(String(rows[index]?.action || ""))) return index;
+  function stationIsEnabled(machineMap, station) {
+    try {
+      return typeof isStationEnabled !== "function" || isStationEnabled(machineMap, station);
+    } catch {
+      return true;
     }
-    return -1;
   }
 
-  function firstRestAfter(rows, index) {
-    for (let cursor = index + 1; cursor < rows.length; cursor += 1) {
-      if (Number(rows[cursor]?.cmd) === 3) return cursor;
-    }
-    return -1;
+  function stationSequence(machineMap) {
+    const sections = stationSections(machineMap);
+    const grouped = new Map();
+    (machineMap?.objects || [])
+      .filter((item) => item.kind === "pad" || item.kind === "roller")
+      .filter((item) => stationIsEnabled(machineMap, Number(item.station)))
+      .forEach((item) => {
+        const station = Number(item.station);
+        if (!Number.isFinite(station)) return;
+        if (!grouped.has(station)) grouped.set(station, []);
+        grouped.get(station).push(item);
+      });
+
+    return [...grouped.entries()]
+      .sort((left, right) => left[0] - right[0])
+      .map(([station, objects]) => ({
+        station,
+        objects,
+        section: String(sections[String(station)] || (typeof labelSectionForStation === "function" ? labelSectionForStation(station) : ""))
+      }))
+      .filter((entry) => entry.section === "body" || entry.section === "back");
   }
 
-  function reindex(rows) {
-    return rows.map((row, index) => ({
-      ...row,
-      hmi: index + 1,
-      plc: index
-    }));
+  function geometryTargets() {
+    const label = typeof selectedLabelSpec === "function" ? selectedLabelSpec() : null;
+    const bottle = typeof selectedBottleSpec === "function" ? selectedBottleSpec() : null;
+    const bottleCirc = typeof bodyCircumference === "function" ? bodyCircumference(bottle) : NaN;
+    const neckCirc = number(label?.neckBottomCircumferenceMm, NaN);
+    const input = state.buildInputs || {};
+    const centerFront = typeof buildProgramSummary === "function"
+      ? number(buildProgramSummary().rows.find(([name]) => name === "Center Line Front (deg)")?.[1], NaN)
+      : NaN;
+    const centerBack = Number.isFinite(centerFront) ? centerFront + 180 : NaN;
+    const neckContact = typeof degFromMm === "function" ? number(degFromMm(input.neckContactMm, neckCirc), NaN) : NaN;
+    const bodyContact = typeof degFromMm === "function" ? number(degFromMm(input.bodyContactMm, bottleCirc), NaN) : NaN;
+    const backContact = typeof degFromMm === "function" ? number(degFromMm(input.backContactMm, bottleCirc), NaN) : NaN;
+    const neckOffset = typeof degFromMm === "function" ? number(degFromMm(input.neckOffsetMm, neckCirc), 0) : 0;
+    const bodyOffset = typeof degFromMm === "function" ? number(degFromMm(input.bodyOffsetMm, bottleCirc), 0) : 0;
+    const backOffset = typeof degFromMm === "function" ? number(degFromMm(input.backOffsetMm, bottleCirc), 0) : 0;
+    const inspectionOffset = typeof degFromMm === "function" ? number(degFromMm(input.backInspectionOffsetMm, bottleCirc), 0) : 0;
+    const bodyFull = typeof degFromMm === "function" ? number(degFromMm(label?.bodyLengthMm, bottleCirc), NaN) : NaN;
+    const backFull = typeof degFromMm === "function" ? number(degFromMm(label?.backLengthMm, bottleCirc), NaN) : NaN;
+    const codeBox = typeof degFromMm === "function" ? number(degFromMm(label?.codeBoxCenterMm, bottleCirc), NaN) : NaN;
+    const bodyHalf = Number.isFinite(bodyFull) ? bodyFull / 2 : NaN;
+    const backHalf = Number.isFinite(backFull) ? backFull / 2 : NaN;
+    const leading = input.neckApplication === "Leading Edge";
+
+    const bodyAdjustedCenter = Number.isFinite(centerFront) && Number.isFinite(bodyContact)
+      ? centerFront + bodyContact
+      : NaN;
+    const backAdjustedCenter = Number.isFinite(centerBack) && Number.isFinite(backContact)
+      ? centerBack + backContact
+      : NaN;
+
+    let body = [bodyAdjustedCenter, neckContact, bodyHalf].every(Number.isFinite)
+      ? (leading
+        ? (bodyAdjustedCenter - (neckOffset + neckContact)) - bodyHalf + bodyOffset
+        : (bodyAdjustedCenter - neckOffset + neckContact) - bodyHalf + bodyOffset)
+      : number(input.plateStartPositionDeg, 0);
+
+    let back = [backAdjustedCenter, neckContact, backHalf].every(Number.isFinite)
+      ? (leading
+        ? (backAdjustedCenter - (neckOffset + neckContact)) - backHalf + backOffset
+        : (backAdjustedCenter - neckOffset + neckContact) - backHalf + backOffset)
+      : body + 180;
+
+    if (circularDistance(back, body) < 90) back += 180;
+
+    const coder = [centerBack, neckContact, backHalf, codeBox].every(Number.isFinite)
+      ? (leading
+        ? (centerBack - (neckOffset + neckContact)) + (backHalf - codeBox) + backOffset + inspectionOffset
+        : (centerBack - neckOffset + neckContact) + (backHalf - codeBox) + backOffset + inspectionOffset)
+      : back;
+
+    return { body, back, coder };
   }
 
-  function updateMotionPlan(rows, bodyStation, wipe, transitionIssue = null) {
-    if (!state.motionPlan || typeof state.motionPlan !== "object") return;
-    state.motionPlan.rows = rows;
-    state.motionPlan.profileKind = "apl-map-driven-no-neck-body-back";
-    state.motionPlan.noNeckBodyBackTransitionFixed = true;
-
-    const stationPlan = Array.isArray(state.motionPlan.stationPlans)
-      ? state.motionPlan.stationPlans.find((plan) => Number(plan.station) === Number(bodyStation) && plan.section === "body")
-      : null;
-    if (stationPlan) {
-      stationPlan.requiredRotation = finite(wipe?.totalRequired, stationPlan.requiredRotation);
-      stationPlan.movePath = [
-        -finite(wipe?.backSpinRequired, finite(wipe?.stages?.[0]?.requiredRotation, 0)),
-        finite(wipe?.forwardWipeRequired, finite(wipe?.stages?.[1]?.requiredRotation, 0))
-      ];
-      stationPlan.valid = true;
-    }
-
-    const retainedIssues = (Array.isArray(state.motionPlan.issues) ? state.motionPlan.issues : [])
-      .filter((issue) => issue?.code !== "apl-no-neck-body-back-transition-capacity");
-    if (transitionIssue) retainedIssues.push(transitionIssue);
-    state.motionPlan.issues = retainedIssues;
-  }
-
-  function fixBodyToBackBoundary(sourceRows, map) {
-    if (!isNoNeckBodyBackProgram() || !Array.isArray(sourceRows) || !sourceRows.length || !map) return sourceRows;
-
-    const sequence = activeStationSequence(map);
-    const firstBackIndex = sequence.findIndex((entry) => entry.section === "back");
-    if (firstBackIndex <= 0) return sourceRows;
-    const bodyStations = sequence.slice(0, firstBackIndex).filter((entry) => entry.section === "body");
-    const bodyEntry = bodyStations.at(-1);
-    const backEntry = sequence[firstBackIndex];
-    if (!bodyEntry || !backEntry) return sourceRows;
-
-    let rows = sourceRows.map((row) => ({ ...row }));
-    const turn1Index = findRow(rows, actionPattern(1, "Body", bodyEntry.station));
-    const turn2Index = findRow(rows, actionPattern(2, "Body", bodyEntry.station), turn1Index + 1);
-    const restIndex = turn2Index >= 0 ? firstRestAfter(rows, turn2Index) : -1;
-    if (turn1Index < 0 || turn2Index < 0 || restIndex < 0) return sourceRows;
-
-    const wipe = typeof sectionWipePlan === "function" ? sectionWipePlan("body") : null;
-    const backSpin = finite(wipe?.backSpinRequired, finite(wipe?.stages?.[0]?.requiredRotation, 0));
-    const forward = finite(wipe?.forwardWipeRequired, finite(wipe?.stages?.[1]?.requiredRotation, 0));
-    if (!(backSpin > EPSILON) || !(forward > EPSILON)) return sourceRows;
-
-    const bodyApplication = finite(rows[turn1Index].plateAngle, 0);
-    const setDownAngle = bodyApplication - backSpin;
-    const completeBodyAngle = setDownAngle + forward;
-
-    rows[turn1Index] = {
-      ...rows[turn1Index],
-      plateAngle: finish(bodyApplication),
-      action: `Wipe Turn 1 Body - Agg ${bodyEntry.station}`,
-      section: "body",
-      station: bodyEntry.station,
-      plannedRotation: -backSpin,
-      noNeckBodyBackFix: true
+  function contactRange(objects) {
+    const preferredKind = objects.some((item) => item.kind === "pad") ? "pad" : "roller";
+    const preferred = objects.filter((item) => item.kind === preferredKind);
+    if (!preferred.length) return null;
+    const starts = preferred.map((item) => number(item.start, item.angle)).filter(Number.isFinite);
+    const ends = preferred.map((item) => {
+      const start = number(item.start, item.angle);
+      return number(item.end, start + number(item.wipeSpanDeg, 0.1));
+    }).filter(Number.isFinite);
+    if (!starts.length || !ends.length) return null;
+    return {
+      start: Math.min(...starts),
+      end: Math.max(...ends),
+      objects: preferred,
+      side: preferred.every((item) => item.side === "inner") ? "inner" : "outer"
     };
-    rows[turn2Index] = {
-      ...rows[turn2Index],
-      plateAngle: finish(setDownAngle),
-      action: `Wipe Turn 2 Body - Agg ${bodyEntry.station}`,
-      section: "body",
-      station: bodyEntry.station,
-      plannedRotation: forward,
-      noNeckBodyBackFix: true
+  }
+
+  function aggregateAngle(machineMap, station) {
+    return number(
+      machineMap?.aggregateAngles?.[String(station)],
+      number(machineMap?.stationAngles?.[String(station)], NaN)
+    );
+  }
+
+  function sectionTarget(rawTarget, reference) {
+    return nearestEquivalent(rawTarget, reference);
+  }
+
+  function wipeMotion(section, side, wipe) {
+    const backSpin = Math.max(0, number(wipe?.backSpinRequired, number(wipe?.stages?.[0]?.requiredRotation, 0)));
+    const forward = Math.max(0, number(wipe?.forwardWipeRequired, number(wipe?.stages?.[1]?.requiredRotation, 0)));
+    const sectionSign = section === "back" ? -1 : 1;
+    const sideSign = side === "inner" ? -1 : 1;
+    const orientation = sectionSign * sideSign;
+    return {
+      backSpin,
+      forward,
+      first: -backSpin * orientation,
+      second: forward * orientation,
+      totalRequired: backSpin + forward
     };
-    rows[restIndex] = {
-      ...rows[restIndex],
-      plateAngle: finish(completeBodyAngle),
-      action: `Wipe Hold Body - Agg ${bodyEntry.station}`,
-      section: "body",
-      station: bodyEntry.station,
-      bodyWipeCompletedBeforeBackAlignment: true,
-      noNeckBodyBackFix: true
+  }
+
+  function rebuildProfile(machineMap) {
+    const commandDriver = window.LabelerServoCommandDriver;
+    const sequence = stationSequence(machineMap);
+    if (!sequence.some((entry) => entry.section === "body")
+      || !sequence.some((entry) => entry.section === "back")) return null;
+
+    const targets = geometryTargets();
+    const issues = [];
+    const stationPlans = [];
+    const rows = [];
+    let plate = number(state.buildInputs?.plateStartPositionDeg, 0);
+    let lastTable = 0;
+
+    const add = (cmd, tableAngle, plateAngle, action, extra = {}) => {
+      let table = number(tableAngle, lastTable + 0.5);
+      if (rows.length && table <= lastTable + EPSILON) table = lastTable + 0.5;
+      rows.push({
+        hmi: rows.length + 1,
+        plc: rows.length,
+        cmd,
+        tableAngle: rounded(table),
+        plateAngle: rounded(plateAngle),
+        action,
+        motionSource: "apl-map-driven-no-neck-body-back-v3",
+        mapDriven: true,
+        noNeckBodyBackProfile: true,
+        ...extra
+      });
+      lastTable = table;
     };
 
-    // Remove any previously generated body-to-back shortcut. That shortcut
-    // used the second body wipe to land on the back-label target, which reduced
-    // the actual body wipe and produced the Aggregate 4 coverage fault.
-    const backWipeIndexBeforeRemoval = findRow(rows, actionPattern(1, "Back", backEntry.station), restIndex + 1);
-    const obsolete = new Set();
-    if (backWipeIndexBeforeRemoval > restIndex) {
-      const backApplication = applicationPattern("Back", backEntry.station);
-      for (let index = restIndex + 1; index < backWipeIndexBeforeRemoval; index += 1) {
-        if (backApplication.test(String(rows[index]?.action || ""))) obsolete.add(index);
+    const addReferenceTurn = (targetTable, targetPlate, action, extra = {}) => {
+      const table = number(targetTable, lastTable + 0.5);
+      const target = sectionTarget(targetPlate, plate);
+      const rotation = target - plate;
+      if (Math.abs(rotation) <= EPSILON) {
+        add(3, table, plate, action.replace(/^Turn/i, "Hold"), {
+          ...extra,
+          applicationReference: true,
+          plannedRotation: 0,
+          plannedRatio: 0
+        });
+        return;
       }
-    }
-    if (obsolete.size) rows = rows.filter((_, index) => !obsolete.has(index));
-
-    const bodyRestIndex = findRow(rows, new RegExp(`Wipe\\s+Hold\\s+Body\\s*-\\s*Agg\\s*${bodyEntry.station}(?:\\D|$)`, "i"));
-    const backWipeIndex = findRow(rows, actionPattern(1, "Back", backEntry.station), bodyRestIndex + 1);
-    if (bodyRestIndex < 0 || backWipeIndex < 0) return reindex(rows);
-
-    const seed = typeof generatedAplSeedProfile === "function" ? generatedAplSeedProfile() : [];
-    const rawBackTarget = finite(seed?.[21]?.plateAngle, completeBodyAngle);
-    const backTarget = nearestEquivalent(rawBackTarget, completeBodyAngle);
-    const aggregateAngle = finite(map.aggregateAngles?.[String(backEntry.station)], finite(map.stationAngles?.[String(backEntry.station)], NaN));
-    const arriveEarly = finite(typeof profileTiming !== "undefined" ? profileTiming.spenderArriveEarly : 1, 1);
-    const applicationTable = aggregateAngle - arriveEarly;
-    const moveStartTable = finite(rows[bodyRestIndex].tableAngle, 0) + 0.5;
-    const available = applicationTable - moveStartTable;
-    const rotation = backTarget - completeBodyAngle;
-    const ratio = Math.abs(rotation) / Math.max(EPSILON, available);
-    let transitionIssue = null;
-
-    if (Number.isFinite(applicationTable) && available > EPSILON) {
-      const transitionRows = [
-        {
-          ...rows[bodyRestIndex],
-          hmi: 0,
-          plc: 0,
-          cmd: 7,
-          tableAngle: finish(moveStartTable),
-          plateAngle: finish(completeBodyAngle),
-          action: `Turn for Back Application - Agg ${backEntry.station}`,
-          section: "back",
-          station: backEntry.station,
-          plannedRotation: rotation,
-          plannedRatio: ratio,
-          bodyBackTransition: true,
-          noNeckBodyBackFix: true,
-          terminalRest: false
-        },
-        {
-          ...rows[bodyRestIndex],
-          hmi: 0,
-          plc: 0,
-          cmd: 3,
-          tableAngle: finish(applicationTable),
-          plateAngle: finish(backTarget),
-          action: `Hold for Back Application - Agg ${backEntry.station}`,
-          section: "back",
-          station: backEntry.station,
-          plannedRotation: rotation,
-          plannedRatio: ratio,
-          backApplicationReference: true,
-          bodyBackTransition: true,
-          noNeckBodyBackFix: true,
-          terminalRest: false
-        }
-      ];
-      rows.splice(backWipeIndex, 0, ...transitionRows);
-
-      if (ratio >= finite(state.maxMoveRatio, 21)) {
-        transitionIssue = {
+      const start = lastTable + 0.5;
+      const available = Math.max(EPSILON, table - start);
+      const ratio = Math.abs(rotation) / available;
+      add(7, start, plate, action, {
+        ...extra,
+        plannedRotation: rotation,
+        plannedRatio: ratio,
+        applicationTransition: true
+      });
+      plate = target;
+      add(3, table, plate, `${action.replace(/^Turn/i, "Hold")} - Reference`, {
+        ...extra,
+        plannedRotation: rotation,
+        plannedRatio: ratio,
+        applicationReference: true
+      });
+      if (ratio >= number(state.maxMoveRatio, 21)) {
+        issues.push({
           level: "bad",
-          code: "apl-no-neck-body-back-transition-capacity",
-          station: backEntry.station,
-          section: "back",
-          message: `The completed body wipe needs ${Math.abs(rotation).toFixed(1)} deg of bottle rotation before Back Aggregate ${backEntry.station}, but only ${available.toFixed(1)} deg of table travel is available (${ratio.toFixed(2)}:1; limit ${finite(state.maxMoveRatio, 21).toFixed(1)}:1). Move the back aggregate later or end the final body pad earlier.`
-        };
+          code: "apl-application-transition-capacity",
+          station: extra.station,
+          section: extra.section,
+          message: `${action} requires ${Math.abs(rotation).toFixed(1)} deg of bottle rotation in ${available.toFixed(1)} deg of table travel (${ratio.toFixed(2)}:1; limit ${number(state.maxMoveRatio, 21).toFixed(1)}:1). Move the aggregate later or finish the preceding wipe earlier.`
+        });
+      }
+    };
+
+    add(3, 0, plate, "Zero Line", { startupReference: true });
+
+    sequence.forEach((entry) => {
+      const range = contactRange(entry.objects);
+      const wipe = typeof sectionWipePlan === "function" ? sectionWipePlan(entry.section) : null;
+      if (!range || !wipe) {
+        issues.push({
+          level: "bad",
+          code: "apl-no-neck-station-contact-missing",
+          station: entry.station,
+          section: entry.section,
+          message: `Aggregate ${entry.station} has no usable ${entry.section} wipe-down contact window.`
+        });
+        return;
+      }
+
+      const aggregate = aggregateAngle(machineMap, entry.station);
+      const applicationPoint = aggregate - number(typeof profileTiming !== "undefined" ? profileTiming.spenderArriveEarly : 1, 1);
+      const rawTarget = entry.section === "back" ? targets.back : targets.body;
+      addReferenceTurn(applicationPoint, rawTarget, `Turn for ${typeof sectionLabel === "function" ? sectionLabel(entry.section) : entry.section} Application - Agg ${entry.station}`, {
+        station: entry.station,
+        section: entry.section
+      });
+
+      let start = number(range.start, lastTable + 0.5);
+      let end = number(range.end, start + 0.1);
+      if (start <= lastTable + EPSILON) start = lastTable + 0.5;
+      if (end <= start + EPSILON) end = start + 0.5;
+
+      const motion = wipeMotion(entry.section, range.side, wipe);
+      const total = Math.max(EPSILON, motion.totalRequired);
+      const split = start + (end - start) * (motion.backSpin / total);
+      const firstRatio = Math.abs(motion.first) / Math.max(EPSILON, split - start);
+      const secondRatio = Math.abs(motion.second) / Math.max(EPSILON, end - split);
+      const labelName = typeof sectionLabel === "function" ? sectionLabel(entry.section) : entry.section;
+
+      add(7, start, plate, `Wipe Turn 1 ${labelName} - Agg ${entry.station}`, {
+        station: entry.station,
+        section: entry.section,
+        stage: "set-down",
+        contactSide: range.side,
+        plannedRotation: motion.first,
+        plannedRatio: firstRatio
+      });
+      plate += motion.first;
+      add(7, split, plate, `Wipe Turn 2 ${labelName} - Agg ${entry.station}`, {
+        station: entry.station,
+        section: entry.section,
+        stage: "wipe",
+        contactSide: range.side,
+        plannedRotation: motion.second,
+        plannedRatio: secondRatio
+      });
+      plate += motion.second;
+      add(3, end, plate, `Wipe Hold ${labelName} - Agg ${entry.station}`, {
+        station: entry.station,
+        section: entry.section,
+        stage: "complete",
+        contactSide: range.side,
+        wipeReference: true
+      });
+
+      [[firstRatio, motion.first, split - start, 1], [secondRatio, motion.second, end - split, 2]].forEach(([ratio, rotation, span, turn]) => {
+        if (ratio < number(state.maxMoveRatio, 21)) return;
+        issues.push({
+          level: "bad",
+          code: "apl-object-contact-capacity",
+          station: entry.station,
+          section: entry.section,
+          message: `Wipe Turn ${turn} ${labelName} - Agg ${entry.station} requires ${Math.abs(rotation).toFixed(1)} deg of bottle rotation in ${span.toFixed(1)} deg of pad contact (${ratio.toFixed(2)}:1; limit ${number(state.maxMoveRatio, 21).toFixed(1)}:1). Increase the pad contact span or adjust the map.`
+        });
+      });
+
+      stationPlans.push({
+        station: entry.station,
+        section: entry.section,
+        active: true,
+        valid: true,
+        requiredRotation: motion.totalRequired,
+        movePath: [motion.first, motion.second],
+        directionChanges: Math.sign(motion.first) !== Math.sign(motion.second) ? 1 : 0,
+        objects: entry.objects,
+        contactSide: range.side
+      });
+    });
+
+    const codingObject = (machineMap?.objects || []).find((item) => item.kind === "coding");
+    if (codingObject) {
+      const codingStart = number(codingObject.start, 304);
+      const codingStop = number(codingObject.end, codingStart + 5);
+      const desiredReady = codingStart - number(typeof profileTiming !== "undefined" ? profileTiming.codingArriveEarlyDeg : 75, 75);
+      const codingReady = desiredReady > lastTable + 0.5 ? desiredReady : codingStart;
+      const target = sectionTarget(targets.coder, plate);
+      const transitionStart = lastTable + 0.5;
+      const available = Math.max(EPSILON, codingReady - transitionStart);
+      const rotation = target - plate;
+      const ratio = Math.abs(rotation) / available;
+
+      if (codingReady <= transitionStart + EPSILON) {
+        issues.push({
+          level: "bad",
+          code: "coding-window-passed",
+          message: `The coder begins at ${codingStart.toFixed(1)} deg table before the Back wipe can establish a reference at ${lastTable.toFixed(1)} deg. Move the coder later or finish Aggregate ${sequence.at(-1)?.station ?? 6} earlier.`
+        });
+      } else {
+        if (Math.abs(rotation) > EPSILON) {
+          add(7, transitionStart, plate, "Center Back Code Box at Coder", {
+            section: "coding",
+            codingMotion: "code-box-centerline",
+            codingWindowStart: rounded(codingStart),
+            codingWindowStop: rounded(codingStop),
+            codingReadyTableAngle: rounded(codingReady),
+            plannedRotation: rotation,
+            plannedRatio: ratio
+          });
+          plate = target;
+        }
+        add(3, codingReady, plate, "Hold Back Code Box Centerline at Coder", {
+          section: "coding",
+          codingHold: true,
+          codingWindowStart: rounded(codingStart),
+          codingWindowStop: rounded(codingStop),
+          codingReadyTableAngle: rounded(codingReady),
+          codeBoxCenterlineAligned: true
+        });
+      }
+
+      const endCurveTable = Math.max(359, codingStop + 0.5);
+      const endCurveTarget = nearestEquivalent(number(state.buildInputs?.plateStartPositionDeg, 0), plate);
+      const releaseRotation = endCurveTarget - plate;
+      const releaseSpan = Math.max(EPSILON, endCurveTable - codingStop);
+      add(7, codingStop, plate, "Return Bottle to End Curve Reference After Coding", {
+        section: "coding",
+        codingRelease: true,
+        plannedRotation: releaseRotation,
+        plannedRatio: Math.abs(releaseRotation) / releaseSpan,
+        codeBoxCenterlineAligned: true
+      });
+      plate = endCurveTarget;
+      add(3, endCurveTable, plate, "End Curve - Rest", {
+        terminalRest: true,
+        motionSource: "terminal-end-curve-rest",
+        codeBoxCenterlineAligned: true
+      });
+
+      if (ratio >= number(state.maxMoveRatio, 21)) {
+        issues.push({
+          level: "bad",
+          code: "coding-centerline-capacity",
+          message: `Centering the Back code box at the coder requires ${Math.abs(rotation).toFixed(1)} deg of bottle rotation in ${available.toFixed(1)} deg of table travel (${ratio.toFixed(2)}:1; limit ${number(state.maxMoveRatio, 21).toFixed(1)}:1). Move the coder later or finish Aggregate ${sequence.at(-1)?.station ?? 6} earlier.`
+        });
       }
     } else {
-      transitionIssue = {
-        level: "bad",
-        code: "apl-no-neck-body-back-transition-capacity",
-        station: backEntry.station,
-        section: "back",
-        message: `Back Aggregate ${backEntry.station} begins before the final body wipe can finish. Move the back aggregate later or end the final body pad earlier.`
-      };
+      add(3, Math.max(359, lastTable + 0.5), plate, "End Curve - Rest", {
+        terminalRest: true,
+        motionSource: "terminal-end-curve-rest"
+      });
     }
 
-    rows = reindex(rows);
-    const finalized = window.LabelerServoCommandDriver?.finalize
-      ? window.LabelerServoCommandDriver.finalize(rows)
-      : rows;
-    const reindexed = reindex(finalized);
-    updateMotionPlan(reindexed, bodyEntry.station, wipe, transitionIssue);
+    const finalized = commandDriver?.finalize ? commandDriver.finalize(rows) : rows;
+    const reindexed = finalized.map((row, index) => ({ ...row, hmi: index + 1, plc: index }));
+    state.motionPlan = {
+      rows: reindexed,
+      issues,
+      stationPlans,
+      pairPlans: [],
+      finalPlateAngle: reindexed.at(-1)?.plateAngle,
+      termination: {
+        section: codingObject ? "coding" : "back",
+        hmi: reindexed.length,
+        tableAngle: reindexed.at(-1)?.tableAngle,
+        command: "Rest"
+      },
+      mapDriven: true,
+      profileKind: "apl-map-driven",
+      profileVariant: "no-neck-body-back-v3",
+      noNeckBodyBackProfile: true,
+      bodyApplicationTarget: rounded(targets.body),
+      backApplicationTarget: rounded(targets.back),
+      coderCenterlineTarget: rounded(targets.coder)
+    };
     return reindexed;
   }
 
@@ -267,18 +433,18 @@
     if (installed) return true;
     if (typeof state === "undefined"
       || typeof generatedAplMapDrivenProfile !== "function"
-      || generatedAplMapDrivenProfile.noNeckBodyBackTransitionFix) return false;
+      || generatedAplMapDrivenProfile.noNeckBodyBackV3) return false;
 
-    const before = generatedAplMapDrivenProfile;
-    generatedAplMapDrivenProfile = function generatedAplMapDrivenProfileWithBodyBackTransition(machineMap, ...args) {
-      const rows = before.call(this, machineMap, ...args);
-      return fixBodyToBackBoundary(rows, machineMap);
+    const base = generatedAplMapDrivenProfile;
+    generatedAplMapDrivenProfile = function generatedAplMapDrivenProfileWithNoNeckBodyBackV3(machineMap, ...args) {
+      if (!isTargetProgram()) return base.call(this, machineMap, ...args);
+      return rebuildProfile(machineMap) || base.call(this, machineMap, ...args);
     };
-    generatedAplMapDrivenProfile.noNeckBodyBackTransitionFix = true;
+    generatedAplMapDrivenProfile.noNeckBodyBackV3 = true;
     installed = true;
 
     try {
-      if (isNoNeckBodyBackProgram() && typeof applyGeneratedServoProfile === "function") {
+      if (isTargetProgram() && typeof applyGeneratedServoProfile === "function") {
         applyGeneratedServoProfile();
         if (typeof render === "function") render();
       }
