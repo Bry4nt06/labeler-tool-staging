@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-back-wipe-direction-v4";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-spec-row-duplicate";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -61,6 +61,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/simulation-collapsible-core.js",
   "./app/servo-replay-loop-controls-integration.js",
   "./app/release-readiness-staging-alignment-integration.js",
+  "./app/spec-row-duplicate-integration.js",
   "./app/multi-map-lock-import-integration-v2.js",
   "./app/map-object-wipe-definition-integration.js",
   "./app/apl-single-cycle-transition-guard.js",
