@@ -21,6 +21,14 @@ function purgeDeprecatedMapLocationMetadata(target = state) {
   return target;
 }
 
+function removeDeprecatedLocationControls() {
+  ["#mapZone", "#mapSite"].forEach((selector) => {
+    const control = document.querySelector(selector);
+    (control?.closest("label") || control)?.remove();
+  });
+  document.querySelectorAll(".zone-site-editor,.zone-site-selection,.developer-menu-actions").forEach((node) => node.remove());
+}
+
 function normalizedZoneSiteName() {
   return "";
 }
@@ -54,12 +62,18 @@ function saveZoneSiteConfiguration() {
   if (typeof saveCurrentSettings === "function") saveCurrentSettings();
 }
 
-function renderZoneSiteDeveloperMenu() {}
+function renderZoneSiteDeveloperMenu() {
+  removeDeprecatedLocationControls();
+}
 
 function importZoneSiteConfigurationFile() {
-  window.alert("Zone and Site configuration is no longer used. Maps are available globally by map name.");
+  window.alert("Location configuration is no longer used. Maps are available globally by map name.");
 }
 
 function bindZoneSiteDeveloperMenu() {
   purgeDeprecatedMapLocationMetadata();
+  removeDeprecatedLocationControls();
 }
+
+purgeDeprecatedMapLocationMetadata();
+removeDeprecatedLocationControls();
