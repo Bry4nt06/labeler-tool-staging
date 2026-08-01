@@ -30,6 +30,7 @@
     "app/map-object-builder-selection-integration.js?v=0.9.3-map-object-builder-selection-v3",
     "app/map-object-double-click-open-fix-integration.js?v=0.9.3-map-object-double-press-v4",
     "app/label-spec-section-selection-integration.js?v=0.9.3-label-section-checkboxes-v1",
+    "app/workbook-reference-map-library-integration.js?v=0.9.4-workbook-map-library-v1",
     "app/locked-map-brand-selector-integration.js?v=0.9.4-locked-map-brands-v1",
     "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact",
     "app/optimizer-brush-channel-expansion-integration.js?v=0.9.3-brush-channel-contact"
