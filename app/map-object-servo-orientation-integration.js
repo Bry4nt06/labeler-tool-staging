@@ -115,6 +115,55 @@
     issues.push({ level: "bad", code, objectId: item.id, station: item.station, section, message: text });
   }
 
+  function orientationAction(item, section, target, label) {
+    return item.kind === "coding"
+      ? `Orient ${sectionName(section)} ${target.mode === "code-box" ? "Code Box" : "Label"} for ${label}`
+      : `Orient ${sectionName(section)} Label for ${label}`;
+  }
+
+  function holdAction(section, target, label) {
+    return `Hold ${sectionName(section)} ${target.mode === "code-box" ? "Code Box" : "Label"} Through ${label}`;
+  }
+
+  function updateFollowing(rows, followingIndex, targetPlate, window, label, metadata, issues, item, section) {
+    const following = rows[followingIndex];
+    if (!following) return;
+    if (Number(following.cmd) === 7) {
+      const destination = rows[followingIndex + 1];
+      const destinationPlate = num(destination?.plateAngle, NaN);
+      const travel = num(destination?.tableAngle, 0) - num(following.tableAngle, 0);
+      if (Number.isFinite(destinationPlate) && travel > EPS) {
+        rows[followingIndex] = {
+          ...following,
+          plateAngle: done(targetPlate),
+          plannedRotation: destinationPlate - targetPlate,
+          plannedRatio: Math.abs(destinationPlate - targetPlate) / travel,
+          mapObjectOrientationContinuation: true
+        };
+      }
+      return;
+    }
+    const expected = num(following.plateAngle, targetPlate);
+    if (Math.abs(expected - targetPlate) <= EPS) return;
+    const continueStart = window.end + GAP;
+    if (continueStart < num(following.tableAngle, continueStart) - EPS) {
+      rows.splice(followingIndex, 0, {
+        hmi: 0,
+        plc: 0,
+        cmd: 7,
+        tableAngle: done(continueStart),
+        plateAngle: done(targetPlate),
+        action: `Continue After ${label}`,
+        ...metadata,
+        mapObjectOrientationContinuation: true,
+        plannedRotation: expected - targetPlate,
+        plannedRatio: Math.abs(expected - targetPlate) / Math.max(EPS, num(following.tableAngle, continueStart) - continueStart)
+      });
+    } else {
+      addIssue(issues, item, section, "map-object-exit-window", `${label} has no open table travel after its window to continue to the next servo reference.`);
+    }
+  }
+
   function insertObject(rows, item, section, window, issues, plans) {
     const active = applications();
     const label = item.name || (item.kind === "coding" ? "Coding" : "Label Sensor");
@@ -127,63 +176,141 @@
       addIssue(issues, item, section, "map-object-before-label-application", `${label} is positioned before the ${sectionName(section)} label has been applied.`);
       return;
     }
+
     let previousIndex = -1;
     rows.forEach((row, index) => { if (num(row.tableAngle, -Infinity) < window.start) previousIndex = index; });
     const previous = rows[previousIndex];
-    const nextIndex = rows.findIndex((row) => num(row.tableAngle, Infinity) >= window.start);
-    const next = rows[nextIndex];
-    if (!previous || Number(previous.cmd) === 7) {
-      addIssue(issues, item, section, "map-object-orientation-no-reference", `${label} needs a completed CMD 3 reference before its orientation turn.`);
+    if (!previous) {
+      addIssue(issues, item, section, "map-object-orientation-no-reference", `${label} has no prior servo state from which to calculate its orientation turn.`);
       return;
     }
-    if (next && num(next.tableAngle, Infinity) < window.end) {
+
+    let nextIndex = rows.findIndex((row) => num(row.tableAngle, Infinity) >= window.start);
+    let next = rows[nextIndex];
+    const nextAtWindowStart = Boolean(next && Math.abs(num(next.tableAngle, Infinity) - window.start) <= EPS);
+    const reusableStartReference = Boolean(nextAtWindowStart && Number(next.cmd) === 3);
+    if (next && num(next.tableAngle, Infinity) < window.end - EPS && !reusableStartReference) {
       addIssue(issues, item, section, "map-object-window-overlap", `${label} overlaps an existing servo event inside its ${done(window.end - window.start)}° object window.`);
       return;
     }
+
+    const activeTransition = Number(previous.cmd) === 7;
     const current = num(previous.plateAngle, NaN);
-    const turnStart = num(previous.tableAngle, 0) + GAP;
+    const turnStart = activeTransition ? num(previous.tableAngle, 0) : num(previous.tableAngle, 0) + GAP;
     if (!Number.isFinite(current) || turnStart >= window.start - EPS) {
       addIssue(issues, item, section, "map-object-turn-window", `${label} does not have enough open table travel to orient before ${done(window.start)}°.`);
       return;
     }
+
     const target = targetFor(item, section, rows, current, window.start);
     const rotation = target.target - current;
     const span = window.start - turnStart;
     const ratio = Math.abs(rotation) / Math.max(EPS, span);
     const metadata = {
-      section, station: item.station, mapDriven: true, mapObjectOrientation: true,
+      section,
+      station: item.station,
+      mapDriven: true,
+      mapObjectOrientation: true,
       orientationObjectId: item.id,
       sensorId: item.kind === "sensor" ? item.id : undefined,
       codingObjectId: item.kind === "coding" ? item.id : undefined
     };
-    const insert = [];
-    if (Math.abs(rotation) > EPS) {
-      insert.push({ hmi: 0, plc: 0, cmd: 7, tableAngle: done(turnStart), plateAngle: done(current), action: item.kind === "coding" ? `Orient ${sectionName(section)} ${target.mode === "code-box" ? "Code Box" : "Label"} for ${label}` : `Orient ${sectionName(section)} Label for ${label}`, ...metadata, plannedRotation: rotation, plannedRatio: ratio });
-      insert.push({ hmi: 0, plc: 0, cmd: 3, tableAngle: done(window.start), plateAngle: done(target.target), action: `Hold ${sectionName(section)} ${target.mode === "code-box" ? "Code Box" : "Label"} Through ${label}`, ...metadata, orientationHold: true, inspectionWindowStart: done(window.start), inspectionWindowStop: done(window.end), requiredLabelVisibilityPercent: target.required, plannedLabelVisibilityPercent: target.visibility });
-      rows.splice(previousIndex + 1, 0, ...insert);
-    } else {
-      rows[previousIndex] = { ...previous, ...metadata, mapObjectOrientationSatisfied: true, inspectionWindowStart: done(window.start), inspectionWindowStop: done(window.end) };
-    }
-    const followingIndex = previousIndex + 1 + insert.length;
-    const following = rows[followingIndex];
-    if (following) {
-      if (Number(following.cmd) === 7) {
-        const destination = rows[followingIndex + 1];
-        const destinationPlate = num(destination?.plateAngle, NaN);
-        const travel = num(destination?.tableAngle, 0) - num(following.tableAngle, 0);
-        if (Number.isFinite(destinationPlate) && travel > EPS) rows[followingIndex] = { ...following, plateAngle: done(target.target), plannedRotation: destinationPlate - target.target, plannedRatio: Math.abs(destinationPlate - target.target) / travel, mapObjectOrientationContinuation: true };
+    const holdRow = {
+      hmi: 0,
+      plc: 0,
+      cmd: 3,
+      tableAngle: done(window.start),
+      plateAngle: done(target.target),
+      action: holdAction(section, target, label),
+      ...metadata,
+      orientationHold: true,
+      inspectionWindowStart: done(window.start),
+      inspectionWindowStop: done(window.end),
+      requiredLabelVisibilityPercent: target.required,
+      plannedLabelVisibilityPercent: target.visibility
+    };
+
+    let holdIndex = -1;
+    let reusedActiveTransition = false;
+    if (activeTransition) {
+      const originalAction = String(previous.action || "Servo transition");
+      rows[previousIndex] = {
+        ...previous,
+        cmd: 7,
+        plateAngle: done(current),
+        action: orientationAction(item, section, target, label),
+        ...metadata,
+        activeHold: Math.abs(rotation) <= EPS,
+        plannedRotation: rotation,
+        plannedRatio: ratio,
+        mapObjectOrientationRetargetedTransition: true,
+        interruptedAction: originalAction
+      };
+      reusedActiveTransition = true;
+      if (reusableStartReference) {
+        rows[nextIndex] = { ...next, ...holdRow };
+        holdIndex = nextIndex;
       } else {
-        const expected = num(following.plateAngle, target.target);
-        if (Math.abs(expected - target.target) > EPS) {
-          const continueStart = window.end + GAP;
-          if (continueStart < num(following.tableAngle, continueStart) - EPS) {
-            rows.splice(followingIndex, 0, { hmi: 0, plc: 0, cmd: 7, tableAngle: done(continueStart), plateAngle: done(target.target), action: `Continue After ${label}`, ...metadata, mapObjectOrientationContinuation: true, plannedRotation: expected - target.target, plannedRatio: Math.abs(expected - target.target) / Math.max(EPS, num(following.tableAngle, continueStart) - continueStart) });
-          } else addIssue(issues, item, section, "map-object-exit-window", `${label} has no open table travel after its window to continue to the next servo reference.`);
-        }
+        rows.splice(previousIndex + 1, 0, holdRow);
+        holdIndex = previousIndex + 1;
       }
+    } else if (Math.abs(rotation) > EPS) {
+      const turnRow = {
+        hmi: 0,
+        plc: 0,
+        cmd: 7,
+        tableAngle: done(turnStart),
+        plateAngle: done(current),
+        action: orientationAction(item, section, target, label),
+        ...metadata,
+        plannedRotation: rotation,
+        plannedRatio: ratio
+      };
+      if (reusableStartReference) {
+        rows.splice(previousIndex + 1, 0, turnRow);
+        nextIndex += 1;
+        next = rows[nextIndex];
+        rows[nextIndex] = { ...next, ...holdRow };
+        holdIndex = nextIndex;
+      } else {
+        rows.splice(previousIndex + 1, 0, turnRow, holdRow);
+        holdIndex = previousIndex + 2;
+      }
+    } else if (reusableStartReference) {
+      rows[nextIndex] = { ...next, ...holdRow };
+      holdIndex = nextIndex;
+    } else {
+      rows[previousIndex] = {
+        ...previous,
+        ...metadata,
+        mapObjectOrientationSatisfied: true,
+        inspectionWindowStart: done(window.start),
+        inspectionWindowStop: done(window.end)
+      };
     }
-    if (ratio >= num(state.maxMoveRatio, 21)) addIssue(issues, item, section, "map-object-orientation-capacity", `${label} requires ${Math.abs(rotation).toFixed(1)}° bottle rotation in ${span.toFixed(1)}° table travel (${ratio.toFixed(2)}:1; limit ${num(state.maxMoveRatio, 21).toFixed(1)}:1).`);
-    plans.push({ objectId: item.id, kind: item.kind, name: label, station: item.station, section, targetMode: target.mode, windowStart: done(window.start), windowStop: done(window.end), targetPlateAngle: done(target.target), rotation: done(rotation), ratio: done(ratio), requiredVisibilityPercent: target.required, plannedVisibilityPercent: target.visibility });
+
+    const followingIndex = holdIndex >= 0 ? holdIndex + 1 : previousIndex + 1;
+    updateFollowing(rows, followingIndex, target.target, window, label, metadata, issues, item, section);
+
+    if (ratio >= num(state.maxMoveRatio, 21)) {
+      addIssue(issues, item, section, "map-object-orientation-capacity", `${label} requires ${Math.abs(rotation).toFixed(1)}° bottle rotation in ${span.toFixed(1)}° table travel (${ratio.toFixed(2)}:1; limit ${num(state.maxMoveRatio, 21).toFixed(1)}:1).`);
+    }
+    plans.push({
+      objectId: item.id,
+      kind: item.kind,
+      name: label,
+      station: item.station,
+      section,
+      targetMode: target.mode,
+      windowStart: done(window.start),
+      windowStop: done(window.end),
+      targetPlateAngle: done(target.target),
+      rotation: done(rotation),
+      ratio: done(ratio),
+      requiredVisibilityPercent: target.required,
+      plannedVisibilityPercent: target.visibility,
+      reusedActiveTransition
+    });
   }
 
   function process(sourceRows) {
