@@ -17,7 +17,7 @@
     "app/apl-label-sensor-reference-integration.js?v=0.9.3-active-sensor-reference",
     "app/map-object-servo-orientation-integration.js?v=0.9.3-map-object-servo-orientation-v3",
     "app/map-object-coder-after-wipe-integration.js?v=0.9.3-coder-after-wipe-v1",
-    "app/map-object-orientation-controls-integration.js?v=0.9.3-map-object-orientation-controls-v1",
+    "app/map-object-orientation-controls-integration.js?v=0.9.4-coder-orientation-off-v1",
     "app/cold-glue-label-geometry-fallback-integration.js?v=0.9.3-cold-glue-shared-geometry",
     "app/cold-glue-center-out-brush-integration.js?v=0.9.3-cold-glue-channel-90",
     "app/cold-glue-gripper-channel-integration.js?v=0.9.3-gripper-label-length",
