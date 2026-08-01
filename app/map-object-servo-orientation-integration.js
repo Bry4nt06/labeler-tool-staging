@@ -125,6 +125,17 @@
     return `Hold ${sectionName(section)} ${target.mode === "code-box" ? "Code Box" : "Label"} Through ${label}`;
   }
 
+  function isPhysicalContactTransition(row) {
+    if (Number(row?.cmd) !== 7) return false;
+    const action = String(row?.action || "");
+    return /wipe|brush|roller|pad|contact/i.test(action)
+      || Boolean(row?.stage)
+      || Boolean(row?.brushStage)
+      || Boolean(row?.contactSide)
+      || Boolean(row?.rollerPass)
+      || Boolean(row?.wipeMotion);
+  }
+
   function updateFollowing(rows, followingIndex, targetPlate, window, label, metadata, issues, item, section) {
     const following = rows[followingIndex];
     if (!following) return;
@@ -195,8 +206,14 @@
     }
 
     const activeTransition = Number(previous.cmd) === 7;
+    const reusableActiveTransition = activeTransition && !isPhysicalContactTransition(previous);
+    if (activeTransition && !reusableActiveTransition) {
+      addIssue(issues, item, section, "map-object-overlaps-physical-wipe", `${label} begins while "${String(previous.action || "the current wipe")}" is still active. The sensor/coder cannot take control of the servo until the pad, roller, or brush wipe reaches its CMD 3 hold. Move the object later than that wipe hold.`);
+      return;
+    }
+
     const current = num(previous.plateAngle, NaN);
-    const turnStart = activeTransition ? num(previous.tableAngle, 0) : num(previous.tableAngle, 0) + GAP;
+    const turnStart = reusableActiveTransition ? num(previous.tableAngle, 0) : num(previous.tableAngle, 0) + GAP;
     if (!Number.isFinite(current) || turnStart >= window.start - EPS) {
       addIssue(issues, item, section, "map-object-turn-window", `${label} does not have enough open table travel to orient before ${done(window.start)}°.`);
       return;
@@ -232,7 +249,7 @@
 
     let holdIndex = -1;
     let reusedActiveTransition = false;
-    if (activeTransition) {
+    if (reusableActiveTransition) {
       const originalAction = String(previous.action || "Servo transition");
       rows[previousIndex] = {
         ...previous,
