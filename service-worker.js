@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-map-object-orientation-v1";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-label-sections-neck-wipe-double-open-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -67,6 +67,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/map-object-wipe-definition-integration.js",
   "./app/apl-neck-pad-center-tack-integration.js",
   "./app/apl-single-cycle-transition-guard.js",
+  "./app/apl-neck-final-pad-completion-integration.js",
   "./app/apl-body-back-two-label-transition-integration.js",
   "./app/apl-back-wipe-direction-correction-integration.js",
   "./app/apl-label-sensor-reference-integration.js",
@@ -80,6 +81,8 @@ const CORE_ASSETS = Object.freeze([
   "./app/cold-glue-gripper-sequence-integration-v2.js",
   "./app/map-builder-station-authority-integration.js",
   "./app/map-object-builder-selection-integration.js",
+  "./app/map-object-double-click-open-fix-integration.js",
+  "./app/label-spec-section-selection-integration.js",
   "./app/optimizer-map-contact-integration.js",
   "./app/optimizer-brush-channel-expansion-integration.js",
   "./app/update-manager.js",
@@ -142,7 +145,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   const type = event.data?.type;
-  const reply = (payload) => event.ports?.[0]?.postMessage(payload);
+  const reply = (payload) => event.ports?.[0].postMessage(payload);
   if (type === "SKIP_WAITING") {
     self.skipWaiting();
     reply({ ok: true, version: RELEASE_VERSION });
