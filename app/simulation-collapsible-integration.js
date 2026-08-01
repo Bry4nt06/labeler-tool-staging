@@ -11,6 +11,7 @@
     "app/map-object-wipe-definition-integration.js?v=0.9.3-object-wipes",
     "app/apl-neck-pad-center-tack-integration.js?v=0.9.3-neck-pad-center-tack-v1",
     "app/apl-single-cycle-transition-guard.js?v=0.9.3-dual-neck-pad-cycle",
+    "app/apl-neck-final-pad-completion-integration.js?v=0.9.3-neck-final-pad-full-label-v2",
     "app/apl-body-back-two-label-transition-integration.js?v=0.9.3-no-neck-body-back-v3",
     "app/apl-back-wipe-direction-correction-integration.js?v=0.9.3-back-wipe-direction-v4",
     "app/apl-label-sensor-reference-integration.js?v=0.9.3-active-sensor-reference",
@@ -24,6 +25,8 @@
     "app/cold-glue-gripper-sequence-integration-v2.js?v=0.9.3-station-safe-grippers-v2",
     "app/map-builder-station-authority-integration.js?v=0.9.3-station-authority",
     "app/map-object-builder-selection-integration.js?v=0.9.3-map-object-builder-selection-v3",
+    "app/map-object-double-click-open-fix-integration.js?v=0.9.3-map-object-double-press-v4",
+    "app/label-spec-section-selection-integration.js?v=0.9.3-label-section-checkboxes-v1",
     "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact",
     "app/optimizer-brush-channel-expansion-integration.js?v=0.9.3-brush-channel-contact"
   ];
