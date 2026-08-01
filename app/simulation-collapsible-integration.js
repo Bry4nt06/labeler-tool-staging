@@ -9,6 +9,7 @@
     "app/remove-zone-site-integration.js?v=0.9.3-global-map-library",
     "app/multi-map-lock-import-integration-v2.js?v=0.9.3-map-import-router",
     "app/map-object-wipe-definition-integration.js?v=0.9.3-object-wipes",
+    "app/apl-neck-pad-center-tack-integration.js?v=0.9.3-neck-pad-center-tack-v1",
     "app/apl-single-cycle-transition-guard.js?v=0.9.3-dual-neck-pad-cycle",
     "app/apl-body-back-two-label-transition-integration.js?v=0.9.3-no-neck-body-back-v3",
     "app/apl-back-wipe-direction-correction-integration.js?v=0.9.3-back-wipe-direction-v4",
