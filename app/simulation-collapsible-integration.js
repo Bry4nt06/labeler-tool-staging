@@ -14,7 +14,7 @@
     "app/apl-body-back-two-label-transition-integration.js?v=0.9.3-no-neck-body-back-v3",
     "app/apl-back-wipe-direction-correction-integration.js?v=0.9.3-back-wipe-direction-v4",
     "app/apl-label-sensor-reference-integration.js?v=0.9.3-active-sensor-reference",
-    "app/map-object-servo-orientation-integration.js?v=0.9.3-map-object-servo-orientation-v1",
+    "app/map-object-servo-orientation-integration.js?v=0.9.3-map-object-servo-orientation-v2",
     "app/map-object-orientation-controls-integration.js?v=0.9.3-map-object-orientation-controls-v1",
     "app/cold-glue-label-geometry-fallback-integration.js?v=0.9.3-cold-glue-shared-geometry",
     "app/cold-glue-center-out-brush-integration.js?v=0.9.3-cold-glue-channel-90",
@@ -23,7 +23,7 @@
     "app/cold-glue-neck-left-right-integration.js?v=0.9.3-neck-parameter-driven-v2",
     "app/cold-glue-gripper-sequence-integration-v2.js?v=0.9.3-station-safe-grippers-v2",
     "app/map-builder-station-authority-integration.js?v=0.9.3-station-authority",
-    "app/map-object-builder-selection-integration.js?v=0.9.3-map-object-builder-selection-v2",
+    "app/map-object-builder-selection-integration.js?v=0.9.3-map-object-builder-selection-v3",
     "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact",
     "app/optimizer-brush-channel-expansion-integration.js?v=0.9.3-brush-channel-contact"
   ];
