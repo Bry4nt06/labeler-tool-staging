@@ -36,11 +36,6 @@
   let installed = false;
   let refreshPending = false;
 
-  const num = (value, fallback = null) => {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  };
-
   function activeMapSafe() {
     try {
       return typeof activeMachineMap === "function" ? activeMachineMap() : null;
@@ -53,6 +48,7 @@
     const map = options.map || activeMapSafe();
     const identity = `${options.machineType || ""} ${map?.machineType || ""} ${map?.name || ""}`.toUpperCase();
     const application = String(options.applicationMode || map?.applicationMode || state?.applicationMode || "").toLowerCase();
+    if (application === "cold-glue") return false;
     return application === "apl"
       || identity.includes("TOPMODUL")
       || (identity.includes("APL") && !identity.includes("COLD"));
@@ -309,16 +305,15 @@
 
   function updateManagerCopy() {
     const select = document.querySelector("#motionProfileSelect");
-    if (!select) return;
+    if (!select || !isAplContext()) return;
     const continuous = [...select.options].find((option) => option.value === "continuous-motion");
-    if (continuous && isAplContext()) {
+    if (continuous) {
       continuous.disabled = false;
-      continuous.textContent = "Continuous Motion";
+      if (continuous.textContent !== "Continuous Motion") continuous.textContent = "Continuous Motion";
     }
     const heading = select.closest(".servo-motion-workbench")?.querySelector(".servo-motion-head p");
-    if (heading && isAplContext()) {
-      heading.textContent = "APL supports Rest / Correction and Continuous Motion. Selecting a profile rebuilds the servo program from the active map and applies that profile's command sequence.";
-    }
+    const copy = "APL supports Rest / Correction and Continuous Motion. Selecting a profile rebuilds the servo program from the active map and applies that profile's command sequence.";
+    if (heading && heading.textContent !== copy) heading.textContent = copy;
   }
 
   function scheduleRefresh() {
