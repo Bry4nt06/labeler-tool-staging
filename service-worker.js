@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-label-sections-neck-wipe-double-open-v1";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-coder-after-wipe-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -72,6 +72,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/apl-back-wipe-direction-correction-integration.js",
   "./app/apl-label-sensor-reference-integration.js",
   "./app/map-object-servo-orientation-integration.js",
+  "./app/map-object-coder-after-wipe-integration.js",
   "./app/map-object-orientation-controls-integration.js",
   "./app/cold-glue-label-geometry-fallback-integration.js",
   "./app/cold-glue-center-out-brush-integration.js",
