@@ -19,6 +19,7 @@
     "app/map-object-coder-after-wipe-integration.js?v=0.9.3-coder-after-wipe-v1",
     "app/map-object-orientation-controls-integration.js?v=0.9.4-coder-orientation-off-v1",
     "app/motion-profile-regeneration-integration.js?v=0.9.4-motion-profile-regeneration-v1",
+    "app/apl-continuous-motion-integration.js?v=0.9.4-apl-continuous-motion-v1",
     "app/cold-glue-label-geometry-fallback-integration.js?v=0.9.3-cold-glue-shared-geometry",
     "app/cold-glue-center-out-brush-integration.js?v=0.9.3-cold-glue-channel-90",
     "app/cold-glue-gripper-channel-integration.js?v=0.9.3-gripper-label-length",
