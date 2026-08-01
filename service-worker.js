@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-coder-orientation-off-v1";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-motion-profile-regeneration-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -74,6 +74,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/map-object-servo-orientation-integration.js",
   "./app/map-object-coder-after-wipe-integration.js",
   "./app/map-object-orientation-controls-integration.js",
+  "./app/motion-profile-regeneration-integration.js",
   "./app/cold-glue-label-geometry-fallback-integration.js",
   "./app/cold-glue-center-out-brush-integration.js",
   "./app/cold-glue-gripper-channel-integration.js",
