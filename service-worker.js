@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-locked-map-brands-v1";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-company-defaults-v2";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -15,6 +15,16 @@ const CORE_ASSETS = Object.freeze([
   "./release-notes.json",
   "./recovery.html",
   "./config/company-default-settings.json",
+  "./config/default-programs/map-blank-apl.json",
+  "./config/default-programs/machine-map-1784426568359-9375.json",
+  "./config/default-programs/machine-map-1784427388958-9702.json",
+  "./config/default-programs/machine-map-1784477554290-6537.json",
+  "./config/default-programs/machine-map-1785590537632-2751.json",
+  "./config/default-programs/machine-map-1785604940794-6949.json",
+  "./config/default-programs/machine-map-1785604972525-2064.json",
+  "./config/default-programs/map-l85-workbook-reference-3-label-apl.json",
+  "./config/default-programs/label-specs.json",
+  "./config/default-programs/bottle-specs.json",
   "./drivers/geometry/label-geometry-driver.js",
   "./drivers/application/application-mode-driver.js",
   "./drivers/mechanical/mechanical-motion-driver.js",
@@ -86,6 +96,8 @@ const CORE_ASSETS = Object.freeze([
   "./app/map-object-builder-selection-integration.js",
   "./app/map-object-double-click-open-fix-integration.js",
   "./app/label-spec-section-selection-integration.js",
+  "./app/company-default-programs-integration.js",
+  "./app/workbook-reference-map-library-integration.js",
   "./app/locked-map-brand-selector-integration.js",
   "./app/optimizer-map-contact-integration.js",
   "./app/optimizer-brush-channel-expansion-integration.js",
