@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-workbook-reference-v1";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-locked-map-brands-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -86,7 +86,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/map-object-builder-selection-integration.js",
   "./app/map-object-double-click-open-fix-integration.js",
   "./app/label-spec-section-selection-integration.js",
-  "./app/workbook-reference-map-integration.js",
+  "./app/locked-map-brand-selector-integration.js",
   "./app/optimizer-map-contact-integration.js",
   "./app/optimizer-brush-channel-expansion-integration.js",
   "./app/update-manager.js",
