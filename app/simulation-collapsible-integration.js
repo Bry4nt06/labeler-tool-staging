@@ -4,6 +4,7 @@
   const modules = [
     "drivers/core/driver-registry.js?v=0.9.6-refactor-1",
     "drivers/core/legacy-driver-bridge.js?v=0.9.6-refactor-1",
+    "drivers/profile/coder-orientation-driver.js?v=0.9.6-coder-driver-v1",
     "app/simulation-collapsible-core.js?v=0.9.3-direct",
     "app/servo-replay-loop-controls-integration.js?v=0.9.3-replay-icons-loop",
     "app/release-readiness-staging-alignment-integration.js?v=0.9.3-staging-readiness-v2",
@@ -35,7 +36,7 @@
     "app/company-default-programs-integration.js?v=0.9.5-company-defaults-v2",
     "app/workbook-reference-map-library-integration.js?v=0.9.4-workbook-map-library-v1",
     "app/locked-map-brand-selector-integration.js?v=0.9.4-locked-map-brands-v1",
-    "app/clockwise-code-box-orientation-integration.js?v=0.9.5-physical-direction-code-box-v2",
+    "app/clockwise-code-box-orientation-integration.js?v=0.9.6-coder-driver-v1",
     "app/coder-rest-grammar-repair-integration.js?v=0.9.5-coder-rest-grammar-v1",
     "app/motion-profile-workbench-integration.js?v=0.9.6-refactor-1",
     "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact",
