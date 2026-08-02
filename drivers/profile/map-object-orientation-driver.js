@@ -4,12 +4,22 @@
   if (global.LabelerMapObjectOrientationDriver) return;
 
   const FULL_CYCLE_DEG = 360;
+  const COMMAND_RESOLUTION_DEG = 0.1;
   const VALID_SECTIONS = Object.freeze(["neck", "body", "back", "none"]);
 
   function finite(value, fallback = NaN) {
     if (value === null || value === undefined || value === "") return fallback;
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function commandAngle(value, resolution = COMMAND_RESOLUTION_DEG) {
+    const step = Math.max(Number.EPSILON, Math.abs(finite(resolution, COMMAND_RESOLUTION_DEG)));
+    return Math.round(finite(value, 0) / step) * step;
+  }
+
+  function sameCommandAngle(left, right, resolution = COMMAND_RESOLUTION_DEG) {
+    return Math.abs(commandAngle(left, resolution) - commandAngle(right, resolution)) <= Number.EPSILON * 16;
   }
 
   function nearestEquivalent(target, reference) {
@@ -113,14 +123,19 @@
     const center = finite(labelCenter, finite(application, 0));
     if (item?.kind === "sensor") {
       const required = Math.min(100, Math.max(1, finite(item?.requiredVisibilityPercent, 50)));
-      const target = nearestEquivalent(finite(sensorTarget, center), currentPlate);
+      const current = finite(currentPlate, center);
+      const rawTarget = nearestEquivalent(finite(sensorTarget, center), current);
+      // Servo rows are emitted at 0.1 degree resolution. Do not create a CMD 7 /
+      // CMD 3 pair when the calculated adjustment cannot change the command value.
+      const target = sameCommandAngle(rawTarget, current) ? current : rawTarget;
       return {
         target,
         mode: "label-center",
         required,
         visibility: finite(sensorVisibilityPercent, 100),
         center,
-        width
+        width,
+        satisfiedAtCommandResolution: target === current
       };
     }
 
@@ -184,8 +199,11 @@
 
   const api = Object.freeze({
     FULL_CYCLE_DEG,
+    COMMAND_RESOLUTION_DEG,
     VALID_SECTIONS,
     finite,
+    commandAngle,
+    sameCommandAngle,
     nearestEquivalent,
     activeFallback,
     resolveSection,
