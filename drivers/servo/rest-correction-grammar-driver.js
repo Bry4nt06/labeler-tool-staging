@@ -17,6 +17,17 @@
       || /return bottle.*(?:end curve|reference).*after coding|release.*after coding|continue.*after coder/i.test(String(row?.action || ""));
   }
 
+  function isCodingRest(row) {
+    if (Number(row?.cmd) !== 3) return false;
+    return row?.codingHold === true
+      || Boolean(row?.codingReadyTableAngle)
+      || row?.codeBoxCenterlineAligned === true
+      || row?.codeBoxDirectionCorrected === true
+      || Boolean(row?.codingObjectId)
+      || (row?.orientationHold === true && /coding|code box/i.test(String(row?.action || "")))
+      || /hold.*(?:coding|code box)|(?:coding|code box).*hold|coding.*reference|code box.*centerline/i.test(String(row?.action || ""));
+  }
+
   function correctionMetrics(startRow, destinationRow, startPlate) {
     const destinationPlate = finite(destinationRow?.plateAngle, NaN);
     const tableTravel = finite(destinationRow?.tableAngle, NaN) - finite(startRow?.tableAngle, NaN);
@@ -31,10 +42,7 @@
   function mergedRest(left, right) {
     const leftActions = Array.isArray(left?.mergedRestActions) ? left.mergedRestActions : [String(left?.action || "Rest")];
     const rightActions = Array.isArray(right?.mergedRestActions) ? right.mergedRestActions : [String(right?.action || "Rest")];
-    const codingAction = [right, left].find((row) => row?.codingHold
-      || row?.codingReadyTableAngle
-      || row?.codeBoxCenterlineAligned
-      || /coding|code box/i.test(String(row?.action || "")));
+    const codingAction = [right, left].find((row) => isCodingRest({ ...row, cmd: 3 }));
     return {
       ...left,
       ...right,
@@ -52,15 +60,39 @@
     };
   }
 
+  function collapseEquivalentCodingRests(rows, tolerance) {
+    const repairs = [];
+    for (let index = 1; index < rows.length; index += 1) {
+      const left = rows[index - 1];
+      const right = rows[index];
+      if (Number(left?.cmd) !== 3 || Number(right?.cmd) !== 3) continue;
+      if (right?.terminalRest === true || /end\s*(?:of\s*)?curve/i.test(String(right?.action || ""))) continue;
+      if (!isCodingRest(left) && !isCodingRest(right)) continue;
+      const leftPlate = finite(left?.plateAngle, NaN);
+      const rightPlate = finite(right?.plateAngle, NaN);
+      if (!Number.isFinite(leftPlate) || !Number.isFinite(rightPlate)) continue;
+      if (Math.abs(rightPlate - leftPlate) > tolerance) continue;
+
+      rows[index - 1] = mergedRest(left, right);
+      rows.splice(index, 1);
+      repairs.push({
+        index: index - 1,
+        hmi: index,
+        strategy: "merge-equivalent-coding-rests",
+        restoredPlateAngle: leftPlate,
+        removedAction: String(right?.action || "Rest")
+      });
+      index -= 1;
+    }
+    return repairs;
+  }
+
   function normalizeCodingReleaseBlocks(rows, tolerance) {
     const repairs = [];
 
     for (let releaseIndex = 1; releaseIndex < rows.length; releaseIndex += 1) {
       if (!isCodingRelease(rows[releaseIndex])) continue;
 
-      // Collapse duplicate stopped references immediately before the release.
-      // The earlier Rest already holds the plate through the later setpoint;
-      // merge the coding metadata into it instead of emitting another CMD 3.
       while (releaseIndex >= 2
         && Number(rows[releaseIndex - 2]?.cmd) === 3
         && Number(rows[releaseIndex - 1]?.cmd) === 3) {
@@ -89,8 +121,6 @@
       const heldPlate = finite(hold.plateAngle, NaN);
       if (!Number.isFinite(heldPlate)) continue;
 
-      // Any earlier Rest in the same block with a different plate target was
-      // actually the start of the turn into the coding hold. Restore CMD 7.
       for (let index = holdIndex - 1; index >= 0; index -= 1) {
         const row = rows[index];
         const next = rows[index + 1];
@@ -197,20 +227,17 @@
       ? options.shouldRepair
       : () => true;
     const rows = sourceRows.map((row) => ({ ...row }));
-    const repairs = normalizeCodingReleaseBlocks(rows, tolerance);
+    const repairs = [
+      ...normalizeCodingReleaseBlocks(rows, tolerance),
+      ...collapseEquivalentCodingRests(rows, tolerance)
+    ];
 
-    // Re-resolve requested hold indexes after any duplicate Rest rows were
-    // removed. Prefer semantic coding-hold markers over stale array indexes.
-    const semanticHoldIndexes = rows.map((row, index) => Number(row?.cmd) === 3
-      && (row?.codingHold || row?.codingReadyTableAngle || /hold.*(?:coding|code box)/i.test(String(row?.action || "")))
-      ? index
-      : -1).filter((index) => index >= 0);
+    const semanticHoldIndexes = rows.map((row, index) => isCodingRest(row) ? index : -1)
+      .filter((index) => index >= 0);
     const preserveIndexes = new Set(semanticHoldIndexes.length
       ? semanticHoldIndexes
       : requestedPreserveIndexes.filter((index) => index >= 0 && index < rows.length));
 
-    // Align only suspicious ordinary Rest rows. Coding-release blocks were
-    // already normalized above and now have a real CMD 7 release command.
     for (let index = rows.length - 2; index >= 0; index -= 1) {
       const row = rows[index];
       const next = rows[index + 1];
@@ -259,6 +286,8 @@
       });
     });
 
+    repairs.push(...collapseEquivalentCodingRests(rows, tolerance));
+
     return {
       rows: rows.map((row, index) => ({ ...row, hmi: index + 1, plc: index })),
       repairs: repairs.sort((left, right) => left.index - right.index)
@@ -268,6 +297,8 @@
   const api = Object.freeze({
     DEFAULT_TOLERANCE,
     isCodingRelease,
+    isCodingRest,
+    collapseEquivalentCodingRests,
     normalizeCodingReleaseBlocks,
     reconcile
   });
