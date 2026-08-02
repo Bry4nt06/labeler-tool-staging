@@ -3,6 +3,7 @@
 (async function startServoForge() {
   try {
     if (window.ServoForgeProfileGenerationReady) await window.ServoForgeProfileGenerationReady;
+    if (window.ServoForgeMapBuilderReady) await window.ServoForgeMapBuilderReady;
     if (window.ServoForgeBootstrapReady) await window.ServoForgeBootstrapReady;
     if (typeof initializeLabelerApp !== "function") {
       throw new Error("initializeLabelerApp is not loaded.");
