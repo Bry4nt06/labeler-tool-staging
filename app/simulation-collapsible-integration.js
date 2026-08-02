@@ -84,6 +84,19 @@
     return featureEntries().flatMap(([, modules]) => modules);
   }
 
+  function readiness(name) {
+    const value = window[name];
+    return value && typeof value.then === "function" ? value : Promise.resolve();
+  }
+
+  function waitForRuntimeOwners() {
+    return Promise.all([
+      readiness("ServoForgeGeometryPlanningReady"),
+      readiness("ServoForgeProfileGenerationReady"),
+      readiness("ServoForgeMapBuilderReady")
+    ]);
+  }
+
   function loadScript(source, feature) {
     return new Promise((resolve, reject) => {
       const expected = new URL(`./${source}`, window.location.href).href;
@@ -130,7 +143,8 @@
     orderedModules: Object.freeze(orderedModules())
   });
 
-  loadAllFeatures().catch((error) => {
+  window.ServoForgeFeatureIntegrationsReady = waitForRuntimeOwners().then(loadAllFeatures);
+  window.ServoForgeFeatureIntegrationsReady.catch((error) => {
     console.error("Staging integration load failed", error);
   });
 })();
