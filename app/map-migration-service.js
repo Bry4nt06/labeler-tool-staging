@@ -5,27 +5,29 @@
     || global.LabelerMapMigrationDriver;
   const schema = global.LabelerDriverRegistry?.resolve("map.schema")
     || global.LabelerMapSchemaDriver;
-  if (!migration || !schema) throw new Error("Map migration service requires map.schema and map.migration.");
+  const runtime = global.LabelerMapRuntimeService;
+  if (!migration || !schema || !runtime) {
+    throw new Error("Map migration service requires map.schema, map.migration, and the map runtime service.");
+  }
 
   let running = false;
 
   function coldGlueObjects(objects) {
     if (typeof normalizeColdGlueMap === "function") return normalizeColdGlueMap(objects);
     return (Array.isArray(objects) ? objects : []).map((item) =>
-      normalizeBuilderObject({ ...item, kind: item?.kind === "wipe" ? "brush" : item?.kind }, "cold-glue", 6)
+      normalizeBuilderObject({
+        ...item,
+        kind: item?.kind === "wipe" ? "brush" : item?.kind
+      }, "cold-glue", 6)
     );
   }
 
-  function currentRuntimeMapId() {
-    try {
-      return typeof runtimeMachineMapId === "undefined" ? null : runtimeMachineMapId;
-    } catch {
-      return null;
-    }
-  }
-
   function migratePersistentMaps() {
-    if (running) return state.mapLibrary?.find((map) => map.id === state.activeMapId) || state.mapLibrary?.[0] || null;
+    if (running) {
+      return state.mapLibrary?.find((map) => map.id === state.activeMapId)
+        || state.mapLibrary?.[0]
+        || null;
+    }
     running = true;
     try {
       const result = migration.migrateLibrary({
@@ -37,15 +39,16 @@
       }, {
         createMap: (input) => createMachineMap(input),
         mapLocationFor: (map) => mapLocationFor(map),
-        normalizeAggregateAngles: (value, mode, objects) => normalizeAggregateAngles(value, mode, objects),
+        normalizeAggregateAngles: (value, mode, objects) =>
+          normalizeAggregateAngles(value, mode, objects),
         normalizeColdGlueObjects: coldGlueObjects
       });
 
       state.mapLibrary = result.maps;
       state.activeMapId = result.activeMapId;
       const selected = result.activeMap;
-      if (selected && (result.forceReload || currentRuntimeMapId() !== selected.id)) {
-        loadMachineMapIntoRuntime(selected, false);
+      if (selected && (result.forceReload || runtime.currentMapId() !== selected.id)) {
+        runtime.loadMachineMapIntoRuntime(selected, false);
       }
       return selected;
     } finally {
@@ -59,15 +62,11 @@
   implementation.mapMigrationInstalled = true;
   implementation.driver = "map.migration";
 
-  ensurePersistentApplicationMaps = implementation;
   global.ensurePersistentApplicationMaps = implementation;
-
   global.LabelerMapMigrationService = Object.freeze({
     driver: "map.migration",
     schemaVersion: schema.MACHINE_MAP_SCHEMA_VERSION,
     migratePersistentMaps,
     ensurePersistentApplicationMaps: implementation
   });
-
-  migratePersistentMaps();
 })(typeof window !== "undefined" ? window : globalThis);
