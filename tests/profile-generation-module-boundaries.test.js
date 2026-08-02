@@ -54,10 +54,10 @@ function context(extra = {}) {
 }
 
 const oldColdGlue = context({
-  state: { applicationMode: "cold-glue" },
-  generatedColdGlueFixedProfile: () => ["cold-glue"]
+  state: { applicationMode: "cold-glue" }
 });
 vm.runInContext(legacy, oldColdGlue);
+oldColdGlue.generatedColdGlueFixedProfile = () => ["cold-glue"];
 const newColdGlue = context({
   state: { applicationMode: "cold-glue" },
   generatedColdGlueFixedProfile: () => ["cold-glue"]
@@ -72,10 +72,10 @@ const map = { id: "map-1" };
 const oldMapRoute = context({
   state: { applicationMode: "apl" },
   selectedLabelApplicationState: () => ({ neck: true, body: true, back: true }),
-  activeMachineMap: () => map,
-  generatedAplMapDrivenProfile: (value) => [value.id]
+  activeMachineMap: () => map
 });
 vm.runInContext(legacy, oldMapRoute);
+oldMapRoute.generatedAplMapDrivenProfile = (value) => [value.id];
 const newMapRoute = context({
   state: { applicationMode: "apl" },
   selectedLabelApplicationState: () => ({ neck: true, body: true, back: true }),
@@ -122,6 +122,8 @@ function overrideContext(source) {
     num: (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback
   });
   vm.runInContext(source, sandbox);
+  sandbox.generatedServoProfile = () => [{ plc: 0, hmi: 1, cmd: 3, tableAngle: 10, plateAngle: 20 }];
+  sandbox.applyMachineTypeProfileFraming = (rows) => rows;
   sandbox.applyGeneratedServoProfile();
   return JSON.parse(JSON.stringify(sandbox.state.program));
 }
