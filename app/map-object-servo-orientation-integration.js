@@ -4,6 +4,7 @@
   const RETRY_MS = 50;
   const GAP = 0.5;
   const EPS = 0.001;
+  const STAGE_ID = "orientation.map-objects";
   let installed = false;
 
   const num = (value, fallback = NaN) => {
@@ -30,6 +31,12 @@
   function issueFactory() {
     return window.LabelerDriverRegistry?.resolve("profile.orientationIssueFactory")
       || window.LabelerOrientationIssueFactoryDriver
+      || null;
+  }
+
+  function pipelineDriver() {
+    return window.LabelerDriverRegistry?.resolve("profile.pipeline")
+      || window.LabelerProfilePipelineDriver
       || null;
   }
 
@@ -373,6 +380,30 @@
     return output;
   }
 
+  function registerPipelineStage() {
+    const pipeline = pipelineDriver();
+    if (!pipeline?.registerStage) return false;
+    pipeline.registerStage({
+      id: STAGE_ID,
+      phase: "orientation",
+      order: 300,
+      source: "app/map-object-servo-orientation-integration.js",
+      description: "Apply map-driven sensor and coder orientation plans.",
+      process
+    });
+    window.LabelerMapObjectOrientationProcessor = process;
+    return true;
+  }
+
+  function installLegacyWrapper() {
+    const base = generatedServoProfile;
+    generatedServoProfile = function generatedServoProfileWithMapObjectOrientation(...args) {
+      return process(base.apply(this, args));
+    };
+    generatedServoProfile.mapObjectOrientationIntegration = true;
+    window.generatedServoProfile = generatedServoProfile;
+  }
+
   function install() {
     if (installed) return true;
     if (typeof generatedServoProfile !== "function"
@@ -380,18 +411,18 @@
       || !orientationDriver()?.orientationTarget
       || !rowBuilder()?.turn
       || !issueFactory()?.issue) return false;
-    const base = generatedServoProfile;
-    generatedServoProfile = function generatedServoProfileWithMapObjectOrientation(...args) {
-      return process(base.apply(this, args));
-    };
-    generatedServoProfile.mapObjectOrientationIntegration = true;
-    window.generatedServoProfile = generatedServoProfile;
+
+    const pipelineManaged = registerPipelineStage();
+    if (!pipelineManaged) installLegacyWrapper();
     installed = true;
-    try {
-      if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
-      if (typeof render === "function") render();
-    } catch (error) {
-      console.error("Unable to apply map-object servo orientation.", error);
+
+    if (!pipelineManaged || window.LabelerProfilePipelineOrchestratorInstalled) {
+      try {
+        if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
+        if (typeof render === "function") render();
+      } catch (error) {
+        console.error("Unable to apply map-object servo orientation.", error);
+      }
     }
     return true;
   }
