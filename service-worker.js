@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-clockwise-code-box-v1";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-coder-rest-grammar-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -100,6 +100,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/workbook-reference-map-library-integration.js",
   "./app/locked-map-brand-selector-integration.js",
   "./app/clockwise-code-box-orientation-integration.js",
+  "./app/coder-rest-grammar-repair-integration.js",
   "./app/optimizer-map-contact-integration.js",
   "./app/optimizer-brush-channel-expansion-integration.js",
   "./app/update-manager.js",
