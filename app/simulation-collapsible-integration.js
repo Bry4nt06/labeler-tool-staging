@@ -33,6 +33,7 @@
     "app/company-default-programs-integration.js?v=0.9.5-company-defaults-v2",
     "app/workbook-reference-map-library-integration.js?v=0.9.4-workbook-map-library-v1",
     "app/locked-map-brand-selector-integration.js?v=0.9.4-locked-map-brands-v1",
+    "app/clockwise-code-box-orientation-integration.js?v=0.9.5-clockwise-code-box-v1",
     "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact",
     "app/optimizer-brush-channel-expansion-integration.js?v=0.9.3-brush-channel-contact"
   ];
