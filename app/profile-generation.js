@@ -9,7 +9,8 @@
     "app/profile-routing.js",
     "app/machine-profile-framing.js",
     "app/servo-overrides.js",
-    "app/profile-translation-service.js"
+    "app/profile-translation-service.js",
+    "app/profile-translator-validation.js"
   ]);
 
   function loadScript(path) {
