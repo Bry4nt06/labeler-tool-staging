@@ -9,6 +9,7 @@
     "drivers/profile/coder-handoff-driver.js?v=0.9.6-orientation-drivers-v1",
     "drivers/profile/map-object-row-builder-driver.js?v=0.9.6-orientation-row-drivers-v1",
     "drivers/profile/orientation-issue-factory-driver.js?v=0.9.6-orientation-row-drivers-v1",
+    "drivers/profile/profile-pipeline-driver.js?v=0.9.6-profile-pipeline-v1",
     "drivers/servo/rest-correction-grammar-driver.js?v=0.9.6-rest-grammar-v4",
     "app/simulation-collapsible-core.js?v=0.9.3-direct",
     "app/servo-replay-loop-controls-integration.js?v=0.9.3-replay-icons-loop",
@@ -41,8 +42,9 @@
     "app/company-default-programs-integration.js?v=0.9.5-company-defaults-v2",
     "app/workbook-reference-map-library-integration.js?v=0.9.4-workbook-map-library-v1",
     "app/locked-map-brand-selector-integration.js?v=0.9.4-locked-map-brands-v1",
-    "app/clockwise-code-box-orientation-integration.js?v=0.9.6-coder-driver-v1",
-    "app/coder-rest-grammar-repair-integration.js?v=0.9.6-rest-grammar-v3",
+    "app/clockwise-code-box-orientation-integration.js?v=0.9.6-profile-pipeline-v1",
+    "app/coder-rest-grammar-repair-integration.js?v=0.9.6-profile-pipeline-v1",
+    "app/profile-pipeline-orchestrator-integration.js?v=0.9.6-profile-pipeline-v1",
     "app/motion-profile-workbench-integration.js?v=0.9.6-refactor-1",
     "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact",
     "app/optimizer-brush-channel-expansion-integration.js?v=0.9.3-brush-channel-contact"
@@ -63,7 +65,10 @@
       const script = document.createElement("script");
       script.src = `./${source}`;
       script.async = false;
-      script.addEventListener("load", () => { script.dataset.loaded = "true"; resolve(); }, { once: true });
+      script.addEventListener("load", () => {
+        script.dataset.loaded = "true";
+        resolve();
+      }, { once: true });
       script.addEventListener("error", reject, { once: true });
       document.body.appendChild(script);
     });
