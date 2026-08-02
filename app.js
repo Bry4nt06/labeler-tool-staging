@@ -5,6 +5,7 @@
     if (window.ServoForgeProfileGenerationReady) await window.ServoForgeProfileGenerationReady;
     if (window.ServoForgeGeometryPlanningReady) await window.ServoForgeGeometryPlanningReady;
     if (window.ServoForgeMapBuilderReady) await window.ServoForgeMapBuilderReady;
+    if (window.ServoForgeFeatureIntegrationsReady) await window.ServoForgeFeatureIntegrationsReady;
     if (window.ServoForgeBootstrapReady) await window.ServoForgeBootstrapReady;
     if (typeof initializeLabelerApp !== "function") {
       throw new Error("initializeLabelerApp is not loaded.");
