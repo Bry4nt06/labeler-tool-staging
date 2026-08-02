@@ -6,7 +6,8 @@
     "app/profile-family-generators-legacy.js",
     "app/profile-routing.js",
     "app/machine-profile-framing.js",
-    "app/servo-overrides.js"
+    "app/servo-overrides.js",
+    "app/profile-translation-service.js"
   ]);
 
   function loadScript(path) {
