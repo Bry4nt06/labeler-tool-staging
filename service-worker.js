@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-orientation-row-drivers-v1";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-profile-pipeline-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -49,6 +49,7 @@ const CORE_ASSETS = Object.freeze([
   "./drivers/profile/coder-handoff-driver.js",
   "./drivers/profile/map-object-row-builder-driver.js",
   "./drivers/profile/orientation-issue-factory-driver.js",
+  "./drivers/profile/profile-pipeline-driver.js",
   "./app/defaults.js",
   "./app/persistence.js",
   "./app/zone-site-configuration.js",
@@ -109,6 +110,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/locked-map-brand-selector-integration.js",
   "./app/clockwise-code-box-orientation-integration.js",
   "./app/coder-rest-grammar-repair-integration.js",
+  "./app/profile-pipeline-orchestrator-integration.js",
   "./app/motion-profile-workbench-integration.js",
   "./app/optimizer-map-contact-integration.js",
   "./app/optimizer-brush-channel-expansion-integration.js",
@@ -134,21 +136,37 @@ async function cachedFallback(url, navigation = false) {
   const cache = await caches.open(CACHE_NAME);
   const direct = await cache.match(normalizedRequest(url), { ignoreSearch: true });
   if (direct) return direct;
-  return navigation ? cache.match(normalizedRequest(APP_SHELL_URL), { ignoreSearch: true }) : null;
+  return navigation
+    ? cache.match(normalizedRequest(APP_SHELL_URL), { ignoreSearch: true })
+    : null;
 }
 
 async function cacheStatus() {
   const cache = await caches.open(CACHE_NAME);
   const checks = await Promise.all(CORE_ASSETS.map(async (asset) => ({
     asset,
-    cached: Boolean(await cache.match(normalizedRequest(new URL(asset, self.registration.scope).href), { ignoreSearch: true }))
+    cached: Boolean(await cache.match(
+      normalizedRequest(new URL(asset, self.registration.scope).href),
+      { ignoreSearch: true }
+    ))
   })));
   const cached = checks.filter((item) => item.cached).length;
-  return { ok: true, version: RELEASE_VERSION, cacheName: CACHE_NAME, total: checks.length, cached, complete: cached === checks.length, missing: checks.filter((item) => !item.cached).map((item) => item.asset) };
+  return {
+    ok: true,
+    version: RELEASE_VERSION,
+    cacheName: CACHE_NAME,
+    total: checks.length,
+    cached,
+    complete: cached === checks.length,
+    missing: checks.filter((item) => !item.cached).map((item) => item.asset)
+  };
 }
 
 async function prepareOffline(requestedAssets = []) {
-  const assets = [...new Set([...CORE_ASSETS, ...(Array.isArray(requestedAssets) ? requestedAssets : [])])];
+  const assets = [...new Set([
+    ...CORE_ASSETS,
+    ...(Array.isArray(requestedAssets) ? requestedAssets : [])
+  ])];
   for (const asset of assets) {
     const url = new URL(asset, self.registration.scope).href;
     const response = await fetch(url, { cache: "no-store" });
@@ -165,7 +183,11 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((names) => Promise.all(names.filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME).map((name) => caches.delete(name))))
+      .then((names) => Promise.all(
+        names
+          .filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
+      ))
       .then(() => self.clients.claim())
   );
 });
@@ -177,9 +199,25 @@ self.addEventListener("message", (event) => {
     self.skipWaiting();
     reply({ ok: true, version: RELEASE_VERSION });
   } else if (type === "GET_CACHE_STATUS") {
-    event.waitUntil(cacheStatus().then(reply).catch((error) => reply({ ok: false, version: RELEASE_VERSION, message: error.message })));
+    event.waitUntil(
+      cacheStatus()
+        .then(reply)
+        .catch((error) => reply({
+          ok: false,
+          version: RELEASE_VERSION,
+          message: error.message
+        }))
+    );
   } else if (type === "PREPARE_OFFLINE") {
-    event.waitUntil(prepareOffline(event.data?.assets).then(reply).catch((error) => reply({ ok: false, version: RELEASE_VERSION, message: error.message })));
+    event.waitUntil(
+      prepareOffline(event.data?.assets)
+        .then(reply)
+        .catch((error) => reply({
+          ok: false,
+          version: RELEASE_VERSION,
+          message: error.message
+        }))
+    );
   }
 });
 
@@ -189,9 +227,15 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
   event.respondWith(
     fetch(event.request, { cache: "no-store" })
-      .then((response) => cacheResponse(event.request.mode === "navigate" ? APP_SHELL_URL : url.href, response))
+      .then((response) => cacheResponse(
+        event.request.mode === "navigate" ? APP_SHELL_URL : url.href,
+        response
+      ))
       .catch(async () => {
-        const cached = await cachedFallback(url.href, event.request.mode === "navigate");
+        const cached = await cachedFallback(
+          url.href,
+          event.request.mode === "navigate"
+        );
         if (cached) return cached;
         throw new Error(`Offline resource unavailable: ${event.request.url}`);
       })
