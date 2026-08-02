@@ -3,6 +3,7 @@
 (function installPhysicalDirectionCodeBoxOrientation() {
   const RETRY_MS = 50;
   const EPS = 0.001;
+  const STAGE_ID = "orientation.physical-code-box";
   let installed = false;
   let refreshPending = false;
 
@@ -14,6 +15,12 @@
   const done = (value) => typeof finishAngle === "function"
     ? finishAngle(value)
     : Math.round(num(value, 0) * 10) / 10;
+
+  function pipelineDriver() {
+    return window.LabelerDriverRegistry?.resolve("profile.pipeline")
+      || window.LabelerProfilePipelineDriver
+      || null;
+  }
 
   function orientationDriver() {
     return window.LabelerDriverRegistry?.resolve("profile.coderOrientation")
@@ -71,7 +78,13 @@
   function codingSection(coder) {
     const explicit = coder?.orientationLabelSection || coder?.labelSection || "auto";
     return orientationDriver()?.resolveSection(explicit, activeApplications())
-      || (activeApplications().back ? "back" : activeApplications().body ? "body" : activeApplications().neck ? "neck" : "none");
+      || (activeApplications().back
+        ? "back"
+        : activeApplications().body
+          ? "body"
+          : activeApplications().neck
+            ? "neck"
+            : "none");
   }
 
   function ensureCoderOrientation() {
@@ -114,8 +127,12 @@
     const label = typeof selectedLabelSpec === "function" ? selectedLabelSpec() : null;
     const lengthMm = section === "neck"
       ? Math.max(num(label?.neckBottomCurveMm, 0), num(label?.neckLengthMm, 0))
-      : section === "body" ? num(label?.bodyLengthMm, NaN) : num(label?.backLengthMm, NaN);
-    return typeof degFromMm === "function" ? num(degFromMm(lengthMm, circumference), NaN) : NaN;
+      : section === "body"
+        ? num(label?.bodyLengthMm, NaN)
+        : num(label?.backLengthMm, NaN);
+    return typeof degFromMm === "function"
+      ? num(degFromMm(lengthMm, circumference), NaN)
+      : NaN;
   }
 
   function applicationTarget(section, rows, beforeTable) {
@@ -182,7 +199,10 @@
     for (let index = holdIndex - 1; index >= 0; index -= 1) {
       const row = rows[index];
       if (Number(row?.cmd) !== 7) continue;
-      if (!(row?.codingObjectId || row?.codingMotion || row?.coderAfterWipeHandoff || /coding|code box/i.test(String(row?.action || "")))) continue;
+      if (!(row?.codingObjectId
+        || row?.codingMotion
+        || row?.coderAfterWipeHandoff
+        || /coding|code box/i.test(String(row?.action || "")))) continue;
       const startPlate = num(row?.plateAngle, NaN);
       const tableTravel = num(rows[holdIndex]?.tableAngle, NaN) - num(row?.tableAngle, NaN);
       rows[index] = {
@@ -211,7 +231,9 @@
     rows[holdIndex + 1] = {
       ...continuation,
       plateAngle: done(target),
-      plannedRotation: Number.isFinite(destinationPlate) ? destinationPlate - target : continuation?.plannedRotation,
+      plannedRotation: Number.isFinite(destinationPlate)
+        ? destinationPlate - target
+        : continuation?.plannedRotation,
       plannedRatio: Number.isFinite(destinationPlate) && tableTravel > EPS
         ? Math.abs(destinationPlate - target) / tableTravel
         : continuation?.plannedRatio,
@@ -228,8 +250,10 @@
     state.motionPlan.codeBoxPhysicalSide = "left";
     state.motionPlan.codeBoxDirectionInvariant = true;
     state.motionPlan.coderOrientationDriver = "profile.coderOrientation";
+    state.motionPlan.profilePipelineOrientationStage = STAGE_ID;
     state.motionPlan.mapObjectOrientationPlans = (Array.isArray(state.motionPlan.mapObjectOrientationPlans)
-      ? state.motionPlan.mapObjectOrientationPlans : []).map((plan) =>
+      ? state.motionPlan.mapObjectOrientationPlans
+      : []).map((plan) =>
       plan?.kind === "coding" || plan?.codingObjectId
         ? {
             ...plan,
@@ -248,13 +272,15 @@
     if (!Array.isArray(sourceRows) || !sourceRows.length) return sourceRows;
     const map = activeMapSafe();
     if (!map) return sourceRows;
-    const coder = (Array.isArray(map.objects) ? map.objects : []).find((item) => item?.kind === "coding");
+    const coder = (Array.isArray(map.objects) ? map.objects : [])
+      .find((item) => item?.kind === "coding");
     if (!coder || coder.orientBottle === false) return sourceRows;
     const section = codingSection(coder);
     if (section === "none") return sourceRows;
 
     const rows = sourceRows.map((row) => ({ ...row }));
-    const holdIndexes = rows.map((row, index) => isCodingHold(row) ? index : -1).filter((index) => index >= 0);
+    const holdIndexes = rows.map((row, index) => isCodingHold(row) ? index : -1)
+      .filter((index) => index >= 0);
     if (!holdIndexes.length) return sourceRows;
 
     let finalTarget = null;
@@ -299,12 +325,25 @@
     });
   }
 
-  function install() {
-    if (installed) return true;
-    if (typeof generatedServoProfile !== "function"
-      || typeof state === "undefined"
-      || !orientationDriver()) return false;
+  function registerPipelineStage() {
+    const pipeline = pipelineDriver();
+    if (!pipeline?.registerStage) return false;
+    pipeline.registerStage({
+      id: STAGE_ID,
+      phase: "orientation",
+      order: 500,
+      source: "app/clockwise-code-box-orientation-integration.js",
+      description: "Apply the physical machine direction to the left-edge code-box target.",
+      process(sourceRows) {
+        ensureCoderOrientation();
+        return process(sourceRows);
+      }
+    });
+    window.LabelerPhysicalDirectionCodeBoxProcessor = process;
+    return true;
+  }
 
+  function installLegacyWrapper() {
     const base = generatedServoProfile;
     generatedServoProfile = function generatedServoProfileWithPhysicalDirectionCodeBox(...args) {
       ensureCoderOrientation();
@@ -312,18 +351,23 @@
     };
     generatedServoProfile.physicalDirectionCodeBoxOrientation = true;
     window.generatedServoProfile = generatedServoProfile;
+  }
 
-    if (typeof renderWipeDownBuilder === "function") {
-      const renderBuilderBase = renderWipeDownBuilder;
-      renderWipeDownBuilder = function renderWipeDownBuilderWithPhysicalDirections(...args) {
-        const result = renderBuilderBase.apply(this, args);
-        ensureCoderOrientation();
-        relabelDirectionControls();
-        return result;
-      };
-      window.renderWipeDownBuilder = renderWipeDownBuilder;
-    }
+  function installBuilderHook() {
+    if (typeof renderWipeDownBuilder !== "function"
+      || renderWipeDownBuilder.physicalDirectionCodeBoxOrientation) return;
+    const renderBuilderBase = renderWipeDownBuilder;
+    renderWipeDownBuilder = function renderWipeDownBuilderWithPhysicalDirections(...args) {
+      const result = renderBuilderBase.apply(this, args);
+      ensureCoderOrientation();
+      relabelDirectionControls();
+      return result;
+    };
+    renderWipeDownBuilder.physicalDirectionCodeBoxOrientation = true;
+    window.renderWipeDownBuilder = renderWipeDownBuilder;
+  }
 
+  function installDirectionChange() {
     document.addEventListener("change", (event) => {
       if (!event.target.closest?.("#mapDirection,#direction")) return;
       window.setTimeout(() => {
@@ -334,6 +378,18 @@
         relabelDirectionControls();
       }, 0);
     });
+  }
+
+  function install() {
+    if (installed) return true;
+    if (typeof generatedServoProfile !== "function"
+      || typeof state === "undefined"
+      || !orientationDriver()) return false;
+
+    const pipelineManaged = registerPipelineStage();
+    if (!pipelineManaged) installLegacyWrapper();
+    installBuilderHook();
+    installDirectionChange();
 
     const observer = new MutationObserver(scheduleRefresh);
     observer.observe(document.documentElement, { childList: true, subtree: true });
@@ -343,8 +399,10 @@
     const changed = ensureCoderOrientation();
     try {
       if (changed && typeof saveCurrentSettings === "function") saveCurrentSettings();
-      if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
-      if (typeof render === "function") render();
+      if (!pipelineManaged || window.LabelerProfilePipelineOrchestratorInstalled) {
+        if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
+        if (typeof render === "function") render();
+      }
     } catch (error) {
       console.error("Unable to apply physical direction and code-box orientation correction.", error);
     }
@@ -355,6 +413,9 @@
     if (!install()) window.setTimeout(wait, RETRY_MS);
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wait, { once: true });
-  else wait();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", wait, { once: true });
+  } else {
+    wait();
+  }
 })();
