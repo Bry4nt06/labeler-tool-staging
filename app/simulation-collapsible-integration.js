@@ -5,8 +5,6 @@
     coreDrivers: Object.freeze([
       "drivers/core/driver-registry.js?v=0.9.6-refactor-1",
       "drivers/core/legacy-driver-bridge.js?v=0.9.6-refactor-1",
-      "drivers/map/map-schema-driver.js?v=0.9.6-map-schema-v1",
-      "drivers/map/map-migration-driver.js?v=0.9.6-map-migration-v1",
       "drivers/profile/coder-orientation-driver.js?v=0.9.6-coder-driver-v1",
       "drivers/profile/map-object-orientation-driver.js?v=0.9.6-orientation-drivers-v1",
       "drivers/profile/coder-handoff-driver.js?v=0.9.6-orientation-drivers-v1",
@@ -53,8 +51,6 @@
     ]),
 
     mapBuilder: Object.freeze([
-      "app/map-schema-adapter-integration.js?v=0.9.6-map-schema-v1",
-      "app/map-migration-service.js?v=0.9.6-map-migration-v1",
       "app/map-builder-station-authority-integration.js?v=0.9.3-station-authority",
       "app/map-object-builder-selection-integration.js?v=0.9.3-map-object-builder-selection-v3",
       "app/map-object-double-click-open-fix-integration.js?v=0.9.3-map-object-double-press-v4",
