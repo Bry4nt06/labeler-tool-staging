@@ -12,9 +12,14 @@
     return Number.isFinite(parsed) ? parsed : fallback;
   };
   const done = (value) => typeof finishAngle === "function" ? finishAngle(value) : Math.round(num(value, 0) * 10) / 10;
-  const nearest = (target, reference) => num(target, 0) + 360 * Math.round((num(reference, target) - num(target, 0)) / 360);
   const sectionName = (section) => typeof sectionLabel === "function" ? sectionLabel(section) : String(section || "Label");
   const activeMap = () => typeof activeMachineMap === "function" ? activeMachineMap() : null;
+
+  function orientationDriver() {
+    return window.LabelerDriverRegistry?.resolve("profile.mapObjectOrientation")
+      || window.LabelerMapObjectOrientationDriver
+      || null;
+  }
 
   function applications() {
     try { return selectedLabelApplicationState(); }
@@ -27,35 +32,31 @@
   }
 
   function objectSection(item, map) {
-    const explicit = String(item.orientationLabelSection || "auto").toLowerCase();
-    if (["neck", "body", "back", "none"].includes(explicit)) return explicit;
-    if (item.kind === "sensor") {
-      const station = Number(item.station);
-      const inferred = stationSections(map)[String(station)] || (typeof labelSectionForStation === "function" ? labelSectionForStation(station) : "");
-      if (["neck", "body", "back", "none"].includes(inferred)) return inferred;
-    }
-    const active = applications();
-    return active.back ? "back" : active.body ? "body" : active.neck ? "neck" : "none";
+    return orientationDriver()?.resolveSection({
+      item,
+      activeApplications: applications(),
+      stationSections: stationSections(map),
+      fallbackStationSection: (station) => typeof labelSectionForStation === "function" ? labelSectionForStation(station) : ""
+    }) || "none";
   }
 
   function enabled(item) {
-    if (item.kind === "sensor") return Boolean(item.orientBottle ?? item.servoAssist);
-    if (item.kind === "coding") return item.orientBottle !== false;
-    return false;
+    return orientationDriver()?.enabled(item) ?? false;
   }
 
   function applicationTarget(section, rows, before) {
-    const planned = num(state?.motionPlan?.[`${section}ApplicationTarget`], NaN);
-    if (Number.isFinite(planned)) return planned;
-    const row = [...rows].reverse().find((entry) => num(entry.tableAngle, Infinity) < before
-      && String(entry.section || "").toLowerCase() === section
-      && /application/i.test(String(entry.action || ""))
-      && Number.isFinite(num(entry.plateAngle, NaN)));
-    if (row) return num(row.plateAngle, 0);
+    let seedTarget = 0;
     try {
       const seed = generatedAplSeedProfile();
-      return num(seed[section === "neck" ? 1 : section === "body" ? 11 : 21]?.plateAngle, 0);
-    } catch { return 0; }
+      seedTarget = num(seed[section === "neck" ? 1 : section === "body" ? 11 : 21]?.plateAngle, 0);
+    } catch { seedTarget = 0; }
+    return orientationDriver()?.applicationTarget({
+      section,
+      rows,
+      before,
+      plannedTarget: state?.motionPlan?.[`${section}ApplicationTarget`],
+      seedTarget
+    }) ?? seedTarget;
   }
 
   function geometry(section) {
@@ -73,29 +74,30 @@
     const shape = geometry(section);
     const application = applicationTarget(section, rows, table);
     const center = typeof labelSensorInspectionCenter === "function" ? labelSensorInspectionCenter(section, application, shape.width) : application;
+    let sensorPlan = null;
     if (item.kind === "sensor") {
       const required = Math.min(100, Math.max(1, num(item.requiredVisibilityPercent, 50)));
-      const plan = typeof nearestLabelSensorTarget === "function"
+      sensorPlan = typeof nearestLabelSensorTarget === "function"
         ? nearestLabelSensorTarget(currentPlate, center, shape.width, required, 180)
         : { target: center, visibility: { percent: 100 } };
-      return { target: nearest(num(plan.target, center), currentPlate), mode: "label-center", required, visibility: num(plan.visibility?.percent, 100) };
     }
-    const mode = item.orientationTarget === "label-center" ? "label-center" : "code-box";
-    let target = center;
-    const plannedCoder = section === "back" ? num(state?.motionPlan?.coderCenterlineTarget, NaN) : NaN;
-    if (mode === "code-box" && Number.isFinite(plannedCoder)) target = plannedCoder;
-    else if (mode === "code-box" && Number.isFinite(shape.code)) target = center + shape.width / 2 - shape.code + shape.inspection;
-    return { target: nearest(target, currentPlate), mode, required: 100, visibility: 100 };
+    return orientationDriver()?.orientationTarget({
+      item,
+      section,
+      currentPlate,
+      applicationTarget: application,
+      labelWidthDeg: shape.width,
+      labelCenter: center,
+      sensorTarget: sensorPlan?.target,
+      sensorVisibilityPercent: sensorPlan?.visibility?.percent,
+      coderCenterlineTarget: state?.motionPlan?.coderCenterlineTarget,
+      codeBoxOffsetDeg: shape.code,
+      inspectionOffsetDeg: shape.inspection
+    }) || { target: currentPlate, mode: "label-center", required: 100, visibility: 100 };
   }
 
   function windowFor(item, rows) {
-    const point = num(item.angle, item.start);
-    let start = item.kind === "sensor" ? point - 1.5 : num(item.start, point);
-    let end = item.kind === "sensor" ? point + 1.5 : Math.max(start + 0.5, num(item.end, start + 5));
-    while (end <= start) end += 360;
-    const minimum = Math.min(...rows.map((row) => num(row.tableAngle, 0)));
-    while (end < minimum) { start += 360; end += 360; }
-    return { start, end };
+    return orientationDriver()?.objectWindow({ item, rows }) || { start: num(item?.start, 0), end: num(item?.end, 5) };
   }
 
   function alreadyHandled(rows, item) {
@@ -126,29 +128,24 @@
   }
 
   function isPhysicalContactTransition(row) {
-    if (Number(row?.cmd) !== 7) return false;
-    const action = String(row?.action || "");
-    return /wipe|brush|roller|pad|contact/i.test(action)
-      || Boolean(row?.stage)
-      || Boolean(row?.brushStage)
-      || Boolean(row?.contactSide)
-      || Boolean(row?.rollerPass)
-      || Boolean(row?.wipeMotion);
+    return orientationDriver()?.isPhysicalContactTransition(row) ?? false;
   }
 
   function updateFollowing(rows, followingIndex, targetPlate, window, label, metadata, issues, item, section) {
     const following = rows[followingIndex];
     if (!following) return;
     if (Number(following.cmd) === 7) {
-      const destination = rows[followingIndex + 1];
-      const destinationPlate = num(destination?.plateAngle, NaN);
-      const travel = num(destination?.tableAngle, 0) - num(following.tableAngle, 0);
-      if (Number.isFinite(destinationPlate) && travel > EPS) {
+      const metrics = orientationDriver()?.continuationMetrics({
+        startRow: following,
+        destinationRow: rows[followingIndex + 1],
+        targetPlate
+      });
+      if (Number.isFinite(metrics?.destinationPlate) && metrics.tableTravel > EPS) {
         rows[followingIndex] = {
           ...following,
           plateAngle: done(targetPlate),
-          plannedRotation: destinationPlate - targetPlate,
-          plannedRatio: Math.abs(destinationPlate - targetPlate) / travel,
+          plannedRotation: metrics.plannedRotation,
+          plannedRatio: metrics.plannedRatio,
           mapObjectOrientationContinuation: true
         };
       }
@@ -326,7 +323,8 @@
       ratio: done(ratio),
       requiredVisibilityPercent: target.required,
       plannedVisibilityPercent: target.visibility,
-      reusedActiveTransition
+      reusedActiveTransition,
+      orientationDriver: "profile.mapObjectOrientation"
     });
   }
 
@@ -344,7 +342,7 @@
       .sort((a, b) => a.window.start - b.window.start);
     objects.forEach((item) => {
       if (alreadyHandled(rows, item)) {
-        plans.push({ objectId: item.id, kind: item.kind, section: item.section, handledByGenerator: true });
+        plans.push({ objectId: item.id, kind: item.kind, section: item.section, handledByGenerator: true, orientationDriver: "profile.mapObjectOrientation" });
         return;
       }
       if (item.kind === "sensor") replacesSensors = true;
@@ -364,6 +362,7 @@
       }), ...issues];
       state.motionPlan.mapObjectOrientationPlans = plans;
       state.motionPlan.mapObjectOrientationDriven = true;
+      state.motionPlan.mapObjectOrientationDriver = "profile.mapObjectOrientation";
       state.motionPlan.finalPlateAngle = output.at(-1)?.plateAngle;
     }
     return output;
@@ -371,7 +370,9 @@
 
   function install() {
     if (installed) return true;
-    if (typeof generatedServoProfile !== "function" || typeof state === "undefined") return false;
+    if (typeof generatedServoProfile !== "function"
+      || typeof state === "undefined"
+      || !orientationDriver()?.orientationTarget) return false;
     const base = generatedServoProfile;
     generatedServoProfile = function generatedServoProfileWithMapObjectOrientation(...args) { return process(base.apply(this, args)); };
     generatedServoProfile.mapObjectOrientationIntegration = true;
