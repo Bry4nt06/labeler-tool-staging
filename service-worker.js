@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-coder-driver-v1";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-rest-grammar-v2";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -32,6 +32,7 @@ const CORE_ASSETS = Object.freeze([
   "./drivers/mechanical/mechanical-motion-driver.js",
   "./drivers/mechanical/cold-glue-motion-driver.js",
   "./drivers/servo/servo-command-driver.js",
+  "./drivers/servo/rest-correction-grammar-driver.js",
   "./drivers/planning/motion-planner-driver.js",
   "./drivers/planning/mechanical-event-planner-driver.js",
   "./drivers/planning/incremental-rotation-driver.js",
