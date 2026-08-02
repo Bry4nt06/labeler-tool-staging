@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-profile-pipeline-v2";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-bootstrap-modules-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -63,6 +63,10 @@ const CORE_ASSETS = Object.freeze([
   "./app/map-rendering.js",
   "./app/table-rendering.js",
   "./app/bootstrap.js",
+  "./app/export-service.js",
+  "./app/global-actions.js",
+  "./app/animation-runtime.js",
+  "./app/startup-runtime.js",
   "./app/motion-planner-ui.js",
   "./app/profile-translator-integration.js",
   "./app/servo-pipeline-validator-integration.js",
