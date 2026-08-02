@@ -32,7 +32,11 @@ function loadSimulatorRuntime() {
 async function initializeLabelerApp() {
   try {
     loadSavedSettings();
-    await applyCompanySettingsSeed();
+    if (!window.LabelerCompanyDefaultsService?.reconcile) {
+      throw new Error("Company catalog service is not loaded.");
+    }
+    window.ServoForgeCompanyDefaultsReady = window.LabelerCompanyDefaultsService.reconcile();
+    await window.ServoForgeCompanyDefaultsReady;
     ensurePersistentApplicationMaps();
     if (typeof initializeStella660ColdGlueExample === "function" && initializeStella660ColdGlueExample()) {
       saveCurrentSettings();
