@@ -12,6 +12,12 @@
     return Number.isFinite(parsed) ? parsed : fallback;
   }
 
+  function isCodingRelease(row) {
+    if (Number(row?.cmd) !== 7) return false;
+    return row?.codingRelease === true
+      || /return bottle.*(?:end curve|reference).*after coding|release.*after coding|continue.*after coder/i.test(String(row?.action || ""));
+  }
+
   function correctionMetrics(startRow, destinationRow, startPlate) {
     const destinationPlate = finite(destinationRow?.plateAngle, NaN);
     const tableTravel = finite(destinationRow?.tableAngle, NaN) - finite(startRow?.tableAngle, NaN);
@@ -67,11 +73,21 @@
     }
 
     const tolerance = Math.max(0, finite(options.tolerance, DEFAULT_TOLERANCE));
-    const preserveIndexes = new Set(Array.isArray(options.preserveRestIndexes) ? options.preserveRestIndexes : []);
+    const requestedPreserveIndexes = Array.isArray(options.preserveRestIndexes)
+      ? options.preserveRestIndexes
+      : [];
     const shouldRepair = typeof options.shouldRepair === "function"
       ? options.shouldRepair
       : () => true;
     const rows = sourceRows.map((row) => ({ ...row }));
+    const automaticCodingReleaseIndexes = new Set(
+      rows.map((row, index) => Number(row?.cmd) === 3 && isCodingRelease(rows[index + 1]) ? index : -1)
+        .filter((index) => index >= 0)
+    );
+    const preserveIndexes = new Set([
+      ...requestedPreserveIndexes,
+      ...automaticCodingReleaseIndexes
+    ]);
     const repairs = [];
 
     // First align ordinary Rest rows to the next row's starting reference.
@@ -104,13 +120,15 @@
       });
     }
 
-    // A selected hold, such as the real coding hold, is authoritative. Keep
-    // that achieved bottle angle and propagate it through any following Rest
-    // rows and into the start row of the next motion command.
+    // A selected hold, or any Rest directly before a coding-release motion,
+    // is authoritative. Keep that achieved bottle angle and propagate it into
+    // the start row of the release/continuation move.
     [...preserveIndexes].sort((a, b) => a - b).forEach((index) => {
       const row = rows[index];
       const next = rows[index + 1];
-      if (!row || !next || Number(row.cmd) !== 3 || !shouldRepair(row, index, rows)) return;
+      const automaticCodingRelease = automaticCodingReleaseIndexes.has(index);
+      if (!row || !next || Number(row.cmd) !== 3) return;
+      if (!automaticCodingRelease && !shouldRepair(row, index, rows)) return;
       const heldPlate = finite(row.plateAngle, NaN);
       const nextPlate = finite(next.plateAngle, NaN);
       if (!Number.isFinite(heldPlate) || !Number.isFinite(nextPlate)) return;
@@ -120,10 +138,13 @@
       repairs.push({
         index,
         hmi: row?.hmi ?? index + 1,
-        strategy: "preserve-rest-target",
+        strategy: automaticCodingRelease
+          ? "preserve-coding-release-handoff"
+          : "preserve-rest-target",
         rejectedPlateTravel: rejectedTravel,
         restoredPlateAngle: heldPlate,
-        alignedThroughIndex
+        alignedThroughIndex,
+        automaticCodingRelease
       });
     });
 
@@ -133,7 +154,7 @@
     };
   }
 
-  const api = Object.freeze({ DEFAULT_TOLERANCE, reconcile });
+  const api = Object.freeze({ DEFAULT_TOLERANCE, isCodingRelease, reconcile });
   global.LabelerRestCorrectionGrammarDriver = api;
   global.LabelerDriverRegistry?.register("servo.restCorrectionGrammar", api, {
     dependencies: ["servo.command"],
