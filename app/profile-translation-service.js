@@ -3,7 +3,7 @@
 (function installProfileTranslationService() {
   let installed = false;
 
-  function selectedTranslatorProfile() {
+  function selectedProfile() {
     const profiles = typeof allMotionProfiles === "function" ? allMotionProfiles() : [];
     const selectedId = state.selectedMotionProfileId || state.defaultMotionProfileId || "automatic";
     return profiles.find((profile) => profile.id === selectedId) || profiles[0] || {
@@ -16,7 +16,7 @@
     };
   }
 
-  function translatorMachineProfile(profile) {
+  function machineProfile(profile = selectedProfile()) {
     return typeof resolveProfileMachine === "function" ? resolveProfileMachine(profile) : "DEFAULT";
   }
 
@@ -46,23 +46,35 @@
     return result;
   }
 
+  function publishTranslation(result) {
+    if (typeof window.dispatchEvent !== "function" || typeof CustomEvent !== "function") return;
+    window.dispatchEvent(new CustomEvent("servoforge:profile-translated", {
+      detail: {
+        profileId: result?.profileId,
+        machineProfile: result?.machineProfile,
+        rowCount: result?.rows?.length || 0,
+        fallbackCount: result?.fallbackCount || 0
+      }
+    }));
+  }
+
   function buildAndTranslateProgram() {
     const planner = window.LabelerMotionPlannerDriver;
     const translator = window.LabelerProfileTranslatorDriver;
     if (!planner?.buildPlan || !translator?.translate || !Array.isArray(state.program)) return null;
 
-    const profile = selectedTranslatorProfile();
+    const profile = selectedProfile();
     const requestedProfileId = profile.id || "automatic";
-    const machineProfile = translatorMachineProfile(profile);
+    const resolvedMachineProfile = machineProfile(profile);
     const plan = planner.buildPlan(state.program, {
       profileId: requestedProfileId,
-      machineProfile,
+      machineProfile: resolvedMachineProfile,
       customIntents: profile.builtIn ? [] : profile.intents || []
     });
     const result = translator.translate(state.program, plan, {
       requestedProfileId,
       profileId: plan.profileId,
-      machineProfile
+      machineProfile: resolvedMachineProfile
     });
 
     state.program = result.rows;
@@ -95,6 +107,7 @@
       }
     };
     state.motionTranslation = result;
+    publishTranslation(result);
     return result;
   }
 
@@ -129,6 +142,8 @@
   }
 
   window.LabelerProfileTranslationService = Object.freeze({
+    selectedProfile,
+    machineProfile,
     buildAndTranslateProgram,
     install,
     syncTranslatedRows
