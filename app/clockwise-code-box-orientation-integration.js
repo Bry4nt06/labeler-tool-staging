@@ -1,9 +1,10 @@
 "use strict";
 
-(function installClockwiseCodeBoxOrientationIntegration() {
+(function installPhysicalDirectionCodeBoxOrientation() {
   const RETRY_MS = 50;
   const EPS = 0.001;
   let installed = false;
+  let refreshPending = false;
 
   const num = (value, fallback = NaN) => {
     if (value === null || value === undefined || value === "") return fallback;
@@ -17,17 +18,36 @@
     + 360 * Math.round((num(reference, target) - num(target, 0)) / 360);
 
   function activeMapSafe() {
-    try {
-      return typeof activeMachineMap === "function" ? activeMachineMap() : null;
-    } catch {
-      return null;
-    }
+    try { return typeof activeMachineMap === "function" ? activeMachineMap() : null; }
+    catch { return null; }
   }
 
-  function machineDirection(map = activeMapSafe()) {
+  function editableMapSafe() {
+    try { return typeof editableMachineMap === "function" ? editableMachineMap() : activeMapSafe(); }
+    catch { return activeMapSafe(); }
+  }
+
+  function storedDirection(map = activeMapSafe()) {
     return String(map?.machineSettings?.direction || map?.direction || state?.direction || "ccw")
-      .trim()
-      .toLowerCase() === "cw" ? "cw" : "ccw";
+      .trim().toLowerCase() === "cw" ? "cw" : "ccw";
+  }
+
+  function physicalDirection(map = activeMapSafe()) {
+    // The legacy map coordinate system labels these two stored values backwards.
+    // Keep the coordinates stable, but expose and use the correct physical name.
+    return storedDirection(map) === "cw" ? "ccw" : "cw";
+  }
+
+  function relabelDirectionControls() {
+    [document.querySelector("#mapDirection"), document.querySelector("#direction")]
+      .filter(Boolean)
+      .forEach((select) => {
+        const storedCw = select.querySelector('option[value="cw"]');
+        const storedCcw = select.querySelector('option[value="ccw"]');
+        if (storedCw) storedCw.textContent = "Counter-clockwise";
+        if (storedCcw) storedCcw.textContent = "Clockwise";
+        select.dataset.physicalDirectionLabels = "true";
+      });
   }
 
   function activeApplications() {
@@ -40,12 +60,36 @@
     }
   }
 
-  function codingSection(map) {
-    const coder = (Array.isArray(map?.objects) ? map.objects : []).find((item) => item?.kind === "coding");
+  function codingSection(map, coder) {
     const explicit = String(coder?.orientationLabelSection || coder?.labelSection || "auto").toLowerCase();
     const active = activeApplications();
     if (["neck", "body", "back"].includes(explicit) && active[explicit]) return explicit;
     return active.back ? "back" : active.body ? "body" : active.neck ? "neck" : "none";
+  }
+
+  function ensureCoderOrientation() {
+    const maps = [...new Set([activeMapSafe(), editableMapSafe()].filter(Boolean))];
+    let changed = false;
+    maps.forEach((map) => {
+      (Array.isArray(map.objects) ? map.objects : []).forEach((item) => {
+        if (item?.kind !== "coding") return;
+        const section = String(item.orientationLabelSection || item.labelSection || "auto").toLowerCase();
+        const shouldOrient = section !== "none";
+        if (item.orientBottle !== shouldOrient) {
+          item.orientBottle = shouldOrient;
+          changed = true;
+        }
+        if (!item.orientationTarget) {
+          item.orientationTarget = "code-box";
+          changed = true;
+        }
+        if (item.orientationConfigured !== true) {
+          item.orientationConfigured = true;
+          changed = true;
+        }
+      });
+    });
+    return changed;
   }
 
   function labelCircumference(section) {
@@ -88,7 +132,7 @@
     return num(fallback.at(-1)?.plateAngle, NaN);
   }
 
-  function clockwiseTarget(section, rows, holdIndex) {
+  function codeBoxTarget(map, section, rows, holdIndex) {
     const label = typeof selectedLabelSpec === "function" ? selectedLabelSpec() : null;
     const circumference = labelCircumference(section);
     const width = labelWidth(section, circumference);
@@ -102,22 +146,26 @@
     const application = applicationTarget(section, rows, hold?.tableAngle);
     if (![width, code, application].every(Number.isFinite)) return null;
 
-    // Label specifications always measure the code-box center from the printed
-    // label's left edge. Reversing machine travel changes the servo-coordinate
-    // sign of that label-local distance, but it does not move the printed code
-    // box to the other side of the label.
-    const center = section === "body" || section === "back"
-      ? application - width / 2
-      : application;
-    const target = center - (width / 2 - code + inspection);
+    const center = typeof labelSensorInspectionCenter === "function"
+      ? num(labelSensorInspectionCenter(section, application, width), NaN)
+      : application + ((section === "body" || section === "back") ? width / 2 : 0);
+    if (!Number.isFinite(center)) return null;
+
+    // codeBoxCenterMm is always measured from the printed label's left edge.
+    // Reversing the machine reverses only this label-local servo offset.
+    const leftEdgeOffset = width / 2 - code + inspection;
+    const direction = physicalDirection(map);
+    const rawTarget = center + (direction === "cw" ? -leftEdgeOffset : leftEdgeOffset);
     const previous = rows.slice(0, holdIndex).reverse().find((row) => Number.isFinite(num(row?.plateAngle, NaN)));
     return {
-      target: nearest(target, num(previous?.plateAngle, target)),
+      target: nearest(rawTarget, num(previous?.plateAngle, rawTarget)),
+      physicalDirection: direction,
       application,
       center,
       width,
       code,
-      inspection
+      inspection,
+      leftEdgeOffset
     };
   }
 
@@ -127,36 +175,33 @@
     return Boolean(row?.codingObjectId)
       || Boolean(row?.codingHold)
       || Boolean(row?.codingReadyTableAngle)
+      || Boolean(row?.codingMotion)
       || (Boolean(row?.orientationHold) && /coding|code box/i.test(action))
-      || /hold.*(?:coding|code box)|(?:coding|code box).*hold|coding.*reference/i.test(action);
+      || /hold.*(?:coding|code box)|(?:coding|code box).*hold|coding.*reference|direct turn for coding.*reference/i.test(action);
   }
 
-  function updateTurnIntoHold(rows, holdIndex, target) {
-    let turnIndex = -1;
+  function updateTurnIntoHold(rows, holdIndex, target, direction) {
     for (let index = holdIndex - 1; index >= 0; index -= 1) {
       const row = rows[index];
       if (Number(row?.cmd) !== 7) continue;
-      if (row?.codingObjectId || row?.codingMotion || row?.coderAfterWipeHandoff || /coding|code box/i.test(String(row?.action || ""))) {
-        turnIndex = index;
-        break;
-      }
+      if (!(row?.codingObjectId || row?.codingMotion || row?.coderAfterWipeHandoff || /coding|code box/i.test(String(row?.action || "")))) continue;
+      const startPlate = num(row?.plateAngle, NaN);
+      const tableTravel = num(rows[holdIndex]?.tableAngle, NaN) - num(row?.tableAngle, NaN);
+      rows[index] = {
+        ...row,
+        plannedRotation: Number.isFinite(startPlate) ? target - startPlate : row?.plannedRotation,
+        plannedRatio: Number.isFinite(startPlate) && tableTravel > EPS
+          ? Math.abs(target - startPlate) / tableTravel
+          : row?.plannedRatio,
+        codeBoxDirectionCorrected: true,
+        physicalMachineDirection: direction,
+        codeBoxPhysicalSide: "left"
+      };
+      return;
     }
-    if (turnIndex < 0) return;
-
-    const turn = rows[turnIndex];
-    const startPlate = num(turn?.plateAngle, NaN);
-    const tableTravel = num(rows[holdIndex]?.tableAngle, NaN) - num(turn?.tableAngle, NaN);
-    if (!Number.isFinite(startPlate)) return;
-    rows[turnIndex] = {
-      ...turn,
-      plannedRotation: target - startPlate,
-      plannedRatio: tableTravel > EPS ? Math.abs(target - startPlate) / tableTravel : turn?.plannedRatio,
-      clockwiseCodeBoxCorrected: true,
-      codeBoxPhysicalSide: "left"
-    };
   }
 
-  function updateContinuation(rows, holdIndex, target) {
+  function updateContinuation(rows, holdIndex, target, direction) {
     const continuation = rows[holdIndex + 1];
     if (!continuation || Number(continuation.cmd) !== 7) return;
     if (!(continuation.coderAfterWipeContinuation
@@ -172,20 +217,29 @@
       plannedRatio: Number.isFinite(destinationPlate) && tableTravel > EPS
         ? Math.abs(destinationPlate - target) / tableTravel
         : continuation?.plannedRatio,
-      clockwiseCodeBoxCorrected: true,
+      codeBoxDirectionCorrected: true,
+      physicalMachineDirection: direction,
       codeBoxPhysicalSide: "left"
     };
   }
 
-  function updateMotionPlan(target, section) {
+  function updateMotionPlan(target, section, direction) {
     if (!state?.motionPlan || typeof state.motionPlan !== "object") return;
     state.motionPlan.coderCenterlineTarget = done(target);
+    state.motionPlan.physicalMachineDirection = direction;
     state.motionPlan.codeBoxPhysicalSide = "left";
     state.motionPlan.codeBoxDirectionInvariant = true;
     state.motionPlan.mapObjectOrientationPlans = (Array.isArray(state.motionPlan.mapObjectOrientationPlans)
       ? state.motionPlan.mapObjectOrientationPlans : []).map((plan) =>
       plan?.kind === "coding" || plan?.codingObjectId
-        ? { ...plan, section, targetPlateAngle: done(target), clockwiseCodeBoxCorrected: true, codeBoxPhysicalSide: "left" }
+        ? {
+            ...plan,
+            section,
+            targetPlateAngle: done(target),
+            codeBoxDirectionCorrected: true,
+            physicalMachineDirection: direction,
+            codeBoxPhysicalSide: "left"
+          }
         : plan
     );
   }
@@ -193,8 +247,10 @@
   function process(sourceRows) {
     if (!Array.isArray(sourceRows) || !sourceRows.length) return sourceRows;
     const map = activeMapSafe();
-    if (!map || machineDirection(map) !== "cw") return sourceRows;
-    const section = codingSection(map);
+    if (!map) return sourceRows;
+    const coder = (Array.isArray(map.objects) ? map.objects : []).find((item) => item?.kind === "coding");
+    if (!coder || coder.orientBottle === false) return sourceRows;
+    const section = codingSection(map, coder);
     if (section === "none") return sourceRows;
 
     const rows = sourceRows.map((row) => ({ ...row }));
@@ -202,26 +258,29 @@
     if (!holdIndexes.length) return sourceRows;
 
     let finalTarget = null;
+    let direction = physicalDirection(map);
     holdIndexes.forEach((holdIndex) => {
-      const correction = clockwiseTarget(section, rows, holdIndex);
+      const correction = codeBoxTarget(map, section, rows, holdIndex);
       if (!correction) return;
       finalTarget = correction.target;
+      direction = correction.physicalDirection;
       rows[holdIndex] = {
         ...rows[holdIndex],
         plateAngle: done(correction.target),
-        clockwiseCodeBoxCorrected: true,
+        codeBoxDirectionCorrected: true,
+        physicalMachineDirection: direction,
         codeBoxPhysicalSide: "left",
         codeBoxReferenceEdge: "left",
         codeBoxOffsetDeg: done(correction.code),
         labelWidthDeg: done(correction.width)
       };
-      updateTurnIntoHold(rows, holdIndex, correction.target);
-      updateContinuation(rows, holdIndex, correction.target);
+      updateTurnIntoHold(rows, holdIndex, correction.target, direction);
+      updateContinuation(rows, holdIndex, correction.target, direction);
     });
 
     if (!Number.isFinite(finalTarget)) return sourceRows;
     const output = rows.map((row, index) => ({ ...row, hmi: index + 1, plc: index }));
-    updateMotionPlan(finalTarget, section);
+    updateMotionPlan(finalTarget, section, direction);
     if (state?.motionPlan && typeof state.motionPlan === "object") {
       state.motionPlan.rows = output;
       state.motionPlan.finalPlateAngle = output.at(-1)?.plateAngle;
@@ -229,21 +288,62 @@
     return output;
   }
 
+  function scheduleRefresh() {
+    if (refreshPending) return;
+    refreshPending = true;
+    window.requestAnimationFrame(() => {
+      refreshPending = false;
+      relabelDirectionControls();
+      ensureCoderOrientation();
+    });
+  }
+
   function install() {
     if (installed) return true;
     if (typeof generatedServoProfile !== "function" || typeof state === "undefined") return false;
+
     const base = generatedServoProfile;
-    generatedServoProfile = function generatedServoProfileWithClockwiseCodeBox(...args) {
+    generatedServoProfile = function generatedServoProfileWithPhysicalDirectionCodeBox(...args) {
+      ensureCoderOrientation();
       return process(base.apply(this, args));
     };
-    generatedServoProfile.clockwiseCodeBoxOrientation = true;
+    generatedServoProfile.physicalDirectionCodeBoxOrientation = true;
     window.generatedServoProfile = generatedServoProfile;
+
+    if (typeof renderWipeDownBuilder === "function") {
+      const renderBuilderBase = renderWipeDownBuilder;
+      renderWipeDownBuilder = function renderWipeDownBuilderWithPhysicalDirections(...args) {
+        const result = renderBuilderBase.apply(this, args);
+        ensureCoderOrientation();
+        relabelDirectionControls();
+        return result;
+      };
+      window.renderWipeDownBuilder = renderWipeDownBuilder;
+    }
+
+    document.addEventListener("change", (event) => {
+      if (!event.target.closest?.("#mapDirection,#direction")) return;
+      window.setTimeout(() => {
+        ensureCoderOrientation();
+        if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
+        if (typeof saveCurrentSettings === "function") saveCurrentSettings();
+        if (typeof render === "function") render();
+        relabelDirectionControls();
+      }, 0);
+    });
+
+    const observer = new MutationObserver(scheduleRefresh);
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+
     installed = true;
+    relabelDirectionControls();
+    const changed = ensureCoderOrientation();
     try {
+      if (changed && typeof saveCurrentSettings === "function") saveCurrentSettings();
       if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
       if (typeof render === "function") render();
     } catch (error) {
-      console.error("Unable to apply clockwise code-box orientation correction.", error);
+      console.error("Unable to apply physical direction and code-box orientation correction.", error);
     }
     return true;
   }
