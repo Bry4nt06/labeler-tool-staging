@@ -1,0 +1,57 @@
+"use strict";
+
+function runtimeReleaseVersion() {
+  return window.SERVOFORGE_RELEASE_VERSION
+    || document.querySelector('meta[name="application-version"]')?.content
+    || "0.9.2";
+}
+
+function showStartupError(error) {
+  console.error("Labeler tool startup failed", error);
+  const mapPanel = document.querySelector(".map-panel");
+  const validationList = document.querySelector("#validationList");
+  const message = error && error.message ? error.message : String(error || "Unknown startup error");
+  if (mapPanel) {
+    const notice = document.createElement("div");
+    notice.className = "startup-error";
+    notice.innerHTML = `<strong>Tool startup error</strong><span>${message}</span>`;
+    mapPanel.appendChild(notice);
+  }
+  if (validationList) validationList.innerHTML = `<div class="notice bad">Startup failed: ${message}</div>`;
+}
+
+function loadSimulatorRuntime() {
+  const version = runtimeReleaseVersion();
+  if (document.querySelector("script[data-servoforge-simulator]")) return;
+  const script = document.createElement("script");
+  script.src = `app/simulator-milestone.js?v=${encodeURIComponent(version)}`;
+  script.dataset.servoforgeSimulator = version;
+  document.head.appendChild(script);
+}
+
+async function initializeLabelerApp() {
+  try {
+    loadSavedSettings();
+    await applyCompanySettingsSeed();
+    ensurePersistentApplicationMaps();
+    if (typeof initializeStella660ColdGlueExample === "function" && initializeStella660ColdGlueExample()) {
+      saveCurrentSettings();
+    }
+    bindSetup();
+    bindWipeDownBuilder();
+    bindGlobalActions();
+    render();
+    startAnimationLoop();
+    await registerToolUpdateService();
+    loadSimulatorRuntime();
+  } catch (error) {
+    showStartupError(error);
+  }
+}
+
+window.LabelerStartupRuntime = Object.freeze({
+  initialize: initializeLabelerApp,
+  showError: showStartupError,
+  loadSimulator: loadSimulatorRuntime,
+  releaseVersion: runtimeReleaseVersion
+});
