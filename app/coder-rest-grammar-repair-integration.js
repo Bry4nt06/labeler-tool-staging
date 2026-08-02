@@ -63,11 +63,13 @@
     const output = result.rows.map((row, index) => {
       const repair = repairsByIndex.get(index);
       if (!repair) return row;
-      const preservingCodingHold = repair.strategy === "preserve-rest-target";
+      const preservingCodingHold = repair.strategy === "preserve-rest-target"
+        || repair.strategy === "preserve-coding-release-handoff";
       return {
         ...row,
         coderRestGrammarRepaired: true,
         coderRestGrammarStrategy: repair.strategy,
+        automaticCodingReleaseHandoff: repair.automaticCodingRelease === true,
         rejectedRestPlateTravel: repair.rejectedPlateTravel,
         rejectedFalseCodingHold: !preservingCodingHold,
         codeBoxDirectionCorrected: preservingCodingHold ? row.codeBoxDirectionCorrected : false
@@ -79,6 +81,7 @@
       state.motionPlan.coderRestGrammarRepairs = result.repairs.map((repair) => ({
         hmi: repair.index + 1,
         strategy: repair.strategy,
+        automaticCodingRelease: repair.automaticCodingRelease === true,
         rejectedPlateTravel: repair.rejectedPlateTravel,
         restoredPlateAngle: repair.restoredPlateAngle,
         alignedThroughHmi: Number.isInteger(repair.alignedThroughIndex)
