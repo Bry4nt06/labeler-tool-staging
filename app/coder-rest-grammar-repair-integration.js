@@ -3,6 +3,7 @@
 (function installCoderRestGrammarRepair() {
   const RETRY_MS = 50;
   const TOLERANCE = 0.5;
+  const STAGE_ID = "grammar.coder-rest";
   let installed = false;
 
   const num = (value, fallback = NaN) => {
@@ -10,6 +11,12 @@
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
   };
+
+  function pipelineDriver() {
+    return window.LabelerDriverRegistry?.resolve("profile.pipeline")
+      || window.LabelerProfilePipelineDriver
+      || null;
+  }
 
   function grammarDriver() {
     return window.LabelerDriverRegistry?.resolve("servo.restCorrectionGrammar")
@@ -61,16 +68,16 @@
 
     const repairsByIndex = new Map(result.repairs.map((entry) => [entry.index, entry]));
     const output = result.rows.map((row, index) => {
-      const repair = repairsByIndex.get(index);
-      if (!repair) return row;
-      const preservingCodingHold = repair.strategy === "preserve-rest-target"
-        || repair.strategy === "preserve-coding-release-handoff";
+      const grammarRepair = repairsByIndex.get(index);
+      if (!grammarRepair) return row;
+      const preservingCodingHold = grammarRepair.strategy === "preserve-rest-target"
+        || grammarRepair.strategy === "preserve-coding-release-handoff";
       return {
         ...row,
         coderRestGrammarRepaired: true,
-        coderRestGrammarStrategy: repair.strategy,
-        automaticCodingReleaseHandoff: repair.automaticCodingRelease === true,
-        rejectedRestPlateTravel: repair.rejectedPlateTravel,
+        coderRestGrammarStrategy: grammarRepair.strategy,
+        automaticCodingReleaseHandoff: grammarRepair.automaticCodingRelease === true,
+        rejectedRestPlateTravel: grammarRepair.rejectedPlateTravel,
         rejectedFalseCodingHold: !preservingCodingHold,
         codeBoxDirectionCorrected: preservingCodingHold ? row.codeBoxDirectionCorrected : false
       };
@@ -78,20 +85,45 @@
 
     if (state?.motionPlan && typeof state.motionPlan === "object") {
       state.motionPlan.rows = output;
-      state.motionPlan.coderRestGrammarRepairs = result.repairs.map((repair) => ({
-        hmi: repair.index + 1,
-        strategy: repair.strategy,
-        automaticCodingRelease: repair.automaticCodingRelease === true,
-        rejectedPlateTravel: repair.rejectedPlateTravel,
-        restoredPlateAngle: repair.restoredPlateAngle,
-        alignedThroughHmi: Number.isInteger(repair.alignedThroughIndex)
-          ? repair.alignedThroughIndex + 1
+      state.motionPlan.coderRestGrammarRepairs = result.repairs.map((grammarRepair) => ({
+        hmi: grammarRepair.index + 1,
+        strategy: grammarRepair.strategy,
+        automaticCodingRelease: grammarRepair.automaticCodingRelease === true,
+        rejectedPlateTravel: grammarRepair.rejectedPlateTravel,
+        restoredPlateAngle: grammarRepair.restoredPlateAngle,
+        alignedThroughHmi: Number.isInteger(grammarRepair.alignedThroughIndex)
+          ? grammarRepair.alignedThroughIndex + 1
           : undefined
       }));
       state.motionPlan.restCorrectionGrammarDriver = true;
+      state.motionPlan.profilePipelineGrammarStage = STAGE_ID;
       state.motionPlan.finalPlateAngle = output.at(-1)?.plateAngle;
     }
     return output;
+  }
+
+  function registerPipelineStage() {
+    const pipeline = pipelineDriver();
+    if (!pipeline?.registerStage) return false;
+    pipeline.registerStage({
+      id: STAGE_ID,
+      phase: "grammar",
+      order: 600,
+      source: "app/coder-rest-grammar-repair-integration.js",
+      description: "Reconcile coder Rest/Correction transitions after all orientation stages.",
+      process: repair
+    });
+    window.LabelerCoderRestGrammarRepairProcessor = repair;
+    return true;
+  }
+
+  function installLegacyWrapper() {
+    const base = generatedServoProfile;
+    generatedServoProfile = function generatedServoProfileWithCoderRestGrammarRepair(...args) {
+      return repair(base.apply(this, args));
+    };
+    generatedServoProfile.coderRestGrammarRepair = true;
+    window.generatedServoProfile = generatedServoProfile;
   }
 
   function install() {
@@ -99,18 +131,18 @@
     if (typeof generatedServoProfile !== "function"
       || typeof state === "undefined"
       || !grammarDriver()?.reconcile) return false;
-    const base = generatedServoProfile;
-    generatedServoProfile = function generatedServoProfileWithCoderRestGrammarRepair(...args) {
-      return repair(base.apply(this, args));
-    };
-    generatedServoProfile.coderRestGrammarRepair = true;
-    window.generatedServoProfile = generatedServoProfile;
+
+    const pipelineManaged = registerPipelineStage();
+    if (!pipelineManaged) installLegacyWrapper();
     installed = true;
-    try {
-      if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
-      if (typeof render === "function") render();
-    } catch (error) {
-      console.error("Unable to reconcile coder Rest/Correction grammar.", error);
+
+    if (!pipelineManaged) {
+      try {
+        if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
+        if (typeof render === "function") render();
+      } catch (error) {
+        console.error("Unable to reconcile coder Rest/Correction grammar.", error);
+      }
     }
     return true;
   }
@@ -119,6 +151,9 @@
     if (!install()) window.setTimeout(wait, RETRY_MS);
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wait, { once: true });
-  else wait();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", wait, { once: true });
+  } else {
+    wait();
+  }
 })();
