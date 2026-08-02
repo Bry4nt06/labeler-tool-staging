@@ -3,7 +3,9 @@
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.2";
   const modules = Object.freeze([
-    "app/profile-family-generators-legacy.js",
+    "app/apl-seed-profile.js",
+    "app/cold-glue-profile-generation.js",
+    "app/apl-map-profile-generation.js",
     "app/profile-routing.js",
     "app/machine-profile-framing.js",
     "app/servo-overrides.js",
