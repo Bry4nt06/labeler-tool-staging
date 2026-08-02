@@ -42,6 +42,37 @@ const target = orientation.orientationTarget({
 assert.equal(target.target, 208);
 assert.equal(target.mode, "code-box");
 
+// The 45H three-label back-sensor case can calculate a target that differs
+// internally but rounds to the same 0.1-degree command value. That is already
+// satisfied and must not create a zero-effective CMD 7 / CMD 3 pair.
+assert.equal(orientation.commandAngle(234.54), 234.5);
+assert.equal(orientation.sameCommandAngle(234.54, 234.5), true);
+assert.equal(orientation.sameCommandAngle(234.56, 234.5), false);
+const satisfiedSensorTarget = orientation.orientationTarget({
+  item: { kind: "sensor", requiredVisibilityPercent: 50 },
+  section: "back",
+  currentPlate: 234.5,
+  applicationTarget: 180,
+  labelWidthDeg: 120,
+  labelCenter: 230,
+  sensorTarget: 234.54,
+  sensorVisibilityPercent: 50
+});
+assert.equal(satisfiedSensorTarget.target, 234.5);
+assert.equal(satisfiedSensorTarget.satisfiedAtCommandResolution, true);
+const realSensorTarget = orientation.orientationTarget({
+  item: { kind: "sensor", requiredVisibilityPercent: 50 },
+  section: "back",
+  currentPlate: 234.5,
+  applicationTarget: 180,
+  labelWidthDeg: 120,
+  labelCenter: 230,
+  sensorTarget: 234.56,
+  sensorVisibilityPercent: 50
+});
+assert.equal(realSensorTarget.target, 234.56);
+assert.equal(realSensorTarget.satisfiedAtCommandResolution, false);
+
 const located = handoff.locateFinalWipe(rows, 230);
 assert.deepEqual(located, { turnIndex: 0, holdIndex: 1 });
 const timing = handoff.timing({
