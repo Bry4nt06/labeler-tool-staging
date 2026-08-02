@@ -16,6 +16,8 @@ const routing = read("app/profile-routing.js");
 const framing = read("app/machine-profile-framing.js");
 const overrides = read("app/servo-overrides.js");
 const translation = read("app/profile-translation-service.js");
+const translationValidation = read("app/profile-translator-validation.js");
+const translatorUi = read("app/profile-translator-integration.js");
 const app = read("app.js");
 const serviceWorker = read("service-worker.js");
 
@@ -26,7 +28,8 @@ const expectedModules = [
   "app/profile-routing.js",
   "app/machine-profile-framing.js",
   "app/servo-overrides.js",
-  "app/profile-translation-service.js"
+  "app/profile-translation-service.js",
+  "app/profile-translator-validation.js"
 ];
 expectedModules.forEach((modulePath) => {
   const escaped = modulePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -66,6 +69,9 @@ assert.match(overrides, /function servoOverrideProfileKey\(/);
 assert.match(overrides, /function setServoAngleOverride\(/);
 assert.match(translation, /function buildAndTranslateProgram\(/);
 assert.match(translation, /motionEventId/);
+assert.match(translationValidation, /translatorAwareValidation/);
+assert.match(translatorUi, /persistMotionProfileSelection/);
+assert.doesNotMatch(translatorUi, /buildAndTranslateProgram|syncTranslatedRows|TRANSLATOR_RELEASE_VERSION/);
 
 const activeProfileSources = [aplSeed, coldGlue, aplMap, routing, framing, overrides, translation].join("\n");
 const exactlyOnce = [
@@ -77,7 +83,8 @@ const exactlyOnce = [
   "applyMachineTypeProfileFraming",
   "applyGeneratedServoProfile",
   "servoOverrideProfileKey",
-  "setServoAngleOverride"
+  "setServoAngleOverride",
+  "buildAndTranslateProgram"
 ];
 exactlyOnce.forEach((name) => {
   const definitions = activeProfileSources.match(new RegExp(`function ${name}\\(`, "g")) || [];
@@ -92,6 +99,6 @@ assert.match(coldGlue, /cold-glue-channel-capacity/);
 assert.match(aplMap, /apl-machine-map/);
 assert.match(aplMap, /apl-long-neck-adaptive-wipe/);
 assert.match(aplMap, /codingMotion: "direct-shortest-path"/);
-assert.match(serviceWorker, /profile-family-modules-v1/);
+assert.match(serviceWorker, /profile-translation-ownership-v1/);
 
 console.log("Separated profile family boundary regression passed.");
