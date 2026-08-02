@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-coder-rest-grammar-v1";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-refactor-foundation-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -25,6 +25,8 @@ const CORE_ASSETS = Object.freeze([
   "./config/default-programs/map-l85-workbook-reference-3-label-apl.json",
   "./config/default-programs/label-specs.json",
   "./config/default-programs/bottle-specs.json",
+  "./drivers/core/driver-registry.js",
+  "./drivers/core/legacy-driver-bridge.js",
   "./drivers/geometry/label-geometry-driver.js",
   "./drivers/application/application-mode-driver.js",
   "./drivers/mechanical/mechanical-motion-driver.js",
@@ -101,6 +103,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/locked-map-brand-selector-integration.js",
   "./app/clockwise-code-box-orientation-integration.js",
   "./app/coder-rest-grammar-repair-integration.js",
+  "./app/motion-profile-workbench-integration.js",
   "./app/optimizer-map-contact-integration.js",
   "./app/optimizer-brush-channel-expansion-integration.js",
   "./app/update-manager.js",
