@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-profile-family-modules-v1";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-profile-translation-ownership-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -62,6 +62,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/machine-profile-framing.js",
   "./app/servo-overrides.js",
   "./app/profile-translation-service.js",
+  "./app/profile-translator-validation.js",
   "./app/simulation-engine.js",
   "./app/assemblies.js",
   "./app/wipe-down-builder.js",
