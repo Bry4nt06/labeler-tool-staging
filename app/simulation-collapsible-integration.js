@@ -5,7 +5,7 @@
     "drivers/core/driver-registry.js?v=0.9.6-refactor-1",
     "drivers/core/legacy-driver-bridge.js?v=0.9.6-refactor-1",
     "drivers/profile/coder-orientation-driver.js?v=0.9.6-coder-driver-v1",
-    "drivers/servo/rest-correction-grammar-driver.js?v=0.9.6-rest-grammar-v2",
+    "drivers/servo/rest-correction-grammar-driver.js?v=0.9.6-rest-grammar-v3",
     "app/simulation-collapsible-core.js?v=0.9.3-direct",
     "app/servo-replay-loop-controls-integration.js?v=0.9.3-replay-icons-loop",
     "app/release-readiness-staging-alignment-integration.js?v=0.9.3-staging-readiness-v2",
