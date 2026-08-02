@@ -31,6 +31,18 @@
       || null;
   }
 
+  function rowBuilder() {
+    return window.LabelerDriverRegistry?.resolve("profile.mapObjectRowBuilder")
+      || window.LabelerMapObjectRowBuilderDriver
+      || null;
+  }
+
+  function issueFactory() {
+    return window.LabelerDriverRegistry?.resolve("profile.orientationIssueFactory")
+      || window.LabelerOrientationIssueFactoryDriver
+      || null;
+  }
+
   function activeMap() {
     try { return typeof activeMachineMap === "function" ? activeMachineMap() : null; }
     catch { return null; }
@@ -115,25 +127,25 @@
     });
     if (!plan || plan.kind === "none" || plan.kind === "blocked") return;
     if (plan.kind === "retarget") {
-      rows[plan.index] = {
-        ...plan.row,
-        plateAngle: done(plan.row.plateAngle),
-        coderAfterWipeContinuation: true
-      };
+      rows[plan.index] = rowBuilder().retargetContinuation(plan.row, {
+        plateAngle: plan.row.plateAngle,
+        rotation: plan.row.plannedRotation,
+        ratio: plan.row.plannedRatio,
+        formatter: done,
+        marker: "coderAfterWipeContinuation"
+      });
       return;
     }
-    rows.splice(plan.index, 0, {
-      hmi: 0,
-      plc: 0,
-      cmd: 7,
-      tableAngle: done(plan.start),
-      plateAngle: done(targetPlate),
+    rows.splice(plan.index, 0, rowBuilder().continuation({
+      tableAngle: plan.start,
+      plateAngle: targetPlate,
       action: "Continue After Coder",
-      ...metadata,
-      coderAfterWipeContinuation: true,
-      plannedRotation: plan.plannedRotation,
-      plannedRatio: plan.plannedRatio
-    });
+      metadata,
+      rotation: plan.plannedRotation,
+      ratio: plan.plannedRatio,
+      formatter: done,
+      marker: "coderAfterWipeContinuation"
+    }));
   }
 
   function applyHandoff(rows, item, issue, section, issues, plans) {
@@ -160,11 +172,15 @@
       epsilon: EPS
     });
     if (!timing?.available) {
-      issues.push({
-        ...issue,
-        code: "coder-window-after-wipe-unavailable",
-        message: `${label} cannot take control after ${String(turn.action || "the final wipe")} completes at ${done(holdTable)}°. Its coding window ends at ${done(window.end)}°. Move the coder later or finish the wipe earlier.`
-      });
+      issues.push(issueFactory().coderWindowUnavailable({
+        baseIssue: issue,
+        item,
+        section,
+        label,
+        action: String(turn.action || "the final wipe"),
+        holdTable: done(holdTable),
+        windowEnd: done(window.end)
+      }));
       return true;
     }
 
@@ -175,92 +191,86 @@
       epsilon: EPS
     });
     if (interfering || !timing.withinWindow) {
-      issues.push({
-        ...issue,
-        code: "coder-handoff-capacity",
-        message: `${label} waits for ${String(turn.action || "the final wipe")} to finish at ${done(holdTable)}°, but needs ${Math.abs(rotation).toFixed(1)}° of bottle rotation before the coding window ends at ${done(window.end)}°. Move the coder later, increase the gap after the wipe, or reduce the required coding correction.`
-      });
+      issues.push(issueFactory().coderHandoffCapacity({
+        baseIssue: issue,
+        item,
+        section,
+        label,
+        action: String(turn.action || "the final wipe"),
+        holdTable: done(holdTable),
+        rotation,
+        windowEnd: done(window.end)
+      }));
       return true;
     }
 
-    const metadata = {
+    const metadata = rowBuilder().metadata({
+      item,
       section,
-      station: item?.station,
-      mapDriven: true,
-      mapObjectOrientation: true,
-      codingObjectId: item?.id,
-      orientationObjectId: item?.id,
-      coderAfterWipeHandoff: true,
-      completedWipeAction: String(turn.action || ""),
-      orientationDriver: "profile.mapObjectOrientation",
-      handoffDriver: "profile.coderHandoff"
-    };
+      extras: {
+        coderAfterWipeHandoff: true,
+        completedWipeAction: String(turn.action || ""),
+        orientationDriver: "profile.mapObjectOrientation",
+        handoffDriver: "profile.coderHandoff"
+      }
+    });
 
     let insertionIndex = located.holdIndex + 1;
     if (Math.abs(rotation) > EPS) {
-      rows.splice(insertionIndex, 0, {
-        hmi: 0,
-        plc: 0,
-        cmd: 7,
-        tableAngle: done(timing.turnStart),
-        plateAngle: done(holdPlate),
-        action: `Orient ${sectionName(section)} ${target.mode === "code-box" ? "Code Box" : "Label"} for ${label} After Wipe`,
-        ...metadata,
-        plannedRotation: rotation,
-        plannedRatio: Math.abs(rotation) / Math.max(EPS, timing.readyTable - timing.turnStart)
-      }, {
-        hmi: 0,
-        plc: 0,
-        cmd: 3,
-        tableAngle: done(timing.readyTable),
-        plateAngle: done(target.target),
-        action: `Hold ${sectionName(section)} ${target.mode === "code-box" ? "Code Box" : "Label"} Through ${label}`,
-        ...metadata,
-        orientationHold: true,
-        inspectionWindowStart: done(window.start),
-        inspectionWindowStop: done(window.end),
-        codingReadyTableAngle: done(timing.readyTable),
-        delayedCodingReady: timing.readyTable > window.start + EPS
-      });
+      rows.splice(insertionIndex, 0,
+        rowBuilder().turn({
+          tableAngle: timing.turnStart,
+          plateAngle: holdPlate,
+          action: `Orient ${sectionName(section)} ${target.mode === "code-box" ? "Code Box" : "Label"} for ${label} After Wipe`,
+          metadata,
+          rotation,
+          ratio: Math.abs(rotation) / Math.max(EPS, timing.readyTable - timing.turnStart),
+          formatter: done
+        }),
+        rowBuilder().hold({
+          tableAngle: timing.readyTable,
+          plateAngle: target.target,
+          action: `Hold ${sectionName(section)} ${target.mode === "code-box" ? "Code Box" : "Label"} Through ${label}`,
+          metadata,
+          window,
+          formatter: done,
+          extras: {
+            codingReadyTableAngle: done(timing.readyTable),
+            delayedCodingReady: timing.readyTable > window.start + EPS
+          }
+        })
+      );
       insertionIndex += 2;
     } else {
-      rows[located.holdIndex] = {
-        ...hold,
-        ...metadata,
-        mapObjectOrientationSatisfied: true,
-        inspectionWindowStart: done(window.start),
-        inspectionWindowStop: done(window.end),
-        codingReadyTableAngle: done(holdTable)
-      };
+      rows[located.holdIndex] = rowBuilder().satisfied(hold, {
+        metadata,
+        window,
+        formatter: done,
+        extras: { codingReadyTableAngle: done(holdTable) }
+      });
     }
 
     updateFollowing(rows, insertionIndex, target.target, window, metadata);
-    issues.push({
-      level: timing.readyTable > window.start + EPS ? "warn" : "ok",
-      code: "coder-after-wipe-handoff",
-      objectId: item?.id,
-      station: item?.station,
+    const delayed = timing.readyTable > window.start + EPS;
+    issues.push(issueFactory().coderHandoffStatus({
+      item,
       section,
-      message: timing.readyTable > window.start + EPS
-        ? `${label} waits for the wipe to complete at ${done(holdTable)}°, then reaches the coding orientation at ${done(timing.readyTable)}° inside its configured window.`
-        : `${label} waits for the wipe to complete, then takes control before its coding window begins.`
-    });
-    plans.push({
-      objectId: item?.id,
-      kind: "coding",
-      name: label,
+      label,
+      holdTable: done(holdTable),
+      readyTable: done(timing.readyTable),
+      delayed
+    }));
+    plans.push(rowBuilder().coderHandoffPlan({
+      item,
+      label,
       section,
-      targetMode: target.mode,
-      windowStart: done(window.start),
-      windowStop: done(window.end),
-      wipeHoldTableAngle: done(holdTable),
-      codingReadyTableAngle: done(timing.readyTable),
-      targetPlateAngle: done(target.target),
-      rotation: done(rotation),
-      coderAfterWipeHandoff: true,
-      orientationDriver: "profile.mapObjectOrientation",
-      handoffDriver: "profile.coderHandoff"
-    });
+      target,
+      window,
+      holdTable,
+      readyTable: timing.readyTable,
+      rotation,
+      formatter: done
+    }));
     return true;
   }
 
@@ -273,7 +283,8 @@
       .filter((issue) => issue?.code === "map-object-overlaps-physical-wipe" && issue?.objectId);
     if (!overlapIssues.length) return sourceRows;
 
-    const rows = sourceRows.map((row) => ({ ...row })).sort((left, right) => num(left?.tableAngle, 0) - num(right?.tableAngle, 0));
+    const rows = sourceRows.map((row) => ({ ...row }))
+      .sort((left, right) => num(left?.tableAngle, 0) - num(right?.tableAngle, 0));
     const retainedIssues = (state.motionPlan.issues || []).filter((issue) => issue?.code !== "map-object-overlaps-physical-wipe");
     const replacementIssues = [];
     const plans = Array.isArray(state.motionPlan.mapObjectOrientationPlans)
@@ -299,6 +310,8 @@
     state.motionPlan.mapObjectOrientationPlans = plans;
     state.motionPlan.coderAfterWipeHandoff = plans.some((plan) => plan?.coderAfterWipeHandoff);
     state.motionPlan.coderHandoffDriver = "profile.coderHandoff";
+    state.motionPlan.mapObjectRowBuilderDriver = "profile.mapObjectRowBuilder";
+    state.motionPlan.orientationIssueFactoryDriver = "profile.orientationIssueFactory";
     state.motionPlan.finalPlateAngle = output.at(-1)?.plateAngle;
     return output;
   }
@@ -308,7 +321,9 @@
     if (typeof generatedServoProfile !== "function"
       || typeof state === "undefined"
       || !orientationDriver()?.orientationTarget
-      || !handoffDriver()?.locateFinalWipe) return false;
+      || !handoffDriver()?.locateFinalWipe
+      || !rowBuilder()?.turn
+      || !issueFactory()?.issue) return false;
     const base = generatedServoProfile;
     generatedServoProfile = function generatedServoProfileWithCoderAfterWipeHandoff(...args) {
       return process(base.apply(this, args));
