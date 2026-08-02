@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-rest-grammar-v4";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-orientation-drivers-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -45,6 +45,8 @@ const CORE_ASSETS = Object.freeze([
   "./drivers/quality/release-readiness-driver.js",
   "./drivers/profile/apl-profile-driver.js",
   "./drivers/profile/coder-orientation-driver.js",
+  "./drivers/profile/map-object-orientation-driver.js",
+  "./drivers/profile/coder-handoff-driver.js",
   "./app/defaults.js",
   "./app/persistence.js",
   "./app/zone-site-configuration.js",
