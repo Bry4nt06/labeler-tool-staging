@@ -10,23 +10,34 @@ const source = fs.readFileSync(path.join(root, "app/profile-translation-service.
 const loader = fs.readFileSync(path.join(root, "app/profile-generation.js"), "utf8");
 
 assert.match(loader, /app\/profile-translation-service\.js/);
+assert.match(loader, /app\/profile-translator-validation\.js/);
 assert.match(source, /profileTranslationInstalled/);
 assert.match(source, /motionEventId/);
 assert.match(source, /state\.motionTranslation = result/);
+assert.match(source, /servoforge:profile-translated/);
 
 const baseRows = [
   { hmi: 1, plc: 0, cmd: 3, tableAngle: 0, plateAngle: 0, action: "Zero Line" },
   { hmi: 2, plc: 1, cmd: 7, tableAngle: 10, plateAngle: 0, action: "Wipe Turn 1 Body - Agg 3" },
   { hmi: 3, plc: 2, cmd: 3, tableAngle: 20, plateAngle: 40, action: "End Curve - Rest", terminalRest: true }
 ];
+const events = [];
+function CustomEvent(type, options) {
+  this.type = type;
+  this.detail = options?.detail;
+}
 
 const sandbox = {
   console,
+  CustomEvent,
   state: {
     program: [],
     motionPlan: {},
     selectedMotionProfileId: "automatic",
     defaultMotionProfileId: "automatic"
+  },
+  dispatchEvent(event) {
+    events.push(event);
   },
   allMotionProfiles: () => [{
     id: "automatic",
@@ -91,5 +102,10 @@ assert.equal(sandbox.state.program[1].motionEventId, "ME-ROW-2");
 assert.equal(sandbox.state.motionPlan.planner.steps[2].eventId, "ME-ROW-3");
 assert.equal(sandbox.state.motionTranslation.rows.length, 3);
 assert.equal(sandbox.applyGeneratedServoProfile.profileTranslationInstalled, true);
+assert.equal(sandbox.LabelerProfileTranslationService.selectedProfile().id, "automatic");
+assert.equal(sandbox.LabelerProfileTranslationService.machineProfile(), "TOPMODUL");
+assert.equal(events.length, 1);
+assert.equal(events[0].type, "servoforge:profile-translated");
+assert.equal(events[0].detail.rowCount, 3);
 
 console.log("Profile translation readiness regression passed.");
