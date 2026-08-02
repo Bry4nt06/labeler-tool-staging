@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-map-migration-v1";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-map-builder-modules-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -68,8 +68,16 @@ const CORE_ASSETS = Object.freeze([
   "./app/simulation-engine.js",
   "./app/assemblies.js",
   "./app/wipe-down-builder.js",
+  "./app/map-defaults-service.js",
+  "./app/map-library-service.js",
   "./app/map-schema-adapter-integration.js",
+  "./app/map-runtime-service.js",
   "./app/map-migration-service.js",
+  "./app/map-cold-glue-optimization-service.js",
+  "./app/map-builder-controls.js",
+  "./app/map-builder-history-service.js",
+  "./app/map-builder-renderer.js",
+  "./app/map-builder-controller.js",
   "./app/validation.js",
   "./app/setup-bindings.js",
   "./app/map-rendering.js",
