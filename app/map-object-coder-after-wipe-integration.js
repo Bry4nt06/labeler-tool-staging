@@ -5,6 +5,7 @@
   const GAP = 0.5;
   const EPS = 0.001;
   const SAFETY_FACTOR = 0.9;
+  const STAGE_ID = "orientation.coder-handoff";
   let installed = false;
 
   const num = (value, fallback = NaN) => {
@@ -40,6 +41,12 @@
   function issueFactory() {
     return window.LabelerDriverRegistry?.resolve("profile.orientationIssueFactory")
       || window.LabelerOrientationIssueFactoryDriver
+      || null;
+  }
+
+  function pipelineDriver() {
+    return window.LabelerDriverRegistry?.resolve("profile.pipeline")
+      || window.LabelerProfilePipelineDriver
       || null;
   }
 
@@ -316,6 +323,30 @@
     return output;
   }
 
+  function registerPipelineStage() {
+    const pipeline = pipelineDriver();
+    if (!pipeline?.registerStage) return false;
+    pipeline.registerStage({
+      id: STAGE_ID,
+      phase: "orientation",
+      order: 400,
+      source: "app/map-object-coder-after-wipe-integration.js",
+      description: "Hand the bottle servo from the final wipe into the coder window.",
+      process
+    });
+    window.LabelerCoderAfterWipeProcessor = process;
+    return true;
+  }
+
+  function installLegacyWrapper() {
+    const base = generatedServoProfile;
+    generatedServoProfile = function generatedServoProfileWithCoderAfterWipeHandoff(...args) {
+      return process(base.apply(this, args));
+    };
+    generatedServoProfile.coderAfterWipeHandoff = true;
+    window.generatedServoProfile = generatedServoProfile;
+  }
+
   function install() {
     if (installed) return true;
     if (typeof generatedServoProfile !== "function"
@@ -324,18 +355,18 @@
       || !handoffDriver()?.locateFinalWipe
       || !rowBuilder()?.turn
       || !issueFactory()?.issue) return false;
-    const base = generatedServoProfile;
-    generatedServoProfile = function generatedServoProfileWithCoderAfterWipeHandoff(...args) {
-      return process(base.apply(this, args));
-    };
-    generatedServoProfile.coderAfterWipeHandoff = true;
-    window.generatedServoProfile = generatedServoProfile;
+
+    const pipelineManaged = registerPipelineStage();
+    if (!pipelineManaged) installLegacyWrapper();
     installed = true;
-    try {
-      if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
-      if (typeof render === "function") render();
-    } catch (error) {
-      console.error("Unable to hand off from the final wipe to the coder.", error);
+
+    if (!pipelineManaged || window.LabelerProfilePipelineOrchestratorInstalled) {
+      try {
+        if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
+        if (typeof render === "function") render();
+      } catch (error) {
+        console.error("Unable to hand off from the final wipe to the coder.", error);
+      }
     }
     return true;
   }
