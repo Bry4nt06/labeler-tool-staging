@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-profile-modules-v1";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-profile-family-modules-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -55,10 +55,13 @@ const CORE_ASSETS = Object.freeze([
   "./app/zone-site-configuration.js",
   "./app/geometry-and-planning.js",
   "./app/profile-generation.js",
-  "./app/profile-family-generators-legacy.js",
+  "./app/apl-seed-profile.js",
+  "./app/cold-glue-profile-generation.js",
+  "./app/apl-map-profile-generation.js",
   "./app/profile-routing.js",
   "./app/machine-profile-framing.js",
   "./app/servo-overrides.js",
+  "./app/profile-translation-service.js",
   "./app/simulation-engine.js",
   "./app/assemblies.js",
   "./app/wipe-down-builder.js",
