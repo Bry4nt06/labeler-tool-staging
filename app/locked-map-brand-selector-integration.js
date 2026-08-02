@@ -43,23 +43,32 @@
     return String(value || "apl").toLowerCase() === "cold-glue" ? "cold-glue" : "apl";
   }
 
+  function activeMap() {
+    try {
+      return typeof activeMachineMap === "function" ? activeMachineMap() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function activeMapIsLocked(map = activeMap()) {
+    return Boolean(
+      map?.id
+      && readPreferences().lockedMapIds.includes(String(map.id))
+    );
+  }
+
   function compatibleBrandSpecs(map) {
     const mode = normalizedMode(map?.applicationMode);
     const seen = new Set();
     return (Array.isArray(state?.labelSpecs) ? state.labelSpecs : []).filter((spec) => {
       const brand = String(spec?.brand || "").trim();
       if (!brand || normalizedMode(spec?.applicationMode) !== mode) return false;
-      const key = brand.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
+      const identity = brand.toLowerCase();
+      if (seen.has(identity)) return false;
+      seen.add(identity);
       return true;
     });
-  }
-
-  function lockedMaps() {
-    const locked = new Set(readPreferences().lockedMapIds);
-    return (Array.isArray(state?.mapLibrary) ? state.mapLibrary : [])
-      .filter((map) => locked.has(String(map?.id || "")));
   }
 
   function purgeRetiredWorkbookFeature() {
@@ -92,93 +101,7 @@
     return previousLength !== state.mapLibrary.length;
   }
 
-  function optionIdentity(option) {
-    return `${String(option?.dataset?.mapId || "")}\u001f${String(option?.dataset?.brand || "")}`;
-  }
-
-  function expectedIdentities(maps) {
-    return maps.flatMap((map) => {
-      const specs = compatibleBrandSpecs(map);
-      if (!specs.length) return [`${String(map.id)}\u001f`];
-      return specs.map((spec) => `${String(map.id)}\u001f${String(spec.brand)}`);
-    });
-  }
-
-  function viewerOptionsAreCurrent(select, maps) {
-    const expected = expectedIdentities(maps);
-    const current = [...select.options].map(optionIdentity);
-    return expected.length === current.length
-      && expected.every((identity, index) => identity === current[index]);
-  }
-
-  function createBrandOption(map, spec, multipleMaps) {
-    const option = document.createElement("option");
-    option.dataset.mapId = String(map.id || "");
-    option.dataset.brand = String(spec?.brand || "");
-    option.value = `${option.dataset.mapId}\u001f${option.dataset.brand}`;
-    option.textContent = spec?.brand
-      ? String(spec.brand)
-      : multipleMaps ? String(map.name || "Machine Map") : "No compatible label specs";
-    option.disabled = !spec?.brand;
-    if (String(map.id) === String(state.activeMapId)
-      && String(spec?.brand || "") === String(state.selectedBrand || "")) {
-      option.selected = true;
-    }
-    return option;
-  }
-
-  function updateViewerLabel(viewer) {
-    const label = viewer?.querySelector("label");
-    if (label) {
-      const text = [...label.childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
-      if (text && text.textContent !== "Locked Maps — Label Specs ") text.textContent = "Locked Maps — Label Specs ";
-    }
-    const badge = viewer?.querySelector(".locked-map-badge");
-    if (badge && badge.textContent !== "Read Only Map • Inputs Editable") badge.textContent = "Read Only Map • Inputs Editable";
-  }
-
-  function renderBrandOptions() {
-    const viewer = document.querySelector("#lockedMapViewer");
-    const select = viewer?.querySelector("#lockedMapViewerSelect");
-    if (!viewer || !select) return;
-
-    const maps = lockedMaps();
-    viewer.hidden = maps.length === 0;
-    updateViewerLabel(viewer);
-    if (!maps.length) return;
-
-    if (!viewerOptionsAreCurrent(select, maps)) {
-      const fragment = document.createDocumentFragment();
-      const multipleMaps = maps.length > 1;
-      maps.forEach((map) => {
-        const specs = compatibleBrandSpecs(map);
-        const parent = multipleMaps ? document.createElement("optgroup") : fragment;
-        if (multipleMaps) parent.label = String(map.name || "Machine Map");
-        if (specs.length) {
-          specs.forEach((spec) => parent.appendChild(createBrandOption(map, spec, multipleMaps)));
-        } else {
-          parent.appendChild(createBrandOption(map, null, multipleMaps));
-        }
-        if (multipleMaps) fragment.appendChild(parent);
-      });
-      select.replaceChildren(fragment);
-    }
-
-    const selected = [...select.options].find((option) =>
-      option.dataset.mapId === String(state.activeMapId || "")
-      && option.dataset.brand === String(state.selectedBrand || "")
-    );
-    if (selected) select.value = selected.value;
-    else {
-      const activeMapOption = [...select.options].find((option) =>
-        option.dataset.mapId === String(state.activeMapId || "") && !option.disabled
-      );
-      if (activeMapOption) select.value = activeMapOption.value;
-    }
-  }
-
-  function unlockBuildInputs() {
-    const surface = document.querySelector("#buildInputs");
+  function restoreSurfaceControls(surface) {
     if (!surface) return;
     surface.classList.remove("read-only-surface");
     surface.querySelectorAll("input,select,textarea,button").forEach((control) => {
@@ -186,49 +109,122 @@
       control.disabled = control.dataset.developerWasDisabled === "true";
       delete control.dataset.developerWasDisabled;
     });
-
-    const note = document.querySelector("#workspaceControlsCard .workspace-controls-note:last-child");
-    const noteText = "Locked maps protect mechanical layout, Specs, and Servo Program edits. Build Inputs remain editable for brand selection and program generation.";
-    if (note && note.textContent !== noteText) note.textContent = noteText;
   }
 
-  function applySelectedBrand(option) {
-    const mapId = String(option?.dataset?.mapId || "");
-    const brand = String(option?.dataset?.brand || "");
-    if (!mapId || !brand) return;
+  function unlockEditableSurfaces() {
+    restoreSurfaceControls(document.querySelector("#specs"));
+    restoreSurfaceControls(document.querySelector("#buildInputs"));
 
-    const map = (state.mapLibrary || []).find((entry) => String(entry?.id || "") === mapId);
-    const locked = readPreferences().lockedMapIds.includes(mapId);
-    const spec = compatibleBrandSpecs(map).find((entry) => String(entry.brand) === brand);
-    if (!map || !locked || !spec) return;
+    const note = document.querySelector("#workspaceControlsCard .workspace-controls-note:last-child");
+    const noteText = "Locked maps protect the mechanical map, Map Builder, and Servo Program edits. Specs and Build Inputs remain editable.";
+    if (note && note.textContent.trim() !== noteText) note.textContent = noteText;
 
-    try {
-      if (String(state.activeMapId || "") !== mapId && typeof loadMachineMapIntoRuntime === "function") {
-        loadMachineMapIntoRuntime(map, false);
+    const help = document.querySelector("#workspaceMapLockHelp");
+    if (help && activeMapIsLocked()) {
+      help.textContent = "The selected mechanical map is protected. Specs and Build Inputs remain editable.";
+    }
+  }
+
+  function optionFor(spec, map) {
+    const option = document.createElement("option");
+    option.dataset.mapId = String(map?.id || "");
+    option.dataset.brand = String(spec?.brand || "");
+    option.value = String(spec?.brand || "");
+    option.textContent = String(spec?.brand || "No compatible label specs");
+    option.disabled = !spec?.brand;
+    return option;
+  }
+
+  function updateViewerCopy(viewer) {
+    const label = viewer?.querySelector("label");
+    if (label) {
+      const text = [...label.childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
+      if (text && text.textContent !== "Label Spec ") text.textContent = "Label Spec ";
+    }
+
+    const badge = viewer?.querySelector(".locked-map-badge");
+    const badgeText = "Map Locked • Specs & Inputs Editable";
+    if (badge && badge.textContent !== badgeText) badge.textContent = badgeText;
+  }
+
+  function applySelectedBrand(brand) {
+    const map = activeMap();
+    if (!map || !activeMapIsLocked(map)) return;
+
+    const spec = compatibleBrandSpecs(map)
+      .find((entry) => String(entry?.brand || "") === String(brand || ""));
+    if (!spec) return;
+
+    state.selectedBrand = String(spec.brand);
+    if (spec.bottleType) state.selectedBottle = String(spec.bottleType);
+    if (state.simulation) state.simulation.useCustom = false;
+
+    if (typeof clearServoSimulationForSelectedMap === "function") {
+      clearServoSimulationForSelectedMap();
+    }
+    if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
+    if (typeof render === "function") render();
+    if (typeof saveCurrentSettings === "function") saveCurrentSettings();
+    scheduleRefresh();
+  }
+
+  function renderActiveMapBrandOptions() {
+    const viewer = document.querySelector("#lockedMapViewer");
+    const select = viewer?.querySelector("#lockedMapViewerSelect");
+    if (!viewer || !select) return;
+
+    const map = activeMap();
+    const locked = activeMapIsLocked(map);
+    viewer.hidden = !locked;
+    updateViewerCopy(viewer);
+
+    if (!locked) {
+      if (select.options.length) select.replaceChildren();
+      return;
+    }
+
+    const specs = compatibleBrandSpecs(map);
+    const expected = specs.map((spec) => String(spec.brand));
+    const current = [...select.options].map((option) => String(option.dataset.brand || ""));
+
+    if (
+      expected.length !== current.length
+      || expected.some((brand, index) => brand !== current[index])
+    ) {
+      const fragment = document.createDocumentFragment();
+      if (specs.length) {
+        specs.forEach((spec) => fragment.appendChild(optionFor(spec, map)));
+      } else {
+        fragment.appendChild(optionFor(null, map));
       }
-      state.selectedBrand = String(spec.brand);
-      if (spec.bottleType) state.selectedBottle = String(spec.bottleType);
-      if (state.simulation) state.simulation.useCustom = false;
-      if (typeof clearServoSimulationForSelectedMap === "function") clearServoSimulationForSelectedMap();
-      if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
-      if (typeof render === "function") render();
-      if (typeof saveCurrentSettings === "function") saveCurrentSettings();
-    } finally {
-      scheduleRefresh();
+      select.replaceChildren(fragment);
+    }
+
+    const selected = specs.find((spec) => String(spec.brand) === String(state.selectedBrand || ""));
+    if (selected) {
+      select.value = String(selected.brand);
+      return;
+    }
+
+    const fallback = specs[0];
+    if (fallback) {
+      select.value = String(fallback.brand);
+      applySelectedBrand(fallback.brand);
     }
   }
 
   function bindSelection() {
     if (document.documentElement.dataset.lockedMapBrandSelectorBound === "true") return;
     document.documentElement.dataset.lockedMapBrandSelectorBound = "true";
+
     document.addEventListener("change", (event) => {
       const select = event.target.closest?.("#lockedMapViewerSelect");
       if (!select) return;
       const option = select.selectedOptions?.[0];
-      if (!option?.dataset?.mapId) return;
+      if (!option?.dataset?.brand) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      applySelectedBrand(option);
+      applySelectedBrand(option.dataset.brand);
     }, true);
   }
 
@@ -237,8 +233,9 @@
     const style = document.createElement("style");
     style.id = "lockedMapBrandSelectorStyles";
     style.textContent = `
-      #lockedMapViewerSelect optgroup{font-weight:800;color:var(--map-label)}
       #lockedMapViewerSelect option{font-weight:500;color:var(--text)}
+      #specs:not(.read-only-surface) input:not(:disabled),
+      #specs:not(.read-only-surface) select:not(:disabled),
       #buildInputs:not(.read-only-surface) input:not(:disabled),
       #buildInputs:not(.read-only-surface) select:not(:disabled){opacity:1;cursor:auto}
     `;
@@ -248,8 +245,8 @@
   function refresh() {
     refreshPending = false;
     purgeRetiredWorkbookFeature();
-    unlockBuildInputs();
-    renderBrandOptions();
+    unlockEditableSurfaces();
+    renderActiveMapBrandOptions();
   }
 
   function scheduleRefresh() {
@@ -265,23 +262,28 @@
       subtree: true,
       childList: true,
       attributes: true,
-      attributeFilter: ["disabled", "class"]
+      attributeFilter: ["disabled", "class", "hidden"]
     });
   }
 
   function install() {
     if (installed) return true;
-    if (typeof state === "undefined"
+    if (
+      typeof state === "undefined"
       || typeof activeMachineMap !== "function"
-      || !document.querySelector(".map-head")) return false;
+      || !document.querySelector(".map-head")
+    ) {
+      return false;
+    }
 
     installed = true;
     const changed = purgeRetiredWorkbookFeature();
     bindSelection();
     installStyles();
     installObserver();
-    unlockBuildInputs();
-    renderBrandOptions();
+    unlockEditableSurfaces();
+    renderActiveMapBrandOptions();
+
     if (changed && typeof saveCurrentSettings === "function") saveCurrentSettings();
     window.setTimeout(scheduleRefresh, 250);
     window.setTimeout(scheduleRefresh, 1000);
