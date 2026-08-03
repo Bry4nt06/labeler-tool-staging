@@ -75,25 +75,30 @@
   }
 
   function addLabel() {
-    return commit(() => {
-      const id = actions.call("nextId", state.labelSpecs) ?? state.labelSpecs.length + 1;
-      const brand = `New Label ${id}`;
-      state.labelSpecs.push({
-        id,
-        applicationMode: actions.call("normalizeLabelApplicationMode", state.applicationMode) || state.applicationMode,
-        brand,
-        specNumber: "",
-        bottleType: state.selectedBottle,
-        bodyLengthMm: null,
-        backLengthMm: null,
-        neckHeightMm: null,
-        neckLengthMm: null,
-        neckBottomCurveMm: null,
-        neckBottomCircumferenceMm: null,
-        codeBoxCenterMm: null
-      });
-      state.selectedBrand = brand;
-      actions.call("applyLabelLengthStationRules");
+    return actions.execute({
+      mutate() {
+        const id = actions.call("nextId", state.labelSpecs) ?? state.labelSpecs.length + 1;
+        const brand = `New Label ${id}`;
+        state.labelSpecs.push({
+          id,
+          applicationMode: actions.call("normalizeLabelApplicationMode", state.applicationMode) || state.applicationMode,
+          brand,
+          specNumber: "",
+          bottleType: state.selectedBottle,
+          bodyLengthMm: null,
+          backLengthMm: null,
+          neckHeightMm: null,
+          neckLengthMm: null,
+          neckBottomCurveMm: null,
+          neckBottomCircumferenceMm: null,
+          codeBoxCenterMm: null
+        });
+        state.selectedBrand = brand;
+        actions.call("applyLabelLengthStationRules");
+      },
+      regenerate: true,
+      persist: true,
+      render: "all"
     });
   }
 
@@ -101,7 +106,8 @@
     const spec = state.labelSpecs[index];
     if (!spec) return;
     const selectedBeforeUpdate = state.selectedBrand === spec.brand;
-    const affectsSelectedProgram = selectedBeforeUpdate && labelNumericFields.has(key);
+    const affectsSelectedProgram = selectedBeforeUpdate
+      && (labelNumericFields.has(key) || key === "applicationMode");
 
     return actions.execute({
       mutate() {
