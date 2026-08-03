@@ -62,20 +62,6 @@ function renderAggregateAngleEditor(machineMap) {
   const activeAggregates = activeSlotNumbers(machineMap.enabledAggregates);
   if (els.aggregateAnglesSummary) els.aggregateAnglesSummary.textContent = `${activeAggregates.length} active aggregate${activeAggregates.length === 1 ? "" : "s"} • click to expand`;
   els.aggregateAngleEditor.innerHTML = `<div class="builder-row-grid">${activeAggregates.map((aggregate) => `<label>Aggregate ${aggregate}<input data-aggregate-angle="${aggregate}" type="number" step="0.1" value="${fmt(machineMap.aggregateAngles[String(aggregate)], 1)}"></label>`).join("")}</div>`;
-  els.aggregateAngleEditor.querySelectorAll("[data-aggregate-angle]").forEach((control) => {
-    const applyAggregateAngle = () => {
-      if (control.value === "" || control.value === "-") return;
-      const aggregate = String(control.dataset.aggregateAngle);
-      const editable = editableMachineMap();
-      editable.aggregateAngles = normalizeAggregateAngles(editable.aggregateAngles, editable.applicationMode, editable.objects);
-      editable.aggregateAngles[aggregate] = num(control.value, editable.aggregateAngles[aggregate]);
-      editable.stationAngles = normalizeStationAngles(editable.stationAngles);
-      editable.stationAngles[aggregate] = editable.aggregateAngles[aggregate];
-      refreshAfterBuilderEdit({ persist: true });
-    };
-    control.addEventListener("input", applyAggregateAngle);
-    control.addEventListener("change", applyAggregateAngle);
-  });
 }
 
 function renderMachineLayoutControls(machineMap) {
@@ -87,25 +73,6 @@ function renderMachineLayoutControls(machineMap) {
       const number = index + 1;
       return `<label class="machine-toggle-item${enabled ? "" : " inactive"}"><input type="checkbox" data-machine-slot="${slotType}" data-slot-number="${number}" ${enabled ? "checked" : ""}><span>${label} ${number}</span></label>`;
     }).join("");
-    container.querySelectorAll("[data-machine-slot]").forEach((control) => {
-      control.addEventListener("change", () => {
-        const editable = editableMachineMap();
-        const target = control.dataset.machineSlot === "aggregate" ? editable.enabledAggregates : editable.enabledStations;
-        const slotIndex = Number(control.dataset.slotNumber) - 1;
-        if (!control.checked && target.filter(Boolean).length === 1) {
-          control.checked = true;
-          window.alert(`At least one ${control.dataset.machineSlot} must remain active.`);
-          return;
-        }
-        target[slotIndex] = control.checked;
-        editable.aggregateCount = editable.enabledAggregates.filter(Boolean).length;
-        editable.stationCount = editable.enabledStations.filter(Boolean).length;
-        ensureAplObjectsForNewStations(editable);
-        loadMachineMapIntoRuntime(editable, true);
-        saveCurrentSettings();
-        renderWipeDownBuilder();
-      });
-    });
   };
   renderGroup(els.aggregateToggleList, machineMap.enabledAggregates, "Aggregate", "aggregate");
   renderGroup(els.stationToggleList, machineMap.enabledStations, "Station", "station");
@@ -135,9 +102,6 @@ function renderMapLibraryControls() {
   }
   if (els.newMachineMap) els.newMachineMap.disabled = libraryLocation.zone === "ALL";
   if (els.applicationMode) {
-    // MultiModul machines can run either application system. Rebuild the
-    // options whenever a map is rendered so a previously saved APL map never
-    // leaves the selector with only its current application available.
     const supportedModes = [
       { value: "apl", label: "APL" },
       { value: "cold-glue", label: "Cold Glue" }
