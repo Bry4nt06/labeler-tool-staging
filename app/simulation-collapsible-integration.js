@@ -83,7 +83,7 @@
       "app/map-builder-station-authority-integration.js?v=0.9.3-station-authority",
       "app/map-object-builder-selection-integration.js?v=0.9.3-map-object-builder-selection-v3",
       "app/map-object-double-click-open-fix-integration.js?v=0.9.3-map-object-double-press-v4",
-      "app/label-spec-section-selection-integration.js?v=0.9.3-label-section-checkboxes-v1"
+      "app/label-spec-section-selection-integration.js?v=0.9.8-label-dimension-presence-v1"
     ]),
 
     catalogs: Object.freeze([
