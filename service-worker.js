@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-map-builder-modules-v1";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-assembly-ui-split-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -27,6 +27,8 @@ const CORE_ASSETS = Object.freeze([
   "./config/default-programs/bottle-specs.json",
   "./drivers/core/driver-registry.js",
   "./drivers/core/legacy-driver-bridge.js",
+  "./drivers/assembly/assembly-model-driver.js",
+  "./drivers/assembly/assembly-geometry-driver.js",
   "./drivers/map/map-schema-driver.js",
   "./drivers/map/map-migration-driver.js",
   "./drivers/geometry/label-geometry-driver.js",
@@ -67,6 +69,9 @@ const CORE_ASSETS = Object.freeze([
   "./app/profile-translator-validation.js",
   "./app/simulation-engine.js",
   "./app/assemblies.js",
+  "./app/assembly-driver-adapter.js",
+  "./app/assembly-editor-controller.js",
+  "./app/assembly-map-renderer.js",
   "./app/wipe-down-builder.js",
   "./app/map-defaults-service.js",
   "./app/map-library-service.js",
