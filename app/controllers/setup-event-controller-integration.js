@@ -10,8 +10,10 @@
   const tabs = global.LabelerTabsController;
   const transfer = global.LabelerTransferController;
   const simulation = global.LabelerSimulationController;
+  const program = global.LabelerServoProgramController;
+  const simulationEditor = global.LabelerSimulationEditorController;
   const application = global.LabelerApplicationController;
-  if (![settings, map, specs, build, tabs, transfer, simulation, application].every(Boolean)) {
+  if (![settings, map, specs, build, tabs, transfer, simulation, program, simulationEditor, application].every(Boolean)) {
     throw new Error("Setup event controllers are not fully loaded.");
   }
 
@@ -104,11 +106,42 @@
     return false;
   }
 
+  function handleProgramChange(target) {
+    if (!els.program?.contains(target)) return false;
+    const row = target.closest?.("tr[data-program-hmi]");
+    const hmi = Number(row?.dataset.programHmi);
+    const field = target.dataset?.programField;
+    if (!Number.isFinite(hmi) || !field || field === "action") return false;
+    if (field === "command") program.updateCommand(hmi, target.value);
+    else if (field === "tableAngle" || field === "plateAngle") program.updateOverride(hmi, field, target.value);
+    else return false;
+    return true;
+  }
+
+  function handleSimulationChange(target) {
+    if (!els.simulation?.contains(target)) return false;
+    if (target.id === "servoProfileLibrarySelect") {
+      simulationEditor.selectProfile(target.value);
+      return true;
+    }
+    const row = target.closest?.("tr[data-simulation-source-index]");
+    const sourceIndex = Number(row?.dataset.simulationSourceIndex);
+    const field = target.dataset?.simulationField;
+    if (!Number.isInteger(sourceIndex) || !field || field === "action") return false;
+    if (field === "command") simulationEditor.updateCommand(sourceIndex, target.value);
+    else if (field === "tableAngle") simulationEditor.updateTableAngle(sourceIndex, target.value);
+    else if (field === "plateAngle") simulationEditor.updatePlateAngle(sourceIndex, target.value);
+    else return false;
+    return true;
+  }
+
   document.addEventListener("change", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
 
     if (handleSpecChange(event)) { consume(event); return; }
+    if (handleProgramChange(target)) { consume(event); return; }
+    if (handleSimulationChange(target)) { consume(event); return; }
 
     if (target === els.themePreset) settings.setTheme(target.value);
     else if (target === els.workspaceView) settings.setWorkspaceView(target.value);
@@ -147,7 +180,17 @@
   document.addEventListener("input", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
-    if (target === els.previewAngle) map.setPreviewAngle(target.value, false);
+    if (target.dataset?.programField === "action" && els.program?.contains(target)) {
+      const hmi = Number(target.closest?.("tr[data-program-hmi]")?.dataset.programHmi);
+      if (Number.isFinite(hmi)) program.updateAction(hmi, target.value);
+      else return;
+    }
+    else if (target.dataset?.simulationField === "action" && els.simulation?.contains(target)) {
+      const sourceIndex = Number(target.closest?.("tr[data-simulation-source-index]")?.dataset.simulationSourceIndex);
+      if (Number.isInteger(sourceIndex)) simulationEditor.updateAction(sourceIndex, target.value);
+      else return;
+    }
+    else if (target === els.previewAngle) map.setPreviewAngle(target.value, false);
     else if (target === els.animationSpeed) simulation.setSpeed(target.value);
     else return;
     consume(event);
@@ -181,6 +224,18 @@
       consume(event);
       return;
     }
+    const simulationDelete = target.closest(".simulation-delete-line");
+    if (simulationDelete) {
+      const sourceIndex = Number(simulationDelete.closest?.("tr[data-simulation-source-index]")?.dataset.simulationSourceIndex);
+      simulationEditor.deleteLine(sourceIndex);
+      consume(event);
+      return;
+    }
+    if (target.closest(".simulation-add-line")) {
+      simulationEditor.addLineBeforeEnd();
+      consume(event);
+      return;
+    }
     const tab = target.closest(".tab");
     if (tab) {
       tabs.activate(tab.dataset.tab, tab);
@@ -196,6 +251,12 @@
 
     if (target.closest("#addBottleSpec")) specs.addBottle();
     else if (target.closest("#addLabelSpec")) specs.addLabel();
+    else if (target.closest("#saveServoProfile")) simulationEditor.saveProfile(
+      els.simulation?.querySelector("#servoProfileName")?.value,
+      els.simulation?.querySelector("#servoProfileDescription")?.value
+    );
+    else if (target.closest("#loadServoProfile")) simulationEditor.loadProfile(els.simulation?.querySelector("#servoProfileLibrarySelect")?.value);
+    else if (target.closest("#deleteServoProfile")) simulationEditor.deleteProfile(els.simulation?.querySelector("#servoProfileLibrarySelect")?.value);
     else if (target === els.playPause) simulation.togglePlayback();
     else if (target === els.applicationSetupButton) map.setBuilderOpen(!state.wipeBuilderOpen);
     else if (target === els.closeApplicationSetup) map.setBuilderOpen(false);
@@ -254,6 +315,8 @@
     tabs,
     transfer,
     simulation,
+    servoProgram: program,
+    simulationEditor,
     application
   });
 })(window);
