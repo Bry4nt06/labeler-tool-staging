@@ -1,9 +1,21 @@
 {
   "schemaVersion": 1,
   "environment": "staging",
-  "currentVersion": "0.9.2",
-  "generatedAt": "2026-07-29T14:09:27Z",
+  "currentVersion": "0.9.10",
+  "generatedAt": "2026-08-03T18:38:55Z",
   "releases": [
+    {
+      "version": "0.9.10",
+      "milestone": 13,
+      "title": "Brand Regeneration and Validation Fit Hotfix",
+      "summary": "Ensures two-label Brand Recipes regenerate immediately and keeps the top Validation status card within the panel width.",
+      "changes": [
+        "Apply dimension-driven label station rules whenever a Brand Recipe is selected.",
+        "Regenerate and persist the Servo Program before rerendering Validation.",
+        "Stack Validation status, faults, warnings, checks, and duplicate counts in one constrained column.",
+        "Refresh release and feature cache keys so browsers do not reuse the 0.9.9 behavior."
+      ]
+    },
     {
       "version": "0.9.2",
       "milestone": 12,

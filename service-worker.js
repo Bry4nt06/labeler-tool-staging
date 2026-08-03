@@ -1,7 +1,7 @@
 "use strict";
 
-const RELEASE_VERSION = "0.9.2";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.2-assembly-ui-split-v1";
+const RELEASE_VERSION = "0.9.10";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-validation-brand-hotfix-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 

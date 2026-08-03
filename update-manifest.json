@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "0.9.8",
+  "version": "0.9.10",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING 0.9.8 adds verified Map Builder lifecycle initialization, open-time self-repair, population diagnostics, and distinct staging asset URLs."
+  "notes": "STAGING 0.9.10 regenerates the Servo Program when a Brand Recipe is selected and stacks the top Validation summary so it cannot overflow the panel."
 }
