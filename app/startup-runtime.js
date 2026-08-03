@@ -48,7 +48,14 @@ async function initializeLabelerApp() {
       saveCurrentSettings();
     }
     window.LabelerSetupStateController.initialize();
+
+    // Map Builder is not part of the application-wide render cycle. Populate
+    // its saved-map controls and configured-object list before installing the
+    // builder's direct control bindings. This also restores an already-open
+    // builder after refresh instead of showing an empty drawer.
+    renderWipeDownBuilder();
     bindWipeDownBuilder();
+
     bindGlobalActions();
     render();
     startAnimationLoop();
