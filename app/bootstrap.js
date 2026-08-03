@@ -8,6 +8,7 @@
   const modules = Object.freeze([
     "app/export-service.js",
     "app/controllers/workspace-action-service.js",
+    "app/controllers/theme-presets-controller.js",
     "app/controllers/settings-controller.js",
     "app/controllers/map-controller.js",
     "app/controllers/specs-controller.js",
