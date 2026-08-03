@@ -65,11 +65,14 @@ assert.ok(layoutSource.includes("At least one ${slotType} must remain active."))
 
 assert.ok(validationUiSource.includes("overflow-x: hidden !important"));
 assert.ok(validationUiSource.includes("overflow-y: auto !important"));
-assert.ok(validationUiSource.includes("display: flex !important"));
-assert.ok(validationUiSource.includes("flex: 1 0 100%"));
-assert.ok(validationUiSource.includes("flex: 1 1 0"));
+assert.ok(validationUiSource.includes("display: grid !important"));
+assert.ok(validationUiSource.includes("grid-template-columns: minmax(0, 1fr) !important"));
+assert.ok(validationUiSource.includes(".pipeline-validation-summary > span"));
+assert.ok(validationUiSource.includes("width: 100% !important"));
+assert.ok(validationUiSource.includes("text-align: left !important"));
 assert.ok(validationUiSource.includes("word-break: break-word"));
 assert.ok(validationUiSource.includes(".validation-head-actions"));
+assert.ok(!validationUiSource.includes("flex: 1 1 0"), "Pipeline metrics must not share a horizontal flex row.");
 
 const validationPath = "app/controllers/validation-panel-ui-controller.js";
 const layoutPath = "app/controllers/map-builder-layout-controller.js";
@@ -179,4 +182,4 @@ assert.strictEqual(calls.alerts.length, 1);
   assert.strictEqual(listeners.get(type).options, true, `${type} must use capture ownership.`);
 });
 
-console.log("Controller ownership and Validation overflow regression passed.");
+console.log("Controller ownership and vertically stacked Validation layout regression passed.");
