@@ -68,27 +68,33 @@ function dispatch(type, target) {
   return event;
 }
 
+function assertLastCall(name, args = []) {
+  const call = calls.at(-1);
+  assert.strictEqual(call?.name, name);
+  assert.strictEqual(JSON.stringify(call?.args || []), JSON.stringify(args));
+}
+
 let event = dispatch("input", new FakeElement("mapName", "Updated Map"));
-assert.deepStrictEqual(calls.at(-1), { name: "saveMapDefinitionFromControls", args: [{ type: "input" }] });
+assertLastCall("saveMapDefinitionFromControls", [{ type: "input" }]);
 assert.strictEqual(event.propagationStopped, true);
 
 event = dispatch("change", new FakeElement("builderObjectType", "roller"));
-assert.deepStrictEqual(calls.at(-1), { name: "updateBuilderTypeControls", args: [] });
+assertLastCall("updateBuilderTypeControls");
 assert.strictEqual(event.propagationStopped, true);
 
 event = dispatch("change", new FakeElement("mapDirection", "cw"));
-assert.deepStrictEqual(calls.at(-1), { name: "saveMapDefinitionFromControls", args: [{ type: "change" }] });
+assertLastCall("saveMapDefinitionFromControls", [{ type: "change" }]);
 
 event = dispatch("click", new FakeElement("addBuilderObject"));
-assert.deepStrictEqual(calls.at(-1), { name: "addBuilderObjectFromControls", args: [] });
+assertLastCall("addBuilderObjectFromControls");
 assert.strictEqual(event.defaultPrevented, true);
 assert.strictEqual(event.propagationStopped, true);
 
 event = dispatch("click", new FakeElement("newMachineMap"));
-assert.deepStrictEqual(calls.at(-1), { name: "createMachineMapFromCurrent", args: [] });
+assertLastCall("createMachineMapFromCurrent");
 
 event = dispatch("click", new FakeElement("undoBuilderEdit"));
-assert.deepStrictEqual(calls.at(-1), { name: "restoreBuilderHistory", args: ["undo"] });
+assertLastCall("restoreBuilderHistory", ["undo"]);
 
 assert.ok(listeners.has("input"));
 assert.ok(listeners.has("change"));
