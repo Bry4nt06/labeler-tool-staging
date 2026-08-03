@@ -20,46 +20,57 @@
       .validation-diagnostics-summary {
         grid-column: 1 / -1;
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr);
         gap: 6px;
         align-items: stretch;
-        width: 100%;
-        max-width: 100%;
-        min-width: 0;
+        inline-size: 100%;
+        max-inline-size: 100%;
+        min-inline-size: 0;
         padding: 8px;
-        overflow: hidden;
+        overflow-x: clip;
+        overflow-y: visible;
+        contain: inline-size;
         border: 1px solid var(--line);
         border-radius: 7px;
         background: var(--panel-hi);
         box-sizing: border-box;
       }
 
-      .validation-diagnostics-summary strong {
-        grid-column: 1 / -1;
-        display: block;
-        width: 100%;
+      .validation-diagnostics-summary,
+      .validation-diagnostics-summary * {
+        box-sizing: border-box;
         min-width: 0;
+        max-width: 100%;
+      }
+
+      .validation-diagnostics-summary strong {
+        display: block;
+        inline-size: 100%;
+        max-inline-size: 100%;
+        min-inline-size: 0;
         padding: 2px 4px 5px;
         font-size: 10px;
         line-height: 1.2;
+        white-space: normal;
         overflow-wrap: anywhere;
+        word-break: break-word;
       }
 
       .validation-diagnostics-summary span {
         display: flex;
         align-items: center;
-        justify-content: center;
-        width: 100%;
-        max-width: 100%;
-        min-width: 0;
+        justify-content: flex-start;
+        inline-size: 100%;
+        max-inline-size: 100%;
+        min-inline-size: 0;
         min-height: 32px;
-        padding: 6px;
+        padding: 6px 8px;
         border-radius: 5px;
         background: var(--input);
         box-sizing: border-box;
-        font-size: 8px;
-        line-height: 1.15;
-        text-align: center;
+        font-size: 9px;
+        line-height: 1.2;
+        text-align: left;
         white-space: normal;
         overflow-wrap: anywhere;
         word-break: break-word;
@@ -68,12 +79,6 @@
       .validation-diagnostics-summary[data-status="PASS"] strong { color: var(--health-good-text, #6df0a5); }
       .validation-diagnostics-summary[data-status="REVIEW"] strong { color: var(--health-warn-text, #ffd86d); }
       .validation-diagnostics-summary[data-status="FAIL"] strong { color: var(--health-bad-text, #ff8991); }
-
-      @media (max-width: 430px) {
-        .validation-diagnostics-summary {
-          grid-template-columns: minmax(0, 1fr);
-        }
-      }
     `;
     document.head.appendChild(style);
   }
