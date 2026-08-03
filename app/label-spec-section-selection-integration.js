@@ -106,7 +106,17 @@
       holder.querySelectorAll("[data-label-section]").forEach((checkbox) => {
         checkbox.addEventListener("change", () => saveSelection(spec, checkbox.dataset.labelSection, checkbox.checked, checkbox));
       });
-      brandCell.appendChild(holder);
+
+      const brandInput = brandCell.querySelector('[data-spec-field="brand"]');
+      const layout = document.createElement("div");
+      layout.className = "label-brand-section-layout";
+      if (brandInput) {
+        brandCell.insertBefore(layout, brandInput);
+        layout.appendChild(brandInput);
+      } else {
+        brandCell.appendChild(layout);
+      }
+      layout.appendChild(holder);
     });
   }
 
@@ -151,9 +161,42 @@
     const style = document.createElement("style");
     style.id = "labelSpecSectionSelectionStyles";
     style.textContent = `
-      .label-section-checkboxes{display:flex;flex-wrap:wrap;gap:3px 7px;margin-top:4px;padding-top:4px;border-top:1px solid var(--line)}
-      .label-section-checkboxes label{display:inline-flex;align-items:center;gap:3px;color:var(--muted);font-size:9px;white-space:nowrap}
-      .label-section-checkboxes input{width:auto;min-width:0;margin:0}
+      .label-brand-section-layout {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+      .label-brand-section-layout > [data-spec-field="brand"] {
+        flex: 1 1 150px;
+        min-width: 110px;
+      }
+      .label-section-checkboxes {
+        display: flex;
+        flex: 0 0 auto;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 5px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+      .label-section-checkboxes label {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        color: var(--muted);
+        font-size: 8px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .label-section-checkboxes input {
+        width: 13px;
+        min-width: 13px;
+        height: 13px;
+        margin: 0;
+      }
     `;
     document.head.appendChild(style);
   }
