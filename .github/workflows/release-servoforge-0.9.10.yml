@@ -1,0 +1,104 @@
+name: Align ServoForge 0.9.10 Staging
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/release-servoforge-0.9.10.yml
+
+permissions:
+  contents: write
+
+jobs:
+  align:
+    if: contains(github.event.head_commit.message, '[release-0.9.10]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Align staging release metadata
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import datetime
+          import json
+          import re
+
+          root = Path('.')
+          version = '0.9.10'
+          staging_url = 'https://bry4nt06.github.io/labeler-tool-staging/'
+
+          def update(path, transform):
+              p = root / path
+              text = p.read_text(encoding='utf-8')
+              p.write_text(transform(text), encoding='utf-8')
+
+          update('index.html', lambda text: re.sub(
+              r'(<meta name="application-version" content=")[^"]+("\s*/>)',
+              rf'\g<1>{version}\2',
+              re.sub(r'(\?v=)[^"\']+', rf'\g<1>{version}', re.sub(r'Version\s+\d+\.\d+\.\d+\s+•', f'Version {version} •', text))
+          ))
+
+          def bootstrap(text):
+              return re.sub(r'const version = "[^"]+";', f'const version = "{version}";', text, count=1)
+          update('app/bootstrap.js', bootstrap)
+
+          def release_constant(text):
+              text = re.sub(r'const RELEASE_VERSION = "[^"]+";', f'const RELEASE_VERSION = "{version}";', text)
+              text = re.sub(r'const VALIDATOR_RELEASE_VERSION = "[^"]+";', f'const VALIDATOR_RELEASE_VERSION = "{version}";', text)
+              return text
+          update('app/update-manager.js', release_constant)
+          update('app/servo-pipeline-validator-integration.js', release_constant)
+
+          def service_worker(text):
+              text = re.sub(r'const RELEASE_VERSION = "[^"]+";', f'const RELEASE_VERSION = "{version}";', text, count=1)
+              text = re.sub(r'const CACHE_NAME = "[^"]+";', f'const CACHE_NAME = "servoforge-labeler-staging-v{version}-validation-brand-hotfix-v1";', text, count=1)
+              text = re.sub(r'const CACHE_PREFIX = "[^"]+";', 'const CACHE_PREFIX = "servoforge-labeler-staging-";', text, count=1)
+              return text
+          update('service-worker.js', service_worker)
+
+          manifest_path = root / 'update-manifest.json'
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          manifest.update({
+              'schemaVersion': 1,
+              'version': version,
+              'releaseUrl': staging_url,
+              'downloadUrl': staging_url,
+              'notes': 'STAGING 0.9.10 regenerates the Servo Program when a Brand Recipe is selected and stacks the top Validation summary so it cannot overflow the panel.'
+          })
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+
+          notes_path = root / 'release-notes.json'
+          notes = json.loads(notes_path.read_text(encoding='utf-8'))
+          notes['environment'] = 'staging'
+          notes['currentVersion'] = version
+          notes['generatedAt'] = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+          release = {
+              'version': version,
+              'milestone': 13,
+              'title': 'Brand Regeneration and Validation Fit Hotfix',
+              'summary': 'Ensures two-label Brand Recipes regenerate immediately and keeps the top Validation status card within the panel width.',
+              'changes': [
+                  'Apply dimension-driven label station rules whenever a Brand Recipe is selected.',
+                  'Regenerate and persist the Servo Program before rerendering Validation.',
+                  'Stack Validation status, faults, warnings, checks, and duplicate counts in one constrained column.',
+                  'Refresh release and feature cache keys so browsers do not reuse the 0.9.9 behavior.'
+              ]
+          }
+          notes['releases'] = [release, *[item for item in notes.get('releases', []) if item.get('version') != version]]
+          notes_path.write_text(json.dumps(notes, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Commit aligned staging release
+        shell: bash
+        run: |
+          rm -f .github/workflows/release-servoforge-0.9.10.yml
+          git config user.name "ServoForge Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Release ServoForge staging 0.9.10"
+          git push origin main
