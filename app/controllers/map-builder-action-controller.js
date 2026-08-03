@@ -6,6 +6,8 @@
   const actions = global.LabelerWorkspaceActionService;
 
   function call(name, ...args) {
+    const domainAction = global.LabelerMapBuilderDomainActions?.[name];
+    if (typeof domainAction === "function") return domainAction(...args);
     return actions?.call(name, ...args);
   }
 
@@ -63,6 +65,7 @@
 
   global.LabelerMapBuilderActionController = Object.freeze({
     installed: true,
+    call,
     saveDefinition,
     updateObjectType,
     undo,
