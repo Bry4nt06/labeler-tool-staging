@@ -1,7 +1,10 @@
 "use strict";
 
 (function loadServoForgeBootstrapModules() {
-  const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.2";
+  const version = "0.9.8";
+  window.SERVOFORGE_RELEASE_VERSION = version;
+  const banner = document.querySelector(".staging-environment-banner");
+  if (banner) banner.textContent = `STAGING ${version} / TEST BUILD — NOT PRODUCTION`;
   const modules = Object.freeze([
     "app/export-service.js",
     "app/controllers/workspace-action-service.js",
