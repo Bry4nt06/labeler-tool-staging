@@ -19,6 +19,20 @@
       "drivers/servo/rest-correction-grammar-driver.js?v=0.9.6-rest-grammar-v4"
     ]),
 
+    presentationCore: Object.freeze([
+      "app/table-presentation-helpers.js?v=0.9.7-table-rendering-retired-v1",
+      "app/specification-table-renderer.js?v=0.9.7-table-rendering-split-v1",
+      "app/build-inputs-renderer.js?v=0.9.7-table-rendering-split-v1",
+      "app/machine-data-table-renderer.js?v=0.9.7-table-rendering-retired-v1",
+      "app/servo-command-presentation.js?v=0.9.7-servo-table-split-v1",
+      "app/servo-program-active-row-renderer.js?v=0.9.7-table-rendering-retired-v1",
+      "app/servo-program-table-renderer.js?v=0.9.7-servo-table-split-v1",
+      "app/simulation-table-renderer.js?v=0.9.7-servo-table-split-v1",
+      "app/wipe-telemetry-service.js?v=0.9.7-table-rendering-retired-v1",
+      "app/wipe-telemetry-renderer.js?v=0.9.7-table-rendering-retired-v1",
+      "app/workspace-status-renderer.js?v=0.9.7-table-rendering-retired-v1"
+    ]),
+
     workspaceCore: Object.freeze([
       "app/assembly-driver-adapter.js?v=0.9.7-assembly-drivers-v1",
       "app/assembly-editor-controller.js?v=0.9.7-assembly-ui-split-v1",
@@ -84,11 +98,6 @@
     ]),
 
     rendering: Object.freeze([
-      "app/specification-table-renderer.js?v=0.9.7-table-rendering-split-v1",
-      "app/build-inputs-renderer.js?v=0.9.7-table-rendering-split-v1",
-      "app/servo-command-presentation.js?v=0.9.7-servo-table-split-v1",
-      "app/servo-program-table-renderer.js?v=0.9.7-servo-table-split-v1",
-      "app/simulation-table-renderer.js?v=0.9.7-servo-table-split-v1",
       "app/rendering-coordinator-integration.js?v=0.9.7-rendering-coordinator-v1"
     ]),
 
