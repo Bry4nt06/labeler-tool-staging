@@ -30,32 +30,35 @@
 
       #specs tr.selected-brand-spec > td {
         background:
-          linear-gradient(rgba(65, 200, 137, 0.17), rgba(65, 200, 137, 0.17)),
+          linear-gradient(
+            color-mix(in srgb, var(--accent, var(--green)) 15%, transparent),
+            color-mix(in srgb, var(--accent, var(--green)) 15%, transparent)
+          ),
           var(--panel);
-        border-top: 1px solid var(--green);
-        border-bottom: 1px solid var(--green);
+        border-top: 1px solid var(--accent, var(--green));
+        border-bottom: 1px solid var(--accent, var(--green));
       }
 
       #specs tr.selected-brand-spec > td:first-child {
-        border-left: 3px solid var(--green);
-        box-shadow: inset 4px 0 12px rgba(65, 200, 137, 0.2);
+        border-left: 3px solid var(--accent, var(--green));
+        box-shadow: inset 4px 0 12px color-mix(in srgb, var(--accent, var(--green)) 20%, transparent);
       }
 
       #specs tr.selected-brand-spec > td:last-child {
-        border-right: 1px solid var(--green);
+        border-right: 1px solid var(--accent, var(--green));
       }
 
       #specs tr.selected-brand-spec input,
       #specs tr.selected-brand-spec select {
-        border-color: var(--green);
-        box-shadow: 0 0 0 1px rgba(65, 200, 137, 0.22);
+        border-color: var(--accent, var(--green));
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, var(--green)) 22%, transparent);
       }
 
       #specs tr.selected-brand-spec td:first-child::after {
         content: "Selected";
         display: block;
         margin-top: 3px;
-        color: var(--green);
+        color: var(--accent, var(--green));
         font-size: 8px;
         font-weight: 800;
         letter-spacing: 0.05em;
