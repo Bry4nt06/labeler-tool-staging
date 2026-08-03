@@ -60,6 +60,12 @@ async function initializeLabelerApp() {
     if (!window.LabelerSpecificationTableUiController?.installed) {
       throw new Error("Specs table UI controller is not loaded.");
     }
+    if (!window.LabelerServoProgramEventController?.installed) {
+      throw new Error("Servo Program event controller is not loaded.");
+    }
+    if (!window.LabelerStationTableEventController?.installed) {
+      throw new Error("Station table event controller is not loaded.");
+    }
     if (!window.LabelerMapBuilderActionController?.installed || !window.LabelerMapBuilderEventController?.installed) {
       throw new Error("Map Builder action and event controllers are not loaded.");
     }
