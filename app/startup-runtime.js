@@ -48,6 +48,9 @@ async function initializeLabelerApp() {
     if (!window.LabelerHealthStatusUiController?.installed) {
       throw new Error("Health status visual controller is not loaded.");
     }
+    if (!window.LabelerValidationPanelUiController?.installed) {
+      throw new Error("Validation panel UI controller is not loaded.");
+    }
     if (!window.LabelerSpecificationEventController?.installed) {
       throw new Error("Specification field event controller is not loaded.");
     }
@@ -59,6 +62,9 @@ async function initializeLabelerApp() {
     }
     if (!window.LabelerMapBuilderActionController?.installed || !window.LabelerMapBuilderEventController?.installed) {
       throw new Error("Map Builder action and event controllers are not loaded.");
+    }
+    if (!window.LabelerMapBuilderLayoutController?.installed) {
+      throw new Error("Map Builder layout controller is not loaded.");
     }
     if (!window.LabelerMapBuilderRowController?.installed) {
       throw new Error("Map Builder row event controller is not loaded.");
