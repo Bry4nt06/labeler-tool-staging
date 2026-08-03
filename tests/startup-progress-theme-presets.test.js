@@ -49,8 +49,6 @@ Object.entries(expectedThemes).forEach(([preset, label]) => {
   assert.ok(themeSource.includes(`body[data-theme="${preset}"]`), `${preset} CSS must be installed.`);
 });
 
-// Every added theme uses a dark neutral workspace hierarchy. Secondary colors
-// identify controls and map elements rather than tinting entire work surfaces.
 [
   "--panel: #14181d;",
   "--panel: #161917;",
@@ -99,21 +97,15 @@ assert.ok(specsUiSource.includes("var(--accent, var(--green))"));
 assert.ok(specsUiSource.includes("#specs tr.selected-brand-spec > td"));
 assert.ok(specsUiSource.includes("color-mix(in srgb, var(--accent, var(--green)) 22%, var(--panel))"));
 assert.ok(specsUiSource.includes("background-clip: padding-box"));
-assert.ok(specsUiSource.includes("#specs tr.selected-brand-spec > td:last-child::before"));
-assert.ok(specsUiSource.includes('content: "Selected"'));
-assert.ok(specsUiSource.includes("display: inline-flex"));
-assert.ok(specsUiSource.includes("max-width: 58px"));
-assert.ok(specsUiSource.includes("pointer-events: none"));
 assert.ok(specsUiSource.includes("#specs .spec-row-actions"));
 assert.ok(specsUiSource.includes("flex-wrap: nowrap !important"));
 assert.ok(specsUiSource.includes("#specs .spec-row-actions > .spec-icon-button"));
 assert.ok(specsUiSource.includes("flex: 0 0 32px"));
 assert.ok(specsUiSource.includes("border-color: var(--line)"));
 assert.ok(specsUiSource.includes("box-shadow: none"));
-assert.ok(!specsUiSource.includes("td:first-child::after"), "Selected marker must not remain cramped beneath the first cell.");
-assert.ok(!specsUiSource.includes("position: absolute"), "Selected marker must remain in the compact action line.");
-assert.ok(!specsUiSource.includes("padding-top: 31px"), "Selected rows must not reserve a second action line.");
-assert.ok(!specsUiSource.includes("flex: 1 1 70px"), "Spec action icons must not expand the action column.");
+assert.ok(!specsUiSource.includes('content: "Selected"'), "The row highlight must communicate selection without a text marker.");
+assert.ok(!specsUiSource.includes("td:first-child::after"), "Selected marker must not remain beneath the first cell.");
+assert.ok(!specsUiSource.includes("td:last-child::before"), "Selected marker must not occupy the action cell.");
 assert.ok(!specsUiSource.includes("min-width: 150px"), "Selected action cells must not impose a table-expanding minimum width.");
 assert.ok(!specsUiSource.includes("rgba(65, 200, 137, 0.17)"));
 assert.ok(!specsUiSource.includes("rgba(65, 200, 137, 0.2)"));
@@ -146,4 +138,4 @@ assert.ok(appSource.includes("progress?.fail"));
 assert.ok(startupSource.includes("return true;"));
 assert.ok(startupSource.includes("return false;"));
 
-console.log("Startup progress, themes, and compact selected Label Spec regression passed.");
+console.log("Startup progress, themes, and highlight-only selected Label Spec regression passed.");
