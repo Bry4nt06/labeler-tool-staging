@@ -258,10 +258,8 @@ A later cleanup phase can physically remove the superseded handler bodies after 
 - delegated event-type registration
 - bootstrap ordering before startup
 
-## Offline behavior
+## Offline and version behavior
 
-The controller modules load through the existing bootstrap loader with the cache identity suffix:
+The controller modules use the same application version query as the other bootstrap modules. This preserves release-readiness version alignment.
 
-- `setup-controllers-v1`
-
-The service worker's same-origin network-first strategy caches each successful controller response after the first online staging load.
+Because the controller files are new paths, they cannot collide with an older cached response. The service worker's same-origin network-first strategy caches each successful controller response after the first online staging load.
