@@ -5,10 +5,10 @@
 
   const STYLE_ID = "servoforgeExpandedThemeStyles";
   const presets = Object.freeze([
-    { value: "red-black", label: "Red & black" },
-    { value: "dark-gold", label: "Dark gold" },
-    { value: "burnt-orange", label: "Burnt orange" },
-    { value: "forge-gradient", label: "Forge gradient" }
+    { value: "red-black", label: "Carbon Crimson" },
+    { value: "dark-gold", label: "Carbon Brass" },
+    { value: "burnt-orange", label: "Graphite Copper" },
+    { value: "forge-gradient", label: "Midnight Alloy" }
   ]);
 
   function installOptions() {
@@ -16,7 +16,11 @@
     if (!select) return false;
     const lightOption = [...select.options].find((option) => option.value === "light") || null;
     presets.forEach(({ value, label }) => {
-      if ([...select.options].some((option) => option.value === value)) return;
+      const existing = [...select.options].find((option) => option.value === value);
+      if (existing) {
+        existing.textContent = label;
+        return;
+      }
       const option = document.createElement("option");
       option.value = value;
       option.textContent = label;
@@ -31,161 +35,281 @@
     style.id = STYLE_ID;
     style.textContent = `
       body[data-theme="red-black"] {
-        --bg: #0e1013;
-        --bg-a: #08090b;
-        --bg-b: #151316;
-        --bg-glow: rgba(132, 49, 57, 0.09);
-        --panel: #17191d;
-        --panel-hi: #1f2227;
-        --line: #383b42;
-        --input: #0c0e11;
-        --ink: #e8e4e5;
-        --muted: #9d9295;
-        --green: #a5535a;
-        --green-dark: #64343a;
-        --blue: #9c7377;
-        --amber: #a98258;
-        --red: #b85f66;
-        --fill: #2a1c20;
-        --btn-a: #583137;
-        --btn-b: #352126;
-        --btn-hover-a: #6d3d44;
-        --btn-hover-b: #43282e;
-        --panel-accent: rgba(165, 83, 90, 0.2);
-        --accent: #a5535a;
-        --map-shell: #090b0d;
-        --map-surface: #131518;
-        --map-ring: #514248;
-        --map-head-fill: #21191d;
-        --map-head-stroke: #a5535a;
-        --map-label: #c7babc;
-        --map-text: #eee9ea;
-        --map-muted: #9f9295;
-        --map-readout: #1b171a;
-      }
-
-      body[data-theme="red-black"] .panel,
-      body[data-theme="red-black"] .map-area,
-      body[data-theme="red-black"] .table-wrap {
-        box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5), 0 0 24px rgba(122, 42, 50, 0.045);
+        --bg: #0b0e12;
+        --bg-a: #07090c;
+        --bg-b: #11161c;
+        --bg-glow: rgba(132, 51, 63, 0.07);
+        --panel: #14181d;
+        --panel-hi: #1c2228;
+        --line: #303842;
+        --input: #0a0e12;
+        --ink: #e7ebef;
+        --muted: #97a1ab;
+        --green: #a45a63;
+        --green-dark: #623740;
+        --blue: #7e919f;
+        --amber: #a18862;
+        --red: #b25e66;
+        --fill: #251a1f;
+        --btn-a: #4b2b31;
+        --btn-b: #2c1c20;
+        --btn-hover-a: #60363e;
+        --btn-hover-b: #382329;
+        --panel-accent: rgba(164, 90, 99, 0.2);
+        --accent: #a45a63;
+        --map-shell: #080b0f;
+        --map-surface: #11171d;
+        --map-ring: #46525d;
+        --map-head-fill: #21181d;
+        --map-head-stroke: #a45a63;
+        --map-label: #c5cdd3;
+        --map-text: #edf1f4;
+        --map-muted: #929da6;
+        --map-readout: #171b20;
       }
 
       body[data-theme="dark-gold"] {
-        --bg: #11120f;
-        --bg-a: #090a08;
-        --bg-b: #171710;
-        --bg-glow: rgba(150, 121, 50, 0.075);
-        --panel: #191a17;
-        --panel-hi: #22231e;
-        --line: #3d3d35;
-        --input: #0d0e0c;
-        --ink: #e8e5d8;
-        --muted: #9e9985;
-        --green: #a38a4d;
-        --green-dark: #62532f;
-        --blue: #978b67;
-        --amber: #b69a55;
-        --red: #a7665c;
-        --fill: #29261a;
-        --btn-a: #574a2a;
-        --btn-b: #342f20;
-        --btn-hover-a: #6a5a32;
-        --btn-hover-b: #423a25;
-        --panel-accent: rgba(163, 138, 77, 0.18);
-        --accent: #a38a4d;
-        --map-shell: #0b0c0a;
-        --map-surface: #151612;
-        --map-ring: #514c3a;
+        --bg: #0c0e10;
+        --bg-a: #08090a;
+        --bg-b: #141512;
+        --bg-glow: rgba(139, 116, 62, 0.065);
+        --panel: #161917;
+        --panel-hi: #1f2320;
+        --line: #343a35;
+        --input: #0c0f0d;
+        --ink: #e9e9e2;
+        --muted: #9c9e93;
+        --green: #a38b55;
+        --green-dark: #625536;
+        --blue: #83908b;
+        --amber: #b09862;
+        --red: #a76561;
+        --fill: #252319;
+        --btn-a: #4d442d;
+        --btn-b: #2f2a20;
+        --btn-hover-a: #605437;
+        --btn-hover-b: #3b3426;
+        --panel-accent: rgba(163, 139, 85, 0.19);
+        --accent: #a38b55;
+        --map-shell: #090b0a;
+        --map-surface: #131713;
+        --map-ring: #4a5047;
         --map-head-fill: #211f17;
-        --map-head-stroke: #a38a4d;
-        --map-label: #c7c1aa;
-        --map-text: #ece8da;
-        --map-muted: #9f9985;
-        --map-readout: #1c1b15;
+        --map-head-stroke: #a38b55;
+        --map-label: #cbc9ba;
+        --map-text: #efeee7;
+        --map-muted: #989b91;
+        --map-readout: #181a17;
       }
 
       body[data-theme="burnt-orange"] {
-        --bg: #11100f;
-        --bg-a: #090908;
-        --bg-b: #18140f;
-        --bg-glow: rgba(158, 82, 39, 0.08);
-        --panel: #1a1917;
-        --panel-hi: #24221f;
-        --line: #413b36;
-        --input: #0e0d0c;
-        --ink: #ebe4de;
-        --muted: #a0968f;
-        --green: #a7653e;
-        --green-dark: #694128;
-        --blue: #9f7d69;
-        --amber: #af8756;
-        --red: #ae6257;
-        --fill: #2c211a;
-        --btn-a: #5d3b28;
-        --btn-b: #38271d;
-        --btn-hover-a: #714932;
-        --btn-hover-b: #463025;
-        --panel-accent: rgba(167, 101, 62, 0.19);
-        --accent: #a7653e;
-        --map-shell: #0b0b0a;
-        --map-surface: #171513;
-        --map-ring: #55483f;
+        --bg: #0c0f12;
+        --bg-a: #080a0c;
+        --bg-b: #171512;
+        --bg-glow: rgba(145, 83, 47, 0.07);
+        --panel: #171a1e;
+        --panel-hi: #20252a;
+        --line: #373e45;
+        --input: #0d1013;
+        --ink: #e9e8e5;
+        --muted: #9e9a95;
+        --green: #a96c47;
+        --green-dark: #66432e;
+        --blue: #81909a;
+        --amber: #ad895b;
+        --red: #a95f59;
+        --fill: #282019;
+        --btn-a: #513928;
+        --btn-b: #30251e;
+        --btn-hover-a: #644631;
+        --btn-hover-b: #3d2e24;
+        --panel-accent: rgba(169, 108, 71, 0.19);
+        --accent: #a96c47;
+        --map-shell: #090c0f;
+        --map-surface: #14181c;
+        --map-ring: #4b535a;
         --map-head-fill: #251d18;
-        --map-head-stroke: #a7653e;
-        --map-label: #cbbeb5;
-        --map-text: #efe8e2;
-        --map-muted: #a29790;
-        --map-readout: #1e1916;
+        --map-head-stroke: #a96c47;
+        --map-label: #ccc8c3;
+        --map-text: #efeeeb;
+        --map-muted: #9a9793;
+        --map-readout: #1a1b1b;
       }
 
       body[data-theme="forge-gradient"] {
-        --bg: #101215;
-        --bg-a: #0a0b0e;
-        --bg-b: #151619;
-        --bg-glow: rgba(85, 112, 105, 0.07);
-        --panel: #191b1f;
-        --panel-hi: #22252a;
-        --line: #3a3f45;
-        --input: #0d0f12;
-        --ink: #e7ebea;
-        --muted: #969f9e;
-        --green: #6e9a87;
-        --green-dark: #456657;
-        --blue: #718d9b;
-        --amber: #9f8658;
-        --red: #9c6269;
-        --fill: #1e2b27;
-        --btn-a: #3d5d52;
-        --btn-b: #354554;
-        --btn-hover-a: #496e61;
-        --btn-hover-b: #405366;
-        --panel-accent: rgba(113, 141, 155, 0.18);
-        --accent: #6e9a87;
-        --map-shell: #0a0c0e;
-        --map-surface: #15191d;
-        --map-ring: #46545b;
-        --map-head-fill: #182321;
-        --map-head-stroke: #718d9b;
-        --map-label: #c4cdcc;
-        --map-text: #ebefee;
-        --map-muted: #98a2a2;
-        --map-readout: #192023;
+        --bg: #0a0e13;
+        --bg-a: #070a0e;
+        --bg-b: #10171b;
+        --bg-glow: rgba(84, 116, 109, 0.07);
+        --panel: #141a20;
+        --panel-hi: #1c242b;
+        --line: #303b45;
+        --input: #0a0f14;
+        --ink: #e5ebee;
+        --muted: #93a0a8;
+        --green: #6f948c;
+        --green-dark: #456058;
+        --blue: #6f879c;
+        --amber: #a08a62;
+        --red: #9d6268;
+        --fill: #192724;
+        --btn-a: #365149;
+        --btn-b: #2d3b48;
+        --btn-hover-a: #416159;
+        --btn-hover-b: #374858;
+        --panel-accent: rgba(111, 135, 156, 0.19);
+        --accent: #6f948c;
+        --map-shell: #070c11;
+        --map-surface: #101820;
+        --map-ring: #40515e;
+        --map-head-fill: #172523;
+        --map-head-stroke: #6f879c;
+        --map-label: #c3ccd1;
+        --map-text: #ebf0f2;
+        --map-muted: #909da5;
+        --map-readout: #152027;
         background:
-          radial-gradient(circle at 12% 4%, rgba(91, 67, 116, 0.09), transparent 34%),
-          radial-gradient(circle at 88% 11%, rgba(145, 79, 48, 0.075), transparent 36%),
-          radial-gradient(circle at 52% 94%, rgba(62, 119, 96, 0.07), transparent 43%),
-          linear-gradient(135deg, #0d0d12 0%, #0d1318 43%, #111815 71%, #19120e 100%);
+          radial-gradient(circle at 10% 2%, rgba(85, 70, 113, 0.075), transparent 34%),
+          radial-gradient(circle at 91% 8%, rgba(73, 108, 123, 0.085), transparent 38%),
+          radial-gradient(circle at 54% 98%, rgba(65, 112, 96, 0.07), transparent 44%),
+          linear-gradient(135deg, #090b10 0%, #0a1118 45%, #0d1715 72%, #12100e 100%);
         background-attachment: fixed;
+      }
+
+      body:is(
+        [data-theme="red-black"],
+        [data-theme="dark-gold"],
+        [data-theme="burnt-orange"],
+        [data-theme="forge-gradient"]
+      ) .panel,
+      body:is(
+        [data-theme="red-black"],
+        [data-theme="dark-gold"],
+        [data-theme="burnt-orange"],
+        [data-theme="forge-gradient"]
+      ) .map-area,
+      body:is(
+        [data-theme="red-black"],
+        [data-theme="dark-gold"],
+        [data-theme="burnt-orange"],
+        [data-theme="forge-gradient"]
+      ) .table-wrap {
+        background:
+          linear-gradient(150deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent 36%),
+          linear-gradient(180deg, var(--panel-hi), var(--panel));
+        border-color: var(--line);
+        border-top-color: color-mix(in srgb, var(--accent) 42%, var(--line));
+        box-shadow: 0 16px 38px rgba(0, 0, 0, 0.4);
+      }
+
+      body:is(
+        [data-theme="red-black"],
+        [data-theme="dark-gold"],
+        [data-theme="burnt-orange"],
+        [data-theme="forge-gradient"]
+      ) .map-area {
+        background:
+          radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--blue) 7%, transparent), transparent 48%),
+          linear-gradient(180deg, color-mix(in srgb, var(--map-shell) 90%, var(--panel-hi) 10%), var(--map-shell));
+      }
+
+      body:is(
+        [data-theme="red-black"],
+        [data-theme="dark-gold"],
+        [data-theme="burnt-orange"],
+        [data-theme="forge-gradient"]
+      ) button {
+        border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
+      }
+
+      body:is(
+        [data-theme="red-black"],
+        [data-theme="dark-gold"],
+        [data-theme="burnt-orange"],
+        [data-theme="forge-gradient"]
+      ) button:hover,
+      body:is(
+        [data-theme="red-black"],
+        [data-theme="dark-gold"],
+        [data-theme="burnt-orange"],
+        [data-theme="forge-gradient"]
+      ) .tab.active {
+        border-color: color-mix(in srgb, var(--accent) 64%, var(--line));
+      }
+
+      body:is(
+        [data-theme="red-black"],
+        [data-theme="dark-gold"],
+        [data-theme="burnt-orange"],
+        [data-theme="forge-gradient"]
+      ) .top-settings-menu > summary {
+        border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+        background: linear-gradient(180deg, var(--btn-a), var(--btn-b));
+      }
+
+      body:is(
+        [data-theme="red-black"],
+        [data-theme="dark-gold"],
+        [data-theme="burnt-orange"],
+        [data-theme="forge-gradient"]
+      ) input:focus,
+      body:is(
+        [data-theme="red-black"],
+        [data-theme="dark-gold"],
+        [data-theme="burnt-orange"],
+        [data-theme="forge-gradient"]
+      ) select:focus {
+        outline-color: color-mix(in srgb, var(--accent) 45%, transparent);
+        border-color: var(--accent);
+      }
+
+      body:is(
+        [data-theme="red-black"],
+        [data-theme="dark-gold"],
+        [data-theme="burnt-orange"],
+        [data-theme="forge-gradient"]
+      ) tbody tr:hover {
+        background: color-mix(in srgb, var(--accent) 5%, transparent);
+      }
+
+      body:is(
+        [data-theme="red-black"],
+        [data-theme="dark-gold"],
+        [data-theme="burnt-orange"],
+        [data-theme="forge-gradient"]
+      ) th {
+        background: color-mix(in srgb, var(--panel-hi) 91%, var(--input) 9%);
+        color: var(--ink);
+        border-bottom-color: var(--line);
+      }
+
+      body:is(
+        [data-theme="red-black"],
+        [data-theme="dark-gold"],
+        [data-theme="burnt-orange"],
+        [data-theme="forge-gradient"]
+      ) .switch-control input:checked + .switch-track {
+        background: color-mix(in srgb, var(--accent) 20%, transparent);
+        border-color: var(--accent);
+      }
+
+      body:is(
+        [data-theme="red-black"],
+        [data-theme="dark-gold"],
+        [data-theme="burnt-orange"],
+        [data-theme="forge-gradient"]
+      ) .notice {
+        border-left-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 10%, transparent);
       }
 
       body[data-theme="forge-gradient"] .panel,
       body[data-theme="forge-gradient"] .map-area,
       body[data-theme="forge-gradient"] .table-wrap {
         background:
-          linear-gradient(145deg, rgba(113, 141, 155, 0.045), transparent 34%),
-          linear-gradient(225deg, rgba(145, 79, 48, 0.035), transparent 42%),
-          linear-gradient(180deg, rgba(34, 37, 42, 0.98), rgba(23, 25, 29, 0.99));
-        box-shadow: 0 20px 52px rgba(0, 0, 0, 0.5), 0 0 26px rgba(78, 110, 96, 0.035);
+          linear-gradient(145deg, rgba(111, 135, 156, 0.045), transparent 34%),
+          linear-gradient(225deg, rgba(65, 112, 96, 0.035), transparent 44%),
+          linear-gradient(180deg, rgba(28, 36, 43, 0.985), rgba(20, 26, 32, 0.995));
       }
     `;
     document.head.appendChild(style);
