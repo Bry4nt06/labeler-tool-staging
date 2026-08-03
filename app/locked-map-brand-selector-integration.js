@@ -1,6 +1,6 @@
 "use strict";
 
-(function installLockedMapBrandSelectorIntegration() {
+(function installMachineMapSelectorIntegration() {
   const RETRY_MS = 50;
   const PREFS_KEY = "servoforge-developer-preferences-v1";
   const RETIRED_MAP_ID = "map-workbook-3-label-apl-reference";
@@ -27,60 +27,32 @@
   }
 
   function savePreferences(preferences) {
-    try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify(preferences));
-    } catch {
-      // Browser storage may be unavailable. Runtime behavior still works.
-    }
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(preferences)); }
+    catch { }
   }
 
-  function normalizedMode(value) {
-    try {
-      if (typeof normalizeLabelApplicationMode === "function") {
-        return normalizeLabelApplicationMode(value);
-      }
-    } catch { }
-    return String(value || "apl").toLowerCase() === "cold-glue" ? "cold-glue" : "apl";
+  function maps() {
+    return Array.isArray(state?.mapLibrary) ? state.mapLibrary : [];
   }
 
   function activeMap() {
-    try {
-      return typeof activeMachineMap === "function" ? activeMachineMap() : null;
-    } catch {
-      return null;
-    }
+    try { return typeof activeMachineMap === "function" ? activeMachineMap() : null; }
+    catch { return null; }
   }
 
-  function activeMapIsLocked(map = activeMap()) {
-    return Boolean(
-      map?.id
-      && readPreferences().lockedMapIds.includes(String(map.id))
-    );
-  }
-
-  function compatibleBrandSpecs(map) {
-    const mode = normalizedMode(map?.applicationMode);
-    const seen = new Set();
-    return (Array.isArray(state?.labelSpecs) ? state.labelSpecs : []).filter((spec) => {
-      const brand = String(spec?.brand || "").trim();
-      if (!brand || normalizedMode(spec?.applicationMode) !== mode) return false;
-      const identity = brand.toLowerCase();
-      if (seen.has(identity)) return false;
-      seen.add(identity);
-      return true;
-    });
+  function mapIsLocked(map) {
+    return Boolean(map?.id && readPreferences().lockedMapIds.includes(String(map.id)));
   }
 
   function purgeRetiredWorkbookFeature() {
     document.querySelectorAll(".workbook-reference-comparison,#workbookReferenceComparisonStyles")
       .forEach((node) => node.remove());
-
     try { localStorage.removeItem(RETIRED_ACTIVATION_KEY); } catch { }
 
-    if (!Array.isArray(state?.mapLibrary)) return false;
-    const previousLength = state.mapLibrary.length;
+    const library = maps();
+    const previousLength = library.length;
     const removedActiveMap = String(state.activeMapId || "") === RETIRED_MAP_ID;
-    state.mapLibrary = state.mapLibrary.filter((map) => String(map?.id || "") !== RETIRED_MAP_ID);
+    state.mapLibrary = library.filter((map) => String(map?.id || "") !== RETIRED_MAP_ID);
 
     const preferences = readPreferences();
     const filteredLocks = preferences.lockedMapIds.filter((id) => id !== RETIRED_MAP_ID);
@@ -91,13 +63,10 @@
 
     if (removedActiveMap && state.mapLibrary.length) {
       state.activeMapId = String(state.mapLibrary[0].id || "");
-      try {
-        if (typeof loadMachineMapIntoRuntime === "function") {
-          loadMachineMapIntoRuntime(state.mapLibrary[0], false);
-        }
-      } catch { }
+      if (typeof loadMachineMapIntoRuntime === "function") {
+        loadMachineMapIntoRuntime(state.mapLibrary[0], false);
+      }
     }
-
     return previousLength !== state.mapLibrary.length;
   }
 
@@ -120,120 +89,104 @@
     if (note && note.textContent.trim() !== noteText) note.textContent = noteText;
 
     const help = document.querySelector("#workspaceMapLockHelp");
-    if (help && activeMapIsLocked()) {
+    if (help && mapIsLocked(activeMap())) {
       help.textContent = "The selected mechanical map is protected. Specs and Build Inputs remain editable.";
     }
   }
 
-  function optionFor(spec, map) {
+  function optionFor(map, lockedIds) {
     const option = document.createElement("option");
-    option.dataset.mapId = String(map?.id || "");
-    option.dataset.brand = String(spec?.brand || "");
-    option.value = String(spec?.brand || "");
-    option.textContent = String(spec?.brand || "No compatible label specs");
-    option.disabled = !spec?.brand;
+    const id = String(map?.id || "");
+    option.value = id;
+    option.dataset.mapId = id;
+    option.dataset.locked = String(lockedIds.has(id));
+    option.textContent = `${lockedIds.has(id) ? "🔒 " : ""}${String(map?.name || "Machine Map")}`;
+    option.selected = id === String(state.activeMapId || "");
     return option;
   }
 
-  function updateViewerCopy(viewer) {
+  function updateViewerCopy(viewer, map) {
     const label = viewer?.querySelector("label");
     if (label) {
       const text = [...label.childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
-      if (text && text.textContent !== "Label Spec ") text.textContent = "Label Spec ";
+      if (text && text.textContent !== "Machine Map ") text.textContent = "Machine Map ";
     }
 
     const badge = viewer?.querySelector(".locked-map-badge");
-    const badgeText = "Map Locked • Specs & Inputs Editable";
-    if (badge && badge.textContent !== badgeText) badge.textContent = badgeText;
+    if (!badge) return;
+    const locked = mapIsLocked(map);
+    badge.textContent = locked ? "Map Locked • Specs & Inputs Editable" : "Map Editable";
+    badge.dataset.state = locked ? "locked" : "editable";
   }
 
-  function applySelectedBrand(brand) {
-    const map = activeMap();
-    if (!map || !activeMapIsLocked(map)) return;
+  function renderMapOptions() {
+    const viewer = document.querySelector("#lockedMapViewer");
+    const select = viewer?.querySelector("#lockedMapViewerSelect");
+    if (!viewer || !select) return;
 
-    const spec = compatibleBrandSpecs(map)
-      .find((entry) => String(entry?.brand || "") === String(brand || ""));
-    if (!spec) return;
-
-    state.selectedBrand = String(spec.brand);
-    if (spec.bottleType) state.selectedBottle = String(spec.bottleType);
-    if (state.simulation) state.simulation.useCustom = false;
-
-    if (typeof clearServoSimulationForSelectedMap === "function") {
-      clearServoSimulationForSelectedMap();
+    const library = maps();
+    viewer.hidden = library.length === 0;
+    if (!library.length) {
+      select.replaceChildren();
+      updateViewerCopy(viewer, null);
+      return;
     }
+
+    const lockedIds = new Set(readPreferences().lockedMapIds);
+    const expected = library.map((map) => `${String(map?.id || "")}\u001f${lockedIds.has(String(map?.id || ""))}`);
+    const current = [...select.options].map((option) => `${String(option.dataset.mapId || "")}\u001f${String(option.dataset.locked || "false") === "true"}`);
+
+    if (expected.length !== current.length || expected.some((identity, index) => identity !== current[index])) {
+      const fragment = document.createDocumentFragment();
+      library.forEach((map) => fragment.appendChild(optionFor(map, lockedIds)));
+      select.replaceChildren(fragment);
+    }
+
+    const selectedId = library.some((map) => String(map?.id || "") === String(state.activeMapId || ""))
+      ? String(state.activeMapId || "")
+      : String(library[0]?.id || "");
+    select.value = selectedId;
+    updateViewerCopy(viewer, library.find((map) => String(map?.id || "") === selectedId));
+  }
+
+  function applySelectedMap(mapId) {
+    const map = maps().find((entry) => String(entry?.id || "") === String(mapId || ""));
+    if (!map || String(map.id) === String(state.activeMapId || "")) {
+      renderMapOptions();
+      return;
+    }
+
+    if (typeof loadMachineMapIntoRuntime === "function") loadMachineMapIntoRuntime(map, true);
+    else state.activeMapId = String(map.id);
+
+    if (state.simulation) state.simulation.useCustom = false;
+    if (typeof clearServoSimulationForSelectedMap === "function") clearServoSimulationForSelectedMap();
     if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
     if (typeof render === "function") render();
     if (typeof saveCurrentSettings === "function") saveCurrentSettings();
     scheduleRefresh();
   }
 
-  function renderActiveMapBrandOptions() {
-    const viewer = document.querySelector("#lockedMapViewer");
-    const select = viewer?.querySelector("#lockedMapViewerSelect");
-    if (!viewer || !select) return;
-
-    const map = activeMap();
-    const locked = activeMapIsLocked(map);
-    viewer.hidden = !locked;
-    updateViewerCopy(viewer);
-
-    if (!locked) {
-      if (select.options.length) select.replaceChildren();
-      return;
-    }
-
-    const specs = compatibleBrandSpecs(map);
-    const expected = specs.map((spec) => String(spec.brand));
-    const current = [...select.options].map((option) => String(option.dataset.brand || ""));
-
-    if (
-      expected.length !== current.length
-      || expected.some((brand, index) => brand !== current[index])
-    ) {
-      const fragment = document.createDocumentFragment();
-      if (specs.length) {
-        specs.forEach((spec) => fragment.appendChild(optionFor(spec, map)));
-      } else {
-        fragment.appendChild(optionFor(null, map));
-      }
-      select.replaceChildren(fragment);
-    }
-
-    const selected = specs.find((spec) => String(spec.brand) === String(state.selectedBrand || ""));
-    if (selected) {
-      select.value = String(selected.brand);
-      return;
-    }
-
-    const fallback = specs[0];
-    if (fallback) {
-      select.value = String(fallback.brand);
-      applySelectedBrand(fallback.brand);
-    }
-  }
-
   function bindSelection() {
-    if (document.documentElement.dataset.lockedMapBrandSelectorBound === "true") return;
-    document.documentElement.dataset.lockedMapBrandSelectorBound = "true";
-
+    if (document.documentElement.dataset.machineMapSelectorBound === "true") return;
+    document.documentElement.dataset.machineMapSelectorBound = "true";
     document.addEventListener("change", (event) => {
       const select = event.target.closest?.("#lockedMapViewerSelect");
       if (!select) return;
-      const option = select.selectedOptions?.[0];
-      if (!option?.dataset?.brand) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      applySelectedBrand(option.dataset.brand);
+      applySelectedMap(select.value);
     }, true);
   }
 
   function installStyles() {
-    if (document.querySelector("#lockedMapBrandSelectorStyles")) return;
+    if (document.querySelector("#machineMapSelectorStyles")) return;
+    document.querySelector("#lockedMapBrandSelectorStyles")?.remove();
     const style = document.createElement("style");
-    style.id = "lockedMapBrandSelectorStyles";
+    style.id = "machineMapSelectorStyles";
     style.textContent = `
       #lockedMapViewerSelect option{font-weight:500;color:var(--text)}
+      .locked-map-badge[data-state="editable"]{border-color:var(--green);color:var(--green)}
       #specs:not(.read-only-surface) input:not(:disabled),
       #specs:not(.read-only-surface) select:not(:disabled),
       #buildInputs:not(.read-only-surface) input:not(:disabled),
@@ -246,7 +199,7 @@
     refreshPending = false;
     purgeRetiredWorkbookFeature();
     unlockEditableSurfaces();
-    renderActiveMapBrandOptions();
+    renderMapOptions();
   }
 
   function scheduleRefresh() {
@@ -268,13 +221,7 @@
 
   function install() {
     if (installed) return true;
-    if (
-      typeof state === "undefined"
-      || typeof activeMachineMap !== "function"
-      || !document.querySelector(".map-head")
-    ) {
-      return false;
-    }
+    if (typeof state === "undefined" || typeof activeMachineMap !== "function" || !document.querySelector(".map-head")) return false;
 
     installed = true;
     const changed = purgeRetiredWorkbookFeature();
@@ -282,8 +229,7 @@
     installStyles();
     installObserver();
     unlockEditableSurfaces();
-    renderActiveMapBrandOptions();
-
+    renderMapOptions();
     if (changed && typeof saveCurrentSettings === "function") saveCurrentSettings();
     window.setTimeout(scheduleRefresh, 250);
     window.setTimeout(scheduleRefresh, 1000);
@@ -294,9 +240,6 @@
     if (!install()) window.setTimeout(wait, RETRY_MS);
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", wait, { once: true });
-  } else {
-    wait();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wait, { once: true });
+  else wait();
 })();
