@@ -1,7 +1,7 @@
 "use strict";
 
 (function loadServoForgeMapBuilderModules() {
-  const releaseVersion = document.querySelector('meta[name="application-version"]')?.content || "0.9.2";
+  const releaseVersion = "0.9.8";
   const modulePaths = Object.freeze([
     "drivers/map/map-schema-driver.js",
     "drivers/map/map-migration-driver.js",
@@ -40,7 +40,7 @@
       }
 
       const script = document.createElement("script");
-      script.src = `./${path}?v=${encodeURIComponent(releaseVersion)}-map-builder-v1`;
+      script.src = `./${path}?v=${encodeURIComponent(releaseVersion)}-map-builder-v2`;
       script.async = false;
       script.dataset.servoforgeMapBuilderModule = path;
       script.addEventListener("load", () => {
