@@ -12,6 +12,8 @@ const setupSource = read("app", "controllers", "setup-event-controller-integrati
 const layoutSource = read("app", "controllers", "map-builder-layout-controller.js");
 const controlsSource = read("app", "map-builder-controls.js");
 const validationUiSource = read("app", "controllers", "validation-panel-ui-controller.js");
+const stationEventSource = read("app", "controllers", "station-table-event-controller.js");
+const programEventSource = read("app", "controllers", "servo-program-event-controller.js");
 const bootstrapSource = read("app", "bootstrap.js");
 const startupSource = read("app", "startup-runtime.js");
 
@@ -20,6 +22,8 @@ const startupSource = read("app", "startup-runtime.js");
   ["map-builder-layout-controller.js", layoutSource],
   ["map-builder-controls.js", controlsSource],
   ["validation-panel-ui-controller.js", validationUiSource],
+  ["station-table-event-controller.js", stationEventSource],
+  ["servo-program-event-controller.js", programEventSource],
   ["bootstrap.js", bootstrapSource],
   ["startup-runtime.js", startupSource]
 ].forEach(([filename, source]) => {
@@ -29,8 +33,23 @@ const startupSource = read("app", "startup-runtime.js");
 assert.ok(!setupSource.includes("handleSpecChange"), "The central setup boundary must not route Specs field changes.");
 assert.ok(!setupSource.includes("labelKeys"), "Positional Label Spec field keys must remain removed.");
 assert.ok(!setupSource.includes('querySelectorAll("input")'), "Specs routing must not depend on positional input indexes.");
+assert.ok(!setupSource.includes("handleStationChange"), "Station table fields require a focused event owner.");
+assert.ok(!setupSource.includes("handleProgramChange"), "Servo Program fields require a focused event owner.");
+assert.ok(!setupSource.includes('target.dataset?.programField === "action"'), "Servo Program action editing must not return to the central boundary.");
 assert.ok(setupSource.includes("specs.addBottle()"));
 assert.ok(setupSource.includes("specs.deleteLabel("));
+
+assert.ok(stationEventSource.includes("LabelerStationTableEventController"));
+assert.ok(stationEventSource.includes('document.addEventListener("change"'));
+assert.ok(stationEventSource.includes("stations.updateName"));
+assert.ok(stationEventSource.includes("stations.updateAngle"));
+
+assert.ok(programEventSource.includes("LabelerServoProgramEventController"));
+assert.ok(programEventSource.includes('document.addEventListener("change"'));
+assert.ok(programEventSource.includes('document.addEventListener("input"'));
+assert.ok(programEventSource.includes("program.updateCommand"));
+assert.ok(programEventSource.includes("program.updateOverride"));
+assert.ok(programEventSource.includes("program.updateAction"));
 
 assert.ok(controlsSource.includes('data-aggregate-angle="${aggregate}"'));
 assert.ok(controlsSource.includes('data-machine-slot="${slotType}"'));
@@ -44,20 +63,31 @@ assert.ok(layoutSource.includes("updateAggregateAngle"));
 assert.ok(layoutSource.includes("updateMachineSlot"));
 assert.ok(layoutSource.includes("At least one ${slotType} must remain active."));
 
-assert.ok(validationUiSource.includes("grid-template-columns: repeat(3, minmax(0, 1fr))"));
-assert.ok(validationUiSource.includes(".pipeline-validation-summary > strong"));
-assert.ok(validationUiSource.includes("grid-column: 1 / -1"));
-assert.ok(validationUiSource.includes("white-space: normal"));
+assert.ok(validationUiSource.includes("overflow-x: hidden !important"));
+assert.ok(validationUiSource.includes("overflow-y: auto !important"));
+assert.ok(validationUiSource.includes("display: flex !important"));
+assert.ok(validationUiSource.includes("flex: 1 0 100%"));
+assert.ok(validationUiSource.includes("flex: 1 1 0"));
+assert.ok(validationUiSource.includes("word-break: break-word"));
+assert.ok(validationUiSource.includes(".validation-head-actions"));
 
 const validationPath = "app/controllers/validation-panel-ui-controller.js";
 const layoutPath = "app/controllers/map-builder-layout-controller.js";
+const stationEventPath = "app/controllers/station-table-event-controller.js";
+const programEventPath = "app/controllers/servo-program-event-controller.js";
 assert.ok(bootstrapSource.includes(validationPath));
 assert.ok(bootstrapSource.includes(layoutPath));
+assert.ok(bootstrapSource.includes(stationEventPath));
+assert.ok(bootstrapSource.includes(programEventPath));
 assert.ok(bootstrapSource.indexOf("app/controllers/health-status-ui-controller.js") < bootstrapSource.indexOf(validationPath));
+assert.ok(bootstrapSource.indexOf("app/controllers/servo-program-controller.js") < bootstrapSource.indexOf(programEventPath));
+assert.ok(bootstrapSource.indexOf("app/controllers/station-table-controller.js") < bootstrapSource.indexOf(stationEventPath));
 assert.ok(bootstrapSource.indexOf("app/controllers/map-builder-event-controller.js") < bootstrapSource.indexOf(layoutPath));
 assert.ok(bootstrapSource.indexOf(layoutPath) < bootstrapSource.indexOf("app/controllers/map-builder-row-controller.js"));
 assert.ok(startupSource.includes("LabelerValidationPanelUiController?.installed"));
 assert.ok(startupSource.includes("LabelerMapBuilderLayoutController?.installed"));
+assert.ok(startupSource.includes("LabelerStationTableEventController?.installed"));
+assert.ok(startupSource.includes("LabelerServoProgramEventController?.installed"));
 
 class FakeElement {
   constructor({ dataset = {}, value = "", checked = false, type = "" } = {}) {
@@ -149,4 +179,4 @@ assert.strictEqual(calls.alerts.length, 1);
   assert.strictEqual(listeners.get(type).options, true, `${type} must use capture ownership.`);
 });
 
-console.log("Controller ownership and Validation layout cleanup regression passed.");
+console.log("Controller ownership and Validation overflow regression passed.");
