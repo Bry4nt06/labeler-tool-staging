@@ -76,31 +76,6 @@
         white-space: nowrap;
       }
 
-      #specs tr.selected-brand-spec > td:last-child::before {
-        content: "Selected";
-        display: inline-flex;
-        flex: 0 1 auto;
-        align-items: center;
-        justify-content: center;
-        box-sizing: border-box;
-        min-width: 0;
-        max-width: 58px;
-        padding: 3px 5px;
-        overflow: hidden;
-        border: 1px solid color-mix(in srgb, var(--accent, var(--green)) 62%, var(--line));
-        border-radius: 5px;
-        background: color-mix(in srgb, var(--accent, var(--green)) 16%, var(--panel-hi));
-        color: var(--accent, var(--green));
-        font-size: 8px;
-        font-weight: 800;
-        letter-spacing: 0.06em;
-        line-height: 1;
-        text-overflow: ellipsis;
-        text-transform: uppercase;
-        white-space: nowrap;
-        pointer-events: none;
-      }
-
       #specs .spec-row-actions > .spec-icon-button {
         display: inline-flex;
         flex: 0 0 32px;
