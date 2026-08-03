@@ -29,40 +29,78 @@
       }
 
       #specs tr.selected-brand-spec > td {
+        position: relative;
         background:
           linear-gradient(
-            color-mix(in srgb, var(--accent, var(--green)) 15%, transparent),
-            color-mix(in srgb, var(--accent, var(--green)) 15%, transparent)
-          ),
-          var(--panel);
-        border-top: 1px solid var(--accent, var(--green));
-        border-bottom: 1px solid var(--accent, var(--green));
+            90deg,
+            color-mix(in srgb, var(--accent, var(--green)) 22%, var(--panel)) 0%,
+            color-mix(in srgb, var(--accent, var(--green)) 12%, var(--panel)) 58%,
+            color-mix(in srgb, var(--accent, var(--green)) 7%, var(--panel)) 100%
+          );
+        background-clip: padding-box;
+        border-top: 1px solid color-mix(in srgb, var(--accent, var(--green)) 72%, var(--line));
+        border-bottom: 1px solid color-mix(in srgb, var(--accent, var(--green)) 72%, var(--line));
       }
 
       #specs tr.selected-brand-spec > td:first-child {
-        border-left: 3px solid var(--accent, var(--green));
-        box-shadow: inset 4px 0 12px color-mix(in srgb, var(--accent, var(--green)) 20%, transparent);
+        border-left: 4px solid var(--accent, var(--green));
+        box-shadow: inset 7px 0 14px color-mix(in srgb, var(--accent, var(--green)) 18%, transparent);
       }
 
       #specs tr.selected-brand-spec > td:last-child {
-        border-right: 1px solid var(--accent, var(--green));
+        border-right: 1px solid color-mix(in srgb, var(--accent, var(--green)) 72%, var(--line));
       }
 
       #specs tr.selected-brand-spec input,
       #specs tr.selected-brand-spec select {
-        border-color: var(--accent, var(--green));
-        box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, var(--green)) 22%, transparent);
+        border-color: var(--line);
+        background: color-mix(in srgb, var(--input) 88%, transparent);
+        box-shadow: none;
       }
 
-      #specs tr.selected-brand-spec td:first-child::after {
+      #specs tr.selected-brand-spec input:focus,
+      #specs tr.selected-brand-spec select:focus {
+        border-color: var(--accent, var(--green));
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent, var(--green)) 24%, transparent);
+      }
+
+      #specs tr.selected-brand-spec > td:last-child {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-content: center;
+        gap: 5px;
+        min-width: 150px;
+        white-space: normal;
+      }
+
+      #specs tr.selected-brand-spec > td:last-child::before {
         content: "Selected";
+        grid-column: 1 / -1;
         display: block;
-        margin-top: 3px;
+        width: 100%;
+        padding: 4px 7px;
+        border: 1px solid color-mix(in srgb, var(--accent, var(--green)) 62%, var(--line));
+        border-radius: 5px;
+        background: color-mix(in srgb, var(--accent, var(--green)) 16%, var(--panel-hi));
         color: var(--accent, var(--green));
         font-size: 8px;
         font-weight: 800;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.08em;
+        line-height: 1.1;
+        text-align: left;
         text-transform: uppercase;
+      }
+
+      #specs tr.selected-brand-spec > td:last-child > button {
+        width: 100%;
+        min-width: 0;
+      }
+
+      @media (max-width: 760px) {
+        #specs tr.selected-brand-spec > td:last-child {
+          grid-template-columns: minmax(0, 1fr);
+          min-width: 110px;
+        }
       }
     `;
     document.head.appendChild(style);
