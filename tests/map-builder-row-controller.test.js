@@ -7,6 +7,7 @@ const vm = require("vm");
 
 const root = path.resolve(__dirname, "..");
 const source = fs.readFileSync(path.join(root, "app", "controllers", "map-builder-row-controller.js"), "utf8");
+const rendererSource = fs.readFileSync(path.join(root, "app", "map-builder-renderer.js"), "utf8");
 const bootstrapSource = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
 const startupSource = fs.readFileSync(path.join(root, "app", "startup-runtime.js"), "utf8");
 
@@ -130,6 +131,15 @@ assert.strictEqual(calls.renderMap, 1);
   assert.ok(listeners.has(type), `${type} must be delegated.`);
   assert.strictEqual(listeners.get(type).options, true, `${type} must use capture ownership.`);
 });
+
+assert.ok(!rendererSource.includes("addEventListener("), "Map Builder rendering must remain listener-free.");
+assert.ok(rendererSource.includes('data-builder-field="name"'));
+assert.ok(rendererSource.includes("data-station-section"));
+assert.ok(rendererSource.includes("builder-duplicate"));
+assert.ok(rendererSource.includes("builder-remove"));
+assert.ok(rendererSource.includes("builder-duplicate-station"));
+assert.ok(!rendererSource.includes("recordBuilderHistory("), "History ownership belongs to the delegated row controller.");
+assert.ok(!rendererSource.includes("refreshAfterBuilderEdit("), "Row mutation ownership belongs to the delegated row controller.");
 
 const rowControllerPath = "app/controllers/map-builder-row-controller.js";
 assert.ok(bootstrapSource.includes(rowControllerPath));
