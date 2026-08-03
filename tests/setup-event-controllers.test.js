@@ -6,7 +6,7 @@ const path = require("path");
 const vm = require("vm");
 
 const root = path.resolve(__dirname, "..");
-const controllerPaths = [
+const runtimeControllerPaths = [
   "app/controllers/workspace-action-service.js",
   "app/controllers/settings-controller.js",
   "app/controllers/map-controller.js",
@@ -16,10 +16,31 @@ const controllerPaths = [
   "app/controllers/transfer-controller.js",
   "app/controllers/simulation-controller.js",
   "app/controllers/application-controller.js",
+  "app/controllers/workspace-panel-controller.js",
+  "app/controllers/setup-event-controller-integration.js"
+];
+const bootstrapControllerPaths = [
+  "app/controllers/workspace-action-service.js",
+  "app/controllers/settings-controller.js",
+  "app/controllers/map-controller.js",
+  "app/controllers/specs-controller.js",
+  "app/controllers/build-inputs-controller.js",
+  "app/controllers/tabs-controller.js",
+  "app/controllers/transfer-controller.js",
+  "app/controllers/simulation-controller.js",
+  "app/controllers/servo-program-controller.js",
+  "app/controllers/simulation-editor-controller.js",
+  "app/controllers/station-table-controller.js",
+  "app/controllers/application-controller.js",
+  "app/controllers/setup-state-controller.js",
+  "app/controllers/workspace-panel-controller.js",
+  "app/controllers/map-builder-popup-controller.js",
   "app/controllers/setup-event-controller-integration.js"
 ];
 const bootstrapSource = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
-const sources = controllerPaths.map((file) => [file, fs.readFileSync(path.join(root, file), "utf8")]);
+const startupSource = fs.readFileSync(path.join(root, "app", "startup-runtime.js"), "utf8");
+const globalActionsSource = fs.readFileSync(path.join(root, "app", "global-actions.js"), "utf8");
+const sources = runtimeControllerPaths.map((file) => [file, fs.readFileSync(path.join(root, file), "utf8")]);
 
 class FakeElement {}
 const listeners = [];
@@ -31,10 +52,12 @@ const calls = {
   render: 0,
   builder: 0,
   assembly: 0,
-  loadMap: 0
+  loadMap: 0,
+  wipeTelemetry: 0
 };
 const activeMap = {
   id: "map-1",
+  name: "Test Map",
   applicationMode: "apl",
   objects: [],
   machineSettings: {}
@@ -64,6 +87,7 @@ const state = {
   previewBottleAngle: null,
   isPlaying: false,
   animationSpeed: 10,
+  wipeBuilderOpen: false,
   depths: { spender: 1, opRoller: 2, nonOpRoller: 3, wipeInner: 4, wipeOuter: 5 },
   bottleSpecs: [{ id: 1, bottleType: "Bottle A", diameterTargetMm: 60, radiusReductionMm: 0 }],
   labelSpecs: [{ id: 1, brand: "Brand A", bottleType: "Bottle A", applicationMode: "apl", bodyLengthMm: 100, backLengthMm: 80, neckBottomCurveMm: 50, neckBottomCircumferenceMm: 120, codeBoxCenterMm: 10 }],
@@ -72,15 +96,18 @@ const state = {
   selectedZone: "Zone 1",
   selectedSite: "Site 1",
   buildInputs: { neckApplication: "Center", plateStartPositionDeg: 0, neckSpenderPlateDeg: 90, neckContactMm: 10, bodyContactMm: 10, backContactMm: 10 },
-  program: [{ cmd: 3, tableAngle: 0, plateAngle: 0, action: "Rest" }],
+  program: [{ hmi: 1, plc: 0, cmd: 3, tableAngle: 0, plateAngle: 0, action: "Rest" }],
   simulation: { useCustom: false, turns: [], rows: [], deletedRows: [], lines: [] },
+  servoProfileLibrary: [],
   mapLibrary: [activeMap],
   applicationMode: "apl",
   activeMapId: "map-1",
   builderHistory: { undo: [], redo: [] }
 };
 
+const panelAttributes = {};
 const document = {
+  body: { classList: { toggle() {} } },
   addEventListener(type, handler, options) { listeners.push({ type, handler, options }); },
   querySelectorAll() { return []; },
   querySelector() { return null; }
@@ -88,7 +115,9 @@ const document = {
 const els = {
   showMoveDistanceOverlay: { checked: false },
   showAllProgramMovesOverlay: { checked: false },
-  playPause: { textContent: "Play", setAttribute() {} }
+  playPause: { textContent: "Play", setAttribute() {} },
+  wipeDownDataPanel: { hidden: false },
+  showWipeDownData: { setAttribute(name, value) { panelAttributes[name] = value; } }
 };
 
 const sandbox = {
@@ -101,8 +130,15 @@ const sandbox = {
   performance: { now: () => 100 },
   console,
   confirm: () => true,
+  alert() {},
   setTimeout,
   clearTimeout,
+  LabelerServoProgramController: Object.freeze({ updateCommand() {}, updateOverride() {}, updateAction() {} }),
+  LabelerSimulationEditorController: Object.freeze({
+    updateCommand() {}, updateTableAngle() {}, updatePlateAngle() {}, updateAction() {}, deleteLine() {}, addLineBeforeEnd() {},
+    saveProfile() {}, selectProfile() {}, loadProfile() {}, deleteProfile() {}
+  }),
+  LabelerStationTableController: Object.freeze({ updateName() {}, updateAngle() {} }),
   syncApplicationMapToLegacyState() { calls.syncMap += 1; },
   syncMapPointsFromAssemblies() { calls.syncAssembly += 1; },
   applyGeneratedServoProfile() { calls.regenerate += 1; },
@@ -112,6 +148,7 @@ const sandbox = {
   renderSimulationMap() {},
   renderAnimationFrame() {},
   renderWipeDownBuilder() { calls.builder += 1; },
+  renderWipeDownData() { calls.wipeTelemetry += 1; },
   renderAssemblyEditor() { calls.assembly += 1; },
   nextId(rows) { return Math.max(0, ...rows.map((row) => Number(row.id) || 0)) + 1; },
   normalizeLabelApplicationMode(value) { return value === "cold-glue" ? "cold-glue" : "apl"; },
@@ -122,6 +159,7 @@ const sandbox = {
   bodyCircumference(bottle) { return Number(bottle?.diameterTargetMm || 0) * Math.PI; },
   degFromMm(mm, circumference) { return Number(mm || 0) / Math.max(0.001, Number(circumference || 0)) * 360; },
   editableMachineMap() { return activeMap; },
+  activeMachineMap() { return activeMap; },
   normalizeColdGlueMap(objects) { return objects; },
   normalizeBuilderObject(item) { return item; },
   loadMachineMapIntoRuntime() { calls.loadMap += 1; },
@@ -148,6 +186,7 @@ assert.ok(sandbox.LabelerTabsController);
 assert.ok(sandbox.LabelerTransferController);
 assert.ok(sandbox.LabelerSimulationController);
 assert.ok(sandbox.LabelerApplicationController);
+assert.strictEqual(sandbox.LabelerWorkspacePanelController.installed, true);
 assert.strictEqual(sandbox.LabelerSetupEventControllers.installed, true);
 
 sandbox.LabelerWorkspaceActionService.render(["all", "builder", "assembly"]);
@@ -176,17 +215,28 @@ sandbox.LabelerSimulationController.loadGeneratedTurns();
 assert.strictEqual(state.simulation.useCustom, true);
 assert.deepStrictEqual(Array.from(state.simulation.turns), [0]);
 
+sandbox.LabelerWorkspacePanelController.initialize();
+assert.strictEqual(els.wipeDownDataPanel.hidden, true);
+assert.strictEqual(panelAttributes["aria-expanded"], "false");
+sandbox.LabelerWorkspacePanelController.setWipeTelemetryOpen(true);
+assert.strictEqual(els.wipeDownDataPanel.hidden, false);
+assert.strictEqual(calls.wipeTelemetry, 1);
+
 const registeredTypes = new Set(listeners.map((entry) => entry.type));
 ["change", "input", "focusin", "submit", "click", "wheel", "pointerdown", "pointermove", "pointerup", "pointercancel"].forEach((type) => {
   assert.ok(registeredTypes.has(type), `Delegated controller boundary must register ${type}.`);
 });
 
 let previousIndex = -1;
-controllerPaths.forEach((file) => {
+bootstrapControllerPaths.forEach((file) => {
   const index = bootstrapSource.indexOf(file);
   assert.ok(index > previousIndex, `${file} must load in controller dependency order.`);
   previousIndex = index;
 });
 assert.ok(bootstrapSource.indexOf("app/controllers/setup-event-controller-integration.js") < bootstrapSource.indexOf("app/startup-runtime.js"));
+assert.ok(startupSource.includes("LabelerWorkspacePanelController.initialize()"));
+assert.ok(!startupSource.includes("bindGlobalActions();"));
+assert.ok(!globalActionsSource.includes("addEventListener"));
+assert.ok(globalActionsSource.includes("compatibilityOnly: true"));
 
 console.log("Setup event controller ownership regression passed.");
