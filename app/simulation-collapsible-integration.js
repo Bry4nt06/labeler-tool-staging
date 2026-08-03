@@ -86,6 +86,9 @@
     rendering: Object.freeze([
       "app/specification-table-renderer.js?v=0.9.7-table-rendering-split-v1",
       "app/build-inputs-renderer.js?v=0.9.7-table-rendering-split-v1",
+      "app/servo-command-presentation.js?v=0.9.7-servo-table-split-v1",
+      "app/servo-program-table-renderer.js?v=0.9.7-servo-table-split-v1",
+      "app/simulation-table-renderer.js?v=0.9.7-servo-table-split-v1",
       "app/rendering-coordinator-integration.js?v=0.9.7-rendering-coordinator-v1"
     ]),
 
