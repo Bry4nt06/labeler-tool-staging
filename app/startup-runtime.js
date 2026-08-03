@@ -40,6 +40,9 @@ async function initializeLabelerApp() {
     if (!window.LabelerWorkspacePanelController?.initialize) {
       throw new Error("Workspace panel controller is not loaded.");
     }
+    if (!window.LabelerMapBuilderActionController?.installed || !window.LabelerMapBuilderEventController?.installed) {
+      throw new Error("Map Builder action and event controllers are not loaded.");
+    }
     if (!window.LabelerMapController?.populateBuilder) {
       throw new Error("Map Builder lifecycle controller is not loaded.");
     }
