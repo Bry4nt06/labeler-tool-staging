@@ -96,7 +96,17 @@ Object.entries(expectedThemes).forEach(([preset, label]) => {
 ].forEach((token) => assert.ok(!themeSource.includes(token), `Previous theme design must remain removed: ${token}`));
 
 assert.ok(specsUiSource.includes("var(--accent, var(--green))"));
-assert.ok(specsUiSource.includes("color-mix(in srgb, var(--accent, var(--green)) 15%, transparent)"));
+assert.ok(specsUiSource.includes("#specs tr.selected-brand-spec > td"));
+assert.ok(specsUiSource.includes("color-mix(in srgb, var(--accent, var(--green)) 22%, var(--panel))"));
+assert.ok(specsUiSource.includes("background-clip: padding-box"));
+assert.ok(specsUiSource.includes("#specs tr.selected-brand-spec > td:last-child::before"));
+assert.ok(specsUiSource.includes('content: "Selected"'));
+assert.ok(specsUiSource.includes("grid-column: 1 / -1"));
+assert.ok(specsUiSource.includes("grid-template-columns: repeat(2, minmax(0, 1fr))"));
+assert.ok(specsUiSource.includes("#specs tr.selected-brand-spec > td:last-child > button"));
+assert.ok(specsUiSource.includes("border-color: var(--line)"));
+assert.ok(specsUiSource.includes("box-shadow: none"));
+assert.ok(!specsUiSource.includes("td:first-child::after"), "Selected marker must not remain cramped beneath the first cell.");
 assert.ok(!specsUiSource.includes("rgba(65, 200, 137, 0.17)"));
 assert.ok(!specsUiSource.includes("rgba(65, 200, 137, 0.2)"));
 
@@ -128,4 +138,4 @@ assert.ok(appSource.includes("progress?.fail"));
 assert.ok(startupSource.includes("return true;"));
 assert.ok(startupSource.includes("return false;"));
 
-console.log("Startup progress and layout-oriented theme regression passed.");
+console.log("Startup progress, themes, and selected Label Spec hierarchy regression passed.");
