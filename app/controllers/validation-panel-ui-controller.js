@@ -50,8 +50,8 @@
       }
 
       .pipeline-validation-summary {
-        display: flex !important;
-        flex-wrap: wrap;
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
         width: 100% !important;
         max-width: 100%;
         min-width: 0;
@@ -60,20 +60,22 @@
       }
 
       .pipeline-validation-summary > strong {
-        flex: 1 0 100%;
+        display: block;
         width: 100%;
         max-width: 100%;
         min-width: 0;
-        padding-bottom: 2px;
+        padding-bottom: 3px;
         overflow-wrap: anywhere;
         word-break: break-word;
       }
 
       .pipeline-validation-summary > span {
-        flex: 1 1 0;
-        width: auto;
+        display: block;
+        width: 100% !important;
         max-width: 100%;
         min-width: 0;
+        padding: 6px 8px !important;
+        text-align: left !important;
         white-space: normal !important;
         overflow-wrap: anywhere;
         word-break: break-word;
@@ -95,10 +97,6 @@
       @media (max-width: 430px) {
         .validation-head-actions {
           grid-template-columns: 1fr;
-        }
-
-        .pipeline-validation-summary > span {
-          flex-basis: 100%;
         }
       }
     `;
