@@ -3,6 +3,10 @@
 let lastAnimationTime = performance.now();
 let animationTimerId = null;
 
+function resetAnimationClock() {
+  lastAnimationTime = performance.now();
+}
+
 function animationFrame(now) {
   if (animationTimerId === null) return;
   const elapsedSeconds = Math.min(0.05, Math.max(0, now - lastAnimationTime) / 1000);
@@ -21,7 +25,7 @@ function animationFrame(now) {
 
 function startAnimationLoop() {
   if (animationTimerId !== null) window.cancelAnimationFrame(animationTimerId);
-  lastAnimationTime = performance.now();
+  resetAnimationClock();
   animationTimerId = window.requestAnimationFrame(animationFrame);
 }
 
@@ -33,5 +37,6 @@ function stopAnimationLoop() {
 
 window.LabelerAnimationRuntime = Object.freeze({
   start: startAnimationLoop,
-  stop: stopAnimationLoop
+  stop: stopAnimationLoop,
+  resetClock: resetAnimationClock
 });
