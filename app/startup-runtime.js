@@ -49,6 +49,9 @@ async function initializeLabelerApp() {
     if (!window.LabelerMapBuilderActionController?.installed || !window.LabelerMapBuilderEventController?.installed) {
       throw new Error("Map Builder action and event controllers are not loaded.");
     }
+    if (!window.LabelerMapBuilderRowController?.installed) {
+      throw new Error("Map Builder row event controller is not loaded.");
+    }
     if (!window.LabelerMapController?.populateBuilder) {
       throw new Error("Map Builder lifecycle controller is not loaded.");
     }
