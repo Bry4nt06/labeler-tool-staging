@@ -16,7 +16,8 @@
       "drivers/profile/map-object-row-builder-driver.js?v=0.9.6-orientation-row-drivers-v1",
       "drivers/profile/orientation-issue-factory-driver.js?v=0.9.6-orientation-row-drivers-v1",
       "drivers/profile/profile-pipeline-driver.js?v=0.9.6-profile-pipeline-v1",
-      "drivers/servo/rest-correction-grammar-driver.js?v=0.9.6-rest-grammar-v4"
+      "drivers/servo/rest-correction-grammar-driver.js?v=0.9.6-rest-grammar-v4",
+      "drivers/servo/production-motion-pattern-driver.js?v=0.9.7-production-motion-reference-v1"
     ]),
 
     presentationCore: Object.freeze([
@@ -30,7 +31,11 @@
       "app/simulation-table-renderer.js?v=0.9.7-servo-table-split-v1",
       "app/wipe-telemetry-service.js?v=0.9.7-table-rendering-retired-v1",
       "app/wipe-telemetry-renderer.js?v=0.9.7-table-rendering-retired-v1",
-      "app/workspace-status-renderer.js?v=0.9.7-table-rendering-retired-v1"
+      "app/workspace-status-renderer.js?v=0.9.7-table-rendering-retired-v1",
+      "app/bottle-visual-renderer.js?v=0.9.7-map-rendering-split-v1",
+      "app/map-overlay-renderer.js?v=0.9.7-map-rendering-split-v1",
+      "app/map-animation-renderer.js?v=0.9.7-map-rendering-split-v1",
+      "app/map-reference-presenter.js?v=0.9.7-map-rendering-split-v1"
     ]),
 
     workspaceCore: Object.freeze([
@@ -89,6 +94,7 @@
       "app/clockwise-code-box-orientation-integration.js?v=0.9.6-profile-pipeline-v1",
       "app/coder-rest-grammar-repair-integration.js?v=0.9.6-profile-pipeline-v1",
       "app/profile-pipeline-orchestrator-integration.js?v=0.9.6-profile-pipeline-v1",
+      "app/production-motion-profile-reference-integration.js?v=0.9.7-production-motion-reference-v1",
       "app/motion-profile-workbench-integration.js?v=0.9.6-refactor-1"
     ]),
 
