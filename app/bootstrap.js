@@ -4,6 +4,16 @@
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.2";
   const modules = Object.freeze([
     "app/export-service.js",
+    "app/controllers/workspace-action-service.js",
+    "app/controllers/settings-controller.js",
+    "app/controllers/map-controller.js",
+    "app/controllers/specs-controller.js",
+    "app/controllers/build-inputs-controller.js",
+    "app/controllers/tabs-controller.js",
+    "app/controllers/transfer-controller.js",
+    "app/controllers/simulation-controller.js",
+    "app/controllers/application-controller.js",
+    "app/controllers/setup-event-controller-integration.js",
     "app/global-actions.js",
     "app/animation-runtime.js",
     "app/startup-runtime.js"
