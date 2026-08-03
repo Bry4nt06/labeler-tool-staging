@@ -3,6 +3,7 @@
 (function installCoderRestGrammarRepair() {
   const RETRY_MS = 50;
   const TOLERANCE = 0.5;
+  const COMMAND_TOLERANCE = 0.001;
   const STAGE_ID = "grammar.coder-rest";
   let installed = false;
 
@@ -52,22 +53,36 @@
       || (row?.codingReadyTableAngle && !row?.codingHold);
   }
 
+  function finalizeSegmentCommands(rows) {
+    const rest = Number(window.LabelerServoCommandDriver?.MOVE_TYPES?.REST ?? 3);
+    const correction = Number(window.LabelerServoCommandDriver?.MOVE_TYPES?.CORRECTION ?? 7);
+    return rows.map((row, index) => {
+      const next = rows[index + 1];
+      const moves = Boolean(next)
+        && Math.abs(num(next?.plateAngle, 0) - num(row?.plateAngle, 0)) > COMMAND_TOLERANCE;
+      return {
+        ...row,
+        cmd: moves ? correction : rest,
+        segmentCommandFinalized: true
+      };
+    });
+  }
+
   function repair(sourceRows) {
     if (!Array.isArray(sourceRows) || sourceRows.length < 2) return sourceRows;
     const driver = grammarDriver();
-    if (!driver?.reconcile) return sourceRows;
-
     const actualIndex = actualCodingHoldIndex(sourceRows);
-    const result = driver.reconcile(sourceRows, {
-      tolerance: TOLERANCE,
-      preserveRestIndexes: actualIndex >= 0 ? [actualIndex] : [],
-      shouldRepair: (row, index) => index === actualIndex
-        || suspiciousFalseCodingHold(row, actualIndex, index)
-    });
-    if (!result.repairs.length) return sourceRows;
+    const result = driver?.reconcile
+      ? driver.reconcile(sourceRows, {
+        tolerance: TOLERANCE,
+        preserveRestIndexes: actualIndex >= 0 ? [actualIndex] : [],
+        shouldRepair: (row, index) => index === actualIndex
+          || suspiciousFalseCodingHold(row, actualIndex, index)
+      })
+      : { rows: sourceRows.map((row) => ({ ...row })), repairs: [] };
 
-    const repairsByIndex = new Map(result.repairs.map((entry) => [entry.index, entry]));
-    const output = result.rows.map((row, index) => {
+    const repairsByIndex = new Map((result.repairs || []).map((entry) => [entry.index, entry]));
+    const repairedRows = result.rows.map((row, index) => {
       const grammarRepair = repairsByIndex.get(index);
       if (!grammarRepair) return row;
       const preservingCodingHold = grammarRepair.strategy === "preserve-rest-target"
@@ -82,10 +97,11 @@
         codeBoxDirectionCorrected: preservingCodingHold ? row.codeBoxDirectionCorrected : false
       };
     });
+    const output = finalizeSegmentCommands(repairedRows);
 
     if (state?.motionPlan && typeof state.motionPlan === "object") {
       state.motionPlan.rows = output;
-      state.motionPlan.coderRestGrammarRepairs = result.repairs.map((grammarRepair) => ({
+      state.motionPlan.coderRestGrammarRepairs = (result.repairs || []).map((grammarRepair) => ({
         hmi: grammarRepair.index + 1,
         strategy: grammarRepair.strategy,
         automaticCodingRelease: grammarRepair.automaticCodingRelease === true,
@@ -96,6 +112,7 @@
           : undefined
       }));
       state.motionPlan.restCorrectionGrammarDriver = true;
+      state.motionPlan.segmentCommandFinalized = true;
       state.motionPlan.profilePipelineGrammarStage = STAGE_ID;
       state.motionPlan.finalPlateAngle = output.at(-1)?.plateAngle;
     }
@@ -110,7 +127,7 @@
       phase: "grammar",
       order: 600,
       source: "app/coder-rest-grammar-repair-integration.js",
-      description: "Reconcile coder Rest/Correction transitions after all orientation stages.",
+      description: "Reconcile coder Rest/Correction transitions and derive CMD 3/7 ownership from final plate travel.",
       process: repair
     });
     window.LabelerCoderRestGrammarRepairProcessor = repair;
@@ -129,8 +146,7 @@
   function install() {
     if (installed) return true;
     if (typeof generatedServoProfile !== "function"
-      || typeof state === "undefined"
-      || !grammarDriver()?.reconcile) return false;
+      || typeof state === "undefined") return false;
 
     const pipelineManaged = registerPipelineStage();
     if (!pipelineManaged) installLegacyWrapper();
