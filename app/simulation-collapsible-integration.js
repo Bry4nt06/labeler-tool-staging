@@ -34,8 +34,10 @@
       "app/workspace-status-renderer.js?v=0.9.7-table-rendering-retired-v1",
       "app/bottle-visual-renderer.js?v=0.9.7-map-rendering-split-v1",
       "app/map-overlay-renderer.js?v=0.9.7-map-rendering-split-v1",
-      "app/map-animation-renderer.js?v=0.9.7-map-rendering-split-v1",
-      "app/map-reference-presenter.js?v=0.9.7-map-rendering-split-v1"
+      "app/map-reference-presenter.js?v=0.9.7-map-rendering-split-v1",
+      "app/mechanical-map-scene-renderer.js?v=0.9.7-map-rendering-retired-v1",
+      "app/simulation-map-scene-renderer.js?v=0.9.7-map-rendering-retired-v1",
+      "app/map-animation-renderer.js?v=0.9.7-map-rendering-split-v1"
     ]),
 
     workspaceCore: Object.freeze([
