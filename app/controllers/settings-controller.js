@@ -48,6 +48,8 @@
           state.showAllProgramMovesOverlay = active;
           if (active) state.showMoveDistanceOverlay = false;
         }
+        if (els.showMoveDistanceOverlay) els.showMoveDistanceOverlay.checked = Boolean(state.showMoveDistanceOverlay);
+        if (els.showAllProgramMovesOverlay) els.showAllProgramMovesOverlay.checked = Boolean(state.showAllProgramMovesOverlay);
       },
       persist: true,
       render: ["map", "simulation-map"]
