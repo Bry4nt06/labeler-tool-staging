@@ -7,7 +7,7 @@
     actions.execute({
       mutate() {
         state.isPlaying = !state.isPlaying;
-        global.lastAnimationTime = performance.now();
+        global.LabelerAnimationRuntime?.resetClock?.();
         if (els.playPause) {
           els.playPause.textContent = state.isPlaying ? "Pause" : "Play";
           els.playPause.setAttribute("aria-pressed", state.isPlaying ? "true" : "false");
