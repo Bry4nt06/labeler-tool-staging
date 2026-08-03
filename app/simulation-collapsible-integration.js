@@ -9,6 +9,7 @@
       "drivers/validation/validation-result-aggregator-driver.js?v=0.9.7-validation-diagnostics-v1",
       "drivers/assembly/assembly-model-driver.js?v=0.9.7-assembly-drivers-v1",
       "drivers/assembly/assembly-geometry-driver.js?v=0.9.7-assembly-drivers-v1",
+      "drivers/rendering/render-cycle-driver.js?v=0.9.7-rendering-coordinator-v1",
       "drivers/profile/coder-orientation-driver.js?v=0.9.6-coder-driver-v1",
       "drivers/profile/map-object-orientation-driver.js?v=0.9.6-orientation-drivers-v1",
       "drivers/profile/coder-handoff-driver.js?v=0.9.6-orientation-drivers-v1",
@@ -80,6 +81,10 @@
     optimization: Object.freeze([
       "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact",
       "app/optimizer-brush-channel-expansion-integration.js?v=0.9.3-brush-channel-contact"
+    ]),
+
+    rendering: Object.freeze([
+      "app/rendering-coordinator-integration.js?v=0.9.7-rendering-coordinator-v1"
     ]),
 
     diagnostics: Object.freeze([
