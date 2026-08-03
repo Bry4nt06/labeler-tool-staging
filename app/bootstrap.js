@@ -25,6 +25,7 @@
     "app/controllers/workspace-panel-controller.js",
     "app/controllers/map-builder-action-controller.js",
     "app/controllers/map-builder-event-controller.js",
+    "app/controllers/map-builder-row-controller.js",
     "app/controllers/map-builder-popup-controller.js",
     "app/controllers/setup-event-controller-integration.js",
     "app/global-actions.js",
