@@ -21,18 +21,18 @@ assert.doesNotThrow(
 );
 
 [
-  "grid-template-columns: repeat(2, minmax(0, 1fr))",
+  "grid-template-columns: minmax(0, 1fr)",
   "grid-column: 1 / -1",
-  "width: 100%",
-  "max-width: 100%",
-  "min-width: 0",
-  "overflow: hidden",
+  "inline-size: 100%",
+  "max-inline-size: 100%",
+  "min-inline-size: 0",
+  "overflow-x: clip",
+  "contain: inline-size",
   "white-space: normal",
   "overflow-wrap: anywhere",
-  "word-break: break-word",
-  "@media (max-width: 430px)"
+  "word-break: break-word"
 ].forEach((token) => {
-  assert.ok(diagnosticsSource.includes(token), `Missing fitted Validation summary rule: ${token}`);
+  assert.ok(diagnosticsSource.includes(token), `Missing stacked Validation summary rule: ${token}`);
 });
 
 assert.ok(
@@ -44,16 +44,16 @@ assert.ok(
 );
 
 assert.ok(
-  !diagnosticsSource.includes("grid-template-columns:minmax(120px,1fr) repeat(4,minmax(48px,auto))"),
-  "The previous width-expanding five-column layout must remain removed."
+  !diagnosticsSource.includes("grid-template-columns: repeat(2, minmax(0, 1fr))"),
+  "The two-column Validation summary must remain removed."
 );
 assert.ok(
   !diagnosticsSource.includes("white-space:nowrap"),
-  "Validation metric chips must be allowed to wrap."
+  "Validation metric rows must be allowed to wrap."
 );
 assert.ok(
-  manifestSource.includes("app/validation-diagnostics-integration.js?v=0.9.8-validation-summary-fit-v2"),
-  "The fitted Validation summary must use a refreshed feature-module URL."
+  manifestSource.includes("app/validation-diagnostics-integration.js?v=0.9.10-validation-summary-stack-v3"),
+  "The stacked Validation summary must use a refreshed feature-module URL."
 );
 
-console.log("Fitted Validation diagnostics summary regression passed.");
+console.log("Stacked Validation diagnostics summary regression passed.");
