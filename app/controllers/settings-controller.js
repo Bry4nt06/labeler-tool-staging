@@ -65,6 +65,18 @@
     });
   }
 
+  function setAssemblyGeometry(tablePitchRadiusMm, padClearanceMm) {
+    actions.execute({
+      mutate() {
+        state.tablePitchRadiusMm = Math.max(0.001, actions.number(tablePitchRadiusMm, state.tablePitchRadiusMm));
+        state.padClearanceMm = Math.max(0, actions.number(padClearanceMm, state.padClearanceMm));
+      },
+      syncAssemblyMap: true,
+      persist: true,
+      render: ["all", "assembly"]
+    });
+  }
+
   function setMapSetting(key, value) {
     commit(key, value, { syncMap: true, render: "all" });
   }
@@ -78,6 +90,7 @@
     setMovementOverlay,
     setAggregateSpacing,
     setGeometry,
+    setAssemblyGeometry,
     setMapSetting
   });
 })(window);
