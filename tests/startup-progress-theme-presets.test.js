@@ -50,6 +50,33 @@ assert.ok(themeSource.includes("Dark gold"));
 assert.ok(themeSource.includes("Burnt orange"));
 assert.ok(themeSource.includes("Forge gradient"));
 
+// Expanded themes must stay charcoal-based, with secondary colors used as
+// subdued accents rather than bright panel backgrounds.
+[
+  "--panel: #17191d;",
+  "--panel: #191a17;",
+  "--panel: #1a1917;",
+  "--panel: #191b1f;",
+  "--panel-hi: #1f2227;",
+  "--panel-hi: #22231e;",
+  "--panel-hi: #24221f;",
+  "--panel-hi: #22252a;"
+].forEach((token) => assert.ok(themeSource.includes(token), `Missing dark surface token: ${token}`));
+[
+  "--green: #a5535a;",
+  "--green: #a38a4d;",
+  "--green: #a7653e;",
+  "--green: #6e9a87;"
+].forEach((token) => assert.ok(themeSource.includes(token), `Missing muted accent token: ${token}`));
+[
+  "--green: #ef4f59;",
+  "--green: #ddb43c;",
+  "--green: #e97632;",
+  "--green: #4ee0a0;",
+  "rgba(138, 72, 214, 0.3)",
+  "rgba(238, 113, 44, 0.25)"
+].forEach((token) => assert.ok(!themeSource.includes(token), `Bright theme token must remain removed: ${token}`));
+
 const themePath = "app/controllers/theme-presets-controller.js";
 assert.ok(bootstrapSource.includes(themePath));
 assert.ok(bootstrapSource.indexOf(themePath) < bootstrapSource.indexOf("app/controllers/settings-controller.js"));
@@ -78,4 +105,4 @@ assert.ok(appSource.includes("progress?.fail"));
 assert.ok(startupSource.includes("return true;"));
 assert.ok(startupSource.includes("return false;"));
 
-console.log("Startup progress and expanded theme regression passed.");
+console.log("Startup progress and subdued theme regression passed.");
