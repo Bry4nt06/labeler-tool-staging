@@ -10,7 +10,8 @@ const modelSource = fs.readFileSync(path.join(root, "drivers", "assembly", "asse
 const geometrySource = fs.readFileSync(path.join(root, "drivers", "assembly", "assembly-geometry-driver.js"), "utf8");
 const adapterSource = fs.readFileSync(path.join(root, "app", "assembly-driver-adapter.js"), "utf8");
 const manifestSource = fs.readFileSync(path.join(root, "app", "simulation-collapsible-integration.js"), "utf8");
-const legacySource = fs.readFileSync(path.join(root, "app", "assemblies.js"), "utf8");
+const compatibilitySource = fs.readFileSync(path.join(root, "app", "assemblies.js"), "utf8");
+const editorSource = fs.readFileSync(path.join(root, "app", "assembly-editor-controller.js"), "utf8");
 
 const defaultAssemblies = [{
   station: 1,
@@ -132,8 +133,10 @@ const modelIndex = manifestSource.indexOf("drivers/assembly/assembly-model-drive
 const geometryIndex = manifestSource.indexOf("drivers/assembly/assembly-geometry-driver.js");
 const adapterIndex = manifestSource.indexOf("app/assembly-driver-adapter.js");
 assert.ok(modelIndex >= 0 && geometryIndex > modelIndex && adapterIndex > geometryIndex, "Assembly drivers and adapter must load in dependency order.");
-assert.match(adapterSource, /install\("normalizeAssembly", normalize\)/, "The adapter must replace the legacy model owner.");
-assert.match(adapterSource, /install\("assemblyStatus"/, "The adapter must replace the legacy status owner.");
-assert.match(legacySource, /function renderAssemblyEditor\(/, "Assembly editor compatibility remains until the next physical UI extraction.");
+assert.match(adapterSource, /install\("normalizeAssembly", normalize\)/, "The adapter must replace the compatibility model owner.");
+assert.match(adapterSource, /install\("assemblyStatus"/, "The adapter must replace the compatibility status owner.");
+assert.match(compatibilitySource, /function normalizeAssembly\(/, "The temporary model fallback remains until the next physical cleanup.");
+assert.doesNotMatch(compatibilitySource, /function renderAssemblyEditor\(/, "The editor must not return to assemblies.js.");
+assert.match(editorSource, /function renderAssemblyEditor\(/, "The extracted editor/controller must own assembly editing.");
 
 console.log("Assembly driver ownership and behavior regression passed.");
