@@ -68,30 +68,6 @@
     return Array.from(row.parentElement?.children || []).indexOf(row);
   }
 
-  function handleStationChange(target) {
-    if (!els.stations?.contains(target)) return false;
-    const row = target.closest?.("tr[data-station-row-index]");
-    const index = Number(row?.dataset.stationRowIndex);
-    const field = target.dataset?.stationField;
-    if (!Number.isInteger(index) || !field) return false;
-    if (field === "name") stations.updateName(index, target.value);
-    else if (field === "angle") stations.updateAngle(index, target.value);
-    else return false;
-    return true;
-  }
-
-  function handleProgramChange(target) {
-    if (!els.program?.contains(target)) return false;
-    const row = target.closest?.("tr[data-program-hmi]");
-    const hmi = Number(row?.dataset.programHmi);
-    const field = target.dataset?.programField;
-    if (!Number.isFinite(hmi) || !field || field === "action") return false;
-    if (field === "command") program.updateCommand(hmi, target.value);
-    else if (field === "tableAngle" || field === "plateAngle") program.updateOverride(hmi, field, target.value);
-    else return false;
-    return true;
-  }
-
   function handleSimulationChange(target) {
     if (!els.simulation?.contains(target)) return false;
     if (target.id === "servoProfileLibrarySelect") {
@@ -113,8 +89,6 @@
     const target = event.target;
     if (!(target instanceof Element)) return;
 
-    if (handleStationChange(target)) { consume(event); return; }
-    if (handleProgramChange(target)) { consume(event); return; }
     if (handleSimulationChange(target)) { consume(event); return; }
 
     if (target === els.themePreset) settings.setTheme(target.value);
@@ -154,12 +128,7 @@
   document.addEventListener("input", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
-    if (target.dataset?.programField === "action" && els.program?.contains(target)) {
-      const hmi = Number(target.closest?.("tr[data-program-hmi]")?.dataset.programHmi);
-      if (Number.isFinite(hmi)) program.updateAction(hmi, target.value);
-      else return;
-    }
-    else if (target.dataset?.simulationField === "action" && els.simulation?.contains(target)) {
+    if (target.dataset?.simulationField === "action" && els.simulation?.contains(target)) {
       const sourceIndex = Number(target.closest?.("tr[data-simulation-source-index]")?.dataset.simulationSourceIndex);
       if (Number.isInteger(sourceIndex)) simulationEditor.updateAction(sourceIndex, target.value);
       else return;
