@@ -15,6 +15,7 @@
   function initialize() {
     if (!map) throw new Error("Map controller must load before setup state initialization.");
 
+    if (typeof bindZoneSiteDeveloperMenu === "function") bindZoneSiteDeveloperMenu();
     if (typeof setThemePreset === "function") setThemePreset(state.themePreset);
     if (typeof setWorkspaceView === "function") setWorkspaceView(state.workspaceView);
 
@@ -50,6 +51,7 @@
     if (els.animationStepReadout) {
       els.animationStepReadout.textContent = `${typeof fmt === "function" ? fmt(state.animationSpeed, 1) : state.animationSpeed} deg / sec`;
     }
+    els.toggleAggregateSpacing?.setAttribute("aria-pressed", String(Boolean(state.showAggregateSpacingOverlay)));
 
     if (els.applicationSetupDialog) els.applicationSetupDialog.hidden = !state.wipeBuilderOpen;
     els.mapRightRail?.classList.toggle("builder-open", Boolean(state.wipeBuilderOpen));
