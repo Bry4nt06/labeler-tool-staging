@@ -12,6 +12,12 @@
     "neckBottomCircumferenceMm",
     "codeBoxCenterMm"
   ]);
+  const labelPresenceFields = new Set([
+    "bodyLengthMm",
+    "backLengthMm",
+    "neckLengthMm",
+    "neckBottomCurveMm"
+  ]);
 
   function commit(mutate) {
     return actions.execute({ mutate, persist: true, render: "all" });
@@ -87,32 +93,49 @@
         codeBoxCenterMm: null
       });
       state.selectedBrand = brand;
+      actions.call("applyLabelLengthStationRules");
     });
   }
 
   function updateLabel(index, key, value) {
     const spec = state.labelSpecs[index];
     if (!spec) return;
-    return commit(() => {
-      if (key === "applicationMode") {
-        spec.applicationMode = actions.call("normalizeLabelApplicationMode", value) || value;
-        actions.call("ensureSelectedBrandForApplication");
-        return;
-      }
-      const oldBrand = spec.brand;
-      if (labelNumericFields.has(key)) spec[key] = numericInput(value, spec[key]);
-      else if (key === "brand" || key === "specNumber") spec[key] = String(value ?? "");
-      else return;
-      if (key === "brand" && state.selectedBrand === oldBrand) state.selectedBrand = spec.brand;
+    const selectedBeforeUpdate = state.selectedBrand === spec.brand;
+    const affectsSelectedProgram = selectedBeforeUpdate && labelNumericFields.has(key);
+
+    return actions.execute({
+      mutate() {
+        if (key === "applicationMode") {
+          spec.applicationMode = actions.call("normalizeLabelApplicationMode", value) || value;
+          actions.call("ensureSelectedBrandForApplication");
+          actions.call("applyLabelLengthStationRules");
+          return;
+        }
+        const oldBrand = spec.brand;
+        if (labelNumericFields.has(key)) spec[key] = numericInput(value, spec[key]);
+        else if (key === "brand" || key === "specNumber") spec[key] = String(value ?? "");
+        else return;
+        if (key === "brand" && state.selectedBrand === oldBrand) state.selectedBrand = spec.brand;
+        if (selectedBeforeUpdate && labelPresenceFields.has(key)) actions.call("applyLabelLengthStationRules");
+      },
+      regenerate: affectsSelectedProgram,
+      persist: true,
+      render: "all"
     });
   }
 
   function deleteLabel(index) {
     const spec = state.labelSpecs[index];
     if (!spec || !global.confirm(`Delete label spec "${spec.brand}"?`)) return;
-    return commit(() => {
-      state.labelSpecs.splice(index, 1);
-      actions.call("ensureSelectedBrandForApplication");
+    return actions.execute({
+      mutate() {
+        state.labelSpecs.splice(index, 1);
+        actions.call("ensureSelectedBrandForApplication");
+        actions.call("applyLabelLengthStationRules");
+      },
+      regenerate: true,
+      persist: true,
+      render: "all"
     });
   }
 
