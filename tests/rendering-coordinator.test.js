@@ -82,12 +82,17 @@ assert.doesNotMatch(assemblyCompatibilitySource, /function\s+(normalizeAssembly|
 assert.match(assemblyCompatibilitySource, /assembly-model-and-geometry-owned-by-drivers/);
 
 const renderDriverIndex = manifestSource.indexOf("drivers/rendering/render-cycle-driver.js");
+const presentationIndex = manifestSource.indexOf("presentationCore");
+const statusRendererIndex = manifestSource.indexOf("app/workspace-status-renderer.js");
 const coordinatorIndex = manifestSource.indexOf("app/rendering-coordinator-integration.js");
 const diagnosticsIndex = manifestSource.indexOf("app/validation-diagnostics-integration.js");
 assert.ok(renderDriverIndex >= 0, "The render-cycle driver must be loaded by the feature manifest.");
-assert.ok(coordinatorIndex > renderDriverIndex, "The browser coordinator must load after its driver.");
+assert.ok(presentationIndex > renderDriverIndex, "Focused presentation owners must load after render drivers.");
+assert.ok(statusRendererIndex > presentationIndex, "Workspace status rendering must be part of presentation core.");
+assert.ok(coordinatorIndex > statusRendererIndex, "The browser coordinator must load after all focused presentation owners.");
 assert.ok(diagnosticsIndex > coordinatorIndex, "Validation diagnostics must remain the final feature stage.");
-assert.match(tableRenderingSource, /function render\(\)/, "The legacy render body remains as a source fallback for this staged phase.");
+assert.doesNotMatch(tableRenderingSource, /function\s+render\s*\(/, "The source-level render fallback must be physically removed.");
+assert.match(tableRenderingSource, /table-rendering-owned-by-focused-presenters/, "The retired source must identify its authoritative owners.");
 assert.match(coordinatorSource, /renderApplication\.renderingCoordinator = true/, "The active render owner must be marked.");
 
-console.log("Rendering coordinator and final assembly ownership regression passed.");
+console.log("Rendering coordinator and retired table source regression passed.");
