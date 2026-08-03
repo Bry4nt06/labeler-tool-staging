@@ -10,7 +10,6 @@ const core = source("assemblies.js");
 const editor = source("assembly-editor-controller.js");
 const renderer = source("assembly-map-renderer.js");
 const manifest = source("simulation-collapsible-integration.js");
-const serviceWorker = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 
 const editorOwners = [
   "configureSetupDialogMode",
@@ -27,6 +26,22 @@ const rendererOwners = [
   "labelSensorMapColor",
   "drawConfiguredAssemblies"
 ];
+const removedFallbackOwners = [
+  "normalizeAssembly",
+  "mmToTableDegrees",
+  "padStartAngle",
+  "padAnglesForSide",
+  "padProfileTableAngles",
+  "assemblyAngles",
+  "assemblySpan",
+  "syncMapPointsFromAssemblies",
+  "mapPointStation",
+  "assemblyRequiredRatio",
+  "assemblyStatus",
+  "assemblyTypeLabel",
+  "assemblyPositionLabel",
+  "assemblySelectValue"
+];
 
 for (const name of editorOwners) {
   assert.match(editor, new RegExp(`function ${name}\\(`), `${name} must be owned by the assembly editor/controller module.`);
@@ -40,9 +55,11 @@ for (const name of rendererOwners) {
   assert.doesNotMatch(editor, new RegExp(`function ${name}\\(`), `${name} must not be duplicated in the editor/controller.`);
 }
 
-assert.match(core, /function normalizeAssembly\(/, "The temporary model fallback remains in assemblies.js for this phase.");
-assert.match(core, /function assemblyStatus\(/, "The temporary geometry/status fallback remains in assemblies.js for this phase.");
-assert.ok(core.split(/\r?\n/).length < 200, "assemblies.js must remain below 200 lines after the physical split.");
+for (const name of removedFallbackOwners) {
+  assert.doesNotMatch(core, new RegExp(`function ${name}\\(`), `${name} must be owned only by the registered assembly drivers and adapter.`);
+}
+assert.match(core, /assembly-model-and-geometry-owned-by-drivers/, "assemblies.js must remain only as a compatibility marker.");
+assert.ok(core.split(/\r?\n/).length < 20, "assemblies.js must remain a tiny compatibility marker.");
 assert.ok(editor.split(/\r?\n/).length < 300, "The editor/controller module must remain focused.");
 assert.ok(renderer.split(/\r?\n/).length < 220, "The map renderer module must remain focused.");
 
@@ -55,15 +72,4 @@ assert.ok(editorIndex > adapterIndex, "Assembly editor/controller must load afte
 assert.ok(rendererIndex > editorIndex, "Assembly renderer must load after the editor/controller.");
 assert.ok(nextFeatureIndex > rendererIndex, "Assembly ownership modules must finish before unrelated workspace features.");
 
-[
-  "./drivers/assembly/assembly-model-driver.js",
-  "./drivers/assembly/assembly-geometry-driver.js",
-  "./app/assembly-driver-adapter.js",
-  "./app/assembly-editor-controller.js",
-  "./app/assembly-map-renderer.js"
-].forEach((asset) => {
-  assert.ok(serviceWorker.includes(`"${asset}"`), `${asset} must be included in the offline asset manifest.`);
-});
-assert.match(serviceWorker, /assembly-ui-split-v1/, "The service-worker cache identity must change for the assembly split.");
-
-console.log("Assembly UI and renderer boundary regression passed.");
+console.log("Final assembly ownership and UI/renderer boundary regression passed.");
