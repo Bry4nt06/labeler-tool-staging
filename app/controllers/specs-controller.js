@@ -2,16 +2,36 @@
 
 (function installSpecsController(global) {
   const actions = global.LabelerWorkspaceActionService;
+  const bottleNumericFields = new Set(["diameterTargetMm", "radiusReductionMm"]);
+  const labelNumericFields = new Set([
+    "bodyLengthMm",
+    "backLengthMm",
+    "neckHeightMm",
+    "neckLengthMm",
+    "neckBottomCurveMm",
+    "neckBottomCircumferenceMm",
+    "codeBoxCenterMm"
+  ]);
 
   function commit(mutate) {
     return actions.execute({ mutate, persist: true, render: "all" });
+  }
+
+  function numericInput(value, fallback = null) {
+    if (value === null || value === undefined || String(value).trim() === "") return null;
+    return actions.number(value, fallback ?? 0);
   }
 
   function addBottle() {
     return commit(() => {
       const id = actions.call("nextId", state.bottleSpecs) ?? state.bottleSpecs.length + 1;
       const bottleType = `New Bottle ${id}`;
-      state.bottleSpecs.push({ id, bottleType, diameterTargetMm: 0, radiusReductionMm: 0 });
+      state.bottleSpecs.push({
+        id,
+        bottleType,
+        diameterTargetMm: null,
+        radiusReductionMm: null
+      });
       state.selectedBottle = bottleType;
     });
   }
@@ -30,7 +50,7 @@
         });
         return;
       }
-      spec[key] = actions.number(value, spec[key]);
+      if (bottleNumericFields.has(key)) spec[key] = numericInput(value, spec[key]);
     });
   }
 
@@ -58,13 +78,13 @@
         brand,
         specNumber: "",
         bottleType: state.selectedBottle,
-        bodyLengthMm: 0,
-        backLengthMm: 0,
-        neckHeightMm: 0,
-        neckLengthMm: 0,
-        neckBottomCurveMm: 0,
-        neckBottomCircumferenceMm: 0,
-        codeBoxCenterMm: 0
+        bodyLengthMm: null,
+        backLengthMm: null,
+        neckHeightMm: null,
+        neckLengthMm: null,
+        neckBottomCurveMm: null,
+        neckBottomCircumferenceMm: null,
+        codeBoxCenterMm: null
       });
       state.selectedBrand = brand;
     });
@@ -80,7 +100,9 @@
         return;
       }
       const oldBrand = spec.brand;
-      spec[key] = typeof spec[key] === "number" ? actions.number(value, spec[key]) : String(value ?? "");
+      if (labelNumericFields.has(key)) spec[key] = numericInput(value, spec[key]);
+      else if (key === "brand" || key === "specNumber") spec[key] = String(value ?? "");
+      else return;
       if (key === "brand" && state.selectedBrand === oldBrand) state.selectedBrand = spec.brand;
     });
   }
