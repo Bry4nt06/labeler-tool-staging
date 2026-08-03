@@ -11,6 +11,7 @@
     "app/controllers/settings-controller.js",
     "app/controllers/map-controller.js",
     "app/controllers/specs-controller.js",
+    "app/controllers/specification-event-controller.js",
     "app/controllers/build-inputs-controller.js",
     "app/controllers/tabs-controller.js",
     "app/controllers/transfer-controller.js",
