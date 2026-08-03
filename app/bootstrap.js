@@ -20,6 +20,7 @@
     "app/controllers/station-table-controller.js",
     "app/controllers/application-controller.js",
     "app/controllers/setup-state-controller.js",
+    "app/controllers/workspace-panel-controller.js",
     "app/controllers/map-builder-popup-controller.js",
     "app/controllers/setup-event-controller-integration.js",
     "app/global-actions.js",
