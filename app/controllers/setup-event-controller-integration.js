@@ -56,17 +56,6 @@
     wipeInnerDepth: "wipeInner",
     wipeOuterDepth: "wipeOuter"
   });
-  const labelKeys = Object.freeze([
-    "brand",
-    "specNumber",
-    "bodyLengthMm",
-    "backLengthMm",
-    "neckHeightMm",
-    "neckLengthMm",
-    "neckBottomCurveMm",
-    "neckBottomCircumferenceMm",
-    "codeBoxCenterMm"
-  ]);
 
   function consume(event, preventDefault = false) {
     if (preventDefault) event.preventDefault();
@@ -77,34 +66,6 @@
     const row = target.closest?.("tbody tr");
     if (!row || !container?.contains(row)) return -1;
     return Array.from(row.parentElement?.children || []).indexOf(row);
-  }
-
-  function handleSpecChange(event) {
-    const target = event.target;
-    if (els.bottleSpecs?.contains(target)) {
-      const index = rowIndex(target, els.bottleSpecs);
-      if (index < 0 || target.tagName !== "INPUT") return false;
-      const inputs = Array.from(target.closest("tr").querySelectorAll("input"));
-      const key = ["bottleType", "diameterTargetMm", "radiusReductionMm"][inputs.indexOf(target)];
-      if (!key) return false;
-      specs.updateBottle(index, key, target.value);
-      return true;
-    }
-    if (els.labelSpecs?.contains(target)) {
-      const index = rowIndex(target, els.labelSpecs);
-      if (index < 0) return false;
-      if (target.tagName === "SELECT") {
-        specs.updateLabel(index, "applicationMode", target.value);
-        return true;
-      }
-      if (target.tagName !== "INPUT") return false;
-      const inputs = Array.from(target.closest("tr").querySelectorAll("input"));
-      const key = labelKeys[inputs.indexOf(target)];
-      if (!key) return false;
-      specs.updateLabel(index, key, target.value);
-      return true;
-    }
-    return false;
   }
 
   function handleStationChange(target) {
@@ -152,7 +113,6 @@
     const target = event.target;
     if (!(target instanceof Element)) return;
 
-    if (handleSpecChange(event)) { consume(event); return; }
     if (handleStationChange(target)) { consume(event); return; }
     if (handleProgramChange(target)) { consume(event); return; }
     if (handleSimulationChange(target)) { consume(event); return; }
