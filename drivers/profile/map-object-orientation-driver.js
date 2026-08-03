@@ -44,7 +44,15 @@
     fallbackStationSection
   } = {}) {
     const explicit = String(item?.orientationLabelSection || "auto").trim().toLowerCase();
-    if (VALID_SECTIONS.includes(explicit)) return explicit;
+    if (explicit === "none") return "none";
+    if (["neck", "body", "back"].includes(explicit)) {
+      if (activeApplications[explicit]) return explicit;
+      // Coding targets saved with a three-label recipe must remain usable when
+      // the selected recipe has fewer labels. Retarget only coders; sensors
+      // remain tied to their physical station and should still report a fault.
+      if (item?.kind === "coding") return activeFallback(activeApplications);
+      return explicit;
+    }
     if (item?.kind === "sensor") {
       const station = Number(item?.station);
       const inferred = String(
@@ -125,8 +133,6 @@
       const required = Math.min(100, Math.max(1, finite(item?.requiredVisibilityPercent, 50)));
       const current = finite(currentPlate, center);
       const rawTarget = nearestEquivalent(finite(sensorTarget, center), current);
-      // Servo rows are emitted at 0.1 degree resolution. Do not create a CMD 7 /
-      // CMD 3 pair when the calculated adjustment cannot change the command value.
       const target = sameCommandAngle(rawTarget, current) ? current : rawTarget;
       return {
         target,
