@@ -1,11 +1,17 @@
 "use strict";
 
+const LABEL_SECTION_PRESENT_THRESHOLD_MM = 1;
+
+function labelSectionDimensionPresent(...values) {
+  return values.some((value) => num(value, 0) > LABEL_SECTION_PRESENT_THRESHOLD_MM);
+}
+
 function selectedLabelApplicationState() {
   const label = selectedLabelSpec();
   const available = {
-    neck: Math.max(num(label?.neckLengthMm, 0), num(label?.neckBottomCurveMm, 0)) > 0,
-    body: num(label?.bodyLengthMm, 0) > 0,
-    back: num(label?.backLengthMm, 0) > 0
+    neck: labelSectionDimensionPresent(label?.neckLengthMm, label?.neckBottomCurveMm),
+    body: labelSectionDimensionPresent(label?.bodyLengthMm),
+    back: labelSectionDimensionPresent(label?.backLengthMm)
   };
   if (state.applicationMode !== "apl" || typeof activeMachineMap !== "function" || typeof inferAplStationSections !== "function") return available;
   const machineMap = activeMachineMap();
