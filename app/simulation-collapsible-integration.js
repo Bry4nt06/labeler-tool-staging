@@ -5,6 +5,8 @@
     coreDrivers: Object.freeze([
       "drivers/core/driver-registry.js?v=0.9.6-refactor-1",
       "drivers/core/legacy-driver-bridge.js?v=0.9.6-refactor-1",
+      "drivers/validation/validation-issue-driver.js?v=0.9.7-validation-diagnostics-v1",
+      "drivers/validation/validation-result-aggregator-driver.js?v=0.9.7-validation-diagnostics-v1",
       "drivers/assembly/assembly-model-driver.js?v=0.9.7-assembly-drivers-v1",
       "drivers/assembly/assembly-geometry-driver.js?v=0.9.7-assembly-drivers-v1",
       "drivers/profile/coder-orientation-driver.js?v=0.9.6-coder-driver-v1",
@@ -76,6 +78,10 @@
     optimization: Object.freeze([
       "app/optimizer-map-contact-integration.js?v=0.9.3-map-contact",
       "app/optimizer-brush-channel-expansion-integration.js?v=0.9.3-brush-channel-contact"
+    ]),
+
+    diagnostics: Object.freeze([
+      "app/validation-diagnostics-integration.js?v=0.9.7-validation-diagnostics-v1"
     ])
   });
 
