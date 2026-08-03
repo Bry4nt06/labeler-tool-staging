@@ -20,25 +20,62 @@ const bootstrapSource = fs.readFileSync(bootstrapPath, "utf8");
 
 class FakeElement {}
 const listeners = [];
-const aria = {};
+const storage = new Map();
 let renderCount = 0;
-const panel = { hidden: false };
-const showButton = {
-  setAttribute(name, value) { aria[name] = value; }
+let aggregateUpdates = 0;
+let removedPopupControls = 0;
+
+const classNames = new Set();
+const panel = {
+  hidden: true,
+  removeAttribute() {},
+  setAttribute() {},
+  classList: { add(value) { classNames.add(value); } }
+};
+const aggregateInput = { id: "showAggregateSpacingOverlay", checked: false };
+const wipeSettingInput = { id: "showWipeDataPanel", checked: false };
+const removableControl = { remove() { removedPopupControls += 1; } };
+const selectorResults = new Map([
+  ["#showAggregateSpacingOverlay", aggregateInput],
+  ["#showWipeDataPanel", wipeSettingInput],
+  ["#wipeDownDataPanel", panel],
+  ["#showWipeDownData", removableControl],
+  ["#closeWipeDownData", removableControl],
+  ["#toggleAggregateSpacing", null],
+  [".validation-head-actions", null]
+]);
+
+const state = {
+  showAggregateSpacingOverlay: false
 };
 const els = {
   wipeDownDataPanel: panel,
-  showWipeDownData: showButton
+  showAggregateSpacingOverlay: aggregateInput,
+  showWipeDataPanel: wipeSettingInput,
+  saveSettings: null
 };
 const document = {
-  addEventListener(type, handler, options) { listeners.push({ type, handler, options }); }
+  addEventListener(type, handler, options) { listeners.push({ type, handler, options }); },
+  querySelector(selector) { return selectorResults.get(selector) || null; },
+  createElement() { throw new Error("Existing regression controls should be reused."); }
 };
 const sandbox = {
   window: null,
   globalThis: null,
   document,
   Element: FakeElement,
+  localStorage: {
+    getItem(key) { return storage.has(key) ? storage.get(key) : null; },
+    setItem(key, value) { storage.set(key, value); }
+  },
+  state,
   els,
+  LabelerSettingsController: {
+    setAggregateSpacing(value) {
+      aggregateUpdates += 1;
+      state.showAggregateSpacingOverlay = Boolean(value);
+    }
+  },
   renderWipeDownData() { renderCount += 1; },
   console
 };
@@ -50,23 +87,35 @@ assert.doesNotThrow(() => vm.runInContext(panelSource, sandbox, { filename: pane
 assert.strictEqual(sandbox.LabelerWorkspacePanelController.installed, true);
 
 sandbox.LabelerWorkspacePanelController.initialize();
-assert.strictEqual(panel.hidden, true);
-assert.strictEqual(aria["aria-expanded"], "false");
-
-sandbox.LabelerWorkspacePanelController.setWipeTelemetryOpen(true);
-assert.strictEqual(panel.hidden, false);
-assert.strictEqual(aria["aria-expanded"], "true");
+assert.strictEqual(panel.hidden, false, "Wipe Data must be visible by default.");
+assert.strictEqual(wipeSettingInput.checked, true);
 assert.strictEqual(renderCount, 1);
+assert.strictEqual(removedPopupControls, 2, "Legacy Wipe Data open and close controls must be removed.");
+assert.ok(classNames.has("persistent-wipe-data-panel"));
 
-sandbox.LabelerWorkspacePanelController.setWipeTelemetryOpen(false);
+sandbox.LabelerWorkspacePanelController.setWipeDataVisible(false);
 assert.strictEqual(panel.hidden, true);
-assert.ok(listeners.some((entry) => entry.type === "click" && entry.options === true));
+assert.strictEqual(wipeSettingInput.checked, false);
+assert.strictEqual(storage.get("servoforgeWipeDataPanelVisible"), "false");
 
+sandbox.LabelerWorkspacePanelController.setWipeDataVisible(true);
+assert.strictEqual(panel.hidden, false);
+assert.strictEqual(renderCount, 2);
+
+sandbox.LabelerWorkspacePanelController.setAggregateSpacingVisible(true);
+assert.strictEqual(aggregateUpdates, 1);
+assert.strictEqual(state.showAggregateSpacingOverlay, true);
+assert.strictEqual(aggregateInput.checked, true);
+assert.ok(listeners.some((entry) => entry.type === "change" && entry.options === true));
+assert.ok(!listeners.some((entry) => entry.type === "click"), "Workspace panels must no longer use popup click controls.");
+
+assert.ok(panelSource.includes(".map-overlay-control"));
+assert.ok(panelSource.includes("Show Wipe Data panel"));
+assert.ok(panelSource.includes("Aggregate travel distance"));
 assert.ok(!globalActionsSource.includes("addEventListener"), "global-actions.js must not register browser listeners.");
 assert.ok(!globalActionsSource.includes("state."), "global-actions.js must not mutate application state.");
 assert.ok(globalActionsSource.includes("compatibilityOnly: true"));
 assert.ok(setupStateSource.includes("bindZoneSiteDeveloperMenu"));
-assert.ok(setupStateSource.includes("toggleAggregateSpacing"));
 assert.ok(startupSource.includes("LabelerWorkspacePanelController.initialize()"));
 assert.ok(!startupSource.includes("bindGlobalActions();"));
 
@@ -76,4 +125,4 @@ const startupIndex = bootstrapSource.indexOf("app/startup-runtime.js");
 assert.ok(panelIndex >= 0 && panelIndex < eventIndex, "Workspace panel controller must load before the delegated event boundary.");
 assert.ok(eventIndex < startupIndex, "Delegated events must load before startup.");
 
-console.log("Global action controller cleanup regression passed.");
+console.log("Workspace panel organization regression passed.");
