@@ -10,6 +10,7 @@ const core = source("assemblies.js");
 const editor = source("assembly-editor-controller.js");
 const renderer = source("assembly-map-renderer.js");
 const manifest = source("simulation-collapsible-integration.js");
+const serviceWorker = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 
 const editorOwners = [
   "configureSetupDialogMode",
@@ -53,5 +54,16 @@ assert.ok(adapterIndex >= 0, "Assembly driver adapter must be present in the fea
 assert.ok(editorIndex > adapterIndex, "Assembly editor/controller must load after the driver adapter.");
 assert.ok(rendererIndex > editorIndex, "Assembly renderer must load after the editor/controller.");
 assert.ok(nextFeatureIndex > rendererIndex, "Assembly ownership modules must finish before unrelated workspace features.");
+
+[
+  "./drivers/assembly/assembly-model-driver.js",
+  "./drivers/assembly/assembly-geometry-driver.js",
+  "./app/assembly-driver-adapter.js",
+  "./app/assembly-editor-controller.js",
+  "./app/assembly-map-renderer.js"
+].forEach((asset) => {
+  assert.ok(serviceWorker.includes(`"${asset}"`), `${asset} must be included in the offline asset manifest.`);
+});
+assert.match(serviceWorker, /assembly-ui-split-v1/, "The service-worker cache identity must change for the assembly split.");
 
 console.log("Assembly UI and renderer boundary regression passed.");
