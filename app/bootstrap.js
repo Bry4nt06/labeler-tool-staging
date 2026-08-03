@@ -16,6 +16,7 @@
     "app/controllers/simulation-editor-controller.js",
     "app/controllers/station-table-controller.js",
     "app/controllers/application-controller.js",
+    "app/controllers/setup-state-controller.js",
     "app/controllers/setup-event-controller-integration.js",
     "app/global-actions.js",
     "app/animation-runtime.js",
