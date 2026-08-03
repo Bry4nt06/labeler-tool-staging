@@ -30,7 +30,9 @@ function loadSimulatorRuntime() {
 }
 
 async function initializeLabelerApp() {
+  const progress = window.ServoForgeStartupProgress;
   try {
+    progress?.set(70, "Verifying workspace controllers…");
     if (!window.LabelerSetupEventControllers?.installed) {
       throw new Error("Setup event controller boundary is not loaded.");
     }
@@ -39,6 +41,9 @@ async function initializeLabelerApp() {
     }
     if (!window.LabelerWorkspacePanelController?.initialize) {
       throw new Error("Workspace panel controller is not loaded.");
+    }
+    if (!window.LabelerThemePresetsController?.installed) {
+      throw new Error("Theme presets controller is not loaded.");
     }
     if (!window.LabelerSpecificationEventController?.installed) {
       throw new Error("Specification field event controller is not loaded.");
@@ -58,25 +63,40 @@ async function initializeLabelerApp() {
     if (!window.LabelerMapController?.populateBuilder) {
       throw new Error("Map Builder lifecycle controller is not loaded.");
     }
+
+    progress?.set(76, "Restoring saved settings…");
     loadSavedSettings();
     if (!window.LabelerCompanyDefaultsService?.reconcile) {
       throw new Error("Company catalog service is not loaded.");
     }
+
+    progress?.set(82, "Loading company defaults…");
     window.ServoForgeCompanyDefaultsReady = window.LabelerCompanyDefaultsService.reconcile();
     await window.ServoForgeCompanyDefaultsReady;
+
+    progress?.set(87, "Preparing machine maps…");
     ensurePersistentApplicationMaps();
     if (typeof initializeStella660ColdGlueExample === "function" && initializeStella660ColdGlueExample()) {
       saveCurrentSettings();
     }
+
+    progress?.set(92, "Applying workspace settings…");
     window.LabelerSetupStateController.initialize();
     window.LabelerWorkspacePanelController.initialize();
     window.LabelerMapController.populateBuilder({ bind: true });
+
+    progress?.set(96, "Rendering ServoForge workspace…");
     render();
     startAnimationLoop();
+
+    progress?.set(98, "Registering update service…");
     await registerToolUpdateService();
     loadSimulatorRuntime();
+    return true;
   } catch (error) {
     showStartupError(error);
+    progress?.fail(error);
+    return false;
   }
 }
 
