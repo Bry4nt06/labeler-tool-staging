@@ -8,6 +8,18 @@ function specificationAttributeValue(value) {
     .replace(/>/g, "&gt;");
 }
 
+function specificationActionIcon(kind) {
+  if (kind === "duplicate") {
+    return '<svg class="spec-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="9" width="10" height="10" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+  }
+  return '<svg class="spec-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v5M14 11v5"></path></svg>';
+}
+
+function specificationDeleteButton(label) {
+  const description = specificationAttributeValue(label || "specification");
+  return `<button class="danger small-button spec-icon-button spec-delete-button" type="button" title="Delete ${description}" aria-label="Delete ${description}">${specificationActionIcon("delete")}</button>`;
+}
+
 function renderBottleSpecs() {
   els.bottleSpecs.innerHTML = `<div class="table-tools"><button id="addBottleSpec" type="button">Add Bottle</button></div><table><thead><tr><th>#</th><th>Bottle Type</th><th class="num">Diameter Target (mm)</th><th class="num">Radius Reduction (mm)</th><th class="num">Body/Back Diameter (mm)</th><th class="num">Body/Back Circumference (mm)</th><th>Action</th></tr></thead><tbody></tbody></table>`;
   const body = els.bottleSpecs.querySelector("tbody");
@@ -16,7 +28,7 @@ function renderBottleSpecs() {
     tr.dataset.specLibrary = "bottle";
     tr.dataset.specIndex = String(index);
     tr.dataset.specId = String(spec.id);
-    tr.innerHTML = `<td>${spec.id}</td><td><input data-spec-field="bottleType" value="${specificationAttributeValue(spec.bottleType)}"></td><td><input data-spec-field="diameterTargetMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.diameterTargetMm)}"></td><td><input data-spec-field="radiusReductionMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.radiusReductionMm)}"></td><td class="num">${fmt(bodyDiameter(spec), 3)}</td><td class="num">${fmt(bodyCircumference(spec), 3)}</td><td><button class="danger small-button" type="button">Delete</button></td>`;
+    tr.innerHTML = `<td>${spec.id}</td><td><input data-spec-field="bottleType" value="${specificationAttributeValue(spec.bottleType)}"></td><td><input data-spec-field="diameterTargetMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.diameterTargetMm)}"></td><td><input data-spec-field="radiusReductionMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.radiusReductionMm)}"></td><td class="num">${fmt(bodyDiameter(spec), 3)}</td><td class="num">${fmt(bodyCircumference(spec), 3)}</td><td>${specificationDeleteButton(spec.bottleType)}</td>`;
     body.appendChild(tr);
   });
 }
@@ -43,7 +55,7 @@ function renderLabelSpecs() {
       tr.setAttribute("aria-current", "true");
       tr.title = "Currently selected Brand Recipe";
     }
-    tr.innerHTML = `<td>${spec.id}</td><td><input data-spec-field="brand" value="${specificationAttributeValue(spec.brand)}"></td><td><input data-spec-field="specNumber" value="${specificationAttributeValue(spec.specNumber)}"></td><td><select data-spec-field="applicationMode" aria-label="Application for ${specificationAttributeValue(spec.brand || "label")}"><option value="apl"${spec.applicationMode === "apl" ? " selected" : ""}>APL</option><option value="cold-glue"${spec.applicationMode === "cold-glue" ? " selected" : ""}>Cold Glue</option></select></td><td><input data-spec-field="bodyLengthMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.bodyLengthMm)}"></td><td><input data-spec-field="backLengthMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.backLengthMm)}"></td><td><input data-spec-field="neckHeightMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.neckHeightMm)}"></td><td><input data-spec-field="neckLengthMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.neckLengthMm)}"></td><td><input data-spec-field="neckBottomCurveMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.neckBottomCurveMm)}"></td><td><input data-spec-field="neckBottomCircumferenceMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.neckBottomCircumferenceMm)}"></td><td><input data-spec-field="codeBoxCenterMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.codeBoxCenterMm)}"></td><td><button class="danger small-button" type="button">Delete</button></td>`;
+    tr.innerHTML = `<td>${spec.id}</td><td><input data-spec-field="brand" value="${specificationAttributeValue(spec.brand)}"></td><td><input data-spec-field="specNumber" value="${specificationAttributeValue(spec.specNumber)}"></td><td><select data-spec-field="applicationMode" aria-label="Application for ${specificationAttributeValue(spec.brand || "label")}"><option value="apl"${spec.applicationMode === "apl" ? " selected" : ""}>APL</option><option value="cold-glue"${spec.applicationMode === "cold-glue" ? " selected" : ""}>Cold Glue</option></select></td><td><input data-spec-field="bodyLengthMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.bodyLengthMm)}"></td><td><input data-spec-field="backLengthMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.backLengthMm)}"></td><td><input data-spec-field="neckHeightMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.neckHeightMm)}"></td><td><input data-spec-field="neckLengthMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.neckLengthMm)}"></td><td><input data-spec-field="neckBottomCurveMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.neckBottomCurveMm)}"></td><td><input data-spec-field="neckBottomCircumferenceMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.neckBottomCircumferenceMm)}"></td><td><input data-spec-field="codeBoxCenterMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.codeBoxCenterMm)}"></td><td>${specificationDeleteButton(spec.brand)}</td>`;
     body.appendChild(tr);
   });
 }
