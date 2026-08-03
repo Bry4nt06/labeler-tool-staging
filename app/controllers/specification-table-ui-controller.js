@@ -49,10 +49,13 @@
 
       #specs tr.selected-brand-spec > td:last-child {
         position: relative;
+        display: table-cell !important;
+        width: 1%;
+        max-width: 145px;
         min-width: 0;
         padding-top: 31px;
         border-right: 1px solid color-mix(in srgb, var(--accent, var(--green)) 72%, var(--line));
-        white-space: normal;
+        white-space: nowrap;
       }
 
       #specs tr.selected-brand-spec input,
@@ -93,30 +96,36 @@
         pointer-events: none;
       }
 
-      #specs .spec-row-actions {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 5px;
-        width: auto;
-        max-width: 100%;
+      #specs tr.selected-brand-spec > td:last-child > button {
+        display: inline-block;
+        box-sizing: border-box;
+        width: calc(50% - 3px);
+        max-width: calc(50% - 3px);
         min-width: 0;
-        white-space: normal;
+        padding: 6px 5px;
+        font-size: 10px;
+        white-space: nowrap;
       }
 
-      #specs .spec-row-actions > button {
-        flex: 1 1 70px;
-        width: auto;
-        max-width: 100%;
-        min-width: 0;
-        padding-right: 6px;
-        padding-left: 6px;
+      #specs tr.selected-brand-spec > td:last-child > button + button {
+        margin-left: 3px;
       }
 
       @media (max-width: 760px) {
-        #specs .spec-row-actions > button {
-          flex-basis: 100%;
+        #specs tr.selected-brand-spec > td:last-child {
+          max-width: 112px;
+          white-space: normal;
+        }
+
+        #specs tr.selected-brand-spec > td:last-child > button {
+          display: block;
+          width: 100%;
+          max-width: 100%;
+        }
+
+        #specs tr.selected-brand-spec > td:last-child > button + button {
+          margin-top: 4px;
+          margin-left: 0;
         }
       }
     `;
