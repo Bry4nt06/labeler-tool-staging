@@ -37,6 +37,9 @@ async function initializeLabelerApp() {
     if (!window.LabelerSetupStateController?.initialize) {
       throw new Error("Setup state controller is not loaded.");
     }
+    if (!window.LabelerWorkspacePanelController?.initialize) {
+      throw new Error("Workspace panel controller is not loaded.");
+    }
     if (!window.LabelerMapController?.populateBuilder) {
       throw new Error("Map Builder lifecycle controller is not loaded.");
     }
@@ -51,8 +54,8 @@ async function initializeLabelerApp() {
       saveCurrentSettings();
     }
     window.LabelerSetupStateController.initialize();
+    window.LabelerWorkspacePanelController.initialize();
     window.LabelerMapController.populateBuilder({ bind: true });
-    bindGlobalActions();
     render();
     startAnimationLoop();
     await registerToolUpdateService();
