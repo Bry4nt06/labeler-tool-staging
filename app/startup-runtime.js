@@ -31,6 +31,9 @@ function loadSimulatorRuntime() {
 
 async function initializeLabelerApp() {
   try {
+    if (!window.LabelerSetupEventControllers?.installed) {
+      throw new Error("Setup event controller boundary is not loaded.");
+    }
     loadSavedSettings();
     if (!window.LabelerCompanyDefaultsService?.reconcile) {
       throw new Error("Company catalog service is not loaded.");
