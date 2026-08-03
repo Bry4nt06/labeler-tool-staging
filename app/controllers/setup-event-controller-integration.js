@@ -12,8 +12,9 @@
   const simulation = global.LabelerSimulationController;
   const program = global.LabelerServoProgramController;
   const simulationEditor = global.LabelerSimulationEditorController;
+  const stations = global.LabelerStationTableController;
   const application = global.LabelerApplicationController;
-  if (![settings, map, specs, build, tabs, transfer, simulation, program, simulationEditor, application].every(Boolean)) {
+  if (![settings, map, specs, build, tabs, transfer, simulation, program, simulationEditor, stations, application].every(Boolean)) {
     throw new Error("Setup event controllers are not fully loaded.");
   }
 
@@ -106,6 +107,18 @@
     return false;
   }
 
+  function handleStationChange(target) {
+    if (!els.stations?.contains(target)) return false;
+    const row = target.closest?.("tr[data-station-row-index]");
+    const index = Number(row?.dataset.stationRowIndex);
+    const field = target.dataset?.stationField;
+    if (!Number.isInteger(index) || !field) return false;
+    if (field === "name") stations.updateName(index, target.value);
+    else if (field === "angle") stations.updateAngle(index, target.value);
+    else return false;
+    return true;
+  }
+
   function handleProgramChange(target) {
     if (!els.program?.contains(target)) return false;
     const row = target.closest?.("tr[data-program-hmi]");
@@ -140,6 +153,7 @@
     if (!(target instanceof Element)) return;
 
     if (handleSpecChange(event)) { consume(event); return; }
+    if (handleStationChange(target)) { consume(event); return; }
     if (handleProgramChange(target)) { consume(event); return; }
     if (handleSimulationChange(target)) { consume(event); return; }
 
@@ -212,6 +226,12 @@
     const target = event.target;
     if (!(target instanceof Element)) return;
 
+    const validationNotice = target.closest("[data-validation-object-id]");
+    if (validationNotice) {
+      LabelerWorkspaceActionService.call("selectMapBuilderObject", validationNotice.dataset.validationObjectId);
+      consume(event);
+      return;
+    }
     const bottleDelete = target.closest("#bottleSpecs tbody .danger");
     if (bottleDelete) {
       specs.deleteBottle(rowIndex(bottleDelete, els.bottleSpecs));
@@ -317,6 +337,7 @@
     simulation,
     servoProgram: program,
     simulationEditor,
+    stationTable: stations,
     application
   });
 })(window);
