@@ -25,9 +25,11 @@ class FakeElement {
   constructor() {
     this.dataset = {};
     this.classList = { contains: () => false };
+    this.textContent = "";
   }
   querySelectorAll() { return []; }
   querySelector() { return null; }
+  closest() { return null; }
 }
 
 const installedStyles = [];
@@ -67,6 +69,10 @@ assert.strictEqual(controller.healthFromValue("WARNING"), "warn");
 assert.strictEqual(controller.healthFromValue("FAIL"), "bad");
 assert.strictEqual(controller.healthFromValue("ACTION"), "bad");
 assert.strictEqual(controller.healthFromValue("RUNNING"), "info");
+assert.strictEqual(controller.healthFromText("Optimization HEALTHY"), "good");
+assert.strictEqual(controller.healthFromText("Servo Pipeline PASS"), "good");
+assert.strictEqual(controller.healthFromText("Needs WARNING review"), "warn");
+assert.strictEqual(controller.healthFromText("Validation FAILURE"), "bad");
 assert.strictEqual(controller.healthForCount("0 faults", "bad"), "good");
 assert.strictEqual(controller.healthForCount("2 faults", "bad"), "bad");
 assert.strictEqual(controller.healthForCount("0 warnings", "warn"), "good");
@@ -79,21 +85,28 @@ const css = installedStyles[0].textContent;
   "--health-warn: #e7b93f",
   "--health-bad: #ed5965",
   "--health-info: #59aee9",
+  "--health-good-glow: rgba(57, 215, 125, 0.08)",
+  "--health-warn-glow: rgba(231, 185, 63, 0.08)",
+  "--health-bad-glow: rgba(237, 89, 101, 0.09)",
   ".pipeline-validation-summary",
   ".servo-program-health-strip",
   ".release-readiness-status",
   ".program-optimizer-panel",
+  ".program-optimizer-badge[data-health]",
   ".diagnostics-workspace-status",
   ".sensor-status-pass",
   ".sensor-status-fail",
-  ".map-fault-notice"
+  ".map-fault-notice",
+  "0 0 5px var(--health-current-glow)"
 ].forEach((token) => assert.ok(css.includes(token), `Missing health visual coverage: ${token}`));
+assert.ok(!css.includes("0 0 18px var(--health-current-glow)"), "Health cards must not use the previous heavy glow.");
+assert.ok(!css.includes("0 0 16px var(--health-current-glow)"), "Validation notices must not use the previous heavy glow.");
 
-// Carbon Crimson deliberately uses red as its layout accent. Health success
-// must remain an independent green rather than inheriting the theme accent.
 assert.ok(themeSource.includes('body[data-theme="red-black"]'));
 assert.ok(themeSource.includes("--green: #a45a63;"));
 assert.ok(!healthSource.includes("var(--green)"), "Health semantics must not inherit the theme accent variable.");
+assert.ok(healthSource.includes("KEYWORD_STATUS_SELECTOR"));
+assert.ok(healthSource.includes("healthFromText(element.textContent)"));
 assert.ok(healthSource.includes('setHealth(notice, notice.classList.contains("bad") ? "bad" : notice.classList.contains("warn") ? "warn" : "good")'));
 
 const controllerPath = "app/controllers/health-status-ui-controller.js";
@@ -103,4 +116,4 @@ assert.ok(bootstrapSource.indexOf(controllerPath) < bootstrapSource.indexOf("app
 assert.ok(startupSource.includes("LabelerHealthStatusUiController?.installed"));
 assert.ok(startupSource.includes("LabelerHealthStatusUiController.refresh()"));
 
-console.log("Theme-independent health status regression passed.");
+console.log("Theme-independent health keyword and restrained glow regression passed.");
