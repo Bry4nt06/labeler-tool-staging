@@ -2,6 +2,7 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.2";
+  const controllerVersion = `${version}-setup-controllers-v1`;
   const modules = Object.freeze([
     "app/export-service.js",
     "app/controllers/workspace-action-service.js",
@@ -35,7 +36,7 @@
         return;
       }
       const script = document.createElement("script");
-      script.src = `./${path}?v=${encodeURIComponent(version)}`;
+      script.src = `./${path}?v=${encodeURIComponent(controllerVersion)}`;
       script.async = false;
       script.dataset.bootstrapModule = path;
       script.addEventListener("load", () => {
