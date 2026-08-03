@@ -47,7 +47,6 @@
       .validation-details > *,
       #validationList > *,
       .panel.validation .pipeline-validation-summary,
-      .panel.validation .pipeline-validation-banner,
       .panel.validation .program-health-strip,
       .panel.validation .diagnostics-health-strip,
       .panel.validation .optimizer-health-strip,
@@ -113,7 +112,6 @@
         line-height: 1.2;
       }
 
-      .pipeline-validation-banner,
       .panel.validation .notice,
       .panel.validation strong,
       .panel.validation span,
