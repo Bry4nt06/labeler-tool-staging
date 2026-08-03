@@ -10,6 +10,7 @@ const read = (...parts) => fs.readFileSync(path.join(root, ...parts), "utf8");
 
 const geometrySource = read("drivers", "geometry", "label-geometry-driver.js");
 const themeSource = read("app", "controllers", "theme-presets-controller.js");
+const specsUiSource = read("app", "controllers", "specification-table-ui-controller.js");
 const bootstrapSource = read("app", "bootstrap.js");
 const appSource = read("app.js");
 const startupSource = read("app", "startup-runtime.js");
@@ -17,6 +18,7 @@ const startupSource = read("app", "startup-runtime.js");
 [
   ["label-geometry-driver.js", geometrySource],
   ["theme-presets-controller.js", themeSource],
+  ["specification-table-ui-controller.js", specsUiSource],
   ["bootstrap.js", bootstrapSource],
   ["app.js", appSource],
   ["startup-runtime.js", startupSource]
@@ -34,48 +36,69 @@ assert.ok(geometrySource.includes("function fail"));
 assert.ok(geometrySource.includes('body.classList.add("servoforge-initializing")'));
 assert.ok(geometrySource.includes('body.classList.remove("servoforge-initializing")'));
 
-[
-  "red-black",
-  "dark-gold",
-  "burnt-orange",
-  "forge-gradient"
-].forEach((preset) => {
+const expectedThemes = Object.freeze({
+  "red-black": "Carbon Crimson",
+  "dark-gold": "Carbon Brass",
+  "burnt-orange": "Graphite Copper",
+  "forge-gradient": "Midnight Alloy"
+});
+
+Object.entries(expectedThemes).forEach(([preset, label]) => {
   assert.ok(themeSource.includes(`value: "${preset}"`), `${preset} option must be registered.`);
+  assert.ok(themeSource.includes(`label: "${label}"`), `${preset} must use its layout-oriented name.`);
   assert.ok(themeSource.includes(`body[data-theme="${preset}"]`), `${preset} CSS must be installed.`);
 });
-assert.ok(themeSource.includes("radial-gradient"));
-assert.ok(themeSource.includes("linear-gradient(135deg"));
-assert.ok(themeSource.includes("Red & black"));
-assert.ok(themeSource.includes("Dark gold"));
-assert.ok(themeSource.includes("Burnt orange"));
-assert.ok(themeSource.includes("Forge gradient"));
 
-// Expanded themes must stay charcoal-based, with secondary colors used as
-// subdued accents rather than bright panel backgrounds.
+// Every added theme uses a dark neutral workspace hierarchy. Secondary colors
+// identify controls and map elements rather than tinting entire work surfaces.
 [
-  "--panel: #17191d;",
-  "--panel: #191a17;",
-  "--panel: #1a1917;",
-  "--panel: #191b1f;",
-  "--panel-hi: #1f2227;",
-  "--panel-hi: #22231e;",
-  "--panel-hi: #24221f;",
-  "--panel-hi: #22252a;"
-].forEach((token) => assert.ok(themeSource.includes(token), `Missing dark surface token: ${token}`));
+  "--panel: #14181d;",
+  "--panel: #161917;",
+  "--panel: #171a1e;",
+  "--panel: #141a20;",
+  "--panel-hi: #1c2228;",
+  "--panel-hi: #1f2320;",
+  "--panel-hi: #20252a;",
+  "--panel-hi: #1c242b;",
+  "--input: #0a0e12;",
+  "--input: #0c0f0d;",
+  "--input: #0d1013;",
+  "--input: #0a0f14;"
+].forEach((token) => assert.ok(themeSource.includes(token), `Missing workspace surface token: ${token}`));
+
 [
+  "--green: #a45a63;",
+  "--green: #a38b55;",
+  "--green: #a96c47;",
+  "--green: #6f948c;"
+].forEach((token) => assert.ok(themeSource.includes(token), `Missing controlled accent token: ${token}`));
+
+[
+  "Carbon Crimson",
+  "Carbon Brass",
+  "Graphite Copper",
+  "Midnight Alloy",
+  "color-mix(in srgb, var(--accent) 5%, transparent)",
+  "color-mix(in srgb, var(--panel-hi) 91%, var(--input) 9%)",
+  ".top-settings-menu > summary",
+  ".switch-control input:checked + .switch-track",
+  "background-attachment: fixed"
+].forEach((token) => assert.ok(themeSource.includes(token), `Missing layout integration: ${token}`));
+
+[
+  "Red & black",
+  "Dark gold",
+  "Burnt orange",
+  "Forge gradient",
   "--green: #a5535a;",
-  "--green: #a38a4d;",
   "--green: #a7653e;",
-  "--green: #6e9a87;"
-].forEach((token) => assert.ok(themeSource.includes(token), `Missing muted accent token: ${token}`));
-[
-  "--green: #ef4f59;",
-  "--green: #ddb43c;",
-  "--green: #e97632;",
-  "--green: #4ee0a0;",
-  "rgba(138, 72, 214, 0.3)",
-  "rgba(238, 113, 44, 0.25)"
-].forEach((token) => assert.ok(!themeSource.includes(token), `Bright theme token must remain removed: ${token}`));
+  "--panel: #191b1f;"
+].forEach((token) => assert.ok(!themeSource.includes(token), `Previous theme design must remain removed: ${token}`));
+
+assert.ok(specsUiSource.includes("var(--accent, var(--green))"));
+assert.ok(specsUiSource.includes("color-mix(in srgb, var(--accent, var(--green)) 15%, transparent)"));
+assert.ok(!specsUiSource.includes("rgba(65, 200, 137, 0.17)"));
+assert.ok(!specsUiSource.includes("rgba(65, 200, 137, 0.2)"));
 
 const themePath = "app/controllers/theme-presets-controller.js";
 assert.ok(bootstrapSource.includes(themePath));
@@ -105,4 +128,4 @@ assert.ok(appSource.includes("progress?.fail"));
 assert.ok(startupSource.includes("return true;"));
 assert.ok(startupSource.includes("return false;"));
 
-console.log("Startup progress and subdued theme regression passed.");
+console.log("Startup progress and layout-oriented theme regression passed.");
