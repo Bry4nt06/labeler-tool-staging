@@ -48,7 +48,11 @@
       }
 
       #specs tr.selected-brand-spec > td:last-child {
+        position: relative;
+        min-width: 0;
+        padding-top: 31px;
         border-right: 1px solid color-mix(in srgb, var(--accent, var(--green)) 72%, var(--line));
+        white-space: normal;
       }
 
       #specs tr.selected-brand-spec input,
@@ -64,20 +68,17 @@
         box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent, var(--green)) 24%, transparent);
       }
 
-      #specs tr.selected-brand-spec > td:last-child {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        align-content: center;
-        gap: 5px;
-        min-width: 150px;
-        white-space: normal;
-      }
-
       #specs tr.selected-brand-spec > td:last-child::before {
         content: "Selected";
-        grid-column: 1 / -1;
+        position: absolute;
+        z-index: 2;
+        top: 4px;
+        right: 4px;
+        left: 4px;
         display: block;
-        width: 100%;
+        box-sizing: border-box;
+        width: auto;
+        max-width: calc(100% - 8px);
         padding: 4px 7px;
         border: 1px solid color-mix(in srgb, var(--accent, var(--green)) 62%, var(--line));
         border-radius: 5px;
@@ -89,17 +90,33 @@
         line-height: 1.1;
         text-align: left;
         text-transform: uppercase;
+        pointer-events: none;
       }
 
-      #specs tr.selected-brand-spec > td:last-child > button {
-        width: 100%;
+      #specs .spec-row-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 5px;
+        width: auto;
+        max-width: 100%;
         min-width: 0;
+        white-space: normal;
+      }
+
+      #specs .spec-row-actions > button {
+        flex: 1 1 70px;
+        width: auto;
+        max-width: 100%;
+        min-width: 0;
+        padding-right: 6px;
+        padding-left: 6px;
       }
 
       @media (max-width: 760px) {
-        #specs tr.selected-brand-spec > td:last-child {
-          grid-template-columns: minmax(0, 1fr);
-          min-width: 110px;
+        #specs .spec-row-actions > button {
+          flex-basis: 100%;
         }
       }
     `;
