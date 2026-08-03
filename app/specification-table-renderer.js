@@ -38,6 +38,11 @@ function renderLabelSpecs() {
     tr.dataset.specLibrary = "label";
     tr.dataset.specIndex = String(index);
     tr.dataset.specId = String(spec.id);
+    if (String(spec.brand ?? "") === String(state.selectedBrand ?? "")) {
+      tr.classList.add("selected-brand-spec");
+      tr.setAttribute("aria-current", "true");
+      tr.title = "Currently selected Brand Recipe";
+    }
     tr.innerHTML = `<td>${spec.id}</td><td><input data-spec-field="brand" value="${specificationAttributeValue(spec.brand)}"></td><td><input data-spec-field="specNumber" value="${specificationAttributeValue(spec.specNumber)}"></td><td><select data-spec-field="applicationMode" aria-label="Application for ${specificationAttributeValue(spec.brand || "label")}"><option value="apl"${spec.applicationMode === "apl" ? " selected" : ""}>APL</option><option value="cold-glue"${spec.applicationMode === "cold-glue" ? " selected" : ""}>Cold Glue</option></select></td><td><input data-spec-field="bodyLengthMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.bodyLengthMm)}"></td><td><input data-spec-field="backLengthMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.backLengthMm)}"></td><td><input data-spec-field="neckHeightMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.neckHeightMm)}"></td><td><input data-spec-field="neckLengthMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.neckLengthMm)}"></td><td><input data-spec-field="neckBottomCurveMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.neckBottomCurveMm)}"></td><td><input data-spec-field="neckBottomCircumferenceMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.neckBottomCircumferenceMm)}"></td><td><input data-spec-field="codeBoxCenterMm" class="num" type="number" step="0.001" value="${specificationAttributeValue(spec.codeBoxCenterMm)}"></td><td><button class="danger small-button" type="button">Delete</button></td>`;
     body.appendChild(tr);
   });
