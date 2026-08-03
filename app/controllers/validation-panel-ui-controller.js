@@ -16,23 +16,31 @@
         min-width: 0;
         overflow-x: clip !important;
         overflow-y: auto !important;
+        scrollbar-gutter: stable;
         contain: inline-size;
+      }
+
+      .panel.validation,
+      .panel.validation *,
+      .panel.validation *::before,
+      .panel.validation *::after {
+        box-sizing: border-box;
+        min-width: 0;
       }
 
       .panel.validation > *,
       .validation-details,
       #validationList {
-        box-sizing: border-box;
-        width: 100%;
-        max-width: 100%;
+        width: 100% !important;
+        max-width: 100% !important;
         min-width: 0;
         overflow-x: clip;
       }
 
       .validation-details,
       #validationList {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
         align-items: stretch;
       }
 
@@ -40,11 +48,14 @@
       #validationList > *,
       .panel.validation .pipeline-validation-summary,
       .panel.validation .pipeline-validation-banner,
+      .panel.validation .program-health-strip,
+      .panel.validation .diagnostics-health-strip,
+      .panel.validation .optimizer-health-strip,
+      .panel.validation .release-readiness-summary,
       .panel.validation .notice {
-        box-sizing: border-box;
         justify-self: stretch;
-        width: auto !important;
-        max-width: 100%;
+        width: 100% !important;
+        max-width: 100% !important;
         min-width: 0;
         margin-right: 0 !important;
         margin-left: 0 !important;
@@ -56,7 +67,6 @@
         align-items: stretch !important;
         width: 100%;
         max-width: 100%;
-        min-width: 0;
       }
 
       .validation-head-actions {
@@ -64,7 +74,6 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
         width: 100%;
         max-width: 100%;
-        min-width: 0;
         white-space: normal !important;
       }
 
@@ -85,10 +94,9 @@
 
       .pipeline-validation-summary > strong,
       .pipeline-validation-summary > span {
-        box-sizing: border-box;
         display: block;
-        width: auto !important;
-        max-width: 100%;
+        width: 100% !important;
+        max-width: 100% !important;
         min-width: 0;
         overflow-wrap: anywhere;
         word-break: break-word;
@@ -109,9 +117,10 @@
       .panel.validation .notice,
       .panel.validation strong,
       .panel.validation span,
-      .panel.validation small {
+      .panel.validation small,
+      .panel.validation p,
+      .panel.validation code {
         max-width: 100%;
-        min-width: 0;
         white-space: normal;
         overflow-wrap: anywhere;
         word-break: break-word;
