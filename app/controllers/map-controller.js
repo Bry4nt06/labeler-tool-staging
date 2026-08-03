@@ -3,6 +3,61 @@
 (function installMapController(global) {
   const actions = global.LabelerWorkspaceActionService;
   let drag = null;
+  let builderBindingsInstalled = false;
+
+  function setBuilderStatus(message, isError = false) {
+    if (!els.builderStatus) return;
+    els.builderStatus.textContent = message;
+    els.builderStatus.classList.toggle("status-bad", Boolean(isError));
+  }
+
+  function ensureActiveBuilderMap() {
+    actions.call("ensurePersistentApplicationMaps");
+    const machineMap = actions.call("activeMachineMap");
+    if (!machineMap) throw new Error("No machine map is available for Map Builder.");
+    if (state.activeMapId !== machineMap.id) {
+      actions.call("loadMachineMapIntoRuntime", machineMap, false);
+    }
+    return machineMap;
+  }
+
+  function verifyBuilderPopulation(machineMap) {
+    const libraryPopulated = Boolean(els.mapLibrarySelect?.options?.length);
+    const layoutPopulated = Boolean(
+      els.aggregateToggleList?.childElementCount
+      || els.stationToggleList?.childElementCount
+    );
+    const objectCount = Array.isArray(machineMap?.objects) ? machineMap.objects.length : 0;
+    const objectsPopulated = objectCount === 0 || Boolean(els.wipeBuilderList?.childElementCount);
+    if (!libraryPopulated) throw new Error("Saved-map controls did not populate.");
+    if (!layoutPopulated) throw new Error("Aggregate and station controls did not populate.");
+    if (!objectsPopulated) throw new Error(`Configured objects did not populate (${objectCount} expected).`);
+    return objectCount;
+  }
+
+  function populateBuilder(options = {}) {
+    const bind = options.bind !== false;
+    try {
+      const machineMap = ensureActiveBuilderMap();
+      actions.call("renderWipeDownBuilder");
+      if (bind && !builderBindingsInstalled) {
+        if (!els.addBuilderObject) throw new Error("Map Builder controls are unavailable in the page DOM.");
+        actions.call("bindWipeDownBuilder");
+        builderBindingsInstalled = true;
+      }
+      const objectCount = verifyBuilderPopulation(machineMap);
+      setBuilderStatus(`STAGING 0.9.8 • ${machineMap.name} • ${objectCount} configured object${objectCount === 1 ? "" : "s"}`);
+      return true;
+    } catch (error) {
+      const message = error?.message || String(error || "Unknown Map Builder error");
+      console.error("Map Builder population failed", error);
+      setBuilderStatus(`Map Builder failed: ${message}`, true);
+      if (els.wipeBuilderList && !els.wipeBuilderList.childElementCount) {
+        els.wipeBuilderList.innerHTML = `<div class="notice bad"><strong>Map Builder failed to populate.</strong><span>${message}</span></div>`;
+      }
+      return false;
+    }
+  }
 
   function setBuilderOpen(open) {
     actions.execute({
@@ -12,8 +67,8 @@
         els.mapRightRail?.classList.toggle("builder-open", state.wipeBuilderOpen);
         els.labelerMapReference?.classList.toggle("builder-open", state.wipeBuilderOpen);
         if (state.wipeBuilderOpen) {
-          actions.call("ensurePersistentApplicationMaps");
-          actions.call("renderWipeDownBuilder");
+          populateBuilder({ bind: true });
+          global.requestAnimationFrame?.(() => populateBuilder({ bind: false }));
         }
       },
       persist: true
@@ -230,6 +285,7 @@
   }
 
   global.LabelerMapController = Object.freeze({
+    populateBuilder,
     setBuilderOpen,
     applyBuilder,
     setLabelerMapOpen,
