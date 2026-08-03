@@ -34,6 +34,9 @@ async function initializeLabelerApp() {
     if (!window.LabelerSetupEventControllers?.installed) {
       throw new Error("Setup event controller boundary is not loaded.");
     }
+    if (!window.LabelerSetupStateController?.initialize) {
+      throw new Error("Setup state controller is not loaded.");
+    }
     loadSavedSettings();
     if (!window.LabelerCompanyDefaultsService?.reconcile) {
       throw new Error("Company catalog service is not loaded.");
@@ -44,7 +47,7 @@ async function initializeLabelerApp() {
     if (typeof initializeStella660ColdGlueExample === "function" && initializeStella660ColdGlueExample()) {
       saveCurrentSettings();
     }
-    bindSetup();
+    window.LabelerSetupStateController.initialize();
     bindWipeDownBuilder();
     bindGlobalActions();
     render();
