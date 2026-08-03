@@ -9,10 +9,7 @@
   function renderTargets(targets) {
     const requested = Array.isArray(targets) ? targets : targets ? [targets] : [];
     const unique = new Set(requested);
-    if (unique.has("all")) {
-      call("render");
-      return;
-    }
+    if (unique.has("all")) call("render");
     if (unique.has("map")) call("renderMap");
     if (unique.has("simulation-map")) call("renderSimulationMap");
     if (unique.has("animation")) call("renderAnimationFrame");
