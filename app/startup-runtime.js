@@ -45,6 +45,9 @@ async function initializeLabelerApp() {
     if (!window.LabelerThemePresetsController?.installed) {
       throw new Error("Theme presets controller is not loaded.");
     }
+    if (!window.LabelerHealthStatusUiController?.installed) {
+      throw new Error("Health status visual controller is not loaded.");
+    }
     if (!window.LabelerSpecificationEventController?.installed) {
       throw new Error("Specification field event controller is not loaded.");
     }
@@ -87,6 +90,7 @@ async function initializeLabelerApp() {
 
     progress?.set(96, "Rendering ServoForge workspace…");
     render();
+    window.LabelerHealthStatusUiController.refresh();
     startAnimationLoop();
 
     progress?.set(98, "Registering update service…");
