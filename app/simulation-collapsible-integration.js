@@ -84,6 +84,8 @@
     ]),
 
     rendering: Object.freeze([
+      "app/specification-table-renderer.js?v=0.9.7-table-rendering-split-v1",
+      "app/build-inputs-renderer.js?v=0.9.7-table-rendering-split-v1",
       "app/rendering-coordinator-integration.js?v=0.9.7-rendering-coordinator-v1"
     ]),
 
