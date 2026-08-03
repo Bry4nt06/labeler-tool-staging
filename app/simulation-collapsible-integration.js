@@ -11,7 +11,7 @@
       "drivers/assembly/assembly-geometry-driver.js?v=0.9.7-assembly-drivers-v1",
       "drivers/rendering/render-cycle-driver.js?v=0.9.7-rendering-coordinator-v1",
       "drivers/profile/coder-orientation-driver.js?v=0.9.6-coder-driver-v1",
-      "drivers/profile/map-object-orientation-driver.js?v=0.9.6-orientation-drivers-v1",
+      "drivers/profile/map-object-orientation-driver.js?v=0.9.8-active-coder-fallback-v2",
       "drivers/profile/coder-handoff-driver.js?v=0.9.6-orientation-drivers-v1",
       "drivers/profile/map-object-row-builder-driver.js?v=0.9.6-orientation-row-drivers-v1",
       "drivers/profile/orientation-issue-factory-driver.js?v=0.9.6-orientation-row-drivers-v1",
@@ -81,7 +81,7 @@
 
     mapBuilder: Object.freeze([
       "app/map-builder-station-authority-integration.js?v=0.9.3-station-authority",
-      "app/map-object-builder-selection-integration.js?v=0.9.3-map-object-builder-selection-v3",
+      "app/map-object-builder-selection-integration.js?v=0.9.8-runtime-object-double-click-v4",
       "app/map-object-double-click-open-fix-integration.js?v=0.9.3-map-object-double-press-v4",
       "app/label-spec-section-selection-integration.js?v=0.9.8-label-dimension-presence-v1"
     ]),
@@ -94,7 +94,7 @@
 
     finalProfileStages: Object.freeze([
       "app/clockwise-code-box-orientation-integration.js?v=0.9.6-profile-pipeline-v1",
-      "app/coder-rest-grammar-repair-integration.js?v=0.9.6-profile-pipeline-v1",
+      "app/coder-rest-grammar-repair-integration.js?v=0.9.8-segment-command-finalizer-v2",
       "app/profile-pipeline-orchestrator-integration.js?v=0.9.6-profile-pipeline-v1",
       "app/production-motion-profile-reference-integration.js?v=0.9.7-production-motion-reference-v1",
       "app/motion-profile-workbench-integration.js?v=0.9.6-refactor-1"
