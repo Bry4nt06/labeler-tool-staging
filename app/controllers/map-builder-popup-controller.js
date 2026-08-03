@@ -3,20 +3,20 @@
 (function installMapBuilderPopupController(global) {
   if (global.LabelerMapBuilderPopupController?.installed) return;
 
-  function control(id, fallback) {
-    return document.querySelector(`#${id}`) || fallback || null;
+  function control(id) {
+    return document.querySelector(`#${id}`) || null;
   }
 
   function elements() {
     return {
-      button: control("wipeDownBuilderButton", global.els?.applicationSetupButton),
-      dialog: control("applicationSetupDialog", global.els?.applicationSetupDialog),
-      close: control("closeApplicationSetup", global.els?.closeApplicationSetup),
-      apply: control("applyApplicationSetup", global.els?.applyApplicationSetup),
-      rightRail: control("mapRightRail", global.els?.mapRightRail),
-      labelerMapReference: control("labelerMapReference", global.els?.labelerMapReference),
-      list: control("wipeBuilderList", global.els?.wipeBuilderList),
-      status: control("builderStatus", global.els?.builderStatus)
+      button: control("wipeDownBuilderButton"),
+      dialog: control("applicationSetupDialog"),
+      close: control("closeApplicationSetup"),
+      apply: control("applyApplicationSetup"),
+      rightRail: control("mapRightRail"),
+      labelerMapReference: control("labelerMapReference"),
+      list: control("wipeBuilderList"),
+      status: control("builderStatus")
     };
   }
 
@@ -32,7 +32,7 @@
   function setVisibility(open) {
     const ui = elements();
     const visible = Boolean(open);
-    global.state.wipeBuilderOpen = visible;
+    state.wipeBuilderOpen = visible;
     if (ui.dialog) ui.dialog.hidden = !visible;
     ui.rightRail?.classList.toggle("builder-open", visible);
     ui.labelerMapReference?.classList.toggle("builder-open", visible);
@@ -55,19 +55,19 @@
   function ensureRendered() {
     const ui = elements();
     try {
-      if (typeof global.ensurePersistentApplicationMaps !== "function") {
+      if (typeof ensurePersistentApplicationMaps !== "function") {
         throw new Error("Map library service is unavailable.");
       }
-      global.ensurePersistentApplicationMaps();
-      const activeMap = typeof global.activeMachineMap === "function"
-        ? global.activeMachineMap()
-        : global.state.mapLibrary?.find((map) => map.id === global.state.activeMapId) || global.state.mapLibrary?.[0];
+      ensurePersistentApplicationMaps();
+      const activeMap = typeof activeMachineMap === "function"
+        ? activeMachineMap()
+        : state.mapLibrary?.find((map) => map.id === state.activeMapId) || state.mapLibrary?.[0];
       if (!activeMap) throw new Error("No machine map is available to edit.");
-      if (typeof global.renderWipeDownBuilder !== "function") {
+      if (typeof renderWipeDownBuilder !== "function") {
         throw new Error("Map Builder renderer is unavailable.");
       }
 
-      global.renderWipeDownBuilder();
+      renderWipeDownBuilder();
       if (ui.list && !ui.list.children.length) {
         ui.list.innerHTML = '<div class="notice"><strong>No configured map objects.</strong><span>Use Add Object to begin building this machine map.</span></div>';
       }
@@ -86,23 +86,23 @@
       ensureRendered();
       ui.dialog?.focus?.({ preventScroll: true });
     });
-    if (typeof global.saveCurrentSettings === "function") global.saveCurrentSettings();
+    if (typeof saveCurrentSettings === "function") saveCurrentSettings();
   }
 
   function close() {
     setVisibility(false);
-    if (typeof global.saveCurrentSettings === "function") global.saveCurrentSettings();
+    if (typeof saveCurrentSettings === "function") saveCurrentSettings();
   }
 
   function toggle() {
-    if (global.state.wipeBuilderOpen && !elements().dialog?.hidden) close();
+    if (state.wipeBuilderOpen && !elements().dialog?.hidden) close();
     else open();
   }
 
   function apply() {
-    if (typeof global.saveCurrentSettings === "function") global.saveCurrentSettings();
+    if (typeof saveCurrentSettings === "function") saveCurrentSettings();
     close();
-    if (typeof global.render === "function") global.render();
+    if (typeof render === "function") render();
   }
 
   function ownedControl(target, id) {
