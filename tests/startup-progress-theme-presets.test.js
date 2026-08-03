@@ -101,12 +101,19 @@ assert.ok(specsUiSource.includes("color-mix(in srgb, var(--accent, var(--green))
 assert.ok(specsUiSource.includes("background-clip: padding-box"));
 assert.ok(specsUiSource.includes("#specs tr.selected-brand-spec > td:last-child::before"));
 assert.ok(specsUiSource.includes('content: "Selected"'));
-assert.ok(specsUiSource.includes("grid-column: 1 / -1"));
-assert.ok(specsUiSource.includes("grid-template-columns: repeat(2, minmax(0, 1fr))"));
-assert.ok(specsUiSource.includes("#specs tr.selected-brand-spec > td:last-child > button"));
+assert.ok(specsUiSource.includes("position: absolute"));
+assert.ok(specsUiSource.includes("padding-top: 31px"));
+assert.ok(specsUiSource.includes("max-width: calc(100% - 8px)"));
+assert.ok(specsUiSource.includes("pointer-events: none"));
+assert.ok(specsUiSource.includes("#specs .spec-row-actions"));
+assert.ok(specsUiSource.includes("flex-wrap: wrap"));
+assert.ok(specsUiSource.includes("flex: 1 1 70px"));
 assert.ok(specsUiSource.includes("border-color: var(--line)"));
 assert.ok(specsUiSource.includes("box-shadow: none"));
 assert.ok(!specsUiSource.includes("td:first-child::after"), "Selected marker must not remain cramped beneath the first cell.");
+assert.ok(!specsUiSource.includes("grid-column: 1 / -1"), "Selected marker must not convert the table action cell into a spanning grid.");
+assert.ok(!specsUiSource.includes("grid-template-columns: repeat(2, minmax(0, 1fr))"), "Selected action controls must not expand the table through an internal grid.");
+assert.ok(!specsUiSource.includes("min-width: 150px"), "Selected action cells must not impose a table-expanding minimum width.");
 assert.ok(!specsUiSource.includes("rgba(65, 200, 137, 0.17)"));
 assert.ok(!specsUiSource.includes("rgba(65, 200, 137, 0.2)"));
 
@@ -138,4 +145,4 @@ assert.ok(appSource.includes("progress?.fail"));
 assert.ok(startupSource.includes("return true;"));
 assert.ok(startupSource.includes("return false;"));
 
-console.log("Startup progress, themes, and selected Label Spec hierarchy regression passed.");
+console.log("Startup progress, themes, and contained selected Label Spec regression passed.");
