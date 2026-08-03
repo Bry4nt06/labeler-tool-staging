@@ -43,6 +43,9 @@ async function initializeLabelerApp() {
     if (!window.LabelerSpecificationEventController?.installed) {
       throw new Error("Specification field event controller is not loaded.");
     }
+    if (!window.LabelerLabelSectionEventController?.installed) {
+      throw new Error("Brand Recipe section event controller is not loaded.");
+    }
     if (!window.LabelerMapBuilderActionController?.installed || !window.LabelerMapBuilderEventController?.installed) {
       throw new Error("Map Builder action and event controllers are not loaded.");
     }
