@@ -39,24 +39,22 @@ assert.ok(duplicateSource.includes("flex: 0 0 32px"));
 assert.ok(duplicateSource.includes("width: 32px"));
 assert.ok(duplicateSource.includes("height: 30px"));
 
-assert.ok(sectionSource.includes("label-brand-section-layout"));
-assert.ok(sectionSource.includes("brandCell.insertBefore(layout, brandInput)"));
-assert.ok(sectionSource.includes("layout.appendChild(brandInput)"));
-assert.ok(sectionSource.includes("layout.appendChild(holder)"));
-assert.ok(sectionSource.includes("flex-wrap: nowrap"));
-assert.ok(sectionSource.includes("margin: 0"));
-assert.ok(sectionSource.includes("padding: 0"));
-assert.ok(sectionSource.includes("border: 0"));
-assert.ok(!sectionSource.includes("margin-top:4px"), "Label section controls must not create a second row.");
-assert.ok(!sectionSource.includes("border-top:1px"), "Label section controls must not add a divider beneath the brand.");
+assert.ok(sectionSource.includes("PRESENT_THRESHOLD_MM = 1"));
+assert.ok(sectionSource.includes("dimensionFlags"));
+assert.ok(sectionSource.includes("clearLegacySectionFlags"));
+assert.ok(sectionSource.includes("applyMapVisibility"));
+assert.ok(sectionSource.includes("applyBuilderVisibility"));
+assert.ok(!sectionSource.includes("label-brand-section-layout"), "Brand inputs must not be crowded by section controls.");
+assert.ok(!sectionSource.includes("label-section-checkboxes"), "Neck, Body, and Back checkboxes must remain removed.");
+assert.ok(!sectionSource.includes("data-label-section"), "Manual section controls must remain removed.");
 
 assert.ok(uiSource.includes("flex-wrap: nowrap !important"));
 assert.ok(uiSource.includes("#specs .spec-row-actions > .spec-icon-button"));
 assert.ok(uiSource.includes("flex: 0 0 32px"));
-assert.ok(uiSource.includes('content: "Selected"'));
-assert.ok(uiSource.includes("display: inline-flex"));
+assert.ok(uiSource.includes("#specs tr.selected-brand-spec > td"));
+assert.ok(!uiSource.includes('content: "Selected"'), "The selected row highlight must stand on its own.");
 assert.ok(!uiSource.includes("padding-top: 31px"), "Selected actions must remain on one compact line.");
-assert.ok(!uiSource.includes("position: absolute"), "Selected badge must participate in the action row.");
+assert.ok(!uiSource.includes("position: absolute"), "Specs actions must not use an overlay marker.");
 assert.ok(!uiSource.includes("flex: 1 1 70px"), "Icon buttons must not expand the action column.");
 
-console.log("Compact Specs table action and label-section layout regression passed.");
+console.log("Compact Specs actions and dimension-driven label presence regression passed.");
