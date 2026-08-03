@@ -48,14 +48,7 @@
       }
 
       #specs tr.selected-brand-spec > td:last-child {
-        position: relative;
-        display: table-cell !important;
-        width: 1%;
-        max-width: 145px;
-        min-width: 0;
-        padding-top: 31px;
         border-right: 1px solid color-mix(in srgb, var(--accent, var(--green)) 72%, var(--line));
-        white-space: nowrap;
       }
 
       #specs tr.selected-brand-spec input,
@@ -71,62 +64,55 @@
         box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent, var(--green)) 24%, transparent);
       }
 
+      #specs .spec-row-actions {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 5px;
+        width: auto;
+        max-width: 100%;
+        min-width: 0;
+        white-space: nowrap;
+      }
+
       #specs tr.selected-brand-spec > td:last-child::before {
         content: "Selected";
-        position: absolute;
-        z-index: 2;
-        top: 4px;
-        right: 4px;
-        left: 4px;
-        display: block;
+        display: inline-flex;
+        flex: 0 1 auto;
+        align-items: center;
+        justify-content: center;
         box-sizing: border-box;
-        width: auto;
-        max-width: calc(100% - 8px);
-        padding: 4px 7px;
+        min-width: 0;
+        max-width: 58px;
+        padding: 3px 5px;
+        overflow: hidden;
         border: 1px solid color-mix(in srgb, var(--accent, var(--green)) 62%, var(--line));
         border-radius: 5px;
         background: color-mix(in srgb, var(--accent, var(--green)) 16%, var(--panel-hi));
         color: var(--accent, var(--green));
         font-size: 8px;
         font-weight: 800;
-        letter-spacing: 0.08em;
-        line-height: 1.1;
-        text-align: left;
+        letter-spacing: 0.06em;
+        line-height: 1;
+        text-overflow: ellipsis;
         text-transform: uppercase;
+        white-space: nowrap;
         pointer-events: none;
       }
 
-      #specs tr.selected-brand-spec > td:last-child > button {
-        display: inline-block;
-        box-sizing: border-box;
-        width: calc(50% - 3px);
-        max-width: calc(50% - 3px);
-        min-width: 0;
-        padding: 6px 5px;
-        font-size: 10px;
-        white-space: nowrap;
-      }
-
-      #specs tr.selected-brand-spec > td:last-child > button + button {
-        margin-left: 3px;
-      }
-
-      @media (max-width: 760px) {
-        #specs tr.selected-brand-spec > td:last-child {
-          max-width: 112px;
-          white-space: normal;
-        }
-
-        #specs tr.selected-brand-spec > td:last-child > button {
-          display: block;
-          width: 100%;
-          max-width: 100%;
-        }
-
-        #specs tr.selected-brand-spec > td:last-child > button + button {
-          margin-top: 4px;
-          margin-left: 0;
-        }
+      #specs .spec-row-actions > .spec-icon-button {
+        display: inline-flex;
+        flex: 0 0 32px;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        max-width: 32px;
+        min-width: 32px;
+        height: 30px;
+        min-height: 30px;
+        margin: 0;
+        padding: 5px;
       }
     `;
     document.head.appendChild(style);
