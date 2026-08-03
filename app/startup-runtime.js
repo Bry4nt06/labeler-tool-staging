@@ -37,6 +37,9 @@ async function initializeLabelerApp() {
     if (!window.LabelerSetupStateController?.initialize) {
       throw new Error("Setup state controller is not loaded.");
     }
+    if (!window.LabelerMapController?.populateBuilder) {
+      throw new Error("Map Builder lifecycle controller is not loaded.");
+    }
     loadSavedSettings();
     if (!window.LabelerCompanyDefaultsService?.reconcile) {
       throw new Error("Company catalog service is not loaded.");
@@ -48,14 +51,7 @@ async function initializeLabelerApp() {
       saveCurrentSettings();
     }
     window.LabelerSetupStateController.initialize();
-
-    // Map Builder is not part of the application-wide render cycle. Populate
-    // its saved-map controls and configured-object list before installing the
-    // builder's direct control bindings. This also restores an already-open
-    // builder after refresh instead of showing an empty drawer.
-    renderWipeDownBuilder();
-    bindWipeDownBuilder();
-
+    window.LabelerMapController.populateBuilder({ bind: true });
     bindGlobalActions();
     render();
     startAnimationLoop();
