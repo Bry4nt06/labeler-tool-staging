@@ -7,6 +7,7 @@
   const FULL_CYCLE = 360;
   let driverPatched = false;
   let validationWrapped = false;
+  let installed = false;
 
   function finite(value, fallback = NaN) {
     const parsed = Number(value);
@@ -83,8 +84,8 @@
   }
 
   function pruneMotionPlan() {
-    if (!Array.isArray(global.state?.motionPlan?.issues)) return;
-    global.state.motionPlan.issues = filterCycleAliasIssues(global.state.motionPlan.issues);
+    if (typeof state === "undefined" || !Array.isArray(state?.motionPlan?.issues)) return;
+    state.motionPlan.issues = filterCycleAliasIssues(state.motionPlan.issues);
   }
 
   function patchOrientationDriver() {
@@ -125,12 +126,14 @@
   }
 
   function install() {
+    if (installed) return true;
     const complete = patchOrientationDriver() && patchValidation();
     if (!complete) return false;
+    installed = true;
     pruneMotionPlan();
     try {
-      if (typeof global.applyGeneratedServoProfile === "function") global.applyGeneratedServoProfile();
-      if (typeof global.render === "function") global.render();
+      if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
+      if (typeof render === "function") render();
     } catch (error) {
       console.error("Unable to normalize the coding station table cycle.", error);
     }
