@@ -9,12 +9,14 @@ const root = path.resolve(__dirname, "..");
 const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 
 const manifest = JSON.parse(read("config/company-default-settings.json"));
-assert.strictEqual(manifest.companyDefaultsVersion, 3);
+assert.strictEqual(manifest.companyDefaultsVersion, 4);
 assert.deepStrictEqual(manifest.fragments.mapLibrary, [
   "./config/default-programs/map-blank-apl.json",
   "./config/default-programs/map-l85-workbook-reference-3-label-apl.json",
   "./config/default-programs/map-45h-topmodul-3-label-apl-wipe-down-pads.json"
 ]);
+assert.deepStrictEqual(manifest.fragments.labelSpecs, []);
+assert.strictEqual(manifest.settings.selectedBrand, "");
 
 const expectedNames = [
   "Blank APL Map",
@@ -33,10 +35,14 @@ assert.doesNotThrow(() => new vm.Script(defaultsSource));
 [
   "hasSavedWorkspace",
   "addMissing",
-  "if (!existingWorkspace)",
+  "retireOldPackagedMaps",
+  "retirePackagedLabelSpecs",
+  "companyDefaultProgram",
+  "companyDefaultSpecVersion",
   "resetToDefaults",
   "clearApplicationStorage"
 ].forEach((token) => assert.ok(defaultsSource.includes(token), `Missing defaults behavior: ${token}`));
+assert.ok(defaultsSource.includes("if (!spec?.companyDefaultSpecVersion) return true"));
 assert.ok(!defaultsSource.includes("result[index] = entry"), "Existing user catalog entries must not be overwritten by defaults.");
 
 const resetSource = read("app/controllers/settings-reset-controller.js");
@@ -48,4 +54,4 @@ assert.ok(resetSource.includes("resetToDefaults"));
 const bootstrap = read("app/bootstrap.js");
 assert.ok(bootstrap.includes("app/controllers/settings-reset-controller.js"));
 
-console.log("Default catalog preservation and reset control regression passed.");
+console.log("Default catalog preservation, cleanup, and reset regression passed.");
