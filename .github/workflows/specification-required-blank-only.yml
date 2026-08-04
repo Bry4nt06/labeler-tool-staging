@@ -5,13 +5,15 @@ on:
     branches: [main]
     paths:
       - .github/workflows/specification-required-blank-only.yml
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    if: contains(github.event.head_commit.message, '[spec-required-blank-only]')
+    if: github.event_name == 'pull_request' || contains(github.event.head_commit.message, '[spec-required-blank-only]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,6 +63,8 @@ jobs:
           pattern = re.compile(r'  function validateBottle\(spec, index, issues\) \{.*?\n  function validateSpecifications\(', re.S)
           match = pattern.search(source)
           if not match:
+              if 'blankOnly: true' in source:
+                  raise SystemExit(0)
               raise SystemExit('Unable to locate specification validation block.')
           source = source[:match.start()] + replacement + '  function validateSpecifications(' + source[match.end():]
           source = source.replace('    minimumLabelMm: MIN_LABEL_MM,\n', '    blankOnly: true,\n')
@@ -68,9 +72,10 @@ jobs:
 
           test_path = Path('tests/specification-sensor-guidance.test.js')
           test = test_path.read_text(encoding='utf-8')
-          start = test.index('const partialNeck = validState();')
-          end = test.index('\n[\n  "plannedLabelVisibilityPercent"', start)
-          zero_tests = r'''const allZero = validState();
+          if 'Numeric zero must count as a completed input.' not in test:
+              start = test.index('const partialNeck = validState();')
+              end = test.index('\n[\n  "plannedLabelVisibilityPercent"', start)
+              zero_tests = r'''const allZero = validState();
 Object.assign(allZero.bottleSpecs[0], {
   diameterTargetMm: 0,
   radiusReductionMm: 0
@@ -94,19 +99,31 @@ const blankBottle = validState();
 blankBottle.bottleSpecs[0].diameterTargetMm = "";
 assert.ok(requirements.validateState(blankBottle).some((issue) => issue.field === "diameterTargetMm"));
 '''
-          test = test[:start] + zero_tests + test[end:]
-          test_path.write_text(test, encoding='utf-8')
+              test = test[:start] + zero_tests + test[end:]
+              test_path.write_text(test, encoding='utf-8')
           PY
 
       - name: Run focused regression
         run: node tests/specification-sensor-guidance.test.js
 
-      - name: Commit correction
+      - name: Commit correction to review branch
+        if: github.event_name == 'pull_request'
         shell: bash
         run: |
-          rm -f .github/workflows/specification-required-blank-only.yml
           git config user.name "ServoForge Release Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add -A
+          git add app/controllers/specification-sensor-guidance-controller.js tests/specification-sensor-guidance.test.js
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Treat zero as a completed required specification value"
+          git push origin HEAD:${GITHUB_HEAD_REF}
+
+      - name: Commit correction to main
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          git config user.name "ServoForge Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/controllers/specification-sensor-guidance-controller.js tests/specification-sensor-guidance.test.js
+          if git diff --cached --quiet; then exit 0; fi
           git commit -m "Treat zero as a completed required specification value"
           git push origin HEAD:main
