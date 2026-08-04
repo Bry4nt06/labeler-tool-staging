@@ -38,41 +38,50 @@
       || sensor.labelSection
       || "auto"
     ).trim().toLowerCase();
-    if (VALID_SECTIONS.has(explicit)) return explicit;
+    if (VALID_SECTIONS.has(explicit) || explicit === "none") return explicit;
+
     const map = machineMap(sourceMap);
     const station = Number(sensor.station);
     try {
       const inferred = typeof inferAplStationSections === "function"
         ? inferAplStationSections(map)?.[String(station)]
         : map?.stationSections?.[String(station)];
-      if (VALID_SECTIONS.has(inferred)) return inferred;
+      if (VALID_SECTIONS.has(inferred) || inferred === "none") return inferred;
     } catch { }
     try {
       const fallback = typeof labelSectionForStation === "function"
         ? labelSectionForStation(station)
         : "none";
-      if (VALID_SECTIONS.has(fallback)) return fallback;
+      if (VALID_SECTIONS.has(fallback) || fallback === "none") return fallback;
     } catch { }
     return "none";
   }
 
   function status(sensor, sourceMap = null) {
     const section = sectionForSensor(sensor, sourceMap);
+    const assigned = VALID_SECTIONS.has(section);
     const manualEnabled = sensor?.enabled !== false;
     const active = applications();
-    const labelPresent = !VALID_SECTIONS.has(section) || Boolean(active[section]);
-    const autoDisabled = manualEnabled && VALID_SECTIONS.has(section) && !labelPresent;
+    const labelPresent = assigned && Boolean(active[section]);
+    const automaticallyRemoved = !assigned || !labelPresent;
+    const enabled = manualEnabled && labelPresent;
+    const shownOnMap = assigned && labelPresent;
+
     return {
       section,
+      assigned,
       manualEnabled,
       labelPresent,
-      autoDisabled,
-      enabled: manualEnabled && labelPresent,
-      reason: !manualEnabled
-        ? "Disabled in Map Builder"
-        : autoDisabled
-          ? `Automatically disabled because the selected Brand has no ${section} label.`
-          : "Active"
+      automaticallyRemoved,
+      enabled,
+      shownOnMap,
+      reason: !assigned
+        ? "Not shown on the map because this sensor is not assigned to a label."
+        : !labelPresent
+          ? `Not shown on the map because the selected Brand has no ${section} label.`
+          : !manualEnabled
+            ? "Disabled in Map Builder; shown only as physical hardware."
+            : "Active"
     };
   }
 
@@ -80,16 +89,22 @@
     return Boolean(status(sensor, sourceMap).enabled);
   }
 
+  function shouldRender(sensor, sourceMap = null) {
+    return Boolean(status(sensor, sourceMap).shownOnMap);
+  }
+
   function findSensor(objectId, sourceMap = null) {
     const map = machineMap(sourceMap);
     return map?.objects?.find((item) => item?.kind === "sensor" && String(item.id) === String(objectId)) || null;
   }
 
-  function disabledSensorIds(sourceMap = null) {
+  function disabledSensors(sourceMap = null) {
     const map = machineMap(sourceMap);
-    return new Set((map?.objects || [])
-      .filter((item) => item?.kind === "sensor" && !isEnabled(item, map))
-      .map((item) => String(item.id)));
+    return (map?.objects || []).filter((item) => item?.kind === "sensor" && !isEnabled(item, map));
+  }
+
+  function disabledSensorIds(sourceMap = null) {
+    return new Set(disabledSensors(sourceMap).map((item) => String(item.id)));
   }
 
   function installStyles() {
@@ -99,31 +114,50 @@
     style.textContent = `
       .sensor-activation-control {
         grid-column: 1 / -1;
-        display: grid;
-        gap: 4px;
-        padding: 10px 12px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: color-mix(in srgb, var(--input) 88%, transparent);
-      }
-      .sensor-activation-control > span {
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-weight: 700;
+        flex-wrap: wrap;
+        gap: 5px 8px;
+        width: fit-content;
+        max-width: 100%;
+        padding: 4px 7px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: color-mix(in srgb, var(--input) 92%, transparent);
+        font-size: .82rem;
       }
-      .sensor-activation-control small { line-height: 1.35; }
+      .sensor-activation-control > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .sensor-activation-control input[type="checkbox"] {
+        inline-size: 14px !important;
+        block-size: 14px !important;
+        min-inline-size: 14px !important;
+        margin: 0 !important;
+      }
+      .sensor-activation-control small {
+        flex: 1 1 190px;
+        line-height: 1.25;
+        font-size: .74rem;
+      }
       .wipe-builder-row.sensor-object-disabled {
-        opacity: .76;
-        border-color: color-mix(in srgb, var(--health-info, #59aee9) 58%, var(--line)) !important;
+        opacity: .78;
+        border-color: color-mix(in srgb, var(--health-info, #59aee9) 52%, var(--line)) !important;
+      }
+      .wipe-builder-row.sensor-object-unassigned {
+        border-style: dashed !important;
       }
       .wipe-builder-row.sensor-object-disabled .sensor-inline-status {
         border-left-color: var(--health-info, #59aee9) !important;
         background: var(--health-info-bg, rgba(58,139,201,.13)) !important;
       }
       #mapSvg [data-map-object-id][data-sensor-disabled="true"] {
-        opacity: .48;
-        filter: saturate(.45);
+        opacity: .45;
+        filter: saturate(.4);
       }
     `;
     document.head.appendChild(style);
@@ -143,11 +177,13 @@
     const checkbox = control.querySelector("[data-sensor-enabled]");
     const note = control.querySelector("[data-sensor-enabled-note]");
     checkbox.checked = current.manualEnabled;
-    checkbox.indeterminate = current.autoDisabled;
+    checkbox.indeterminate = false;
     checkbox.dataset.sensorObjectId = String(sensor.id);
     note.textContent = current.reason;
     row.classList.toggle("sensor-object-disabled", !current.enabled);
+    row.classList.toggle("sensor-object-unassigned", current.automaticallyRemoved);
     row.dataset.sensorEffectiveEnabled = String(current.enabled);
+    row.dataset.sensorShownOnMap = String(current.shownOnMap);
 
     const inlineStatus = row.querySelector(".sensor-inline-status");
     if (inlineStatus && !current.enabled) {
@@ -155,7 +191,7 @@
       inlineStatus.dataset.health = "info";
       const strong = inlineStatus.querySelector("strong");
       const span = inlineStatus.querySelector("span");
-      if (strong) strong.textContent = "Sensor disabled";
+      if (strong) strong.textContent = current.automaticallyRemoved ? "Sensor not used" : "Sensor disabled";
       if (span) span.textContent = current.reason;
     }
   }
@@ -176,7 +212,10 @@
       const sensor = findSensor(node.dataset.mapObjectId, map);
       if (!sensor) return;
       const current = status(sensor, map);
-      node.dataset.sensorDisabled = String(!current.enabled);
+      node.hidden = !current.shownOnMap;
+      node.style.display = current.shownOnMap ? "" : "none";
+      node.dataset.sensorDisabled = String(current.shownOnMap && !current.manualEnabled);
+      node.dataset.sensorRemovedForRecipe = String(!current.shownOnMap);
       node.setAttribute("aria-label", `${sensor.name || "Label Sensor"}: ${current.reason}`);
     });
   }
@@ -185,7 +224,10 @@
     const map = machineMap();
     const sensor = findSensor(objectId, map);
     if (!sensor) return false;
-    if (typeof recordBuilderHistory === "function") recordBuilderHistory(`${enabled ? "Enable" : "Disable"} ${sensor.name || "Label Sensor"}`);
+    if (typeof recordBuilderHistory === "function") {
+      try { recordBuilderHistory(`${enabled ? "Enable" : "Disable"} ${sensor.name || "Label Sensor"}`); }
+      catch { }
+    }
     sensor.enabled = Boolean(enabled);
     if (typeof refreshAfterBuilderEdit === "function") refreshAfterBuilderEdit({ persist: true });
     else {
@@ -194,17 +236,24 @@
       if (typeof render === "function") render();
     }
     if (typeof renderWipeDownBuilder === "function") renderWipeDownBuilder();
+    decorateMap();
     return true;
   }
 
-  function filterDisabledSensorNotes(notes) {
-    const disabled = disabledSensorIds();
-    if (!disabled.size) return Array.isArray(notes) ? notes : [];
-    return (Array.isArray(notes) ? notes : []).filter((note) => {
-      const objectId = note?.[2]?.objectId || note?.metadata?.objectId || note?.objectId;
-      if (objectId && disabled.has(String(objectId))) return false;
-      return true;
+  function noteBelongsToDisabledSensor(note, sensors = disabledSensors()) {
+    const objectId = note?.[2]?.objectId || note?.metadata?.objectId || note?.objectId;
+    if (objectId && sensors.some((sensor) => String(sensor.id) === String(objectId))) return true;
+    const text = String(note?.[1] || note?.message || "");
+    return sensors.some((sensor) => {
+      const name = String(sensor?.name || "Label Sensor").trim();
+      return name && text.includes(name) && /sensor|label|visibility|assigned|orientation|wipe/i.test(text);
     });
+  }
+
+  function filterDisabledSensorNotes(notes) {
+    const sensors = disabledSensors();
+    if (!sensors.length) return Array.isArray(notes) ? notes : [];
+    return (Array.isArray(notes) ? notes : []).filter((note) => !noteBelongsToDisabledSensor(note, sensors));
   }
 
   function updateValidationResult(notes) {
@@ -226,12 +275,18 @@
   }
 
   function pruneMotionIssues() {
-    const disabled = disabledSensorIds();
-    if (!disabled.size || !Array.isArray(state?.motionPlan?.issues)) return;
-    state.motionPlan.issues = state.motionPlan.issues.filter((issue) => {
-      const objectId = issue?.objectId || issue?.metadata?.objectId;
-      return !objectId || !disabled.has(String(objectId));
-    });
+    const sensors = disabledSensors();
+    if (!sensors.length || !Array.isArray(state?.motionPlan?.issues)) return;
+    state.motionPlan.issues = state.motionPlan.issues.filter((issue) => !noteBelongsToDisabledSensor(issue, sensors));
+  }
+
+  function withActiveSensors(sourceMap, callback) {
+    const map = machineMap(sourceMap);
+    if (!map || !Array.isArray(map.objects)) return callback();
+    const original = map.objects;
+    map.objects = original.filter((item) => item?.kind !== "sensor" || isEnabled(item, map));
+    try { return callback(); }
+    finally { map.objects = original; }
   }
 
   function patchOrientationDriver() {
@@ -262,17 +317,7 @@
     if (profileWrapped || typeof global.generatedAplMapDrivenProfile !== "function") return profileWrapped;
     const base = global.generatedAplMapDrivenProfile;
     global.generatedAplMapDrivenProfile = function generatedAplMapDrivenProfileWithSensorActivation(map, ...args) {
-      const changed = [];
-      (map?.objects || []).forEach((item) => {
-        if (item?.kind !== "sensor" || isEnabled(item, map) || !item.servoAssist) return;
-        changed.push([item, item.servoAssist]);
-        item.servoAssist = false;
-      });
-      try {
-        return base.call(this, map, ...args);
-      } finally {
-        changed.forEach(([item, servoAssist]) => { item.servoAssist = servoAssist; });
-      }
+      return withActiveSensors(map, () => base.call(this, map, ...args));
     };
     profileWrapped = true;
     return true;
@@ -283,9 +328,10 @@
     const base = global.validate;
     global.validate = function validateWithSensorActivation(...args) {
       pruneMotionIssues();
-      const notes = filterDisabledSensorNotes(base.apply(this, args));
-      updateValidationResult(notes);
-      return notes;
+      const notes = withActiveSensors(null, () => base.apply(this, args));
+      const filtered = filterDisabledSensorNotes(notes);
+      updateValidationResult(filtered);
+      return filtered;
     };
     validationWrapped = true;
     return true;
@@ -320,6 +366,7 @@
       && patchValidation()
       && patchRenderers();
     if (complete) {
+      pruneMotionIssues();
       decorateBuilder();
       decorateMap();
     }
@@ -344,10 +391,12 @@
     sectionForSensor,
     status,
     isEnabled,
+    shouldRender,
     disabledSensorIds,
     filterDisabledSensorNotes,
     updateSensor,
     refresh() {
+      pruneMotionIssues();
       decorateBuilder();
       decorateMap();
     }
