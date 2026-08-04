@@ -2,6 +2,7 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
+  const build = "defaults-sensors-coding-20260804-v2";
   window.SERVOFORGE_RELEASE_VERSION = version;
   const banner = document.querySelector(".staging-environment-banner");
   if (banner) banner.textContent = `STAGING ${version} / TEST BUILD — NOT PRODUCTION`;
@@ -20,6 +21,7 @@
     "app/controllers/specification-table-ui-controller.js",
     "app/controllers/specification-sensor-guidance-controller.js",
     "app/controllers/sensor-activation-controller.js",
+    "app/controllers/coding-cycle-normalization-controller.js",
     "app/controllers/build-inputs-controller.js",
     "app/controllers/tabs-controller.js",
     "app/controllers/transfer-controller.js",
@@ -59,9 +61,10 @@
         return;
       }
       const script = document.createElement("script");
-      script.src = `./${path}?v=${encodeURIComponent(version)}`;
+      script.src = `./${path}?v=${encodeURIComponent(version)}&build=${encodeURIComponent(build)}`;
       script.async = false;
       script.dataset.bootstrapModule = path;
+      script.dataset.bootstrapBuild = build;
       script.addEventListener("load", () => {
         script.dataset.loaded = "true";
         resolve();
@@ -72,6 +75,7 @@
   }
 
   window.ServoForgeBootstrapModules = modules;
+  window.ServoForgeBootstrapBuild = build;
   window.ServoForgeBootstrapReady = modules.reduce(
     (promise, path) => promise.then(() => loadScript(path)),
     Promise.resolve()
