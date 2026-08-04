@@ -34,9 +34,11 @@
   async function loadOrientationConstraintPlanner() {
     const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
     await loadScript("drivers/profile/orientation-constraint-planner-driver.js", version);
+    await loadScript("drivers/profile/sensor-target-policy-driver.js", version);
     await loadScript("app/orientation-constraint-target-service.js", version);
     await loadScript("app/orientation-constraint-program-planner.js", version);
     await loadScript("app/orientation-constraint-planner-integration.js", version);
+    await loadScript("app/sensor-orientation-default-map-fix-integration.js", version);
     const ready = window.ServoForgeOrientationConstraintPlannerReady;
     if (ready && typeof ready.then === "function") {
       await Promise.race([
