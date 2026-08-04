@@ -4,7 +4,9 @@
   const RETRY_MS = 50;
   const PREFS_KEY = "servoforge-developer-preferences-v1";
   const MAP_ID = "map-l85-workbook-reference-3-label-apl";
-  const MAP_VERSION = 1;
+  const MAP_NAME = "Standard 45H TopModul";
+  const MAP_VERSION = 2;
+  const COMPANY_DEFAULT_VERSION = 5;
   let installed = false;
 
   function readPreferences() {
@@ -55,26 +57,27 @@
     window.normalizeBuilderObject = normalizeBuilderObject;
   }
 
-  function roller(id, name, station, side, center) {
+  function roller(id, name, station, side, start) {
     return {
       id,
       name,
       kind: "roller",
       application: "apl",
       side,
-      start: center,
-      end: center + 5,
+      start,
+      end: start + 5,
       wipeSpanDeg: 5,
       extension: 20,
       station,
       role: "process",
       coveragePercent: 0,
       servoAssist: false,
-      requiredVisibilityPercent: 50
+      requiredVisibilityPercent: 50,
+      labelSection: "neck"
     };
   }
 
-  function pad(id, name, station, start, end) {
+  function pad(id, name, station, start, end, labelSection) {
     return {
       id,
       name,
@@ -89,7 +92,30 @@
       role: "process",
       coveragePercent: 0,
       servoAssist: false,
-      requiredVisibilityPercent: 50
+      requiredVisibilityPercent: 50,
+      labelSection
+    };
+  }
+
+  function sensor(id, name, station, start, end, labelSection) {
+    return {
+      id,
+      name,
+      kind: "sensor",
+      application: "apl",
+      side: "outer",
+      start,
+      end,
+      angle: start,
+      workbookExactWindow: true,
+      extension: 20,
+      station,
+      role: "process",
+      servoAssist: false,
+      requiredVisibilityPercent: 50,
+      orientationLabelSection: "auto",
+      orientationConfigured: true,
+      labelSection
     };
   }
 
@@ -103,46 +129,12 @@
       roller("workbook-a2-r2", "Agg 2 Roller 2", 2, "outer", 117.5),
       roller("workbook-a2-r3", "Agg 2 Roller 3", 2, "inner", 129.5),
       roller("workbook-a2-r4", "Agg 2 Roller 4", 2, "inner", 135),
-      pad("workbook-a3-pad", "Agg 3 Body Wipe-Down Pad", 3, 149, 169),
-      pad("workbook-a4-pad", "Agg 4 Body Wipe-Down Pad", 4, 189, 209),
-      {
-        id: "workbook-neck-body-inspection",
-        name: "Neck / Body Label Inspection",
-        kind: "sensor",
-        application: "apl",
-        side: "outer",
-        start: 216,
-        end: 219,
-        angle: 216,
-        workbookExactWindow: true,
-        extension: 20,
-        station: 4,
-        role: "process",
-        servoAssist: false,
-        requiredVisibilityPercent: 50,
-        orientationLabelSection: "body",
-        orientationConfigured: true
-      },
-      pad("workbook-a5-pad", "Agg 5 Back Wipe-Down Pad", 5, 230, 250),
-      pad("workbook-a6-pad", "Agg 6 Back Wipe-Down Pad", 6, 270, 290),
-      {
-        id: "workbook-back-inspection",
-        name: "Back Label Inspection",
-        kind: "sensor",
-        application: "apl",
-        side: "outer",
-        start: 304,
-        end: 315,
-        angle: 304,
-        workbookExactWindow: true,
-        extension: 20,
-        station: 6,
-        role: "process",
-        servoAssist: false,
-        requiredVisibilityPercent: 50,
-        orientationLabelSection: "back",
-        orientationConfigured: true
-      },
+      pad("workbook-a3-pad", "Agg 3 Body Wipe-Down Pad", 3, 149, 169, "body"),
+      pad("workbook-a4-pad", "Agg 4 Body Wipe-Down Pad", 4, 189, 209, "body"),
+      sensor("workbook-neck-body-inspection", "Neck / Body Label Inspection", 4, 216, 219, "body"),
+      pad("workbook-a5-pad", "Agg 5 Back Wipe-Down Pad", 5, 230, 250, "back"),
+      pad("workbook-a6-pad", "Agg 6 Back Wipe-Down Pad", 6, 270, 290, "back"),
+      sensor("workbook-back-inspection", "Back Label Inspection", 6, 304, 315, "back"),
       {
         id: "workbook-back-coding",
         name: "Back Label Coding",
@@ -156,9 +148,11 @@
         station: null,
         role: "process",
         orientBottle: false,
-        orientationLabelSection: "back",
+        orientationLabelSection: "auto",
         orientationTarget: "code-box",
-        orientationConfigured: true
+        orientationConfigured: true,
+        servoAssist: false,
+        requiredVisibilityPercent: 50
       }
     ];
   }
@@ -166,7 +160,7 @@
   function buildReferenceMap() {
     const map = createMachineMap({
       id: MAP_ID,
-      name: "L85 Workbook Reference - 3 Label APL",
+      name: MAP_NAME,
       machineType: "TopModul",
       applicationMode: "apl",
       headCount: 45,
@@ -198,16 +192,27 @@
       objects: referenceObjects()
     });
 
-    map.workbookReferenceVersion = MAP_VERSION;
-    map.workbookReference = {
-      source: "Labeler Program Tool V1.05B - 3 Label APL - No Seam Alignment - Neck/Body Inspection",
-      line: "85",
-      labeler: "1 and 2",
-      brand: "12oz Platinum (NX)",
-      bottleType: "LNNR - 12 Oz",
-      direction: "Counter-Clockwise"
-    };
+    Object.assign(map, {
+      name: MAP_NAME,
+      companyDefaultProgram: true,
+      companyDefaultProgramVersion: COMPANY_DEFAULT_VERSION,
+      protectedDefaultMap: true,
+      workbookReferenceVersion: MAP_VERSION,
+      workbookReference: {
+        source: "Labeler Program Tool V1.05B - 3 Label APL - No Seam Alignment - Neck/Body Inspection",
+        line: "85",
+        labeler: "1 and 2",
+        brand: "12oz Platinum (NX)",
+        bottleType: "LNNR - 12 Oz",
+        direction: "Counter-Clockwise"
+      }
+    });
     return map;
+  }
+
+  function replaceMap(target, replacement) {
+    Object.keys(target).forEach((key) => delete target[key]);
+    Object.assign(target, replacement);
   }
 
   function ensureReferenceMap() {
@@ -220,10 +225,25 @@
       state.mapLibrary.push(map);
       changed = true;
     } else if (Number(map.workbookReferenceVersion || 0) < MAP_VERSION) {
-      const replacement = buildReferenceMap();
-      Object.keys(map).forEach((key) => delete map[key]);
-      Object.assign(map, replacement);
+      replaceMap(map, buildReferenceMap());
       changed = true;
+    } else {
+      if (map.name !== MAP_NAME) {
+        map.name = MAP_NAME;
+        changed = true;
+      }
+      if (map.companyDefaultProgram !== true) {
+        map.companyDefaultProgram = true;
+        changed = true;
+      }
+      if (Number(map.companyDefaultProgramVersion) !== COMPANY_DEFAULT_VERSION) {
+        map.companyDefaultProgramVersion = COMPANY_DEFAULT_VERSION;
+        changed = true;
+      }
+      if (map.protectedDefaultMap !== true) {
+        map.protectedDefaultMap = true;
+        changed = true;
+      }
     }
 
     const preferences = readPreferences();
