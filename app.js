@@ -39,6 +39,7 @@
     await loadScript("app/orientation-constraint-program-planner.js", version);
     await loadScript("app/orientation-constraint-planner-integration.js", version);
     await loadScript("app/sensor-orientation-default-map-fix-integration.js", version);
+    await loadScript("app/standard-45h-wipe-down-default-integration.js", version);
     const ready = window.ServoForgeOrientationConstraintPlannerReady;
     if (ready && typeof ready.then === "function") {
       await Promise.race([
