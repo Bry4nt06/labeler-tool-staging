@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-validation-brand-hotfix-v1";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-default-sensor-targets-v1";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -23,6 +23,7 @@ const CORE_ASSETS = Object.freeze([
   "./config/default-programs/machine-map-1785604940794-6949.json",
   "./config/default-programs/machine-map-1785604972525-2064.json",
   "./config/default-programs/map-l85-workbook-reference-3-label-apl.json",
+  "./config/default-programs/map-45h-topmodul-3-label-apl-wipe-down-pads.json",
   "./config/default-programs/label-specs.json",
   "./config/default-programs/bottle-specs.json",
   "./drivers/core/driver-registry.js",
@@ -54,6 +55,8 @@ const CORE_ASSETS = Object.freeze([
   "./drivers/profile/map-object-row-builder-driver.js",
   "./drivers/profile/orientation-issue-factory-driver.js",
   "./drivers/profile/profile-pipeline-driver.js",
+  "./drivers/profile/orientation-constraint-planner-driver.js",
+  "./drivers/profile/sensor-target-policy-driver.js",
   "./app/defaults.js",
   "./app/persistence.js",
   "./app/zone-site-configuration.js",
@@ -140,6 +143,10 @@ const CORE_ASSETS = Object.freeze([
   "./app/clockwise-code-box-orientation-integration.js",
   "./app/coder-rest-grammar-repair-integration.js",
   "./app/profile-pipeline-orchestrator-integration.js",
+  "./app/orientation-constraint-target-service.js",
+  "./app/orientation-constraint-program-planner.js",
+  "./app/orientation-constraint-planner-integration.js",
+  "./app/sensor-orientation-default-map-fix-integration.js",
   "./app/motion-profile-workbench-integration.js",
   "./app/optimizer-map-contact-integration.js",
   "./app/optimizer-brush-channel-expansion-integration.js",
