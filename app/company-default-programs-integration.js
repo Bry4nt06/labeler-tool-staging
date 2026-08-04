@@ -36,12 +36,6 @@
     return values.flatMap((value) => Array.isArray(value) ? value : [value]);
   }
 
-  function normalizeSeededLabel(spec) {
-    const entry = clone(spec);
-    if (!String(entry?.specNumber || "").trim()) entry.specNumber = "N/A";
-    return entry;
-  }
-
   function addMissing(current, seeded, identity) {
     const result = Array.isArray(current) ? [...current] : [];
     const known = new Set(result.map(identity).filter(Boolean));
@@ -84,7 +78,7 @@
 
   function taggedLabels(labels, version) {
     return labels.map((spec) => ({
-      ...normalizeSeededLabel(spec),
+      ...clone(spec),
       companyDefaultSpecVersion: version
     }));
   }
@@ -110,7 +104,6 @@
       fragments(source.bottleSpecs)
     ]);
     if (!maps.length) throw new Error("No default machine programs were provided.");
-    if (!labels.length) throw new Error("No default label specifications were provided.");
     if (!bottles.length) throw new Error("No default bottle specifications were provided.");
 
     return {
@@ -143,13 +136,11 @@
       bottleResult = { items: state.bottleSpecs, added: state.bottleSpecs.length, changed: true };
       baseApplied = true;
     } else {
+      // Existing workspaces retain their exact user-created Specs. Only the
+      // packaged maps are added when their stable IDs are not already present.
       mapResult = addMissing(state.mapLibrary, catalog.maps, (map) => key(map?.id));
-      labelResult = addMissing(
-        state.labelSpecs,
-        catalog.labels,
-        (spec) => `${key(spec?.applicationMode || "apl")}|${key(spec?.brand)}`
-      );
-      bottleResult = addMissing(state.bottleSpecs, catalog.bottles, (spec) => key(spec?.bottleType));
+      labelResult = { items: Array.isArray(state.labelSpecs) ? state.labelSpecs : [], added: 0, changed: false };
+      bottleResult = { items: Array.isArray(state.bottleSpecs) ? state.bottleSpecs : [], added: 0, changed: false };
       state.mapLibrary = mapResult.items;
       state.labelSpecs = labelResult.items;
       state.bottleSpecs = bottleResult.items;
@@ -166,13 +157,17 @@
       if (active && typeof loadMachineMapIntoRuntime === "function") loadMachineMapIntoRuntime(active, false);
     }
 
+    if (!state.labelSpecs.some((spec) => String(spec?.brand || "") === String(state.selectedBrand || ""))) {
+      state.selectedBrand = state.labelSpecs[0]?.brand || "";
+    }
+
     const machineTypesChanged = JSON.stringify(state.machineTypes || []) !== previousMachineTypes;
-    const changed = mapResult.changed || labelResult.changed || bottleResult.changed || machineTypesChanged || baseApplied;
+    const changed = mapResult.changed || machineTypesChanged || baseApplied;
 
     saveVersion(catalog.version);
 
     if (changed) {
-      if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
+      if (typeof applyGeneratedServoProfile === "function" && state.selectedBrand) applyGeneratedServoProfile();
       if (typeof saveCurrentSettings === "function") saveCurrentSettings();
       if (typeof render === "function") render();
     }
