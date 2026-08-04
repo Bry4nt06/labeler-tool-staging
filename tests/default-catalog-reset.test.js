@@ -37,12 +37,15 @@ assert.doesNotThrow(() => new vm.Script(defaultsSource));
   "addMissing",
   "retireOldPackagedMaps",
   "retirePackagedLabelSpecs",
+  "LEGACY_LABEL_CATALOG",
+  "legacySnapshots",
+  "labelSnapshot",
   "companyDefaultProgram",
   "companyDefaultSpecVersion",
   "resetToDefaults",
   "clearApplicationStorage"
 ].forEach((token) => assert.ok(defaultsSource.includes(token), `Missing defaults behavior: ${token}`));
-assert.ok(defaultsSource.includes("if (!spec?.companyDefaultSpecVersion) return true"));
+assert.ok(defaultsSource.includes("return !legacySnapshots.has(labelSnapshot(spec))"));
 assert.ok(!defaultsSource.includes("result[index] = entry"), "Existing user catalog entries must not be overwritten by defaults.");
 
 const resetSource = read("app/controllers/settings-reset-controller.js");
