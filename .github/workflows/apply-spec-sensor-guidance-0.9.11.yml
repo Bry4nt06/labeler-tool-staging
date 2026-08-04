@@ -1,0 +1,710 @@
+name: Apply Specs and Sensor Guidance 0.9.11
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-spec-sensor-guidance-0.9.11.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: contains(github.event.head_commit.message, '[spec-sensor-0.9.11]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply focused behavior and UI updates
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          root = Path('.')
+
+          def read(path):
+              return (root / path).read_text(encoding='utf-8')
+
+          def write(path, text):
+              (root / path).parent.mkdir(parents=True, exist_ok=True)
+              (root / path).write_text(text, encoding='utf-8')
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise RuntimeError(f'Missing replacement anchor: {label}')
+              return text.replace(old, new, 1)
+
+          required_controller = r'''"use strict";
+
+(function installSpecificationRequiredFieldsController(global) {
+  if (global.LabelerSpecificationRequiredFieldsController?.installed) return;
+
+  const MIN_LABEL_MM = 1;
+  const NUMERIC_LABEL_FIELDS = Object.freeze([
+    "bodyLengthMm",
+    "backLengthMm",
+    "neckHeightMm",
+    "neckLengthMm",
+    "neckBottomCurveMm",
+    "neckBottomCircumferenceMm",
+    "codeBoxCenterMm"
+  ]);
+  const NECK_FIELDS = Object.freeze([
+    "neckHeightMm",
+    "neckLengthMm",
+    "neckBottomCurveMm",
+    "neckBottomCircumferenceMm"
+  ]);
+  const FIELD_NAMES = Object.freeze({
+    bottleType: "Bottle Type",
+    diameterTargetMm: "Diameter Target",
+    radiusReductionMm: "Radius Reduction",
+    brand: "Brand",
+    specNumber: "Spec #",
+    applicationMode: "Application",
+    bodyLengthMm: "Body Length",
+    backLengthMm: "Back Length",
+    neckHeightMm: "Neck Height",
+    neckLengthMm: "Neck Length",
+    neckBottomCurveMm: "Neck Curve Bottom",
+    neckBottomCircumferenceMm: "Neck Bottom Circumference",
+    codeBoxCenterMm: "Code Box Center"
+  });
+
+  function runtimeState() {
+    try { return typeof state !== "undefined" ? state : global.state; }
+    catch { return global.state; }
+  }
+
+  function finite(value) {
+    if (value === null || value === undefined || String(value).trim() === "") return NaN;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : NaN;
+  }
+
+  function addIssue(issues, library, index, field, rowName, message) {
+    issues.push({ library, index, field, rowName, message });
+  }
+
+  function validateBottle(spec, index, issues) {
+    const rowName = String(spec?.bottleType || `Bottle row ${index + 1}`);
+    if (!String(spec?.bottleType || "").trim()) {
+      addIssue(issues, "bottle", index, "bottleType", rowName, "Bottle Type is required.");
+    }
+    const diameter = finite(spec?.diameterTargetMm);
+    if (!Number.isFinite(diameter) || diameter <= MIN_LABEL_MM) {
+      addIssue(issues, "bottle", index, "diameterTargetMm", rowName, "Diameter Target must be greater than 1 mm.");
+    }
+    const reduction = finite(spec?.radiusReductionMm);
+    if (!Number.isFinite(reduction) || reduction < 0) {
+      addIssue(issues, "bottle", index, "radiusReductionMm", rowName, "Radius Reduction is required and cannot be negative.");
+    }
+  }
+
+  function validateLabel(spec, index, issues) {
+    const rowName = String(spec?.brand || `Label row ${index + 1}`);
+    if (!String(spec?.brand || "").trim()) {
+      addIssue(issues, "label", index, "brand", rowName, "Brand is required.");
+    }
+    if (!String(spec?.specNumber || "").trim()) {
+      addIssue(issues, "label", index, "specNumber", rowName, "Spec # is required.");
+    }
+    if (!["apl", "cold-glue"].includes(String(spec?.applicationMode || "").toLowerCase())) {
+      addIssue(issues, "label", index, "applicationMode", rowName, "Application is required.");
+    }
+
+    const values = {};
+    NUMERIC_LABEL_FIELDS.forEach((field) => {
+      values[field] = finite(spec?.[field]);
+      if (!Number.isFinite(values[field]) || values[field] < 0) {
+        addIssue(issues, "label", index, field, rowName, `${FIELD_NAMES[field]} requires a value of 0 or greater.`);
+      }
+    });
+
+    ["bodyLengthMm", "backLengthMm"].forEach((field) => {
+      const value = values[field];
+      if (Number.isFinite(value) && value > 0 && value <= MIN_LABEL_MM) {
+        addIssue(issues, "label", index, field, rowName, `${FIELD_NAMES[field]} must be 0 for no label or greater than 1 mm for an installed label.`);
+      }
+    });
+
+    const neckConfigured = NECK_FIELDS.some((field) => Number.isFinite(values[field]) && values[field] > 0);
+    if (neckConfigured) {
+      NECK_FIELDS.forEach((field) => {
+        if (!(values[field] > MIN_LABEL_MM)) {
+          addIssue(issues, "label", index, field, rowName, `${FIELD_NAMES[field]} must be greater than 1 mm when a neck label is configured.`);
+        }
+      });
+    }
+
+    const hasBody = values.bodyLengthMm > MIN_LABEL_MM;
+    const hasBack = values.backLengthMm > MIN_LABEL_MM;
+    const hasNeck = neckConfigured && NECK_FIELDS.every((field) => values[field] > MIN_LABEL_MM);
+    if (!hasBody && !hasBack && !hasNeck) {
+      addIssue(issues, "label", index, "bodyLengthMm", rowName, "At least one Neck, Body, or Back label must have dimensions greater than 1 mm.");
+    }
+  }
+
+  function validateState(source = runtimeState()) {
+    const issues = [];
+    (Array.isArray(source?.bottleSpecs) ? source.bottleSpecs : []).forEach((spec, index) => validateBottle(spec, index, issues));
+    (Array.isArray(source?.labelSpecs) ? source.labelSpecs : []).forEach((spec, index) => validateLabel(spec, index, issues));
+    return issues;
+  }
+
+  const requirements = Object.freeze({
+    minimumLabelMm: MIN_LABEL_MM,
+    validateState,
+    validateBottle,
+    validateLabel
+  });
+  global.LabelerSpecificationRequirements = requirements;
+
+  if (typeof document === "undefined") return;
+
+  const STYLE_ID = "servoforgeSpecificationRequiredStyles";
+  const DIALOG_ID = "specificationRequiredDialog";
+  let lastIssues = [];
+  let refreshQueued = false;
+
+  function installStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+    const style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = `
+      #specs .spec-required-missing {
+        border-color: var(--health-bad, #ed5965) !important;
+        background: color-mix(in srgb, var(--health-bad-bg, rgba(215,53,67,.15)) 72%, var(--input)) !important;
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--health-bad, #ed5965) 38%, transparent) !important;
+      }
+      #specs tr.spec-row-has-required-fields > td:first-child {
+        box-shadow: inset 4px 0 0 var(--health-bad, #ed5965);
+      }
+      #${DIALOG_ID} {
+        width: min(560px, calc(100vw - 28px));
+        max-height: min(76vh, 680px);
+        padding: 0;
+        overflow: hidden;
+        border: 1px solid var(--health-bad, #ed5965);
+        border-radius: 12px;
+        color: var(--ink);
+        background: var(--panel);
+        box-shadow: 0 28px 80px rgba(0,0,0,.55);
+      }
+      #${DIALOG_ID}::backdrop { background: rgba(4,8,12,.72); backdrop-filter: blur(3px); }
+      #${DIALOG_ID} .spec-required-head,
+      #${DIALOG_ID} .spec-required-actions { padding: 14px 16px; }
+      #${DIALOG_ID} .spec-required-head { border-bottom: 1px solid var(--line); }
+      #${DIALOG_ID} .spec-required-head strong { color: var(--health-bad-text, #ff8991); font-size: 16px; }
+      #${DIALOG_ID} .spec-required-head p { margin-top: 5px; font-size: 12px; line-height: 1.4; }
+      #${DIALOG_ID} .spec-required-list { display: grid; gap: 7px; max-height: 48vh; margin: 0; padding: 14px 28px 14px 36px; overflow: auto; }
+      #${DIALOG_ID} .spec-required-list li { padding-left: 2px; line-height: 1.35; }
+      #${DIALOG_ID} .spec-required-list strong { color: var(--ink); }
+      #${DIALOG_ID} .spec-required-actions { display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--line); }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function fieldControl(issue) {
+    const row = document.querySelector(`#specs tbody tr[data-spec-library="${issue.library}"][data-spec-index="${issue.index}"]`);
+    return row?.querySelector(`[data-spec-field="${issue.field}"]`) || null;
+  }
+
+  function clearHighlights() {
+    document.querySelectorAll("#specs .spec-required-missing").forEach((control) => {
+      control.classList.remove("spec-required-missing");
+      control.removeAttribute("aria-invalid");
+      control.removeAttribute("data-required-message");
+    });
+    document.querySelectorAll("#specs tr.spec-row-has-required-fields").forEach((row) => row.classList.remove("spec-row-has-required-fields"));
+  }
+
+  function applyHighlights(issues) {
+    clearHighlights();
+    issues.forEach((issue) => {
+      const control = fieldControl(issue);
+      if (!control) return;
+      control.classList.add("spec-required-missing");
+      control.setAttribute("aria-invalid", "true");
+      control.dataset.requiredMessage = issue.message;
+      control.closest("tr")?.classList.add("spec-row-has-required-fields");
+    });
+  }
+
+  function ensureDialog() {
+    installStyles();
+    let dialog = document.getElementById(DIALOG_ID);
+    if (dialog) return dialog;
+    dialog = document.createElement("dialog");
+    dialog.id = DIALOG_ID;
+    dialog.setAttribute("aria-labelledby", "specRequiredTitle");
+    dialog.innerHTML = `
+      <div class="spec-required-head"><strong id="specRequiredTitle">Complete Required Specifications</strong><p id="specRequiredSummary"></p></div>
+      <ol class="spec-required-list"></ol>
+      <div class="spec-required-actions"><button type="button" class="secondary-button" data-spec-required-close>Close</button><button type="button" data-spec-required-review>Review first field</button></div>`;
+    document.body.appendChild(dialog);
+    dialog.addEventListener("click", (event) => {
+      if (event.target.closest?.("[data-spec-required-close]")) dialog.close?.();
+      if (event.target.closest?.("[data-spec-required-review]")) {
+        dialog.close?.();
+        focusFirstIssue();
+      }
+    });
+    return dialog;
+  }
+
+  function activateSpecsTab() {
+    const tab = document.querySelector('.tab[data-tab="specs"]');
+    if (global.LabelerTabsController?.activate) global.LabelerTabsController.activate("specs", tab);
+    else {
+      const source = runtimeState();
+      if (source) source.activeTab = "specs";
+      tab?.classList.add("active");
+      document.querySelector("#specs")?.classList.add("active");
+    }
+  }
+
+  function focusFirstIssue() {
+    const control = fieldControl(lastIssues[0]);
+    document.querySelector("#specs")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    control?.scrollIntoView?.({ behavior: "smooth", block: "center", inline: "center" });
+    global.setTimeout?.(() => control?.focus?.({ preventScroll: true }), 220);
+  }
+
+  function showRequiredDialog(issues = validateState()) {
+    lastIssues = issues;
+    applyHighlights(issues);
+    if (!issues.length) return false;
+    activateSpecsTab();
+    const dialog = ensureDialog();
+    const summary = dialog.querySelector("#specRequiredSummary");
+    const list = dialog.querySelector(".spec-required-list");
+    if (summary) summary.textContent = `${issues.length} required field${issues.length === 1 ? "" : "s"} need attention before continuing.`;
+    if (list) {
+      const unique = new Map();
+      issues.forEach((issue) => unique.set(`${issue.rowName}|${issue.message}`, issue));
+      list.innerHTML = [...unique.values()].map((issue) => `<li><strong>${String(issue.rowName).replace(/[<>&"]/g, "")}</strong>: ${String(issue.message).replace(/[<>&"]/g, "")}</li>`).join("");
+    }
+    if (typeof dialog.showModal === "function") {
+      if (!dialog.open) dialog.showModal();
+    } else dialog.setAttribute("open", "");
+    return true;
+  }
+
+  function validateAndPrompt() {
+    const issues = validateState();
+    if (!issues.length) {
+      lastIssues = [];
+      clearHighlights();
+      return true;
+    }
+    showRequiredDialog(issues);
+    return false;
+  }
+
+  function scheduleRefresh() {
+    if (refreshQueued) return;
+    refreshQueued = true;
+    global.requestAnimationFrame?.(() => {
+      refreshQueued = false;
+      if (!lastIssues.length) return;
+      lastIssues = validateState();
+      applyHighlights(lastIssues);
+    });
+  }
+
+  document.addEventListener("click", (event) => {
+    const tab = event.target.closest?.(".tab[data-tab]");
+    const source = runtimeState();
+    if (!tab || tab.dataset.tab === "specs" || source?.activeTab !== "specs") return;
+    if (validateAndPrompt()) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+
+  document.addEventListener("change", (event) => {
+    const brandSelect = event.target.closest?.("#brandSelect");
+    if (!brandSelect) return;
+    const issues = validateState();
+    if (!issues.length) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    brandSelect.value = String(runtimeState()?.selectedBrand || "");
+    showRequiredDialog(issues);
+  }, true);
+
+  document.addEventListener("input", (event) => {
+    if (!event.target.closest?.("#specs")) return;
+    scheduleRefresh();
+  }, true);
+
+  const observer = new MutationObserver((records) => {
+    if (!lastIssues.length) return;
+    if (records.some((record) => record.target.closest?.("#specs") || record.target.id === "specs")) scheduleRefresh();
+  });
+  observer.observe(document.documentElement, { subtree: true, childList: true });
+
+  installStyles();
+  global.LabelerSpecificationRequiredFieldsController = Object.freeze({
+    installed: true,
+    validate: validateState,
+    validateAndPrompt,
+    showRequiredDialog,
+    applyHighlights
+  });
+})(typeof window !== "undefined" ? window : globalThis);
+'''
+          write('app/controllers/specification-required-fields-controller.js', required_controller)
+
+          bootstrap = read('app/bootstrap.js')
+          bootstrap = replace_once(
+              bootstrap,
+              '    "app/controllers/specification-table-ui-controller.js",\n',
+              '    "app/controllers/specification-table-ui-controller.js",\n    "app/controllers/specification-required-fields-controller.js",\n',
+              'bootstrap required-fields controller'
+          )
+          write('app/bootstrap.js', bootstrap)
+
+          issue_factory = read('drivers/profile/orientation-issue-factory-driver.js')
+          issue_factory = re.sub(
+              r'  function physicalWipeOverlap\(\{ item, section, label, action \}\) \{.*?\n  \}\n\n  function turnWindow',
+              '''  function physicalWipeOverlap({ item, section, label, action }) {
+    const sensor = item?.kind === "sensor";
+    return issue({
+      level: sensor ? "info" : "bad",
+      code: "map-object-overlaps-physical-wipe",
+      item,
+      section,
+      message: sensor
+        ? `${label} is positioned during "${action || "the current wipe"}". Servo assist waits for the wipe to reach its CMD 3 hold before applying a correction. Move the sensor later only when additional correction travel is needed.`
+        : `${label} begins while "${action || "the current wipe"}" is still active. Coding cannot take control of the servo until the pad, roller, or brush wipe reaches its CMD 3 hold. Move the coder later than that wipe hold.`
+    });
+  }
+
+  function turnWindow''',
+              issue_factory,
+              count=1,
+              flags=re.S
+          )
+          write('drivers/profile/orientation-issue-factory-driver.js', issue_factory)
+
+          issue_driver = read('drivers/validation/validation-issue-driver.js')
+          issue_driver = replace_once(
+              issue_driver,
+              '  const LEVELS = Object.freeze({ BAD: "bad", WARN: "warn", OK: "ok" });',
+              '  const LEVELS = Object.freeze({ BAD: "bad", WARN: "warn", INFO: "info", OK: "ok" });',
+              'validation info level constant'
+          )
+          issue_driver = replace_once(
+              issue_driver,
+              '    return normalized === LEVELS.BAD || normalized === LEVELS.WARN || normalized === LEVELS.OK\n      ? normalized\n      : fallback;',
+              '    return normalized === LEVELS.BAD || normalized === LEVELS.WARN || normalized === LEVELS.INFO || normalized === LEVELS.OK\n      ? normalized\n      : fallback;',
+              'validation info level normalization'
+          )
+          write('drivers/validation/validation-issue-driver.js', issue_driver)
+
+          aggregator = read('drivers/validation/validation-result-aggregator-driver.js')
+          aggregator = aggregator.replace('{ bad: 0, warn: 0, ok: 0, total: 0 }', '{ bad: 0, warn: 0, info: 0, ok: 0, total: 0 }')
+          write('drivers/validation/validation-result-aggregator-driver.js', aggregator)
+
+          status_renderer = read('app/workspace-status-renderer.js')
+          status_renderer = replace_once(
+              status_renderer,
+              '${type === "bad" ? "bad" : type === "warn" ? "warn" : ""}',
+              '${type === "bad" ? "bad" : type === "warn" ? "warn" : type === "info" ? "info" : ""}',
+              'informational notice class'
+          )
+          write('app/workspace-status-renderer.js', status_renderer)
+
+          health = read('app/controllers/health-status-ui-controller.js')
+          health = replace_once(
+              health,
+              '      setHealth(notice, notice.classList.contains("bad") ? "bad" : notice.classList.contains("warn") ? "warn" : "good");',
+              '      setHealth(notice, notice.classList.contains("bad") ? "bad" : notice.classList.contains("warn") ? "warn" : notice.classList.contains("info") ? "info" : "good");',
+              'informational notice health annotation'
+          )
+          write('app/controllers/health-status-ui-controller.js', health)
+
+          sensor = read('app/apl-label-sensor-reference-integration.js')
+          helper = r'''
+  function plannedSensorReference(sensor) {
+    const objectId = String(sensor?.id || "");
+    if (!objectId) return null;
+    const program = Array.isArray(state?.program) ? state.program : [];
+    const hold = program.find((row) =>
+      String(row?.sensorId || "") === objectId
+      && Number(row?.cmd) === 3
+      && Number.isFinite(number(row?.plannedLabelVisibilityPercent, NaN))
+      && Number.isFinite(number(row?.plateAngle, NaN))
+    );
+    if (hold) {
+      return {
+        visibilityPercent: number(hold.plannedLabelVisibilityPercent, 0),
+        targetPlateAngle: number(hold.plateAngle, NaN),
+        source: "planned servo-assist orientation"
+      };
+    }
+    const plan = (Array.isArray(state?.motionPlan?.mapObjectOrientationPlans)
+      ? state.motionPlan.mapObjectOrientationPlans
+      : []).find((entry) =>
+        String(entry?.objectId || "") === objectId
+        && Number.isFinite(number(entry?.plannedVisibilityPercent, NaN))
+        && Number.isFinite(number(entry?.targetPlateAngle, NaN))
+      );
+    return plan ? {
+      visibilityPercent: number(plan.plannedVisibilityPercent, 0),
+      targetPlateAngle: number(plan.targetPlateAngle, NaN),
+      source: "planned servo-assist orientation"
+    } : null;
+  }
+'''
+          sensor = replace_once(sensor, '  function correctedSensorNotes() {', helper + '\n  function correctedSensorNotes() {', 'planned sensor reference helper')
+          old_sensor_calc = '''        const bottleAngle = typeof plateAngleAt === "function"
+          ? plateAngleAt(placement, state.program)
+          : target;
+        const requiredVisibility = Math.min(100, Math.max(1, number(sensor.requiredVisibilityPercent, 50)));
+        const visibility = typeof labelSensorVisibility === "function"
+          ? labelSensorVisibility(labelCenter, bottleAngle, labelWidth, 180)
+          : { percent: 0 };
+        const visible = number(visibility.percent, 0) + 0.001 >= requiredVisibility;
+        const source = Number.isFinite(number(state?.motionPlan?.[`${section}ApplicationTarget`], NaN))
+          ? "active map-driven application reference"
+          : "generated application reference";
+'''
+          new_sensor_calc = '''        const planned = sensor.servoAssist ? plannedSensorReference(sensor) : null;
+        const bottleAngle = Number.isFinite(number(planned?.targetPlateAngle, NaN))
+          ? number(planned.targetPlateAngle, target)
+          : typeof plateAngleAt === "function"
+            ? plateAngleAt(placement, state.program)
+            : target;
+        const requiredVisibility = Math.min(100, Math.max(1, number(sensor.requiredVisibilityPercent, 50)));
+        const visibility = planned
+          ? { percent: number(planned.visibilityPercent, 0) }
+          : typeof labelSensorVisibility === "function"
+            ? labelSensorVisibility(labelCenter, bottleAngle, labelWidth, 180)
+            : { percent: 0 };
+        const visible = number(visibility.percent, 0) + 0.001 >= requiredVisibility;
+        const source = planned?.source
+          || (Number.isFinite(number(state?.motionPlan?.[`${section}ApplicationTarget`], NaN))
+            ? "active map-driven application reference"
+            : "generated application reference");
+'''
+          sensor = replace_once(sensor, old_sensor_calc, new_sensor_calc, 'authoritative planned sensor visibility')
+          sensor = replace_once(
+              sensor,
+              '  function wait() {\n',
+              '  window.LabelerAplLabelSensorReferenceIntegration = Object.freeze({ applicationTarget, plannedSensorReference, correctedSensorNotes });\n\n  function wait() {\n',
+              'sensor reference public API'
+          )
+          write('app/apl-label-sensor-reference-integration.js', sensor)
+
+          manifest = read('app/simulation-collapsible-integration.js')
+          manifest = manifest.replace(
+              'drivers/profile/orientation-issue-factory-driver.js?v=0.9.6-orientation-row-drivers-v1',
+              'drivers/profile/orientation-issue-factory-driver.js?v=0.9.11-sensor-guidance-v1'
+          )
+          manifest = manifest.replace(
+              'app/apl-label-sensor-reference-integration.js?v=0.9.3-active-sensor-reference',
+              'app/apl-label-sensor-reference-integration.js?v=0.9.11-planned-sensor-reference-v1'
+          )
+          write('app/simulation-collapsible-integration.js', manifest)
+
+          test_specs = r'''"use strict";
+
+const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
+
+const source = fs.readFileSync(path.resolve(__dirname, "../app/controllers/specification-required-fields-controller.js"), "utf8");
+assert.doesNotThrow(() => new vm.Script(source, { filename: "specification-required-fields-controller.js" }));
+
+const sandbox = { window: null, globalThis: null, console };
+sandbox.window = sandbox;
+sandbox.globalThis = sandbox;
+vm.createContext(sandbox);
+vm.runInContext(source, sandbox, { filename: "specification-required-fields-controller.js" });
+const requirements = sandbox.LabelerSpecificationRequirements;
+assert.ok(requirements);
+
+const valid = {
+  bottleSpecs: [{ bottleType: "11.2 oz", diameterTargetMm: 60, radiusReductionMm: 0.3 }],
+  labelSpecs: [{
+    brand: "Stella",
+    specNumber: "ST-112",
+    applicationMode: "apl",
+    bodyLengthMm: 85,
+    backLengthMm: 76,
+    neckHeightMm: 67,
+    neckLengthMm: 109,
+    neckBottomCurveMm: 110,
+    neckBottomCircumferenceMm: 104,
+    codeBoxCenterMm: 24
+  }]
+};
+assert.deepStrictEqual(requirements.validateState(valid), []);
+
+const missing = JSON.parse(JSON.stringify(valid));
+missing.labelSpecs[0].specNumber = "";
+missing.labelSpecs[0].neckHeightMm = 0;
+const missingIssues = requirements.validateState(missing);
+assert.ok(missingIssues.some((issue) => issue.field === "specNumber"));
+assert.ok(missingIssues.some((issue) => issue.field === "neckHeightMm"));
+
+const noNeck = JSON.parse(JSON.stringify(valid));
+Object.assign(noNeck.labelSpecs[0], {
+  neckHeightMm: 0,
+  neckLengthMm: 0,
+  neckBottomCurveMm: 0,
+  neckBottomCircumferenceMm: 0
+});
+assert.ok(!requirements.validateState(noNeck).some((issue) => issue.field.startsWith("neck")));
+
+const fractionalBody = JSON.parse(JSON.stringify(noNeck));
+fractionalBody.labelSpecs[0].bodyLengthMm = 0.5;
+assert.ok(requirements.validateState(fractionalBody).some((issue) => issue.field === "bodyLengthMm"));
+
+console.log("Specification required-field rules regression passed.");
+'''
+          write('tests/specification-required-fields.test.js', test_specs)
+
+          test_sensor = r'''"use strict";
+
+const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
+const root = path.resolve(__dirname, "..");
+const read = (...parts) => fs.readFileSync(path.join(root, ...parts), "utf8");
+
+const factorySource = read("drivers", "profile", "orientation-issue-factory-driver.js");
+const issueSource = read("drivers", "validation", "validation-issue-driver.js");
+const aggregatorSource = read("drivers", "validation", "validation-result-aggregator-driver.js");
+const sensorSource = read("app", "apl-label-sensor-reference-integration.js");
+const rendererSource = read("app", "workspace-status-renderer.js");
+const healthSource = read("app", "controllers", "health-status-ui-controller.js");
+
+[factorySource, issueSource, aggregatorSource, sensorSource, rendererSource, healthSource].forEach((source) => {
+  assert.doesNotThrow(() => new vm.Script(source));
+});
+
+const sandbox = { window: null, globalThis: null, console, LabelerDriverRegistry: { register() {} } };
+sandbox.window = sandbox;
+sandbox.globalThis = sandbox;
+vm.createContext(sandbox);
+vm.runInContext(factorySource, sandbox);
+const sensorIssue = sandbox.LabelerOrientationIssueFactoryDriver.physicalWipeOverlap({
+  item: { id: "sensor-1", kind: "sensor" },
+  section: "neck",
+  label: "Neck Sensor",
+  action: "Wipe Turn 2 Neck - Agg 2"
+});
+const coderIssue = sandbox.LabelerOrientationIssueFactoryDriver.physicalWipeOverlap({
+  item: { id: "coder-1", kind: "coding" },
+  section: "body",
+  label: "Coder",
+  action: "Wipe Turn 2 Body - Agg 4"
+});
+assert.strictEqual(sensorIssue.level, "info");
+assert.strictEqual(coderIssue.level, "bad");
+assert.ok(/Servo assist waits/.test(sensorIssue.message));
+
+vm.runInContext(issueSource, sandbox);
+vm.runInContext(aggregatorSource, sandbox);
+const result = sandbox.LabelerValidationResultAggregator.aggregateIssues([sensorIssue]);
+assert.strictEqual(result.status, "PASS");
+assert.strictEqual(result.summary.info, 1);
+
+assert.ok(sensorSource.includes("plannedSensorReference"));
+assert.ok(sensorSource.includes("plannedLabelVisibilityPercent"));
+assert.ok(sensorSource.includes("planned servo-assist orientation"));
+assert.ok(rendererSource.includes('type === "info" ? "info"'));
+assert.ok(healthSource.includes('notice.classList.contains("info") ? "info"'));
+
+console.log("Sensor guidance and authoritative visibility regression passed.");
+'''
+          write('tests/sensor-guidance-visibility.test.js', test_sensor)
+
+          # Coordinated staging version alignment.
+          version = '0.9.11'
+          index = read('index.html')
+          index = re.sub(r'(<meta name="application-version" content=")[^"]+("\s*/>)', rf'\g<1>{version}\2', index)
+          index = re.sub(r'(\?v=)0\.9\.10', rf'\g<1>{version}', index)
+          index = re.sub(r'Version\s+0\.9\.10\s+•', f'Version {version} •', index)
+          write('index.html', index)
+
+          bootstrap = read('app/bootstrap.js')
+          bootstrap = re.sub(r'const version = "[^"]+";', f'const version = "{version}";', bootstrap, count=1)
+          write('app/bootstrap.js', bootstrap)
+
+          update_manager = read('app/update-manager.js')
+          update_manager = re.sub(r'const RELEASE_VERSION = "[^"]+";', f'const RELEASE_VERSION = "{version}";', update_manager, count=1)
+          write('app/update-manager.js', update_manager)
+
+          validator = read('app/servo-pipeline-validator-integration.js')
+          validator = re.sub(r'const VALIDATOR_RELEASE_VERSION = "[^"]+";', f'const VALIDATOR_RELEASE_VERSION = "{version}";', validator, count=1)
+          write('app/servo-pipeline-validator-integration.js', validator)
+
+          service_worker = read('service-worker.js')
+          service_worker = re.sub(r'const RELEASE_VERSION = "[^"]+";', f'const RELEASE_VERSION = "{version}";', service_worker, count=1)
+          service_worker = re.sub(r'const CACHE_NAME = "[^"]+";', f'const CACHE_NAME = "servoforge-labeler-staging-v{version}-spec-sensor";', service_worker, count=1)
+          controller_asset = '  "./app/controllers/specification-required-fields-controller.js",'
+          if controller_asset not in service_worker:
+              service_worker = service_worker.replace('  "./app/controllers/specification-table-ui-controller.js",', '  "./app/controllers/specification-table-ui-controller.js",\n' + controller_asset, 1)
+          write('service-worker.js', service_worker)
+
+          update_manifest = {
+              "schemaVersion": 1,
+              "version": version,
+              "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
+              "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
+              "notes": "STAGING 0.9.11 requires complete Specs data before continuing, presents sensor/wipe timing conflicts as blue guidance, and validates sensor visibility from the generated servo-assist plan."
+          }
+          write('update-manifest.json', json.dumps(update_manifest, indent=2) + '\n')
+
+          notes_path = root / 'release-notes.json'
+          notes = json.loads(notes_path.read_text(encoding='utf-8'))
+          notes['currentVersion'] = version
+          release = {
+              "version": version,
+              "milestone": 14,
+              "title": "Required Specifications and Sensor Guidance",
+              "summary": "Adds blocking specification completeness checks and makes generated sensor-orientation plans authoritative for visibility validation.",
+              "changes": [
+                  "Require every visible Specs input to contain a usable value before leaving the Specs tab or selecting a Brand Recipe.",
+                  "Require Neck Height, Neck Length, Neck Curve Bottom, and Neck Bottom Circumference to exceed 1 mm whenever any neck-label geometry is configured.",
+                  "Highlight every missing or invalid specification field and show a required-fields dialog that returns the operator to the first issue.",
+                  "Present sensor placement during an active wipe as informational blue guidance while retaining coding overlap as a blocking fault.",
+                  "Use the generated servo-assist target and planned visibility as the authoritative Body, Neck, or Back sensor validation result."
+              ]
+          }
+          notes['releases'] = [release, *[item for item in notes.get('releases', []) if item.get('version') != version]]
+          notes_path.write_text(json.dumps(notes, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Run focused regression checks
+        shell: bash
+        run: |
+          node --check app/controllers/specification-required-fields-controller.js
+          node --check app/apl-label-sensor-reference-integration.js
+          node --check drivers/profile/orientation-issue-factory-driver.js
+          node tests/specification-required-fields.test.js
+          node tests/sensor-guidance-visibility.test.js
+          node tests/map-double-click-coder-segment-grammar.test.js
+          node tests/validation-diagnostics-summary-fit.test.js
+
+      - name: Commit staging release
+        shell: bash
+        run: |
+          rm -f .github/workflows/apply-spec-sensor-guidance-0.9.11.yml
+          git config user.name "ServoForge Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Release ServoForge staging 0.9.11"
+          git push origin HEAD:main
