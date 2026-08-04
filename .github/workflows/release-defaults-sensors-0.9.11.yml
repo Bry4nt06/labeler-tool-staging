@@ -1,0 +1,114 @@
+name: Release Defaults and Sensors 0.9.11
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/release-defaults-sensors-0.9.11.yml
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: contains(github.event.head_commit.message, '[release-defaults-sensors-0.9.11]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Align release metadata and offline assets
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import datetime
+          import json
+          import re
+
+          root = Path('.')
+          old = '0.9.10'
+          version = '0.9.11'
+
+          for relative in [
+              'index.html',
+              'app/bootstrap.js',
+              'app.js',
+              'app/update-manager.js',
+              'app/servo-pipeline-validator-integration.js'
+          ]:
+              path = root / relative
+              if not path.exists():
+                  continue
+              text = path.read_text(encoding='utf-8').replace(old, version)
+              path.write_text(text, encoding='utf-8')
+
+          sw_path = root / 'service-worker.js'
+          sw = sw_path.read_text(encoding='utf-8').replace(old, version)
+          sw = re.sub(
+              r'const CACHE_NAME = "[^"]+";',
+              'const CACHE_NAME = "servoforge-labeler-staging-v0.9.11-defaults-sensors-v1";',
+              sw,
+              count=1
+          )
+          additions = [
+              ('  "./config/default-programs/map-l85-workbook-reference-3-label-apl.json",',
+               '  "./config/default-programs/map-45h-topmodul-3-label-apl-wipe-down-pads.json",'),
+              ('  "./app/bootstrap.js",',
+               '  "./app/controllers/settings-reset-controller.js",\n  "./app/controllers/sensor-activation-controller.js",')
+          ]
+          for anchor, addition in additions:
+              if addition.split('\n')[0].strip().strip(',') in sw:
+                  continue
+              if anchor not in sw:
+                  raise RuntimeError(f'Missing service-worker anchor: {anchor}')
+              sw = sw.replace(anchor, anchor + '\n' + addition, 1)
+          sw_path.write_text(sw, encoding='utf-8')
+
+          manifest_path = root / 'update-manifest.json'
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          manifest['version'] = version
+          manifest['notes'] = (
+              'STAGING 0.9.11 installs the three packaged TopModul APL maps for new workspaces, '
+              'preserves existing maps and Specs, adds Reset All Settings, and adds manual plus '
+              'recipe-aware sensor disable controls.'
+          )
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+
+          notes_path = root / 'release-notes.json'
+          notes = json.loads(notes_path.read_text(encoding='utf-8'))
+          notes['currentVersion'] = version
+          notes['generatedAt'] = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+          release = {
+              'version': version,
+              'milestone': 14,
+              'title': 'Default Catalog and Sensor Activation',
+              'summary': 'Adds a focused default map catalog, safe browser reset, and recipe-aware sensor activation without removing physical map objects.',
+              'changes': [
+                  'New workspaces start with Blank APL Map, 45H TopModul 3 Label APL, and 45H TopModul 3 Label APL Wipe-Down Pads.',
+                  'Existing saved maps, Label Specs, and Bottle Specs are preserved; only missing packaged defaults are added.',
+                  'Settings now includes Reset All Settings with destructive confirmation and a clean reload from packaged defaults.',
+                  'Label sensors can be disabled manually while remaining visible on the machine map.',
+                  'Sensors assigned to a label section with no active dimensions are disabled automatically for that Brand and excluded from orientation planning and validation.'
+              ]
+          }
+          notes['releases'] = [release, *[item for item in notes.get('releases', []) if item.get('version') != version]]
+          notes_path.write_text(json.dumps(notes, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Run focused regressions
+        run: |
+          node tests/default-catalog-reset.test.js
+          node tests/sensor-activation.test.js
+          node tests/specification-sensor-guidance.test.js
+
+      - name: Commit staging release
+        shell: bash
+        run: |
+          rm -f .github/workflows/release-defaults-sensors-0.9.11.yml
+          git config user.name "ServoForge Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Release ServoForge staging 0.9.11"
+          git push origin HEAD:main
