@@ -5,7 +5,6 @@
 
   const BUTTON_ID = "resetAllSettings";
   const NOTE_ID = "resetAllSettingsNote";
-  const service = global.LabelerCompanyDefaultsService;
 
   function installButton() {
     const panel = document.querySelector(".top-settings-panel");
@@ -43,8 +42,14 @@
       button.disabled = true;
       button.textContent = "Resetting…";
     }
+    const service = global.LabelerCompanyDefaultsService;
     if (!service?.resetToDefaults) {
-      throw new Error("Company defaults service is unavailable.");
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Reset All Settings";
+      }
+      global.alert("Company defaults are still loading. Try the reset again after ServoForge finishes starting.");
+      return false;
     }
     service.resetToDefaults();
     return true;
