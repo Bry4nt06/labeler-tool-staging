@@ -3,6 +3,7 @@
 (function installCompanyDefaultPrograms(global) {
   const SEED_KEY = "labelerCompanyProgramSeedVersion";
   const MANIFEST = "./config/company-default-settings.json";
+  const LEGACY_LABEL_CATALOG = "./config/default-programs/label-specs.json";
   const WORKSPACE_STORAGE_KEY = typeof SETTINGS_KEY === "string" ? SETTINGS_KEY : "labelerToolSettings";
   const RESET_PREFIX = /^(labeler|servoforge)/i;
 
@@ -90,6 +91,23 @@
     }));
   }
 
+  function labelSnapshot(spec) {
+    const normalizedSpecNumber = ["", "n/a"].includes(key(spec?.specNumber)) ? "" : key(spec?.specNumber);
+    return JSON.stringify({
+      applicationMode: key(spec?.applicationMode || "apl"),
+      brand: key(spec?.brand),
+      specNumber: normalizedSpecNumber,
+      bottleType: key(spec?.bottleType),
+      bodyLengthMm: Number(spec?.bodyLengthMm || 0),
+      backLengthMm: Number(spec?.backLengthMm || 0),
+      neckHeightMm: Number(spec?.neckHeightMm || 0),
+      neckLengthMm: Number(spec?.neckLengthMm || 0),
+      neckBottomCurveMm: Number(spec?.neckBottomCurveMm || 0),
+      neckBottomCircumferenceMm: Number(spec?.neckBottomCircumferenceMm || 0),
+      codeBoxCenterMm: Number(spec?.codeBoxCenterMm || 0)
+    });
+  }
+
   async function loadCatalog() {
     const documentData = await json(MANIFEST);
     const base = documentData?.format === "labeler-tool-portable-settings"
@@ -98,10 +116,11 @@
     const version = Number(documentData?.companyDefaultsVersion || 1);
     if (!base) throw new Error("Company default settings are invalid.");
 
-    const [maps, labels, bottles] = await Promise.all([
+    const [maps, labels, bottles, legacyLabels] = await Promise.all([
       fragments(source.mapLibrary),
       fragments(source.labelSpecs),
-      fragments(source.bottleSpecs)
+      fragments(source.bottleSpecs),
+      json(LEGACY_LABEL_CATALOG).catch(() => [])
     ]);
     if (!maps.length) throw new Error("No default machine programs were provided.");
     if (!bottles.length) throw new Error("No default bottle specifications were provided.");
@@ -111,7 +130,8 @@
       version,
       maps: taggedMaps(maps, version),
       labels: taggedLabels(labels, version),
-      bottles: taggedBottles(bottles, version)
+      bottles: taggedBottles(bottles, version),
+      legacyLabels: Array.isArray(legacyLabels) ? legacyLabels : []
     };
   }
 
@@ -122,13 +142,15 @@
     return { items, removed: source.length - items.length };
   }
 
-  function retirePackagedLabelSpecs(current, currentDefaults) {
+  function retirePackagedLabelSpecs(current, currentDefaults, legacyDefaults = []) {
     const currentKeys = new Set(currentDefaults.map((spec) => `${key(spec?.applicationMode || "apl")}|${key(spec?.brand)}`));
+    const legacySnapshots = new Set(legacyDefaults.map(labelSnapshot));
     const source = Array.isArray(current) ? current : [];
     const items = source.filter((spec) => {
-      if (!spec?.companyDefaultSpecVersion) return true;
       const identity = `${key(spec?.applicationMode || "apl")}|${key(spec?.brand)}`;
-      return currentKeys.has(identity);
+      if (currentKeys.has(identity)) return true;
+      if (spec?.companyDefaultSpecVersion) return false;
+      return !legacySnapshots.has(labelSnapshot(spec));
     });
     return { items, removed: source.length - items.length };
   }
@@ -160,7 +182,7 @@
       retiredMaps = mapCleanup.removed;
       mapResult = addMissing(mapCleanup.items, catalog.maps, (map) => key(map?.id));
 
-      const labelCleanup = retirePackagedLabelSpecs(state.labelSpecs, catalog.labels);
+      const labelCleanup = retirePackagedLabelSpecs(state.labelSpecs, catalog.labels, catalog.legacyLabels);
       retiredLabels = labelCleanup.removed;
       labelResult = addMissing(
         labelCleanup.items,
