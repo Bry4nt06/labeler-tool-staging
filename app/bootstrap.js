@@ -12,6 +12,7 @@
     "app/controllers/health-status-ui-controller.js",
     "app/controllers/validation-panel-ui-controller.js",
     "app/controllers/settings-controller.js",
+    "app/controllers/settings-reset-controller.js",
     "app/controllers/map-controller.js",
     "app/controllers/specs-controller.js",
     "app/controllers/specification-event-controller.js",
