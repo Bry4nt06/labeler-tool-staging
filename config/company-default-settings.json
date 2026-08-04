@@ -1,8 +1,8 @@
 {
   "format": "labeler-tool-portable-settings",
   "version": 1,
-  "companyDefaultsVersion": 3,
-  "exportedAt": "2026-08-04T16:43:00.000Z",
+  "companyDefaultsVersion": 4,
+  "exportedAt": "2026-08-04T17:30:00.000Z",
   "settings": {
     "themePreset": "graphite",
     "headCount": 45,
@@ -35,7 +35,7 @@
     "mapLocked": true,
     "activeMapId": "map-l85-workbook-reference-3-label-apl",
     "applicationMode": "apl",
-    "selectedBrand": "12oz Budweiser 2 Label",
+    "selectedBrand": "",
     "selectedBottle": "LNNR - 12 Oz",
     "buildInputs": {
       "neckSpenderPlateDeg": 75,
@@ -69,7 +69,7 @@
       "./config/default-programs/map-l85-workbook-reference-3-label-apl.json",
       "./config/default-programs/map-45h-topmodul-3-label-apl-wipe-down-pads.json"
     ],
-    "labelSpecs": "./config/default-programs/label-specs.json",
+    "labelSpecs": [],
     "bottleSpecs": "./config/default-programs/bottle-specs.json"
   }
 }
