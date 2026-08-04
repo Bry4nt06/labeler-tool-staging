@@ -19,6 +19,7 @@
     "app/controllers/label-section-event-controller.js",
     "app/controllers/specification-table-ui-controller.js",
     "app/controllers/specification-sensor-guidance-controller.js",
+    "app/controllers/sensor-activation-controller.js",
     "app/controllers/build-inputs-controller.js",
     "app/controllers/tabs-controller.js",
     "app/controllers/transfer-controller.js",
