@@ -115,6 +115,24 @@
     };
   }
 
+  function retireOldPackagedMaps(current, currentDefaults) {
+    const currentIds = new Set(currentDefaults.map((map) => key(map?.id)));
+    const source = Array.isArray(current) ? current : [];
+    const items = source.filter((map) => !map?.companyDefaultProgram || currentIds.has(key(map?.id)));
+    return { items, removed: source.length - items.length };
+  }
+
+  function retirePackagedLabelSpecs(current, currentDefaults) {
+    const currentKeys = new Set(currentDefaults.map((spec) => `${key(spec?.applicationMode || "apl")}|${key(spec?.brand)}`));
+    const source = Array.isArray(current) ? current : [];
+    const items = source.filter((spec) => {
+      if (!spec?.companyDefaultSpecVersion) return true;
+      const identity = `${key(spec?.applicationMode || "apl")}|${key(spec?.brand)}`;
+      return currentKeys.has(identity);
+    });
+    return { items, removed: source.length - items.length };
+  }
+
   async function reconcile() {
     if (typeof state === "undefined") throw new Error("ServoForge state is not available.");
 
@@ -125,6 +143,8 @@
     let mapResult;
     let labelResult;
     let bottleResult;
+    let retiredMaps = 0;
+    let retiredLabels = 0;
 
     if (!existingWorkspace) {
       state.mapLibrary = clone(catalog.maps);
@@ -136,10 +156,18 @@
       bottleResult = { items: state.bottleSpecs, added: state.bottleSpecs.length, changed: true };
       baseApplied = true;
     } else {
-      // Existing workspaces retain their exact user-created Specs. Only the
-      // packaged maps are added when their stable IDs are not already present.
-      mapResult = addMissing(state.mapLibrary, catalog.maps, (map) => key(map?.id));
-      labelResult = { items: Array.isArray(state.labelSpecs) ? state.labelSpecs : [], added: 0, changed: false };
+      const mapCleanup = retireOldPackagedMaps(state.mapLibrary, catalog.maps);
+      retiredMaps = mapCleanup.removed;
+      mapResult = addMissing(mapCleanup.items, catalog.maps, (map) => key(map?.id));
+
+      const labelCleanup = retirePackagedLabelSpecs(state.labelSpecs, catalog.labels);
+      retiredLabels = labelCleanup.removed;
+      labelResult = addMissing(
+        labelCleanup.items,
+        catalog.labels,
+        (spec) => `${key(spec?.applicationMode || "apl")}|${key(spec?.brand)}`
+      );
+
       bottleResult = { items: Array.isArray(state.bottleSpecs) ? state.bottleSpecs : [], added: 0, changed: false };
       state.mapLibrary = mapResult.items;
       state.labelSpecs = labelResult.items;
@@ -162,7 +190,12 @@
     }
 
     const machineTypesChanged = JSON.stringify(state.machineTypes || []) !== previousMachineTypes;
-    const changed = mapResult.changed || machineTypesChanged || baseApplied;
+    const changed = mapResult.changed
+      || labelResult.changed
+      || retiredMaps > 0
+      || retiredLabels > 0
+      || machineTypesChanged
+      || baseApplied;
 
     saveVersion(catalog.version);
 
@@ -176,8 +209,8 @@
       changed,
       version: catalog.version,
       existingWorkspace,
-      maps: { added: mapResult.added, total: state.mapLibrary.length },
-      labels: { added: labelResult.added, total: state.labelSpecs.length },
+      maps: { added: mapResult.added, removed: retiredMaps, total: state.mapLibrary.length },
+      labels: { added: labelResult.added, removed: retiredLabels, total: state.labelSpecs.length },
       bottles: { added: bottleResult.added, total: state.bottleSpecs.length },
       baseApplied
     };
