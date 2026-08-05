@@ -41,6 +41,10 @@ assert.match(
   /waitForScopedObservers\?\.\(2, 2000\)[\s\S]*restoreMutationObserver/,
   "the native MutationObserver must be restored after both sensor observers are safely scoped"
 );
-assert.match(startup, /sensor-editor-v14/, "the focus fix must use a new cache-busting build id");
+assert.match(
+  startup,
+  /sensor-(?:editor-v14|release-v15)/,
+  "the focus guard and later sensor policies must use a cache-busting sensor build id"
+);
 
 console.log("Sensor editor focus guard regression passed.");
