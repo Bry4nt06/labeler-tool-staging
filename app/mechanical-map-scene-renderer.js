@@ -37,12 +37,13 @@
       const placement = Number(sensor.angle ?? sensor.start);
       if (!Number.isFinite(placement)) return;
 
-      const radius = Number(state.radius || 0) + Number(state.depths?.opRoller || 0) + 7;
+      const tableRadius = Number(state.radius || 0);
+      const radius = tableRadius + Number(state.depths?.opRoller || 0) + 7;
       const origin = angleToXY(placement, radius);
       const aim = clamp(Number(sensor.sensorAimOffsetDeg || 0), -90, 90);
       const directionSign = state.direction === "cw" ? -1 : 1;
       const rotation = angleToSvgRotation(placement) + 180 + directionSign * aim;
-      const coneLength = clamp(radius * 0.46, 100, 140);
+      const coneLength = clamp(Math.abs(radius - tableRadius) + 14, 32, 48);
       const geometry = sensorConeGeometry(coneLength, sensor.sensorFieldOfViewDeg);
       const selected = String(state.selectedMapObjectId || "") === String(sensor.id);
       const group = add("g", {
@@ -57,10 +58,10 @@
       add("path", {
         d: geometry.path,
         fill: "#55d7ff",
-        "fill-opacity": selected ? 0.38 : 0.24,
+        "fill-opacity": selected ? 0.24 : 0.13,
         stroke: "#a8efff",
-        "stroke-width": selected ? 2.1 : 1.6,
-        "stroke-opacity": selected ? 1 : 0.9,
+        "stroke-width": selected ? 1.8 : 1.35,
+        "stroke-opacity": selected ? 0.82 : 0.64,
         "vector-effect": "non-scaling-stroke"
       }, group);
       add("line", {
@@ -69,18 +70,20 @@
         x2: coneLength,
         y2: 0,
         stroke: "#e1fbff",
-        "stroke-width": selected ? 2.2 : 1.6,
-        "stroke-opacity": 1,
-        "stroke-dasharray": "6 4",
+        "stroke-width": selected ? 1.8 : 1.35,
+        "stroke-opacity": selected ? 0.92 : 0.78,
+        "stroke-dasharray": "5 4",
         "vector-effect": "non-scaling-stroke"
       }, group);
       add("circle", {
         cx: 0,
         cy: 0,
-        r: selected ? 4 : 3.2,
+        r: selected ? 3.5 : 2.8,
         fill: "#e1fbff",
+        "fill-opacity": selected ? 0.92 : 0.78,
         stroke: "#08677e",
-        "stroke-width": 1.2,
+        "stroke-width": 1,
+        "stroke-opacity": 0.76,
         "vector-effect": "non-scaling-stroke"
       }, group);
       const title = add("title", {}, group);
