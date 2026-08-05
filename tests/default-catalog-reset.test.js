@@ -1,60 +1,78 @@
 "use strict";
 
-const assert = require("assert");
-const fs = require("fs");
-const path = require("path");
-const vm = require("vm");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 
 const manifest = JSON.parse(read("config/company-default-settings.json"));
-assert.strictEqual(manifest.companyDefaultsVersion, 4);
-assert.deepStrictEqual(manifest.fragments.mapLibrary, [
-  "./config/default-programs/map-blank-apl.json",
-  "./config/default-programs/map-l85-workbook-reference-3-label-apl.json",
+assert.equal(manifest.companyDefaultsVersion, 12);
+assert.equal(manifest.settings.activeMapId, "map-apl-default");
+assert.deepEqual(manifest.fragments.mapLibrary, [
+  "./config/default-programs/map-apl-6-aggregate.json",
   "./config/default-programs/map-45h-topmodul-3-label-apl-wipe-down-pads.json"
 ]);
-assert.deepStrictEqual(manifest.fragments.labelSpecs, []);
-assert.strictEqual(manifest.settings.selectedBrand, "");
+assert.equal(manifest.fragments.mapLibrary.length, 2);
+assert.deepEqual(manifest.fragments.labelSpecs, []);
 
-const expectedNames = [
-  "Blank APL Map",
-  "45H TopModul 3 Label APL",
-  "45H TopModul 3 Label APL Wipe-Down Pads"
-];
-manifest.fragments.mapLibrary.forEach((source, index) => {
-  const map = JSON.parse(read(source.replace(/^\.\//, "")));
-  assert.strictEqual(map.name, expectedNames[index]);
-  assert.strictEqual(map.headCount, 45);
-  assert.strictEqual(map.applicationMode, "apl");
+const maps = manifest.fragments.mapLibrary.map((source) =>
+  JSON.parse(read(source.replace(/^\.\//, "")))
+);
+assert.deepEqual(maps.map((map) => map.name), [
+  "APL 6-Aggregate",
+  "Standard 45H TopModul Wipe-Down Pads"
+]);
+assert.deepEqual(maps.map((map) => map.id), [
+  "map-apl-default",
+  "map-45h-topmodul-3-label-apl-wipe-down-pads"
+]);
+maps.forEach((map) => {
+  assert.equal(map.headCount, 45);
+  assert.equal(map.applicationMode, "apl");
+  assert.equal(map.companyDefaultProgram, true);
+  assert.equal(map.protectedDefaultMap, true);
+  assert.equal(map.companyDefaultProgramVersion, 12);
+  assert.equal(map.defaultCatalogVersion, 12);
 });
 
-const defaultsSource = read("app/company-default-programs-integration.js");
-assert.doesNotThrow(() => new vm.Script(defaultsSource));
-[
-  "hasSavedWorkspace",
-  "addMissing",
-  "retireOldPackagedMaps",
-  "retirePackagedLabelSpecs",
-  "LEGACY_LABEL_CATALOG",
-  "legacySnapshots",
-  "labelSnapshot",
-  "companyDefaultProgram",
-  "companyDefaultSpecVersion",
-  "resetToDefaults",
-  "clearApplicationStorage"
-].forEach((token) => assert.ok(defaultsSource.includes(token), `Missing defaults behavior: ${token}`));
-assert.ok(defaultsSource.includes("return !legacySnapshots.has(labelSnapshot(spec))"));
-assert.ok(!defaultsSource.includes("result[index] = entry"), "Existing user catalog entries must not be overwritten by defaults.");
+const apl = maps[0];
+assert.deepEqual(apl.machineSettings, {
+  direction: "ccw",
+  radius: 250,
+  referencePitchRadiusMm: 572.958,
+  encoderCountsPerRev: 4096,
+  servoGearRatio: 1,
+  autoScaleTableMap: true,
+  zeroAngle: 0,
+  maxMoveRatio: 21
+});
+assert.deepEqual(apl.depths, {
+  spender: 12,
+  opRoller: 14,
+  nonOpRoller: -18,
+  wipeInner: -4,
+  wipeOuter: 16
+});
 
-const resetSource = read("app/controllers/settings-reset-controller.js");
-assert.doesNotThrow(() => new vm.Script(resetSource));
-assert.ok(resetSource.includes("Reset All Settings"));
-assert.ok(resetSource.includes("LabelerCompanyDefaultsService"));
-assert.ok(resetSource.includes("resetToDefaults"));
+const catalogSource = read("app/company-default-map-catalog-integration.js");
+assert.doesNotThrow(() => new vm.Script(catalogSource));
+assert.match(catalogSource, /map-apl-default/);
+assert.match(catalogSource, /map-45h-topmodul-3-label-apl-wipe-down-pads/);
+assert.match(catalogSource, /companyDefaultProgram !== true/);
+assert.match(catalogSource, /protectedDefaultMap: true/);
 
-const bootstrap = read("app/bootstrap.js");
-assert.ok(bootstrap.includes("app/controllers/settings-reset-controller.js"));
+const legacyWorkbookSource = read("app/workbook-reference-map-library-integration.js");
+assert.doesNotThrow(() => new vm.Script(legacyWorkbookSource));
+assert.match(legacyWorkbookSource, /addsDefaultMap: false/);
+assert.doesNotMatch(legacyWorkbookSource, /state\.mapLibrary\.push/);
+assert.doesNotMatch(legacyWorkbookSource, /map-l85-workbook-reference-3-label-apl/);
 
-console.log("Default catalog preservation, cleanup, and reset regression passed.");
+const deletionGuard = read("app/protected-default-map-integration.js");
+assert.doesNotThrow(() => new vm.Script(deletionGuard));
+assert.match(deletionGuard, /protectedDefaultMap/);
+assert.match(deletionGuard, /protected default/);
+
+console.log("Approved two-map default catalog regression passed.");
