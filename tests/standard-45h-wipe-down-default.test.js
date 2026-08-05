@@ -7,9 +7,26 @@ assert.equal(map.id, "map-45h-topmodul-3-label-apl-wipe-down-pads");
 assert.equal(map.name, "Standard 45H TopModul Wipe-Down Pads");
 assert.equal(map.companyDefaultProgram, true);
 assert.equal(map.protectedDefaultMap, true);
-assert.equal(map.defaultCatalogVersion, 8);
-assert.equal(map.companyDefaultProgramVersion, 8);
-assert.equal(map.objects.length, 11);
+assert.equal(map.defaultCatalogVersion, 12);
+assert.equal(map.companyDefaultProgramVersion, 12);
+assert.equal(map.objects.length, 12);
+assert.deepEqual(map.machineSettings, {
+  direction: "ccw",
+  radius: 250,
+  referencePitchRadiusMm: 572.965,
+  encoderCountsPerRev: 10000,
+  servoGearRatio: 1.051,
+  autoScaleTableMap: true,
+  zeroAngle: 0,
+  maxMoveRatio: 21
+});
+assert.deepEqual(map.depths, {
+  spender: 12,
+  opRoller: 19,
+  nonOpRoller: -16,
+  wipeInner: -16,
+  wipeOuter: 17
+});
 
 const byId = new Map(map.objects.map((object) => [object.id, object]));
 assert.deepEqual(
@@ -31,17 +48,29 @@ assert.deepEqual(
 );
 
 const bodySensor = byId.get("default-neck-body-inspection");
-assert.equal(bodySensor.name, "Body Label Inspection");
+assert.equal(bodySensor.name, "Body Sensor");
 assert.equal(bodySensor.labelSection, "body");
 assert.equal(bodySensor.orientationLabelSection, "body");
 assert.equal(bodySensor.sensorLabelSource, "station-pair");
 assert.equal(bodySensor.sensorLabelLocked, true);
+assert.equal(bodySensor.enabled, true);
+assert.equal(bodySensor.orientBottle, true);
 
 const backSensor = byId.get("default-back-inspection");
+assert.equal(backSensor.name, "Back Sensor");
+assert.equal(backSensor.angle, 296.11528505224214);
 assert.equal(backSensor.labelSection, "back");
 assert.equal(backSensor.orientationLabelSection, "back");
 assert.equal(backSensor.sensorLabelSource, "station-pair");
 assert.equal(backSensor.sensorLabelLocked, true);
+assert.equal(backSensor.enabled, true);
+assert.equal(backSensor.orientBottle, true);
+
+const neckSensor = map.objects.find((object) => object.name === "Neck Sensor");
+assert.ok(neckSensor);
+assert.equal(neckSensor.station, 2);
+assert.equal(neckSensor.orientationLabelSection, "neck");
+assert.equal(neckSensor.orientBottle, true);
 
 assert.equal(byId.get("default-back-coding").orientationLabelSection, "auto");
 assert.equal(byId.get("default-back-coding").orientBottle, true);
