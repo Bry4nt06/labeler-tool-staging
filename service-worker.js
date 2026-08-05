@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-sensor-aim-v11";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-repository-brands-v19";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -138,6 +138,8 @@ const CORE_ASSETS = Object.freeze([
   "./app/map-object-double-click-open-fix-integration.js",
   "./app/label-spec-section-selection-integration.js",
   "./app/company-default-programs-integration.js",
+  "./app/default-bottle-spec-retirement-integration.js",
+  "./app/repository-brand-download-integration.js",
   "./app/workbook-reference-map-library-integration.js",
   "./app/locked-map-brand-selector-integration.js",
   "./app/clockwise-code-box-orientation-integration.js",
