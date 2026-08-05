@@ -24,7 +24,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "sensor-field-of-view-core-v18";
+  const build = "repository-brands-v19";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -74,7 +74,9 @@
       await loadScript("app/sensor-station-label-inheritance-integration.js", version);
       await loadScript("app/inactive-label-sensor-suppression-integration.js", version);
       await loadScript("app/company-default-map-catalog-integration.js", version);
+      await loadScript("app/default-bottle-spec-retirement-integration.js", version);
       await loadScript("app/protected-default-map-integration.js", version);
+      await loadScript("app/repository-brand-download-integration.js", version);
       await window.LabelerSensorEditorFocusGuard?.waitForScopedObservers?.(2, 2000);
     } finally {
       window.LabelerSensorEditorFocusGuard?.restoreMutationObserver?.();
