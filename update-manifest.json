@@ -3,5 +3,5 @@
   "version": "0.9.10",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING 0.9.10 regenerates the Servo Program when a Brand Recipe is selected and stacks the top Validation summary so it cannot overflow the panel."
+  "notes": "STAGING 0.9.10 now uses only APL 6-Aggregate and Standard 45H TopModul Wipe-Down Pads as packaged map defaults, with each map retaining its approved machine settings and protected from deletion."
 }
