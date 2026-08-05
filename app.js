@@ -24,7 +24,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "coder-window-reference-handoff-v21";
+  const build = "coder-window-wipe-hold-v22";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
