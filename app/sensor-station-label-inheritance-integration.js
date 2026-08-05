@@ -4,7 +4,7 @@
   if (global.LabelerSensorStationLabelInheritance?.installed) return;
 
   const RETRY_MS = 50;
-  const CATALOG_VERSION = 9;
+  const CATALOG_VERSION = 10;
   const DEFAULT_MAP_IDS = new Set([
     "map-l85-workbook-reference-3-label-apl",
     "map-45h-topmodul-3-label-apl-wipe-down-pads"
@@ -77,16 +77,15 @@
   function inheritedLabelField(item) {
     const policy = driver();
     const section = policy.sectionForStation(item.station);
-    const label = document.createElement("label");
-    label.className = "sensor-inherited-label-field";
-    label.innerHTML = `Inspection label<div class="sensor-inherited-label-value">${policy.sectionLabel(section)} label</div><small>Inherited from ${policy.stationPairLabel(section)}. This sensor only inspects that label.</small>`;
-    return label;
+    const field = document.createElement("div");
+    field.className = "sensor-inherited-label-field sensor-grid-field";
+    field.innerHTML = `<span class="sensor-field-caption">Inspection label</span><strong class="sensor-inherited-label-value">${policy.sectionLabel(section)} label</strong><small>${policy.stationPairLabel(section)}</small>`;
+    return field;
   }
 
   function removeSensorLabelSelectors(row) {
     row.querySelectorAll(".map-object-orientation-fields").forEach((node) => node.remove());
     row.querySelectorAll("label").forEach((label) => {
-      if (label.classList.contains("sensor-inherited-label-field")) return;
       const text = String(label.textContent || "").replace(/\s+/g, " ").trim();
       const hasLabelSelector = label.querySelector(
         "[data-station-section], [data-object-orientation-field='orientationLabelSection'], [data-corrected-orientation-field='orientationLabelSection']"
@@ -97,36 +96,64 @@
     });
   }
 
+  function labelForControl(row, selector, className) {
+    const label = row.querySelector(selector)?.closest("label");
+    if (label && className) label.classList.add("sensor-grid-field", className);
+    return label;
+  }
+
   function relabelSensorEnabled(row, item) {
-    const checkbox = row.querySelector('[data-builder-field="servoAssist"]');
-    const label = checkbox?.closest("label");
-    if (!label) return;
+    const label = labelForControl(row, '[data-builder-field="servoAssist"]', "sensor-field-enabled");
+    if (!label) return null;
     const textNode = [...label.childNodes].find((node) => node.nodeType === 3 && String(node.textContent || "").trim());
     if (textNode && textNode.textContent !== " Sensor enabled") textNode.textContent = " Sensor enabled";
     const small = label.querySelector("small");
     const section = driver().sectionForStation(item.station);
-    const message = `When enabled, ServoForge orients the bottle to meet the required view of the ${driver().sectionLabel(section).toLowerCase()} label.`;
+    const message = `Orient for the ${driver().sectionLabel(section).toLowerCase()} label view.`;
     if (small && small.textContent !== message) small.textContent = message;
+    return label;
   }
 
   function updateInheritedField(row, item) {
     const grid = row.querySelector(".builder-row-grid");
-    if (!grid) return;
+    if (!grid) return null;
     const section = driver().sectionForStation(item.station);
     const expectedValue = `${driver().sectionLabel(section)} label`;
-    const expectedHelp = `Inherited from ${driver().stationPairLabel(section)}. This sensor only inspects that label.`;
+    const expectedHelp = driver().stationPairLabel(section);
     let field = grid.querySelector(".sensor-inherited-label-field");
     if (!field) {
       field = inheritedLabelField(item);
-      const stationLabel = grid.querySelector('[data-builder-field="station"]')?.closest("label");
-      if (stationLabel?.nextSibling) grid.insertBefore(field, stationLabel.nextSibling);
-      else grid.appendChild(field);
-      return;
+      grid.appendChild(field);
+      return field;
     }
     const value = field.querySelector(".sensor-inherited-label-value");
     const help = field.querySelector("small");
     if (value && value.textContent !== expectedValue) value.textContent = expectedValue;
     if (help && help.textContent !== expectedHelp) help.textContent = expectedHelp;
+    return field;
+  }
+
+  function compactSensorGrid(row, item) {
+    const grid = row.querySelector(".builder-row-grid");
+    if (!grid) return;
+    row.classList.add("sensor-station-inherited-row");
+
+    const enabled = relabelSensorEnabled(row, item);
+    const station = labelForControl(row, '[data-builder-field="station"]', "sensor-field-station");
+    const placement = labelForControl(row, '[data-builder-field="angle"]', "sensor-field-placement");
+    const inherited = updateInheritedField(row, item);
+    const required = labelForControl(row, '[data-builder-field="requiredVisibilityPercent"]', "sensor-field-required");
+    const status = row.querySelector(".sensor-inline-status");
+
+    if (required) {
+      const small = required.querySelector("small");
+      if (small) small.textContent = "1% edge view • 100% centered.";
+    }
+    if (status) status.classList.add("sensor-grid-field", "sensor-field-status");
+
+    [enabled, station, placement, inherited, required, status]
+      .filter(Boolean)
+      .forEach((node) => grid.appendChild(node));
   }
 
   function decorateSensorRows() {
@@ -139,8 +166,7 @@
       if (!item) return;
       if (policy.normalizeSensor(item, { rename: true })) changed = true;
       removeSensorLabelSelectors(row);
-      updateInheritedField(row, item);
-      relabelSensorEnabled(row, item);
+      compactSensorGrid(row, item);
 
       const status = row.querySelector(".sensor-inline-status span");
       const section = policy.sectionForStation(item.station);
@@ -208,16 +234,16 @@
   }
 
   function installHooks() {
-    wrapFunction("loadSavedSettings", "sensorStationLabelInheritanceV9", () => normalizeRuntime());
-    wrapFunction("loadMachineMapIntoRuntime", "sensorStationLabelInheritanceV9", ([map]) => normalizeMap(map));
-    wrapFunction("refreshAfterBuilderEdit", "sensorStationLabelInheritanceV9", () => normalizeMap(editableMap()));
-    wrapFunction("renderWipeDownBuilder", "sensorStationLabelInheritanceV9", () => {
+    wrapFunction("loadSavedSettings", "sensorStationLabelInheritanceV10", () => normalizeRuntime());
+    wrapFunction("loadMachineMapIntoRuntime", "sensorStationLabelInheritanceV10", ([map]) => normalizeMap(map));
+    wrapFunction("refreshAfterBuilderEdit", "sensorStationLabelInheritanceV10", () => normalizeMap(editableMap()));
+    wrapFunction("renderWipeDownBuilder", "sensorStationLabelInheritanceV10", () => {
       normalizeMap(editableMap());
       decorateSensorRows();
     });
 
     const service = global.LabelerCompanyDefaultsService;
-    if (service?.reconcile && !service.sensorStationLabelInheritanceV9) {
+    if (service?.reconcile && !service.sensorStationLabelInheritanceV10) {
       const baseReconcile = service.reconcile.bind(service);
       global.LabelerCompanyDefaultsService = Object.freeze({
         ...service,
@@ -233,18 +259,58 @@
             companyDefaultsVersion: Math.max(Number(result?.version || 0), CATALOG_VERSION)
           };
         },
-        sensorStationLabelInheritanceV9: true
+        sensorStationLabelInheritanceV10: true
       });
     }
   }
 
   function installStyles() {
-    if (document.querySelector("#sensorStationLabelInheritanceStyles")) return;
+    const existing = document.querySelector("#sensorStationLabelInheritanceStyles");
+    if (existing) existing.remove();
     const style = document.createElement("style");
     style.id = "sensorStationLabelInheritanceStyles";
     style.textContent = `
-      .sensor-inherited-label-field{display:flex;flex-direction:column;gap:4px;border-left:3px solid var(--blue);padding-left:7px}
-      .sensor-inherited-label-value{min-height:32px;display:flex;align-items:center;padding:0 10px;border:1px solid var(--line);border-radius:5px;background:var(--panel-strong);font-weight:700}
+      .sensor-station-inherited-row .builder-object-editor{padding-bottom:8px}
+      .sensor-station-inherited-row .builder-row-grid{
+        display:grid;
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:8px;
+        align-items:stretch;
+      }
+      .sensor-station-inherited-row .builder-row-grid>.sensor-grid-field{min-width:0;margin:0}
+      .sensor-station-inherited-row .sensor-grid-field{
+        min-height:64px;
+        padding:7px 8px;
+        border:1px solid var(--line);
+        border-radius:6px;
+        background:color-mix(in srgb,var(--panel-hi) 78%,var(--input));
+      }
+      .sensor-station-inherited-row label.sensor-grid-field{display:flex;flex-direction:column;gap:4px}
+      .sensor-station-inherited-row label.sensor-grid-field input:not([type="checkbox"]),
+      .sensor-station-inherited-row label.sensor-grid-field select{height:31px;min-height:31px}
+      .sensor-station-inherited-row .sensor-field-enabled{justify-content:center}
+      .sensor-station-inherited-row .sensor-field-enabled small,
+      .sensor-station-inherited-row .sensor-field-required small,
+      .sensor-inherited-label-field small{font-size:9px;line-height:1.15;color:var(--muted)}
+      .sensor-inherited-label-field{display:flex;flex-direction:column;justify-content:center;gap:3px}
+      .sensor-field-caption{font-size:10px;font-weight:700;color:var(--muted)}
+      .sensor-inherited-label-value{font-size:14px;line-height:1.1;color:var(--ink)}
+      .sensor-station-inherited-row .sensor-inline-status{
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        align-items:flex-start;
+        gap:3px;
+      }
+      .sensor-station-inherited-row .sensor-inline-status strong{font-size:14px;line-height:1.1}
+      .sensor-station-inherited-row .sensor-inline-status span{font-size:10px;line-height:1.2}
+      .sensor-station-inherited-row .builder-object-actions{margin-top:8px}
+      @media (max-width:1500px){
+        .sensor-station-inherited-row .builder-row-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      }
+      @media (max-width:700px){
+        .sensor-station-inherited-row .builder-row-grid{grid-template-columns:1fr}
+      }
     `;
     document.head.appendChild(style);
   }
