@@ -3,7 +3,7 @@
 (function installSensorEditorCompactInteraction(global) {
   if (global.LabelerSensorEditorCompactInteraction?.installed) return;
 
-  const VERSION = 12;
+  const VERSION = 13;
   const SVG_NS = "http://www.w3.org/2000/svg";
   const EDITABLE_FIELDS = new Set([
     "angle",
@@ -123,13 +123,17 @@
 
     // Own these events before the legacy document-level Map Builder handler.
     // The old handler regenerates and rebuilds the row on every keystroke,
-    // which destroys focus and interrupts native press-and-hold number stepping.
+    // which destroys focus and interrupts normal keyboard entry.
     event.stopImmediatePropagation();
     event.stopPropagation();
 
     applyControlValue(control, { finalize });
     scheduleMapCenterlines();
-    scheduleCommit(finalize ? 0 : 260);
+
+    // Keep the active input mounted while the user types. Full persistence,
+    // profile regeneration, validation, and map rendering wait until the
+    // value is committed by change, blur, or Enter.
+    if (finalize) scheduleCommit(0);
   }
 
   function escapeId(value) {
@@ -222,7 +226,7 @@
       drawSensorCenterlines();
       return result;
     };
-    global.renderMap.sensorEditorCompactV12 = true;
+    global.renderMap.sensorEditorCompactV13 = true;
     global.renderMap.previousFunction = base;
     renderMapWrapped = true;
     return true;
