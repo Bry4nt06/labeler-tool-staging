@@ -23,7 +23,7 @@ const combined = {
   orientationLabelSection: "back"
 };
 assert.equal(driver.normalizeSensor(combined), true);
-assert.equal(combined.name, "Body Label Inspection");
+assert.equal(combined.name, "Body Sensor");
 assert.equal(combined.labelSection, "body");
 assert.equal(combined.orientationLabelSection, "body");
 assert.equal(combined.sensorLabelSource, "station-pair");
@@ -31,9 +31,21 @@ assert.equal(combined.sensorLabelLocked, true);
 
 combined.station = 2;
 driver.normalizeSensor(combined);
-assert.equal(combined.name, "Neck Label Inspection");
+assert.equal(combined.name, "Neck Sensor");
 assert.equal(combined.labelSection, "neck");
 assert.equal(combined.orientationLabelSection, "neck");
+
+const incorrectlyNamed = {
+  id: "sensor-renamed-by-station",
+  kind: "sensor",
+  name: "Neck Sensor",
+  station: 4,
+  orientationLabelSection: "neck"
+};
+driver.normalizeSensor(incorrectlyNamed);
+assert.equal(incorrectlyNamed.name, "Body Sensor");
+assert.equal(incorrectlyNamed.labelSection, "body");
+assert.equal(incorrectlyNamed.orientationLabelSection, "body");
 
 const custom = {
   id: "sensor-custom",
