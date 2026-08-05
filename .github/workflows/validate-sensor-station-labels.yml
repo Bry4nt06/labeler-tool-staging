@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - app.js
+      - app/mechanical-map-scene-renderer.js
       - app/map-object-orientation-controls-integration.js
       - app/orientation-constraint-target-service.js
       - app/sensor-editor-focus-guard-integration.js
@@ -36,6 +37,7 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check app.js
+          node --check app/mechanical-map-scene-renderer.js
           node --check app/map-object-orientation-controls-integration.js
           node --check app/orientation-constraint-target-service.js
           node --check app/sensor-editor-focus-guard-integration.js
