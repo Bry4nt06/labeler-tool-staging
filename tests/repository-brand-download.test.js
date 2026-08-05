@@ -78,13 +78,14 @@ assert.equal(result.items.find((spec) => spec.brand === "Brand B").id, 5, "New b
 assert.ok(result.items.some((spec) => spec.brand === "Local Custom"), "Local custom brands must remain untouched.");
 
 const startup = read("app.js");
-assert.match(startup, /repository-brands-v19/);
+assert.match(startup, /coder-window-wipe-hold-v22/);
 assert.match(startup, /default-bottle-spec-retirement-integration\.js/);
 assert.match(startup, /repository-brand-download-integration\.js/);
 
 const worker = read("service-worker.js");
-assert.match(worker, /repository-brands-v19/);
+assert.match(worker, /coder-window-wipe-hold-v22/);
 assert.match(worker, /default-bottle-spec-retirement-integration\.js/);
 assert.match(worker, /repository-brand-download-integration\.js/);
+assert.match(worker, /optimizer-post-wipe-coverage-fix-integration\.js/);
 
 console.log("Repository brand download and bottle retirement regression passed.");
