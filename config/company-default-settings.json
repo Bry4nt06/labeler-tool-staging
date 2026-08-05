@@ -1,8 +1,8 @@
 {
   "format": "labeler-tool-portable-settings",
   "version": 1,
-  "companyDefaultsVersion": 6,
-  "exportedAt": "2026-08-04T23:51:00.000Z",
+  "companyDefaultsVersion": 7,
+  "exportedAt": "2026-08-05T00:02:00.000Z",
   "settings": {
     "themePreset": "graphite",
     "headCount": 45,
@@ -40,13 +40,13 @@
     "buildInputs": {
       "neckSpenderPlateDeg": 75,
       "neckApplication": "Center",
-      "neckContactMm": 4.4,
-      "bodyContactMm": 5,
-      "backContactMm": 5,
+      "neckContactMm": 0,
+      "bodyContactMm": 0,
+      "backContactMm": 0,
       "neckOverWipeDeg": 66,
       "bodyOverWipeDeg": 10,
       "backOverWipeDeg": 10,
-      "plateStartPositionDeg": 0,
+      "plateStartPositionDeg": 15,
       "neckOffsetMm": 0,
       "bodyOffsetMm": 0,
       "backOffsetMm": 0,
