@@ -2,7 +2,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "sensor-release-v16";
+  const build = "default-map-catalog-v12";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -50,6 +50,8 @@
       await loadScript("app/sensor-orientation-default-map-fix-integration.js", version);
       await loadScript("app/standard-45h-wipe-down-default-integration.js", version);
       await loadScript("app/sensor-station-label-inheritance-integration.js", version);
+      await loadScript("app/company-default-map-catalog-integration.js", version);
+      await loadScript("app/protected-default-map-integration.js", version);
       await window.LabelerSensorEditorFocusGuard?.waitForScopedObservers?.(2, 2000);
     } finally {
       window.LabelerSensorEditorFocusGuard?.restoreMutationObserver?.();
