@@ -2,7 +2,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "sensor-aim-v11";
+  const build = "sensor-editor-v12";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -45,6 +45,7 @@
     await loadScript("app/sensor-orientation-default-map-fix-integration.js", version);
     await loadScript("app/standard-45h-wipe-down-default-integration.js", version);
     await loadScript("app/sensor-station-label-inheritance-integration.js", version);
+    await loadScript("app/sensor-editor-compact-interaction-integration.js", version);
     const ready = window.ServoForgeOrientationConstraintPlannerReady;
     if (ready && typeof ready.then === "function") {
       await Promise.race([
@@ -67,7 +68,7 @@
     progress?.set(53, "Loading feature integrations…");
     if (window.ServoForgeFeatureIntegrationsReady) await window.ServoForgeFeatureIntegrationsReady;
 
-    progress?.set(61, "Applying rotatable sensor layout…");
+    progress?.set(61, "Applying compact sensor controls…");
     await loadOrientationConstraintPlanner();
 
     progress?.set(70, "Loading workspace controllers…");
