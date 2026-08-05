@@ -48,7 +48,7 @@
       row?.orientationObjectId,
       row?.sensorId
     ].filter((value) => value !== null && value !== undefined && String(value) !== "")
-      .map((value) => String(value)))] ;
+      .map((value) => String(value)))];
   }
 
   function sharesObject(hold, row) {
@@ -85,6 +85,14 @@
     return hold?.sensorId ? "Label Sensor" : "Inspection Window";
   }
 
+  function inspectionPoint(hold) {
+    const start = finite(hold?.inspectionWindowStart, NaN);
+    const stop = finite(hold?.inspectionWindowStop, NaN);
+    if (Number.isFinite(start) && Number.isFinite(stop)) return start + (stop - start) / 2;
+    if (Number.isFinite(stop)) return stop;
+    return finite(hold?.tableAngle, NaN);
+  }
+
   function availableReleaseAngle(rows, start, stop, formatter) {
     let candidate = round(start, formatter);
     const finalAllowed = stop - 0.1;
@@ -112,12 +120,13 @@
         || !hold?.orientationHold
         || (!hold?.sensorId && !Array.isArray(hold?.sensorIds))) continue;
 
-      const windowStop = finite(hold?.inspectionWindowStop, NaN);
-      if (!Number.isFinite(windowStop)) continue;
+      const sensorTable = inspectionPoint(hold);
+      const windowStop = finite(hold?.inspectionWindowStop, sensorTable);
+      if (!Number.isFinite(sensorTable)) continue;
 
       const nextIndex = rows.findIndex((row, index) => (
         index > holdIndex
-        && finite(row?.tableAngle, -Infinity) > windowStop + EPS
+        && finite(row?.tableAngle, -Infinity) > sensorTable + EPS
         && Number(row?.cmd) === 7
         && row?.orientationConstraintContinuation
         && sharesObject(hold, row)
@@ -138,7 +147,7 @@
 
       const releaseTable = availableReleaseAngle(
         rows,
-        windowStop + GAP,
+        sensorTable + GAP,
         destinationTable,
         formatter
       );
@@ -174,6 +183,7 @@
         plannedRotation: rotation,
         plannedRatio: ratio,
         releaseExceedsMoveRatio: ratio >= Math.max(0.1, finite(maxMoveRatio, 21)),
+        sensorInspectionTableAngle: round(sensorTable, formatter),
         inspectionWindowStop: round(windowStop, formatter),
         releaseDestinationTableAngle: round(destinationTable, formatter),
         releaseDestinationPlateAngle: round(destinationPlate, formatter),
@@ -184,6 +194,7 @@
         sensorId: hold.sensorId,
         sensorIds: hold.sensorIds,
         objectId: hold.orientationObjectId || hold.sensorId,
+        sensorInspectionTableAngle: release.sensorInspectionTableAngle,
         releaseTableAngle: release.tableAngle,
         targetPlateAngle: release.plateAngle,
         destinationTableAngle: release.releaseDestinationTableAngle,
@@ -211,6 +222,7 @@
     sharesObject,
     originalTurn,
     restoreRetargetedTurn,
+    inspectionPoint,
     availableReleaseAngle,
     apply
   });
