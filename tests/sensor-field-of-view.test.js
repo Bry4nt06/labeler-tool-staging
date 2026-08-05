@@ -12,6 +12,7 @@ require("../app/sensor-field-of-view-integration.js");
 
 const api = global.LabelerSensorFieldOfView;
 assert.ok(api?.installed, "The sensor field-of-view integration must install.");
+assert.equal(api.VERSION, 2);
 assert.equal(api.DEFAULT_FIELD_OF_VIEW_DEG, 18);
 assert.equal(api.fieldOfViewDeg({}), 18);
 assert.equal(api.fieldOfViewDeg({ sensorFieldOfViewDeg: 2 }), 4);
@@ -39,16 +40,20 @@ assert.equal(
 );
 
 const source = fs.readFileSync(path.join(root, "app/sensor-field-of-view-integration.js"), "utf8");
+assert.match(source, /data-sensor-field-of-view-layer/);
 assert.match(source, /data-sensor-field-of-view/);
 assert.match(source, /sensorAimOffsetDeg/);
-assert.match(source, /objectLayer\.insertBefore\(group, objectLayer\.firstChild\)/);
-assert.match(source, /fill-opacity/);
+assert.match(source, /Configured wipe-down assemblies/);
+assert.match(source, /new global\.MutationObserver/);
+assert.match(source, /fill-opacity", selected \? "0\.32" : "0\.18"/);
+assert.match(source, /stroke-dasharray", "6 4"/);
+assert.doesNotMatch(source, /objectLayer\.insertBefore\(group, objectLayer\.firstChild\)/);
 
 const startup = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const coneLoad = startup.indexOf('loadScript("app/sensor-field-of-view-integration.js"');
 const centerlineLoad = startup.indexOf('loadScript("app/sensor-editor-compact-interaction-integration.js"');
 assert.ok(coneLoad >= 0, "The field-of-view integration must load at startup.");
 assert.ok(centerlineLoad > coneLoad, "The cone must load before the centerline interaction module.");
-assert.match(startup, /sensor-field-of-view-v15/);
+assert.match(startup, /sensor-field-of-view-v16/);
 
 console.log("Sensor field-of-view regression passed.");
