@@ -96,8 +96,9 @@ const result = driver.apply({
 assert.equal(result.releases.length, 1, "the body sensor must create one release move");
 
 const release = result.rows.find((row) => row.postInspectionRelease);
-assert.ok(release, "a release correction must be inserted after the inspection window");
-assert.equal(release.tableAngle, 222, "setup must begin immediately after the 221.5° sensor window plus the 0.5° command gap");
+assert.ok(release, "a release correction must be inserted after the sensor pass point");
+assert.equal(release.sensorInspectionTableAngle, 220, "the inspection point must be the center of the sensor window");
+assert.equal(release.tableAngle, 220.5, "setup must begin immediately after the 220° sensor pass plus the 0.5° command gap");
 assert.equal(release.plateAngle, -24, "the release correction must start from the verified sensor orientation");
 assert.equal(release.releaseDestinationTableAngle, 229);
 assert.equal(release.releaseDestinationPlateAngle, -63.5);
