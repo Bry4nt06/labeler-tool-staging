@@ -2,7 +2,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "sensor-editor-v14";
+  const build = "sensor-release-v15";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -39,12 +39,14 @@
     await loadScript("drivers/profile/orientation-constraint-planner-driver.js", version);
     await loadScript("drivers/profile/sensor-target-policy-driver.js", version);
     await loadScript("drivers/profile/sensor-station-label-driver.js", version);
+    await loadScript("drivers/profile/sensor-post-inspection-release-driver.js", version);
     await loadScript("app/orientation-constraint-target-service.js", version);
     await loadScript("app/orientation-constraint-program-planner.js", version);
     await loadScript("app/sensor-editor-focus-guard-integration.js", version);
 
     try {
       await loadScript("app/orientation-constraint-planner-integration.js", version);
+      await loadScript("app/sensor-post-inspection-release-integration.js", version);
       await loadScript("app/sensor-orientation-default-map-fix-integration.js", version);
       await loadScript("app/standard-45h-wipe-down-default-integration.js", version);
       await loadScript("app/sensor-station-label-inheritance-integration.js", version);
