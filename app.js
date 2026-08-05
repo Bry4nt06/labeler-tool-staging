@@ -2,7 +2,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "sensor-station-labels-v10";
+  const build = "sensor-aim-v11";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -67,7 +67,7 @@
     progress?.set(53, "Loading feature integrations…");
     if (window.ServoForgeFeatureIntegrationsReady) await window.ServoForgeFeatureIntegrationsReady;
 
-    progress?.set(61, "Applying compact sensor layout…");
+    progress?.set(61, "Applying rotatable sensor layout…");
     await loadOrientationConstraintPlanner();
 
     progress?.set(70, "Loading workspace controllers…");
