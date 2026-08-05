@@ -2,13 +2,14 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
+  const build = "sensor-station-labels-v9";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
       const expected = new URL(`./${path}`, window.location.href).pathname;
       const existing = [...document.scripts].find((script) => {
-        try { return new URL(script.src, window.location.href).pathname === expected;
-        } catch { return false; }
+        try { return new URL(script.src, window.location.href).pathname === expected; }
+        catch { return false; }
       });
       if (existing) {
         if (existing.dataset.loaded === "true") resolve();
@@ -19,9 +20,10 @@
         return;
       }
       const script = document.createElement("script");
-      script.src = `./${path}?v=${encodeURIComponent(version)}`;
+      script.src = `./${path}?v=${encodeURIComponent(version)}&build=${encodeURIComponent(build)}`;
       script.async = false;
       script.dataset.orientationConstraintModule = path;
+      script.dataset.orientationConstraintBuild = build;
       script.addEventListener("load", () => {
         script.dataset.loaded = "true";
         resolve();
@@ -65,7 +67,7 @@
     progress?.set(53, "Loading feature integrations…");
     if (window.ServoForgeFeatureIntegrationsReady) await window.ServoForgeFeatureIntegrationsReady;
 
-    progress?.set(61, "Coordinating sensor and coder turns…");
+    progress?.set(61, "Applying fixed sensor labels…");
     await loadOrientationConstraintPlanner();
 
     progress?.set(70, "Loading workspace controllers…");
