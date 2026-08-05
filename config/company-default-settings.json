@@ -1,8 +1,8 @@
 {
   "format": "labeler-tool-portable-settings",
   "version": 1,
-  "companyDefaultsVersion": 7,
-  "exportedAt": "2026-08-05T00:02:00.000Z",
+  "companyDefaultsVersion": 8,
+  "exportedAt": "2026-08-05T00:18:00.000Z",
   "settings": {
     "themePreset": "graphite",
     "headCount": 45,
