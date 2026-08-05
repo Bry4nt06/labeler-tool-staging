@@ -24,7 +24,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "optimizer-post-wipe-coverage-v20";
+  const build = "optimizer-wipe-hold-classification-v21";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
