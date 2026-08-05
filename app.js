@@ -7,8 +7,8 @@
     return new Promise((resolve, reject) => {
       const expected = new URL(`./${path}`, window.location.href).pathname;
       const existing = [...document.scripts].find((script) => {
-        try { return new URL(script.src, window.location.href).pathname === expected; }
-        catch { return false; }
+        try { return new URL(script.src, window.location.href).pathname === expected;
+        } catch { return false; }
       });
       if (existing) {
         if (existing.dataset.loaded === "true") resolve();
@@ -36,11 +36,13 @@
     await loadScript("app/global-machine-parameter-defaults-integration.js", version);
     await loadScript("drivers/profile/orientation-constraint-planner-driver.js", version);
     await loadScript("drivers/profile/sensor-target-policy-driver.js", version);
+    await loadScript("drivers/profile/sensor-station-label-driver.js", version);
     await loadScript("app/orientation-constraint-target-service.js", version);
     await loadScript("app/orientation-constraint-program-planner.js", version);
     await loadScript("app/orientation-constraint-planner-integration.js", version);
     await loadScript("app/sensor-orientation-default-map-fix-integration.js", version);
     await loadScript("app/standard-45h-wipe-down-default-integration.js", version);
+    await loadScript("app/sensor-station-label-inheritance-integration.js", version);
     const ready = window.ServoForgeOrientationConstraintPlannerReady;
     if (ready && typeof ready.then === "function") {
       await Promise.race([
