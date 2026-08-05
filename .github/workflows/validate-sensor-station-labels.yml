@@ -8,6 +8,7 @@ on:
       - app/map-object-orientation-controls-integration.js
       - app/orientation-constraint-target-service.js
       - app/sensor-editor-focus-guard-integration.js
+      - app/sensor-field-of-view-integration.js
       - app/sensor-post-inspection-release-integration.js
       - app/sensor-station-label-inheritance-integration.js
       - app/sensor-editor-compact-interaction-integration.js
@@ -16,6 +17,7 @@ on:
       - tests/sensor-station-label-driver.test.js
       - tests/sensor-aim-geometry.test.js
       - tests/sensor-editor-focus-guard.test.js
+      - tests/sensor-field-of-view.test.js
       - tests/sensor-post-inspection-release.test.js
       - tests/sensor-editor-compact-interaction.test.js
       - .github/workflows/validate-sensor-station-labels.yml
@@ -37,6 +39,7 @@ jobs:
           node --check app/map-object-orientation-controls-integration.js
           node --check app/orientation-constraint-target-service.js
           node --check app/sensor-editor-focus-guard-integration.js
+          node --check app/sensor-field-of-view-integration.js
           node --check app/sensor-post-inspection-release-integration.js
           node --check app/sensor-station-label-inheritance-integration.js
           node --check app/sensor-editor-compact-interaction-integration.js
@@ -47,5 +50,6 @@ jobs:
           node tests/sensor-station-label-driver.test.js
           node tests/sensor-aim-geometry.test.js
           node tests/sensor-editor-focus-guard.test.js
+          node tests/sensor-field-of-view.test.js
           node tests/sensor-post-inspection-release.test.js
           node tests/sensor-editor-compact-interaction.test.js
