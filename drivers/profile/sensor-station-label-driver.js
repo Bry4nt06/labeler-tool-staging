@@ -18,7 +18,7 @@
     back: Object.freeze([5, 6])
   });
 
-  const AUTO_SENSOR_NAME = /^(?:label sensor|sensor|neck\s*\/\s*body label inspection|body\s*\/\s*neck label inspection|neck label inspection|body label inspection|back label inspection)$/i;
+  const AUTO_SENSOR_NAME = /^(?:label sensor|sensor|neck sensor|body sensor|back sensor|neck\s*\/\s*body sensor|body\s*\/\s*neck sensor|neck\s*\/\s*body label inspection|body\s*\/\s*neck label inspection|neck label inspection|body label inspection|back label inspection)$/i;
 
   function sectionForStation(station) {
     const value = Math.round(Number(station));
@@ -30,7 +30,7 @@
   }
 
   function sensorName(section) {
-    return `${sectionLabel(section)} Label Inspection`;
+    return `${sectionLabel(section)} Sensor`;
   }
 
   function stationPairLabel(section) {
