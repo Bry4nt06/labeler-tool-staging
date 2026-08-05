@@ -3,5 +3,5 @@
   "version": "0.9.10",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING 0.9.10 now uses only APL 6-Aggregate and Standard 45H TopModul Wipe-Down Pads as packaged map defaults, with each map retaining its approved machine settings and protected from deletion."
+  "notes": "STAGING 0.9.10 removes packaged bottle specification rows 1, 4, and 5 and adds a Settings button that downloads and refreshes all brands in the repository catalog while preserving local custom brands."
 }
