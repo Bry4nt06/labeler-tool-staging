@@ -46,12 +46,12 @@
     const explicit = String(item?.orientationLabelSection || "auto").trim().toLowerCase();
     if (explicit === "none") return "none";
     if (["neck", "body", "back"].includes(explicit)) {
-      if (activeApplications[explicit]) return explicit;
-      // Coding targets saved with a three-label recipe must remain usable when
-      // the selected recipe has fewer labels. Retarget only coders; sensors
-      // remain tied to their physical station and should still report a fault.
+      if (activeApplications[explicit] !== false) return explicit;
+      // A physical label sensor has no inspection duty when its assigned label
+      // is absent from the selected brand. Ignore it without creating a turn,
+      // hold, or validation issue. Coders still retarget to the active label.
       if (item?.kind === "coding") return activeFallback(activeApplications);
-      return explicit;
+      return "none";
     }
     if (item?.kind === "sensor") {
       const station = Number(item?.station);
@@ -60,7 +60,12 @@
         || (typeof fallbackStationSection === "function" ? fallbackStationSection(station) : "")
         || ""
       ).toLowerCase();
-      if (VALID_SECTIONS.includes(inferred)) return inferred;
+      if (VALID_SECTIONS.includes(inferred)) {
+        if (["neck", "body", "back"].includes(inferred) && activeApplications[inferred] === false) {
+          return "none";
+        }
+        return inferred;
+      }
     }
     return activeFallback(activeApplications);
   }
