@@ -1,0 +1,32 @@
+name: Validate station-pair sensors
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - app.js
+      - app/map-object-orientation-controls-integration.js
+      - app/sensor-station-label-inheritance-integration.js
+      - drivers/profile/sensor-station-label-driver.js
+      - tests/sensor-station-label-driver.test.js
+      - .github/workflows/validate-sensor-station-labels.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: |
+          node --check app.js
+          node --check app/map-object-orientation-controls-integration.js
+          node --check app/sensor-station-label-inheritance-integration.js
+          node --check drivers/profile/sensor-station-label-driver.js
+      - name: Run station-pair regression
+        run: node tests/sensor-station-label-driver.test.js
