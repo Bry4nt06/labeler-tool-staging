@@ -4,7 +4,7 @@
   const MAP_ID = "map-45h-topmodul-3-label-apl-wipe-down-pads";
   const MAP_NAME = "Standard 45H TopModul Wipe-Down Pads";
   const SOURCE = "./config/default-programs/map-45h-topmodul-3-label-apl-wipe-down-pads.json";
-  const CATALOG_VERSION = 6;
+  const CATALOG_VERSION = 8;
   const RETRY_MS = 50;
   let installed = false;
   let replacing = null;
@@ -80,7 +80,7 @@
   function wrapCompanyDefaults() {
     const service = global.LabelerCompanyDefaultsService;
     if (!service?.reconcile) return false;
-    if (service.standard45HWipeDownDefaultV6) return true;
+    if (service.standard45HWipeDownDefaultV8) return true;
     const baseReconcile = service.reconcile.bind(service);
     global.LabelerCompanyDefaultsService = Object.freeze({
       ...service,
@@ -95,7 +95,7 @@
           companyDefaultsVersion: Math.max(Number(result?.version || 0), CATALOG_VERSION)
         };
       },
-      standard45HWipeDownDefaultV6: true
+      standard45HWipeDownDefaultV8: true
     });
     return true;
   }
