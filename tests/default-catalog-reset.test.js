@@ -61,7 +61,9 @@ const catalogSource = read("app/company-default-map-catalog-integration.js");
 assert.doesNotThrow(() => new vm.Script(catalogSource));
 assert.match(catalogSource, /map-apl-default/);
 assert.match(catalogSource, /map-45h-topmodul-3-label-apl-wipe-down-pads/);
-assert.match(catalogSource, /companyDefaultProgram !== true/);
+assert.match(catalogSource, /map-blank-apl/);
+assert.match(catalogSource, /map-l85-workbook-reference-3-label-apl/);
+assert.match(catalogSource, /isRetiredPackagedMap/);
 assert.match(catalogSource, /protectedDefaultMap: true/);
 
 const legacyWorkbookSource = read("app/workbook-reference-map-library-integration.js");
