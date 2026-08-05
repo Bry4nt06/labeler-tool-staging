@@ -8,6 +8,16 @@
     "map-apl-default",
     "map-45h-topmodul-3-label-apl-wipe-down-pads"
   ]);
+  const LEGACY_PACKAGED_MAP_IDS = Object.freeze([
+    "map-blank-apl",
+    "map-l85-workbook-reference-3-label-apl",
+    "machine-map-1784426568359-9375",
+    "machine-map-1784427388958-9702",
+    "machine-map-1784477554290-6537",
+    "machine-map-1785590537632-2751",
+    "machine-map-1785604940794-6949",
+    "machine-map-1785604972525-2064"
+  ]);
   const key = (value) => String(value ?? "").trim().toLowerCase();
   const clone = (value) => value == null ? value : JSON.parse(JSON.stringify(value));
   const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
@@ -25,6 +35,13 @@
       }));
   }
 
+  function isRetiredPackagedMap(map) {
+    const id = key(map?.id);
+    return map?.companyDefaultProgram === true
+      || map?.protectedDefaultMap === true
+      || LEGACY_PACKAGED_MAP_IDS.some((legacyId) => key(legacyId) === id);
+  }
+
   async function enforce({ persist = true, render = true } = {}) {
     const service = global.LabelerCompanyDefaultsService;
     if (!service?.loadCatalog || !global.state) {
@@ -40,7 +57,7 @@
     const reserved = new Set(DEFAULT_MAP_IDS.map(key));
     const current = Array.isArray(global.state.mapLibrary) ? global.state.mapLibrary : [];
     const custom = current.filter((map) =>
-      map?.companyDefaultProgram !== true && !reserved.has(key(map?.id))
+      !reserved.has(key(map?.id)) && !isRetiredPackagedMap(map)
     );
     const next = [...official, ...custom];
     const changed = !same(current, next);
@@ -99,7 +116,9 @@
     global.LabelerApprovedDefaultMapCatalog = Object.freeze({
       installed: true,
       DEFAULT_MAP_IDS,
+      LEGACY_PACKAGED_MAP_IDS,
       approvedMaps,
+      isRetiredPackagedMap,
       enforce
     });
     return true;
