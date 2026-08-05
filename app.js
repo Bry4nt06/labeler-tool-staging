@@ -24,7 +24,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "optimizer-wipe-hold-classification-v21";
+  const build = "coder-window-reference-handoff-v21";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -64,6 +64,7 @@
     await loadScript("drivers/profile/sensor-post-inspection-release-driver.js", version);
     await loadScript("app/orientation-constraint-target-service.js", version);
     await loadScript("app/orientation-constraint-program-planner.js", version);
+    await loadScript("app/coder-window-reference-handoff-integration.js", version);
     await loadScript("app/sensor-editor-focus-guard-integration.js", version);
 
     try {
