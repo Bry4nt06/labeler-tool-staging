@@ -24,7 +24,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "repository-brands-v19";
+  const build = "optimizer-post-wipe-coverage-v20";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -77,6 +77,7 @@
       await loadScript("app/default-bottle-spec-retirement-integration.js", version);
       await loadScript("app/protected-default-map-integration.js", version);
       await loadScript("app/repository-brand-download-integration.js", version);
+      await loadScript("app/optimizer-post-wipe-coverage-fix-integration.js", version);
       await window.LabelerSensorEditorFocusGuard?.waitForScopedObservers?.(2, 2000);
     } finally {
       window.LabelerSensorEditorFocusGuard?.restoreMutationObserver?.();
