@@ -2,7 +2,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "sensor-release-v15";
+  const build = "sensor-release-v16";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
