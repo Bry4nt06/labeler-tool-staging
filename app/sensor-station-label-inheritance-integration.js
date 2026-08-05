@@ -4,12 +4,15 @@
   if (global.LabelerSensorStationLabelInheritance?.installed) return;
 
   const RETRY_MS = 50;
-  const CATALOG_VERSION = 8;
+  const CATALOG_VERSION = 9;
   const DEFAULT_MAP_IDS = new Set([
     "map-l85-workbook-reference-3-label-apl",
     "map-45h-topmodul-3-label-apl-wipe-down-pads"
   ]);
   let installed = false;
+  let observer = null;
+  let enforceTimer = null;
+  let regenerationTimer = null;
 
   const driver = () => global.LabelerDriverRegistry?.resolve("profile.sensorStationLabel")
     || global.LabelerSensorStationLabelDriver
@@ -51,14 +54,14 @@
   }
 
   function normalizeRuntime() {
-    if (!global.state) return false;
+    if (!global.state || !driver()) return false;
     let changed = false;
     (Array.isArray(global.state.mapLibrary) ? global.state.mapLibrary : []).forEach((map) => {
       if (normalizeMap(map)) changed = true;
     });
     if (Array.isArray(global.state.aplMapObjects)) {
       global.state.aplMapObjects.forEach((item) => {
-        if (driver()?.normalizeSensor(item, { rename: true })) changed = true;
+        if (driver().normalizeSensor(item, { rename: true })) changed = true;
       });
     }
     const current = activeMap();
@@ -83,11 +86,12 @@
   function removeSensorLabelSelectors(row) {
     row.querySelectorAll(".map-object-orientation-fields").forEach((node) => node.remove());
     row.querySelectorAll("label").forEach((label) => {
+      if (label.classList.contains("sensor-inherited-label-field")) return;
       const text = String(label.textContent || "").replace(/\s+/g, " ").trim();
       const hasLabelSelector = label.querySelector(
         "[data-station-section], [data-object-orientation-field='orientationLabelSection'], [data-corrected-orientation-field='orientationLabelSection']"
       );
-      if (hasLabelSelector || /^(?:Label use|Target label|Inspection label|Station application)\b/i.test(text)) {
+      if (hasLabelSelector || /^(?:Label use|Target label|Inspection label|Station application|Coding label)\b/i.test(text)) {
         label.remove();
       }
     });
@@ -97,126 +101,141 @@
     const checkbox = row.querySelector('[data-builder-field="servoAssist"]');
     const label = checkbox?.closest("label");
     if (!label) return;
-    const textNode = [...label.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
-    if (textNode) textNode.textContent = " Sensor enabled";
+    const textNode = [...label.childNodes].find((node) => node.nodeType === 3 && String(node.textContent || "").trim());
+    if (textNode && textNode.textContent !== " Sensor enabled") textNode.textContent = " Sensor enabled";
     const small = label.querySelector("small");
     const section = driver().sectionForStation(item.station);
-    if (small) small.textContent = `When enabled, ServoForge orients the bottle to meet the required view of the ${driver().sectionLabel(section).toLowerCase()} label.`;
+    const message = `When enabled, ServoForge orients the bottle to meet the required view of the ${driver().sectionLabel(section).toLowerCase()} label.`;
+    if (small && small.textContent !== message) small.textContent = message;
+  }
+
+  function updateInheritedField(row, item) {
+    const grid = row.querySelector(".builder-row-grid");
+    if (!grid) return;
+    const section = driver().sectionForStation(item.station);
+    const expectedValue = `${driver().sectionLabel(section)} label`;
+    const expectedHelp = `Inherited from ${driver().stationPairLabel(section)}. This sensor only inspects that label.`;
+    let field = grid.querySelector(".sensor-inherited-label-field");
+    if (!field) {
+      field = inheritedLabelField(item);
+      const stationLabel = grid.querySelector('[data-builder-field="station"]')?.closest("label");
+      if (stationLabel?.nextSibling) grid.insertBefore(field, stationLabel.nextSibling);
+      else grid.appendChild(field);
+      return;
+    }
+    const value = field.querySelector(".sensor-inherited-label-value");
+    const help = field.querySelector("small");
+    if (value && value.textContent !== expectedValue) value.textContent = expectedValue;
+    if (help && help.textContent !== expectedHelp) help.textContent = expectedHelp;
   }
 
   function decorateSensorRows() {
     const map = activeMap();
-    if (!map) return;
+    const policy = driver();
+    if (!map || !policy) return false;
+    let changed = false;
     document.querySelectorAll(".wipe-builder-row[data-builder-object-id]").forEach((row) => {
       const item = sensorForRow(row, map);
       if (!item) return;
-      driver().normalizeSensor(item, { rename: true });
+      if (policy.normalizeSensor(item, { rename: true })) changed = true;
       removeSensorLabelSelectors(row);
-      const grid = row.querySelector(".builder-row-grid");
-      const stationLabel = grid?.querySelector('[data-builder-field="station"]')?.closest("label");
-      if (grid && !grid.querySelector(".sensor-inherited-label-field")) {
-        const field = inheritedLabelField(item);
-        if (stationLabel?.nextSibling) grid.insertBefore(field, stationLabel.nextSibling);
-        else grid.appendChild(field);
-      }
+      updateInheritedField(row, item);
       relabelSensorEnabled(row, item);
+
       const status = row.querySelector(".sensor-inline-status span");
-      const section = driver().sectionForStation(item.station);
-      if (status && !status.textContent.includes("label")) {
-        status.textContent = `${status.textContent} • ${driver().sectionLabel(section)} label`;
-      }
+      const section = policy.sectionForStation(item.station);
+      const statusText = status ? String(status.textContent || "").replace(/\s*•\s*(?:Neck|Body|Back) label$/i, "") : "";
+      const expectedStatus = `${statusText} • ${policy.sectionLabel(section)} label`;
+      if (status && status.textContent !== expectedStatus) status.textContent = expectedStatus;
+
       const title = row.querySelector("summary strong");
       const nameInput = row.querySelector('[data-builder-field="name"]');
-      if (title) title.textContent = item.name;
+      if (title && title.textContent !== item.name) title.textContent = item.name;
       if (nameInput && nameInput.value !== item.name) nameInput.value = item.name;
     });
+    return changed;
   }
 
-  function wrapLoadSavedSettings() {
-    const base = global.loadSavedSettings;
+  function scheduleRegeneration() {
+    if (regenerationTimer) return;
+    regenerationTimer = global.setTimeout(() => {
+      regenerationTimer = null;
+      try {
+        global.saveCurrentSettings?.();
+        if (global.state?.selectedBrand) global.applyGeneratedServoProfile?.();
+        global.renderValidation?.();
+      } catch (error) {
+        console.error("Unable to apply station-pair sensor labels.", error);
+      }
+    }, 0);
+  }
+
+  function enforceSensorPolicy() {
+    enforceTimer = null;
+    const changed = normalizeRuntime();
+    const rowChanged = decorateSensorRows();
+    if (changed || rowChanged) scheduleRegeneration();
+    return changed || rowChanged;
+  }
+
+  function enforceSoon() {
+    if (enforceTimer) return;
+    enforceTimer = global.setTimeout(enforceSensorPolicy, 0);
+  }
+
+  function installObserver() {
+    if (observer || typeof MutationObserver !== "function" || !document.documentElement) return;
+    observer = new MutationObserver((mutations) => {
+      if (mutations.some((mutation) => mutation.type === "childList" && mutation.addedNodes.length)) enforceSoon();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  function wrapFunction(name, marker, after) {
+    const base = global[name];
     if (typeof base !== "function") return false;
-    if (base.sensorStationLabelInheritance) return true;
-    const wrapped = function loadSavedSettingsWithSensorInheritance(...args) {
+    if (base[marker]) return true;
+    const wrapped = function sensorStationLabelWrappedFunction(...args) {
       const result = base.apply(this, args);
-      normalizeRuntime();
+      after(args, result);
+      enforceSoon();
       return result;
     };
-    wrapped.sensorStationLabelInheritance = true;
-    wrapped.previousLoadSavedSettings = base;
-    global.loadSavedSettings = wrapped;
+    wrapped[marker] = true;
+    wrapped.previousFunction = base;
+    global[name] = wrapped;
     return true;
   }
 
-  function wrapLoadMachineMap() {
-    const base = global.loadMachineMapIntoRuntime;
-    if (typeof base !== "function") return false;
-    if (base.sensorStationLabelInheritance) return true;
-    const wrapped = function loadMachineMapWithSensorInheritance(map, ...args) {
-      normalizeMap(map);
-      const result = base.call(this, map, ...args);
-      normalizeRuntime();
-      return result;
-    };
-    wrapped.sensorStationLabelInheritance = true;
-    wrapped.previousLoadMachineMapIntoRuntime = base;
-    global.loadMachineMapIntoRuntime = wrapped;
-    return true;
-  }
-
-  function wrapBuilderRefresh() {
-    const base = global.refreshAfterBuilderEdit;
-    if (typeof base !== "function") return false;
-    if (base.sensorStationLabelInheritance) return true;
-    const wrapped = function refreshAfterBuilderEditWithSensorInheritance(...args) {
-      normalizeMap(editableMap());
-      normalizeRuntime();
-      return base.apply(this, args);
-    };
-    wrapped.sensorStationLabelInheritance = true;
-    wrapped.previousRefreshAfterBuilderEdit = base;
-    global.refreshAfterBuilderEdit = wrapped;
-    return true;
-  }
-
-  function wrapBuilderRenderer() {
-    const base = global.renderWipeDownBuilder;
-    if (typeof base !== "function") return false;
-    if (base.sensorStationLabelInheritance) return true;
-    const wrapped = function renderWipeDownBuilderWithSensorInheritance(...args) {
-      normalizeMap(editableMap());
-      normalizeRuntime();
-      const result = base.apply(this, args);
+  function installHooks() {
+    wrapFunction("loadSavedSettings", "sensorStationLabelInheritanceV9", () => normalizeRuntime());
+    wrapFunction("loadMachineMapIntoRuntime", "sensorStationLabelInheritanceV9", ([map]) => normalizeMap(map));
+    wrapFunction("refreshAfterBuilderEdit", "sensorStationLabelInheritanceV9", () => normalizeMap(editableMap()));
+    wrapFunction("renderWipeDownBuilder", "sensorStationLabelInheritanceV9", () => {
       normalizeMap(editableMap());
       decorateSensorRows();
-      return result;
-    };
-    wrapped.sensorStationLabelInheritance = true;
-    wrapped.previousRenderWipeDownBuilder = base;
-    global.renderWipeDownBuilder = wrapped;
-    return true;
-  }
-
-  function wrapCompanyDefaults() {
-    const service = global.LabelerCompanyDefaultsService;
-    if (!service?.reconcile) return false;
-    if (service.sensorStationLabelInheritanceV8) return true;
-    const baseReconcile = service.reconcile.bind(service);
-    global.LabelerCompanyDefaultsService = Object.freeze({
-      ...service,
-      async reconcile(...args) {
-        const result = await baseReconcile(...args);
-        const changed = normalizeRuntime();
-        if (changed && typeof global.saveCurrentSettings === "function") global.saveCurrentSettings();
-        return {
-          ...result,
-          changed: Boolean(result?.changed || changed),
-          sensorStationLabelsNormalized: changed,
-          companyDefaultsVersion: Math.max(Number(result?.version || 0), CATALOG_VERSION)
-        };
-      },
-      sensorStationLabelInheritanceV8: true
     });
-    return true;
+
+    const service = global.LabelerCompanyDefaultsService;
+    if (service?.reconcile && !service.sensorStationLabelInheritanceV9) {
+      const baseReconcile = service.reconcile.bind(service);
+      global.LabelerCompanyDefaultsService = Object.freeze({
+        ...service,
+        async reconcile(...args) {
+          const result = await baseReconcile(...args);
+          const changed = normalizeRuntime();
+          if (changed) global.saveCurrentSettings?.();
+          enforceSoon();
+          return {
+            ...result,
+            changed: Boolean(result?.changed || changed),
+            sensorStationLabelsNormalized: changed,
+            companyDefaultsVersion: Math.max(Number(result?.version || 0), CATALOG_VERSION)
+          };
+        },
+        sensorStationLabelInheritanceV9: true
+      });
+    }
   }
 
   function installStyles() {
@@ -231,40 +250,30 @@
   }
 
   function install() {
-    if (installed) return true;
-    if (!global.state
-      || !driver()
-      || typeof global.renderWipeDownBuilder !== "function"
-      || typeof global.refreshAfterBuilderEdit !== "function"
-      || typeof global.loadSavedSettings !== "function"
-      || typeof global.loadMachineMapIntoRuntime !== "function") return false;
-
+    installObserver();
     installStyles();
-    wrapLoadSavedSettings();
-    wrapLoadMachineMap();
-    wrapBuilderRefresh();
-    wrapBuilderRenderer();
-    wrapCompanyDefaults();
-    const changed = normalizeRuntime();
-    installed = true;
+    installHooks();
+    if (installed) {
+      enforceSoon();
+      return true;
+    }
+    if (!driver() || !global.state) return false;
 
+    installed = true;
     global.LabelerSensorStationLabelInheritance = Object.freeze({
       installed: true,
       CATALOG_VERSION,
       normalizeMap,
       normalizeRuntime,
-      decorateSensorRows
+      decorateSensorRows,
+      enforceSensorPolicy
     });
 
-    if (changed && typeof global.saveCurrentSettings === "function") global.saveCurrentSettings();
-    global.setTimeout(() => {
-      wrapCompanyDefaults();
-      normalizeRuntime();
-      if (typeof global.renderWipeDownBuilder === "function") global.renderWipeDownBuilder();
-      if (typeof global.applyGeneratedServoProfile === "function" && global.state?.selectedBrand) {
-        global.applyGeneratedServoProfile();
-      }
-    }, 0);
+    enforceSensorPolicy();
+    [50, 250, 750, 1500].forEach((delay) => global.setTimeout(() => {
+      installHooks();
+      enforceSensorPolicy();
+    }, delay));
     return true;
   }
 
