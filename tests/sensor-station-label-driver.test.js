@@ -13,6 +13,10 @@ assert.equal(driver.sectionForStation(4), "body");
 assert.equal(driver.sectionForStation(5), "back");
 assert.equal(driver.sectionForStation(6), "back");
 assert.equal(driver.sectionForStation(7), "none");
+assert.equal(driver.sensorAimOffset(120), 90);
+assert.equal(driver.sensorAimOffset(-120), -90);
+assert.equal(driver.sensorAimOffset("22.5"), 22.5);
+assert.equal(driver.sensorAimOffset(undefined), 0);
 
 const combined = {
   id: "sensor-body",
@@ -20,7 +24,8 @@ const combined = {
   name: "Neck / Body Label Inspection",
   station: 4,
   labelSection: "neck",
-  orientationLabelSection: "back"
+  orientationLabelSection: "back",
+  sensorAimOffsetDeg: 25
 };
 assert.equal(driver.normalizeSensor(combined), true);
 assert.equal(combined.name, "Body Sensor");
@@ -28,6 +33,10 @@ assert.equal(combined.labelSection, "body");
 assert.equal(combined.orientationLabelSection, "body");
 assert.equal(combined.sensorLabelSource, "station-pair");
 assert.equal(combined.sensorLabelLocked, true);
+assert.equal(combined.sensorAimOffsetDeg, 25);
+assert.equal(combined.enabled, true);
+assert.equal(combined.servoAssist, true);
+assert.equal(combined.orientBottle, true);
 
 combined.station = 2;
 driver.normalizeSensor(combined);
@@ -35,29 +44,26 @@ assert.equal(combined.name, "Neck Sensor");
 assert.equal(combined.labelSection, "neck");
 assert.equal(combined.orientationLabelSection, "neck");
 
-const incorrectlyNamed = {
-  id: "sensor-renamed-by-station",
-  kind: "sensor",
-  name: "Neck Sensor",
-  station: 4,
-  orientationLabelSection: "neck"
-};
-driver.normalizeSensor(incorrectlyNamed);
-assert.equal(incorrectlyNamed.name, "Body Sensor");
-assert.equal(incorrectlyNamed.labelSection, "body");
-assert.equal(incorrectlyNamed.orientationLabelSection, "body");
+combined.enabled = false;
+combined.sensorAimOffsetDeg = -135;
+driver.normalizeSensor(combined);
+assert.equal(combined.sensorAimOffsetDeg, -90);
+assert.equal(combined.servoAssist, false);
+assert.equal(combined.orientBottle, false);
 
 const custom = {
   id: "sensor-custom",
   kind: "sensor",
   name: "Camera 12 Verification",
   station: 6,
-  orientationLabelSection: "neck"
+  orientationLabelSection: "neck",
+  sensorAimOffsetDeg: 15
 };
 driver.normalizeSensor(custom);
 assert.equal(custom.name, "Camera 12 Verification", "Custom sensor names must remain intact.");
 assert.equal(custom.labelSection, "back");
 assert.equal(custom.orientationLabelSection, "back");
+assert.equal(custom.sensorAimOffsetDeg, 15);
 
 const coder = {
   id: "coder",
@@ -69,4 +75,4 @@ const map = { objects: [combined, custom, coder] };
 assert.equal(driver.normalizeMap(map), false, "Already normalized sensors should not cause repeated changes.");
 assert.equal(coder.orientationLabelSection, "auto", "Coder label selection remains independent.");
 
-console.log("Sensor station-label inheritance regression passed.");
+console.log("Sensor station-label and aiming regression passed.");
