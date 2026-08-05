@@ -8,9 +8,11 @@ on:
       - app/map-object-orientation-controls-integration.js
       - app/orientation-constraint-target-service.js
       - app/sensor-station-label-inheritance-integration.js
+      - app/sensor-editor-compact-interaction-integration.js
       - drivers/profile/sensor-station-label-driver.js
       - tests/sensor-station-label-driver.test.js
       - tests/sensor-aim-geometry.test.js
+      - tests/sensor-editor-compact-interaction.test.js
       - .github/workflows/validate-sensor-station-labels.yml
 
 permissions:
@@ -30,8 +32,10 @@ jobs:
           node --check app/map-object-orientation-controls-integration.js
           node --check app/orientation-constraint-target-service.js
           node --check app/sensor-station-label-inheritance-integration.js
+          node --check app/sensor-editor-compact-interaction-integration.js
           node --check drivers/profile/sensor-station-label-driver.js
       - name: Run sensor regressions
         run: |
           node tests/sensor-station-label-driver.test.js
           node tests/sensor-aim-geometry.test.js
+          node tests/sensor-editor-compact-interaction.test.js
