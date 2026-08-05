@@ -25,19 +25,8 @@ jobs:
 
           path = Path('app/sensor-station-label-inheritance-integration.js')
           text = path.read_text(encoding='utf-8')
-          old = '''    observer = new MutationObserver((mutations) => {
-      if (mutations.some((mutation) => mutation.type === "childList" && mutation.addedNodes.length)) enforceSoon();
-    });'''
-          new = '''    observer = new MutationObserver((mutations) => {
-      const meaningfulAddition = mutations.some((mutation) => {
-        if (mutation.type !== "childList" || !mutation.addedNodes.length) return false;
-        return [...mutation.addedNodes].some((node) => !(
-          node instanceof Element
-          && node.matches?.("[data-sensor-aim-indicator]")
-        ));
-      });
-      if (meaningfulAddition) enforceSoon();
-    });'''
+          old = "    observer = new MutationObserver((mutations) => {\n      if (mutations.some((mutation) => mutation.type === \"childList\" && mutation.addedNodes.length)) enforceSoon();\n    });"
+          new = "    observer = new MutationObserver((mutations) => {\n      const meaningfulAddition = mutations.some((mutation) => {\n        if (mutation.type !== \"childList\" || !mutation.addedNodes.length) return false;\n        return [...mutation.addedNodes].some((node) => !(\n          node instanceof Element\n          && node.matches?.(\"[data-sensor-aim-indicator]\")\n        ));\n      });\n      if (meaningfulAddition) enforceSoon();\n    });"
           if old not in text:
               raise SystemExit('Expected sensor observer block was not found.')
           path.write_text(text.replace(old, new, 1), encoding='utf-8')
