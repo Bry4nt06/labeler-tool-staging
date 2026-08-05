@@ -24,7 +24,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "workspace-defaults-v14";
+  const build = "sensor-field-of-view-v15";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -80,6 +80,7 @@
       window.LabelerSensorEditorFocusGuard?.restoreMutationObserver?.();
     }
 
+    await loadScript("app/sensor-field-of-view-integration.js", version);
     await loadScript("app/sensor-editor-compact-interaction-integration.js", version);
     const ready = window.ServoForgeOrientationConstraintPlannerReady;
     if (ready && typeof ready.then === "function") {
