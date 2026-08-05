@@ -43,7 +43,7 @@ assert.match(
 );
 assert.match(
   startup,
-  /sensor-(?:editor-v14|release-v15)/,
+  /sensor-(?:editor-v14|release-v1[5-9])/,
   "the focus guard and later sensor policies must use a cache-busting sensor build id"
 );
 
