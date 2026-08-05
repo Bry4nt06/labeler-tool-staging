@@ -2,7 +2,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "sensor-editor-v13";
+  const build = "sensor-editor-v14";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -41,10 +41,18 @@
     await loadScript("drivers/profile/sensor-station-label-driver.js", version);
     await loadScript("app/orientation-constraint-target-service.js", version);
     await loadScript("app/orientation-constraint-program-planner.js", version);
-    await loadScript("app/orientation-constraint-planner-integration.js", version);
-    await loadScript("app/sensor-orientation-default-map-fix-integration.js", version);
-    await loadScript("app/standard-45h-wipe-down-default-integration.js", version);
-    await loadScript("app/sensor-station-label-inheritance-integration.js", version);
+    await loadScript("app/sensor-editor-focus-guard-integration.js", version);
+
+    try {
+      await loadScript("app/orientation-constraint-planner-integration.js", version);
+      await loadScript("app/sensor-orientation-default-map-fix-integration.js", version);
+      await loadScript("app/standard-45h-wipe-down-default-integration.js", version);
+      await loadScript("app/sensor-station-label-inheritance-integration.js", version);
+      await window.LabelerSensorEditorFocusGuard?.waitForScopedObservers?.(2, 2000);
+    } finally {
+      window.LabelerSensorEditorFocusGuard?.restoreMutationObserver?.();
+    }
+
     await loadScript("app/sensor-editor-compact-interaction-integration.js", version);
     const ready = window.ServoForgeOrientationConstraintPlannerReady;
     if (ready && typeof ready.then === "function") {
