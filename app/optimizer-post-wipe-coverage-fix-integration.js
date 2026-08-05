@@ -1,7 +1,7 @@
 "use strict";
 
 (function installPostWipeCoveragePolicy(global) {
-  if (global.LabelerPostWipeCoveragePolicy?.installed) return;
+  if (global.LabelerPostWipeCoveragePolicy?.version >= 2) return;
 
   const RETRY_MS = 50;
   const EPSILON = 0.001;
@@ -64,11 +64,7 @@
   function isPostWipeOrientationHandoff(diagnostic, rows, options = {}) {
     if (diagnostic?.code !== "optimizer-wipe-contact") return false;
     const row = rowForDiagnostic(rows, diagnostic);
-    if (!row || Number(row.cmd) !== 7) return false;
-
-    const action = key(row.action || diagnostic.message);
-    const stage = key(row.stage || row.motionStage || row.brushStage);
-    if (!/wipe\s+hold/.test(action) || !/(?:^|-)complete$|wipe-hold/.test(stage)) return false;
+    if (!row || !/wipe\s+hold/.test(key(row.action || diagnostic.message))) return false;
 
     const source = Array.isArray(rows) ? rows : [];
     const index = source.indexOf(row);
@@ -76,8 +72,9 @@
     const frameEnd = number(source[index + 1]?.tableAngle);
     if (frameStart === null || frameEnd === null || frameEnd <= frameStart + EPSILON) return false;
 
-    const objects = matchingWipeObjects(row, diagnostic, options);
-    const ranges = objects.map((item) => alignedRange(item, frameStart, frameEnd)).filter(Boolean);
+    const ranges = matchingWipeObjects(row, diagnostic, options)
+      .map((item) => alignedRange(item, frameStart, frameEnd))
+      .filter(Boolean);
     if (!ranges.length) return false;
 
     const contactEnd = Math.max(...ranges.map((range) => range.end));
@@ -89,9 +86,7 @@
     const diagnostics = (Array.isArray(result?.diagnostics) ? result.diagnostics : [])
       .filter((diagnostic) => !isPostWipeOrientationHandoff(diagnostic, sourceRows, options));
     result.diagnostics = diagnostics;
-    if (typeof driver?.calculateMetrics === "function") {
-      result.currentMetrics = driver.calculateMetrics(sourceRows || [], options, diagnostics);
-    }
+    if (typeof driver?.calculateMetrics === "function") result.currentMetrics = driver.calculateMetrics(sourceRows || [], options, diagnostics);
     result.status = diagnostics.some((item) => item.level === "bad")
       ? "ACTION"
       : diagnostics.some((item) => item.level === "warn")
@@ -102,21 +97,20 @@
 
   function install() {
     const driver = global.LabelerProgramOptimizerDriver;
-    if (!driver?.analyze || driver.postWipeCoveragePolicyV1) return Boolean(driver?.postWipeCoveragePolicyV1);
+    if (!driver?.analyze || driver.postWipeCoveragePolicyV2) return Boolean(driver?.postWipeCoveragePolicyV2);
     if (!/analyzeWithMapAwareCoverage/.test(String(driver.analyze))) return false;
 
     const baseAnalyze = driver.analyze.bind(driver);
-    const wrappedAnalyze = function analyzeWithoutPostWipeCoverageFailure(rows, options = {}) {
-      return filterDiagnostics(baseAnalyze(rows, options), rows, options, driver);
-    };
-
     global.LabelerProgramOptimizerDriver = Object.freeze({
       ...driver,
-      analyze: wrappedAnalyze,
-      postWipeCoveragePolicyV1: true
+      analyze(rows, options = {}) {
+        return filterDiagnostics(baseAnalyze(rows, options), rows, options, driver);
+      },
+      postWipeCoveragePolicyV2: true
     });
     global.LabelerPostWipeCoveragePolicy = Object.freeze({
       installed: true,
+      version: 2,
       objectRange,
       alignedRange,
       rowForDiagnostic,
