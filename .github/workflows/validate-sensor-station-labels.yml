@@ -15,6 +15,7 @@ on:
       - app/sensor-editor-compact-interaction-integration.js
       - drivers/profile/sensor-station-label-driver.js
       - drivers/profile/sensor-post-inspection-release-driver.js
+      - tests/default-hidden-workspace-panels.test.js
       - tests/sensor-station-label-driver.test.js
       - tests/sensor-aim-geometry.test.js
       - tests/sensor-editor-focus-guard.test.js
@@ -47,8 +48,9 @@ jobs:
           node --check app/sensor-editor-compact-interaction-integration.js
           node --check drivers/profile/sensor-station-label-driver.js
           node --check drivers/profile/sensor-post-inspection-release-driver.js
-      - name: Run sensor regressions
+      - name: Run sensor and workspace regressions
         run: |
+          node tests/default-hidden-workspace-panels.test.js
           node tests/sensor-station-label-driver.test.js
           node tests/sensor-aim-geometry.test.js
           node tests/sensor-editor-focus-guard.test.js
