@@ -295,7 +295,14 @@
   function installObserver() {
     if (observer || typeof MutationObserver !== "function" || !document.documentElement) return;
     observer = new MutationObserver((mutations) => {
-      if (mutations.some((mutation) => mutation.type === "childList" && mutation.addedNodes.length)) enforceSoon();
+      const meaningfulAddition = mutations.some((mutation) => {
+        if (mutation.type !== "childList" || !mutation.addedNodes.length) return false;
+        return [...mutation.addedNodes].some((node) => !(
+          node instanceof Element
+          && node.matches?.("[data-sensor-aim-indicator]")
+        ));
+      });
+      if (meaningfulAddition) enforceSoon();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
   }
