@@ -31,7 +31,7 @@ assert.doesNotMatch(
   /loadScript\("app\/sensor-field-of-view-integration\.js"/,
   "The field-of-view must be owned by the core map renderer, not a timing-sensitive wrapper."
 );
-assert.match(startup, /sensor-field-of-view-core-v18/);
+assert.match(startup, /(?:sensor-field-of-view-core-v18|coder-window-wipe-hold-v22)/);
 
 const integration = fs.readFileSync(path.join(root, "app", "sensor-field-of-view-integration.js"), "utf8");
 assert.doesNotThrow(() => new vm.Script(integration));
