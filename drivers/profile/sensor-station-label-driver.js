@@ -18,7 +18,18 @@
     back: Object.freeze([5, 6])
   });
 
+  const SENSOR_AIM_LIMIT_DEG = 90;
   const AUTO_SENSOR_NAME = /^(?:label sensor|sensor|neck sensor|body sensor|back sensor|neck\s*\/\s*body sensor|body\s*\/\s*neck sensor|neck\s*\/\s*body label inspection|body\s*\/\s*neck label inspection|neck label inspection|body label inspection|back label inspection)$/i;
+
+  function finite(value, fallback = 0) {
+    if (value === null || value === undefined || value === "") return fallback;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function sensorAimOffset(value) {
+    return Math.max(-SENSOR_AIM_LIMIT_DEG, Math.min(SENSOR_AIM_LIMIT_DEG, finite(value, 0)));
+  }
 
   function sectionForStation(station) {
     const value = Math.round(Number(station));
@@ -41,6 +52,7 @@
   function normalizeSensor(item, { rename = true } = {}) {
     if (!item || item.kind !== "sensor") return false;
     const section = sectionForStation(item.station);
+    const manuallyEnabled = item.enabled !== false;
     let changed = false;
 
     const assign = (key, value) => {
@@ -54,6 +66,14 @@
     assign("orientationConfigured", true);
     assign("sensorLabelSource", "station-pair");
     assign("sensorLabelLocked", true);
+    assign("sensorAimOffsetDeg", sensorAimOffset(item.sensorAimOffsetDeg));
+
+    // Sensor enabled is the single authority for both inspection and the
+    // shortest servo correction. The legacy servoAssist field is retained for
+    // the profile pipeline, but is no longer exposed as a second checkbox.
+    assign("enabled", manuallyEnabled);
+    assign("servoAssist", manuallyEnabled);
+    assign("orientBottle", manuallyEnabled);
 
     if (rename && section !== "none" && AUTO_SENSOR_NAME.test(String(item.name || "").trim())) {
       assign("name", sensorName(section));
@@ -73,6 +93,9 @@
   const api = Object.freeze({
     SECTION_BY_STATION,
     STATIONS_BY_SECTION,
+    SENSOR_AIM_LIMIT_DEG,
+    finite,
+    sensorAimOffset,
     sectionForStation,
     sectionLabel,
     sensorName,
