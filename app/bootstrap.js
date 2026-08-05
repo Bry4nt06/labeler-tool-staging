@@ -2,7 +2,7 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "defaults-sensors-coding-20260804-v3";
+  const build = "local-workspace-persistence-20260805-v1";
   window.SERVOFORGE_RELEASE_VERSION = version;
   const banner = document.querySelector(".staging-environment-banner");
   if (banner) banner.textContent = `STAGING ${version} / TEST BUILD — NOT PRODUCTION`;
@@ -14,6 +14,7 @@
     "app/controllers/validation-panel-ui-controller.js",
     "app/controllers/settings-controller.js",
     "app/controllers/settings-reset-controller.js",
+    "app/controllers/local-persistence-controller.js",
     "app/controllers/map-controller.js",
     "app/controllers/specs-controller.js",
     "app/controllers/specification-event-controller.js",
