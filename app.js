@@ -58,7 +58,6 @@
   async function loadOrientationConstraintPlanner() {
     const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
     await loadScript("app/global-machine-parameter-defaults-integration.js", version);
-    await loadScript("app/brand-contact-parameter-defaults-integration.js", version);
     await loadScript("drivers/profile/orientation-constraint-planner-driver.js", version);
     await loadScript("drivers/profile/sensor-target-policy-driver.js", version);
     await loadScript("drivers/profile/sensor-station-label-driver.js", version);
