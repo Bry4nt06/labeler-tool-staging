@@ -2,7 +2,7 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "local-workspace-persistence-20260805-v1";
+  const build = "bottle-type-selection-20260806-v1";
   window.SERVOFORGE_RELEASE_VERSION = version;
   const banner = document.querySelector(".staging-environment-banner");
   if (banner) banner.textContent = `STAGING ${version} / TEST BUILD — NOT PRODUCTION`;
