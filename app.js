@@ -24,7 +24,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "apl-post-wipe-sensor-hold-v23-workspace-visibility-v1";
+  const build = "apl-post-wipe-sensor-hold-v24-workspace-visibility-v1";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
