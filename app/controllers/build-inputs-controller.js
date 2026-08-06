@@ -42,7 +42,13 @@
   }
 
   function selectBottle(value) {
-    commit(() => { state.selectedBottle = value; });
+    const requestedBottleType = String(value ?? "");
+    const selected = state.bottleSpecs.find((row) => String(row?.bottleType ?? "") === requestedBottleType);
+    if (!selected) return false;
+
+    return commit(() => {
+      state.selectedBottle = selected.bottleType;
+    }, { regenerate: true });
   }
 
   function updateField(key, value) {
