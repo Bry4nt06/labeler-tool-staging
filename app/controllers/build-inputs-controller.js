@@ -3,13 +3,17 @@
 (function installBuildInputsController(global) {
   const actions = global.LabelerWorkspaceActionService;
 
+  function hasOption(options, key) {
+    return Object.prototype.hasOwnProperty.call(options, key);
+  }
+
   function commit(mutate, options = {}) {
     return actions.execute({
       mutate,
       syncMap: Boolean(options.syncMap),
       regenerate: Boolean(options.regenerate),
       persist: options.persist !== false,
-      render: options.render || "all"
+      render: hasOption(options, "render") ? options.render : "all"
     });
   }
 
@@ -51,16 +55,19 @@
     }, { regenerate: true });
   }
 
-  function selectBottle(value) {
+  function selectBottle(value, options = {}) {
     const requestedBottleType = bottleKey(value);
     const selected = state.bottleSpecs.find((row) => bottleKey(row?.bottleType) === requestedBottleType);
     if (!selected) return false;
+
+    const commitOptions = { regenerate: true };
+    if (hasOption(options, "render")) commitOptions.render = options.render;
 
     return commit(() => {
       state.selectedBottle = selected.bottleType;
       const label = selectedLabel();
       if (label) label.bottleType = selected.bottleType;
-    }, { regenerate: true });
+    }, commitOptions);
   }
 
   function updateField(key, value) {
