@@ -18,6 +18,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Fetch committed regression files
         shell: bash
@@ -48,6 +49,10 @@ jobs:
           node --check app/label-specification-service.js
           node --check tests/bottle-selection-regeneration.test.js
       - name: Verify browser build marker
-        run: grep -q 'bottle-type-selection-20260806-v2' app/bootstrap.js
+        run: grep -q 'bottle-type-selection-20260806-v3' app/bootstrap.js
+      - name: Verify native menu render deferral
+        run: |
+          grep -q 'scheduleBottleSelectionRender' app/controllers/setup-event-controller-integration.js
+          grep -q 'render: null' app/controllers/setup-event-controller-integration.js
       - name: Run Bottle Type selection regression
         run: node tests/bottle-selection-regeneration.test.js
