@@ -3,5 +3,5 @@
   "version": "0.9.10",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING 0.9.10 defaults Neck, Body, and Back Contact Parameters to 10 degrees for every existing, custom, and repository-downloaded brand while preserving later brand-specific user adjustments."
+  "notes": "STAGING 0.9.10 build v25 defaults Neck, Body, and Back Contact Parameters to 10 degrees for every existing, custom, and repository-downloaded brand while preserving later brand-specific user adjustments."
 }
