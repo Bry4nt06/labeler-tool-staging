@@ -3,5 +3,5 @@
   "version": "0.9.10",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING 0.9.10 removes packaged bottle specification rows 1, 4, and 5 and adds a Settings button that downloads and refreshes all brands in the repository catalog while preserving local custom brands."
+  "notes": "STAGING 0.9.10 inserts a stopped application reference before the two-command Agg 6 back wipe and a stopped post-wipe reference before the map-positioned label sensor setup turn. The sequence is limited to no more than two consecutive CMD 7 wipe corrections."
 }
