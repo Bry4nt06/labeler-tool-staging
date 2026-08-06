@@ -4,7 +4,9 @@ on:
   push:
     branches: [main]
     paths:
+      - "app/bootstrap.js"
       - "app/controllers/build-inputs-controller.js"
+      - "app/controllers/setup-event-controller-integration.js"
       - "app/label-specification-service.js"
       - "tests/bottle-selection-regeneration.test.js"
       - ".github/workflows/validate-bottle-selection.yml"
@@ -24,8 +26,14 @@ jobs:
           base="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}"
           mkdir -p app/controllers tests
           curl --fail --silent --show-error --location \
+            "$base/app/bootstrap.js" \
+            --output app/bootstrap.js
+          curl --fail --silent --show-error --location \
             "$base/app/controllers/build-inputs-controller.js" \
             --output app/controllers/build-inputs-controller.js
+          curl --fail --silent --show-error --location \
+            "$base/app/controllers/setup-event-controller-integration.js" \
+            --output app/controllers/setup-event-controller-integration.js
           curl --fail --silent --show-error --location \
             "$base/app/label-specification-service.js" \
             --output app/label-specification-service.js
@@ -34,8 +42,12 @@ jobs:
             --output tests/bottle-selection-regeneration.test.js
       - name: Check JavaScript syntax
         run: |
+          node --check app/bootstrap.js
           node --check app/controllers/build-inputs-controller.js
+          node --check app/controllers/setup-event-controller-integration.js
           node --check app/label-specification-service.js
           node --check tests/bottle-selection-regeneration.test.js
+      - name: Verify browser build marker
+        run: grep -q 'bottle-type-selection-20260806-v2' app/bootstrap.js
       - name: Run Bottle Type selection regression
         run: node tests/bottle-selection-regeneration.test.js
