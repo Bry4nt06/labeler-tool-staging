@@ -1,0 +1,32 @@
+name: Validate Bottle Type Selection
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/controllers/build-inputs-controller.js"
+      - "app/label-specification-service.js"
+      - "tests/bottle-selection-regeneration.test.js"
+      - ".github/workflows/validate-bottle-selection.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out staging
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check JavaScript syntax
+        run: |
+          node --check app/controllers/build-inputs-controller.js
+          node --check app/label-specification-service.js
+          node --check tests/bottle-selection-regeneration.test.js
+      - name: Run Bottle Type selection regression
+        run: node tests/bottle-selection-regeneration.test.js
