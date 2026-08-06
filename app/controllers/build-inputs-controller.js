@@ -22,6 +22,16 @@
     return { label, bottle, bodyCirc, neckCirc, neckLabelDeg };
   }
 
+  function bottleKey(value) {
+    return String(value ?? "").trim().toLowerCase();
+  }
+
+  function selectedLabel() {
+    return actions.call("selectedLabelSpec")
+      || state.labelSpecs.find((row) => String(row?.brand ?? "") === String(state.selectedBrand ?? ""))
+      || null;
+  }
+
   function selectZone(value) {
     commit(() => {
       state.selectedZone = value;
@@ -42,12 +52,14 @@
   }
 
   function selectBottle(value) {
-    const requestedBottleType = String(value ?? "");
-    const selected = state.bottleSpecs.find((row) => String(row?.bottleType ?? "") === requestedBottleType);
+    const requestedBottleType = bottleKey(value);
+    const selected = state.bottleSpecs.find((row) => bottleKey(row?.bottleType) === requestedBottleType);
     if (!selected) return false;
 
     return commit(() => {
       state.selectedBottle = selected.bottleType;
+      const label = selectedLabel();
+      if (label) label.bottleType = selected.bottleType;
     }, { regenerate: true });
   }
 
