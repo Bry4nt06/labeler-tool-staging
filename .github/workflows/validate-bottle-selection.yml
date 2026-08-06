@@ -17,12 +17,21 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out staging
-        uses: actions/checkout@v4
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+      - name: Fetch committed regression files
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}"
+          mkdir -p app/controllers tests
+          curl --fail --silent --show-error --location \
+            "$base/app/controllers/build-inputs-controller.js" \
+            --output app/controllers/build-inputs-controller.js
+          curl --fail --silent --show-error --location \
+            "$base/app/label-specification-service.js" \
+            --output app/label-specification-service.js
+          curl --fail --silent --show-error --location \
+            "$base/tests/bottle-selection-regeneration.test.js" \
+            --output tests/bottle-selection-regeneration.test.js
       - name: Check JavaScript syntax
         run: |
           node --check app/controllers/build-inputs-controller.js
