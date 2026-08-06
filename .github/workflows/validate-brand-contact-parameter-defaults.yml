@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - app.js
-      - app/brand-contact-parameter-defaults-integration.js
+      - app/global-machine-parameter-defaults-integration.js
       - tests/brand-contact-parameter-defaults.test.js
       - .github/workflows/validate-brand-contact-parameter-defaults.yml
 
@@ -23,7 +23,7 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check app.js
-          node --check app/brand-contact-parameter-defaults-integration.js
+          node --check app/global-machine-parameter-defaults-integration.js
           node --check tests/brand-contact-parameter-defaults.test.js
       - name: Run brand contact defaults regression
         run: node tests/brand-contact-parameter-defaults.test.js
