@@ -6,7 +6,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
-const source = fs.readFileSync(path.join(root, "app", "brand-contact-parameter-defaults-integration.js"), "utf8");
+const source = fs.readFileSync(path.join(root, "app", "global-machine-parameter-defaults-integration.js"), "utf8");
 const startup = fs.readFileSync(path.join(root, "app.js"), "utf8");
 
 assert.doesNotThrow(() => new vm.Script(source));
@@ -16,7 +16,8 @@ assert.match(source, /programNeckContactDeg/);
 assert.match(source, /programBodyContactDeg/);
 assert.match(source, /programBackContactDeg/);
 assert.match(startup, /brand-contact-defaults-10deg-v25/);
-assert.match(startup, /brand-contact-parameter-defaults-integration\.js/);
+assert.doesNotMatch(startup, /brand-contact-parameter-defaults-integration\.js/);
+assert.match(startup, /global-machine-parameter-defaults-integration\.js/);
 
 const inputs = new Map([
   ["programNeckContactDeg", { value: "" }],
