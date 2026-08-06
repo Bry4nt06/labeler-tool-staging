@@ -36,6 +36,8 @@ class FakeElement {
 
 const listeners = new Map();
 const calls = [];
+const scheduledFrames = [];
+const scheduledTimers = [];
 let execution = null;
 const document = {
   addEventListener(type, handler, options) {
@@ -53,6 +55,7 @@ const sandbox = {
     applicationMode: "apl",
     selectedBrand: "Test Brand",
     selectedBottle: "Bottle A",
+    selectedSite: "Site A",
     labelSpecs: [
       { applicationMode: "apl", brand: "Test Brand", bottleType: "Bottle A" }
     ],
@@ -63,14 +66,26 @@ const sandbox = {
     buildInputs: {}
   },
   els: {},
+  requestAnimationFrame(callback) {
+    scheduledFrames.push(callback);
+    return scheduledFrames.length;
+  },
+  setTimeout(callback) {
+    scheduledTimers.push(callback);
+    return scheduledTimers.length;
+  },
+  clearTimeout() {},
   LabelerWorkspaceActionService: {
     execute(options) {
       execution = options;
       const result = options.mutate?.();
       if (options.regenerate) calls.push("regenerate");
       if (options.persist) calls.push("persist");
-      calls.push(`render:${options.render}`);
+      if (options.render) calls.push(`render:${options.render}`);
       return result;
+    },
+    render(targets) {
+      calls.push(`deferred-render:${targets}`);
     },
     call(name, ...args) {
       const handler = sandbox[name];
@@ -109,7 +124,7 @@ assert.strictEqual(
 );
 assert.strictEqual(execution?.regenerate, true, "Bottle Type selection must regenerate the Servo Program.");
 assert.strictEqual(execution?.persist, true, "Bottle Type selection must persist immediately.");
-assert.strictEqual(execution?.render, "all", "Bottle Type selection must rerender the workspace.");
+assert.strictEqual(execution?.render, "all", "Direct Bottle Type selection must rerender the workspace by default.");
 assert.ok(calls.includes("regenerate"));
 assert.ok(calls.includes("persist"));
 assert.ok(calls.includes("render:all"));
@@ -121,9 +136,14 @@ assert.strictEqual(
   "Render preparation must preserve the newly associated Bottle Type."
 );
 
+sandbox.LabelerBuildInputsController.selectSite("Site B");
+assert.strictEqual(execution?.render, null, "An explicit null render target must suppress synchronous workspace replacement.");
+assert.strictEqual(sandbox.state.selectedSite, "Site B");
+
 sandbox.state.selectedBottle = "Bottle A";
 sandbox.state.labelSpecs[0].bottleType = "Bottle A";
 execution = null;
+calls.length = 0;
 vm.runInContext(eventControllerSource, sandbox, { filename: "setup-event-controller-integration.js" });
 
 function dispatchChange(target) {
@@ -138,13 +158,24 @@ function dispatchChange(target) {
   return event;
 }
 
-const changeEvent = dispatchChange(new FakeElement("bottleSelect", "Bottle B "));
+const bottleSelect = new FakeElement("bottleSelect", "Bottle B ");
+const changeEvent = dispatchChange(bottleSelect);
 assert.strictEqual(changeEvent.propagationStopped, true, "The Bottle Type UI event must be owned by the setup controller.");
 assert.strictEqual(sandbox.state.selectedBottle, "Bottle B ", "The #bottleSelect change event must update application state.");
 assert.strictEqual(sandbox.state.labelSpecs[0].bottleType, "Bottle B ", "The UI change must persist the brand-to-bottle relationship.");
 assert.strictEqual(execution?.regenerate, true);
 assert.strictEqual(execution?.persist, true);
-assert.strictEqual(execution?.render, "all");
+assert.strictEqual(execution?.render, null, "The native select must not be replaced during its own change event.");
+assert.strictEqual(bottleSelect.value, "Bottle B ", "The selected option must remain visible while the native menu closes.");
+assert.ok(!calls.includes("render:all"), "No synchronous full render may run while the native Bottle Type menu is closing.");
+assert.ok(!calls.includes("deferred-render:all"));
+assert.strictEqual(scheduledFrames.length, 1, "The workspace rebuild must wait for the next animation frame.");
+
+scheduledFrames.shift()(0);
+assert.strictEqual(scheduledTimers.length, 1, "The workspace rebuild must be deferred beyond the native menu close frame.");
+assert.ok(!calls.includes("deferred-render:all"));
+scheduledTimers.shift()();
+assert.ok(calls.includes("deferred-render:all"), "The full workspace must rerender after the native menu has closed.");
 
 execution = null;
 const invalidResult = sandbox.LabelerBuildInputsController.selectBottle("Missing Bottle");
@@ -153,4 +184,4 @@ assert.strictEqual(sandbox.state.selectedBottle, "Bottle B ");
 assert.strictEqual(sandbox.state.labelSpecs[0].bottleType, "Bottle B ");
 assert.strictEqual(execution, null, "Rejected values must not persist or rerender.");
 
-console.log("Bottle Type UI selection, regeneration, and brand persistence regression passed.");
+console.log("Bottle Type native selection, regeneration, deferred rendering, and brand persistence regression passed.");
