@@ -24,7 +24,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "brand-contact-defaults-10deg-v25-workspace-visibility-v1";
+  const build = "first-application-zero-datum-v26-workspace-visibility-v1";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -63,6 +63,7 @@
     await loadScript("drivers/profile/sensor-station-label-driver.js", version);
     await loadScript("drivers/profile/sensor-post-inspection-release-driver.js", version);
     await loadScript("app/orientation-constraint-target-service.js", version);
+    await loadScript("app/first-application-zero-datum-integration.js", version);
     await loadScript("app/orientation-constraint-program-planner.js", version);
     await loadScript("app/coder-window-reference-handoff-integration.js", version);
     await loadScript("app/sensor-editor-focus-guard-integration.js", version);
