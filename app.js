@@ -24,7 +24,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "apl-post-wipe-sensor-hold-v24-workspace-visibility-v1";
+  const build = "brand-contact-defaults-10deg-v25-workspace-visibility-v1";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -58,6 +58,7 @@
   async function loadOrientationConstraintPlanner() {
     const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
     await loadScript("app/global-machine-parameter-defaults-integration.js", version);
+    await loadScript("app/brand-contact-parameter-defaults-integration.js", version);
     await loadScript("drivers/profile/orientation-constraint-planner-driver.js", version);
     await loadScript("drivers/profile/sensor-target-policy-driver.js", version);
     await loadScript("drivers/profile/sensor-station-label-driver.js", version);
