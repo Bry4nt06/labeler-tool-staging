@@ -2,9 +2,9 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "startup-dom-binding-recovery-v33-20260807-1306";
-  const buildUpdatedAt = "Aug 7, 2026 1:06 PM ET";
-  // Regression lineage: label-application-reference-v32-20260807-1251 • Aug 7, 2026 12:51 PM ET
+  const build = "wipe-pad-reverse-bevel-v34-20260807-1343";
+  const buildUpdatedAt = "Aug 7, 2026 1:43 PM ET";
+  // Regression lineage: startup-dom-binding-recovery-v33-20260807-1306 • label-application-reference-v32-20260807-1251
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
@@ -49,6 +49,7 @@
     "app/controllers/map-builder-popup-controller.js",
     "app/controllers/setup-event-controller-integration.js",
     "app/application-reference-build-input-integration.js",
+    "app/wipe-pad-bevel-direction-integration.js",
     "app/global-actions.js",
     "app/animation-runtime.js",
     "app/startup-runtime.js"
