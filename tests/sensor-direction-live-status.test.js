@@ -19,7 +19,8 @@ assert.doesNotThrow(() => new vm.Script(targetSource));
 assert.doesNotThrow(() => new vm.Script(liveStatusSource));
 assert.doesNotThrow(() => new vm.Script(sensorMapColorSource));
 assert.doesNotThrow(() => new vm.Script(compactEditorSource));
-assert.match(geometrySource, /application plate angle itself is the finished/);
+assert.match(geometrySource, /finished physical label centerline/);
+assert.match(geometrySource, /Application\/tack position and finished label centerline are separate/);
 assert.doesNotMatch(geometrySource, /alignmentPercent/);
 assert.match(targetSource, /function machineDirectionSign/);
 assert.match(targetSource, /visibility solver must not mirror sensor aim a second time/);
@@ -49,11 +50,11 @@ assert.match(compactEditorSource, /else schedulePreviewRegeneration\(160\)/);
 assert.match(compactEditorSource, /background:var\(--panel-hi\)!important/);
 assert.match(compactEditorSource, /sensor-station-inherited-row>summary/);
 assert.match(startupSource, /first-application-zero-datum-v30-physical-sensor-visibility/);
-assert.match(startupSource, /label-centerline-policy-v31/);
+assert.match(startupSource, /label-application-reference-v32/);
 assert.match(startupSource, /sensor-direction-live-status-integration\.js/);
 assert.match(bootstrapSource, /sensor-map-visibility-color-integration\.js/);
-assert.match(bootstrapSource, /sensor-visibility-colors-20260807-1234/);
-assert.match(bootstrapSource, /Aug 7, 2026 12:34 PM ET/);
+assert.match(bootstrapSource, /label-application-reference-v32-20260807-1251/);
+assert.match(bootstrapSource, /Aug 7, 2026 12:51 PM ET/);
 
 const map = {
   applicationMode: "apl",
@@ -150,7 +151,7 @@ assert.ok(svc);
 assert.equal(context.labelSensorMapStatus, svc.labelSensorMapStatus, "Map Builder status must use the shared orientation service.");
 
 let status = svc.labelSensorMapStatus(sensor, context.state.program);
-assert.equal(status.labelCenter, 100, "Body application plate angle must remain the label centerline without a half-width shift.");
+assert.equal(status.labelCenter, 100, "Without the application-reference policy loaded, the target-service fallback receives an already-resolved centerline target.");
 assert.equal(status.sensorAimOffsetDeg, 16);
 assert.equal(status.sensorPhysicalAimOffsetDeg, 16);
 assert.equal(status.viewedPlateAngle, 130);
