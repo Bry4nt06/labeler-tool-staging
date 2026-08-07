@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "sensor-visibility-colors-20260807-1234";
-  const buildUpdatedAt = "Aug 7, 2026 12:34 PM ET";
+  const build = "label-application-reference-v32-20260807-1251";
+  const buildUpdatedAt = "Aug 7, 2026 12:51 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
@@ -46,6 +46,7 @@
     "app/controllers/map-builder-row-controller.js",
     "app/controllers/map-builder-popup-controller.js",
     "app/controllers/setup-event-controller-integration.js",
+    "app/application-reference-build-input-integration.js",
     "app/global-actions.js",
     "app/animation-runtime.js",
     "app/startup-runtime.js"
@@ -55,8 +56,8 @@
     return new Promise((resolve, reject) => {
       const expected = new URL(`./${path}`, window.location.href).pathname;
       const existing = [...document.scripts].find((script) => {
-        try { return new URL(script.src, window.location.href).pathname === expected; }
-        catch { return false; }
+        try { return new URL(script.src, window.location.href).pathname === expected;
+        } catch { return false; }
       });
       if (existing) {
         if (existing.dataset.loaded === "true") resolve();
