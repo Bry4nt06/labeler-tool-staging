@@ -1,0 +1,209 @@
+name: Apply spender plate visual v35
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/apply-spender-plate-visual-v35.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Apply ServoForge map visual and defaults update
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json, re
+          ROOT = Path('.')
+          def read(path): return (ROOT / path).read_text(encoding='utf-8')
+          def write(path, text):
+              p = ROOT / path; p.parent.mkdir(parents=True, exist_ok=True); p.write_text(text, encoding='utf-8')
+          def replace_once(path, old, new):
+              text = read(path)
+              if old not in text: raise RuntimeError(f'Expected text not found in {path}: {old[:120]!r}')
+              write(path, text.replace(old, new, 1))
+          def regex_once(path, pattern, replacement):
+              text = read(path); updated, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+              if count != 1: raise RuntimeError(f'Expected one regex match in {path}, found {count}: {pattern}')
+              write(path, updated)
+
+          assembly = read('app/assembly-map-renderer.js')
+          assembly = re.sub(r'function machineForwardPadPath\(startAngle, endAngle, centerRadius, widthMapUnits\) \{.*?\n\}\n\nfunction drawSpongeWipeDownPad', '''function machineTrailingPadPath(startAngle, endAngle, centerRadius, widthMapUnits) {
+            const start = num(startAngle, 0);
+            let end = num(endAngle, start);
+            while (end < start) end += 360;
+            const width = Math.max(1, num(widthMapUnits, wipeDownPadWidthMapUnits()));
+            const innerRadius = Math.max(1, centerRadius - width / 2);
+            const outerRadius = Math.max(innerRadius + 0.5, centerRadius + width / 2);
+            const span = Math.max(0.1, end - start);
+            const physicalBevelDeg = (width / Math.max(1, centerRadius)) * 180 / Math.PI * 0.8;
+            const bevelDeg = Math.min(span * 0.38, Math.max(0.75, Math.min(5, physicalBevelDeg)));
+            // Logical angles increase in machine travel direction, so the start
+            // side is trailing. Chamfer it so the bevel faces against travel.
+            const innerTrailingStart = start + bevelDeg;
+            const startOuter = angleToXY(start, outerRadius);
+            const endOuter = angleToXY(end, outerRadius);
+            const startInner = angleToXY(innerTrailingStart, innerRadius);
+            const endInner = angleToXY(end, innerRadius);
+            const largeOuter = span > 180 ? 1 : 0;
+            const innerSpan = Math.max(0.1, end - innerTrailingStart);
+            const largeInner = innerSpan > 180 ? 1 : 0;
+            const sweepOuter = state.direction === "cw" ? 0 : 1;
+            const sweepInner = sweepOuter ? 0 : 1;
+            return [`M ${startOuter.x} ${startOuter.y}`, `A ${outerRadius} ${outerRadius} 0 ${largeOuter} ${sweepOuter} ${endOuter.x} ${endOuter.y}`, `L ${endInner.x} ${endInner.y}`, `A ${innerRadius} ${innerRadius} 0 ${largeInner} ${sweepInner} ${startInner.x} ${startInner.y}`, "Z"].join(" ");
+          }
+
+          function drawSpongeWipeDownPad''', assembly, count=1, flags=re.S)
+          if 'function machineForwardPadPath' in assembly: raise RuntimeError('Primary wipe renderer still contains machineForwardPadPath.')
+          assembly = assembly.replace('const d = machineForwardPadPath(item.start, item.end, centerRadius, widthMapUnits);', 'const d = machineTrailingPadPath(item.start, item.end, centerRadius, widthMapUnits);', 1)
+          assembly = assembly.replace('"data-bevel-facing": "machine-forward"', '"data-bevel-facing": "against-machine-direction"', 1)
+          assembly = assembly.replace('  machineForwardPadPath,\n', '  machineTrailingPadPath,\n', 1)
+          assembly = assembly.replace('  spongeWipePadsV1: true,\n  spongeRollersV1: true', '  spongeWipePadsV1: true,\n  spongeWipePadsV2: true,\n  bevelAgainstMachineDirectionV1: true,\n  spongeRollersV1: true', 1)
+          assembly = re.sub(r'function activeAggregateDefinitions\(\) \{.*?\n\}\n\nconst AGGREGATE_CENTERLINE_MIN_GAP_DEG', '''function activeAggregateDefinitions() {
+            const machineMap = activeMachineMap();
+            if (!machineMap) return [];
+            const enabled = normalizeEnabledSlots(machineMap.enabledAggregates, machineMap.aggregateCount);
+            const angles = normalizeAggregateAngles(machineMap.aggregateAngles, machineMap.applicationMode, machineMap.objects);
+            const spenderAngles = typeof normalizeSpenderPlateAngles === "function" ? normalizeSpenderPlateAngles(machineMap.spenderPlateAngles) : Object.fromEntries(Array.from({ length: 6 }, (_, index) => [String(index + 1), 75]));
+            return enabled.map((isEnabled, index) => isEnabled ? { number: index + 1, angle: num(angles[String(index + 1)], 0), spenderPlateAngleDeg: Math.max(0, Math.min(180, num(spenderAngles[String(index + 1)], 75))) } : null).filter(Boolean);
+          }
+
+          const AGGREGATE_CENTERLINE_MIN_GAP_DEG''', assembly, count=1, flags=re.S)
+          assembly = re.sub(r'function drawIndependentAggregates\(add, layer\) \{.*?\n\}\n\nfunction labelSensorMapStatus', '''function drawAplSpenderAssembly(add, layer, aggregate) {
+            const machineSign = state.direction === "cw" ? 1 : -1;
+            const plateAngleDeg = Math.max(0, Math.min(180, num(aggregate.spenderPlateAngleDeg, 75)));
+            const xy = angleToXY(aggregate.angle, state.radius + state.depths.spender);
+            const rotation = angleToSvgRotation(aggregate.angle) + machineSign * plateAngleDeg;
+            const group = add("g", { transform: `translate(${xy.x} ${xy.y}) rotate(${rotation})`, "data-aggregate-marker": aggregate.number, "data-application-arm": aggregate.number, "data-spender-plate-angle": plateAngleDeg }, layer);
+            add("polygon", { points: "-4,-2.6 20,-3.2 25,-1.5 25,1.5 20,3.2 -4,2.6", fill: "#c5ccd2", stroke: "#69737c", "stroke-width": 1, "stroke-linejoin": "round", "data-spender-plate": aggregate.number }, group);
+            add("line", { x1: -2, y1: -1.4, x2: 21, y2: -1.8, stroke: "#f1f4f6", "stroke-width": 0.7, "stroke-opacity": 0.72, "pointer-events": "none" }, group);
+            add("line", { x1: 21, y1: 0, x2: 47, y2: 0, stroke: "#59636c", "stroke-width": 6, "stroke-linecap": "round", "data-application-arm-member": aggregate.number }, group);
+            add("line", { x1: 23, y1: -1.1, x2: 44, y2: -1.1, stroke: "#aab3bb", "stroke-width": 0.85, "stroke-opacity": 0.65, "pointer-events": "none" }, group);
+            add("circle", { cx: 47, cy: 0, r: 5.2, fill: "#7a848d", stroke: "#c8ced3", "stroke-width": 1.1, "data-application-arm-pivot": aggregate.number }, group);
+            add("circle", { cx: 47, cy: 0, r: 2.1, fill: "#20262b", stroke: "#111519", "stroke-width": 0.7 }, group);
+            add("line", { x1: -4, y1: -2.8, x2: -4, y2: 2.8, stroke: "#ff8a00", "stroke-width": 1.4, "stroke-linecap": "round", "data-spender-contact-edge": aggregate.number }, group);
+            return group;
+          }
+
+          function drawIndependentAggregates(add, layer) {
+            activeAggregateDefinitions().forEach((aggregate) => {
+              if (state.applicationMode !== "cold-glue") { drawAplSpenderAssembly(add, layer, aggregate); return; }
+              const xy = angleToXY(aggregate.angle, state.radius + state.depths.spender);
+              const rotation = angleToSvgRotation(aggregate.angle) + 90;
+              const group = add("g", { transform: `translate(${xy.x} ${xy.y}) rotate(${rotation})`, "data-aggregate-marker": aggregate.number }, layer);
+              add("line", { x1: -9, y1: 0, x2: 9, y2: 0, stroke: "#d71920", "stroke-width": 3, "stroke-linecap": "round" }, group);
+            });
+          }
+
+          function labelSensorMapStatus''', assembly, count=1, flags=re.S)
+          write('app/assembly-map-renderer.js', assembly)
+
+          replace_once('drivers/map/map-schema-driver.js', '  const BLANK_MAP_SEED_VERSION = 1;\n', '  const BLANK_MAP_SEED_VERSION = 1;\n  const DEFAULT_SPENDER_PLATE_ANGLE_DEG = 75;\n')
+          replace_once('drivers/map/map-schema-driver.js', '''  function normalizeStationAngles(value, { defaults = {} } = {}) {
+            return normalizeAngleRecord(value, defaults);
+          }
+          ''', '''  function normalizeStationAngles(value, { defaults = {} } = {}) {
+            return normalizeAngleRecord(value, defaults);
+          }
+
+          function normalizeSpenderPlateAngles(value, defaultAngle = DEFAULT_SPENDER_PLATE_ANGLE_DEG) {
+            const source = value && typeof value === "object" ? value : {};
+            const result = {};
+            for (let slot = 1; slot <= 6; slot += 1) result[String(slot)] = Math.max(0, Math.min(180, finite(source[String(slot)], defaultAngle)));
+            return result;
+          }
+          ''')
+          replace_once('drivers/map/map-schema-driver.js', '''      aggregateAngles: normalizeAggregateAngles(
+                { ...normalizedStationAngles, ...(input.aggregateAngles || {}) },
+                mode,
+                sourceObjects,
+                { aplDefaults: aplAggregateDefaults }
+              ),
+              stationAngles:''', '''      aggregateAngles: normalizeAggregateAngles(
+                { ...normalizedStationAngles, ...(input.aggregateAngles || {}) },
+                mode,
+                sourceObjects,
+                { aplDefaults: aplAggregateDefaults }
+              ),
+              spenderPlateAngles: normalizeSpenderPlateAngles(input.spenderPlateAngles),
+              stationAngles:''')
+          replace_once('drivers/map/map-schema-driver.js', '    BLANK_MAP_SEED_VERSION,\n    VALID_OBJECT_KINDS,', '    BLANK_MAP_SEED_VERSION,\n    DEFAULT_SPENDER_PLATE_ANGLE_DEG,\n    VALID_OBJECT_KINDS,')
+          replace_once('drivers/map/map-schema-driver.js', '    normalizeAggregateAngles,\n    normalizeStationAngles,\n    sortAplMapObjects,', '    normalizeAggregateAngles,\n    normalizeStationAngles,\n    normalizeSpenderPlateAngles,\n    sortAplMapObjects,')
+          replace_once('drivers/map/map-migration-driver.js', '      map.aggregateAngles = normalizeAggregateAngles(map.aggregateAngles, applicationMode, map.objects);\n      Object.assign(map, mapLocationFor(map));', '      map.aggregateAngles = normalizeAggregateAngles(map.aggregateAngles, applicationMode, map.objects);\n      map.spenderPlateAngles = schema.normalizeSpenderPlateAngles(map.spenderPlateAngles);\n      Object.assign(map, mapLocationFor(map));')
+          replace_once('app/map-schema-adapter-integration.js', '''    normalizeStationAngles(value) {
+              return driver.normalizeStationAngles(value, { defaults: aplStationDefaults() });
+            },
+            sortAplMapObjects(objects) {''', '''    normalizeStationAngles(value) {
+              return driver.normalizeStationAngles(value, { defaults: aplStationDefaults() });
+            },
+            normalizeSpenderPlateAngles(value) {
+              return driver.normalizeSpenderPlateAngles(value);
+            },
+            sortAplMapObjects(objects) {''')
+
+          regex_once('app/map-builder-controls.js', r'function renderAggregateAngleEditor\(machineMap\) \{.*?\n\}\n\nfunction renderMachineLayoutControls', '''function renderAggregateAngleEditor(machineMap) {
+            if (!els.aggregateAngleEditor) return;
+            if (els.aggregateAnglesSection) els.aggregateAnglesSection.hidden = false;
+            machineMap.aggregateAngles = normalizeAggregateAngles(machineMap.aggregateAngles, machineMap.applicationMode, machineMap.objects);
+            machineMap.spenderPlateAngles = normalizeSpenderPlateAngles(machineMap.spenderPlateAngles);
+            machineMap.stationAngles = normalizeStationAngles({ ...machineMap.stationAngles, ...machineMap.aggregateAngles });
+            const activeAggregates = activeSlotNumbers(machineMap.enabledAggregates);
+            if (els.aggregateAnglesSummary) els.aggregateAnglesSummary.textContent = `${activeAggregates.length} active aggregate${activeAggregates.length === 1 ? "" : "s"} • click to expand`;
+            els.aggregateAngleEditor.innerHTML = `<div class="builder-row-grid">${activeAggregates.map((aggregate) => `<label>Aggregate ${aggregate} table angle<input data-aggregate-angle="${aggregate}" type="number" step="0.1" value="${fmt(machineMap.aggregateAngles[String(aggregate)], 1)}"></label><label>Spender ${aggregate} plate angle<input data-spender-plate-angle="${aggregate}" type="number" min="0" max="180" step="0.1" value="${fmt(machineMap.spenderPlateAngles[String(aggregate)], 1)}" title="Application arm / spender plate angle. Default 75°."></label>`).join("")}</div>`;
+          }
+
+          function renderMachineLayoutControls''')
+          replace_once('app/controllers/map-builder-layout-controller.js', '  function machineSlotControl(target) {', '  function spenderPlateAngleControl(target) {\n    if (!target?.matches?.("[data-spender-plate-angle]")) return false;\n    return Boolean(typeof els !== "undefined" && els.aggregateAngleEditor?.contains(target));\n  }\n\n  function machineSlotControl(target) {')
+          replace_once('app/controllers/map-builder-layout-controller.js', '  function updateMachineSlot(control) {', '  function updateSpenderPlateAngle(control) {\n    if (!spenderPlateAngleControl(control)) return false;\n    if (["", "-", ".", "-."].includes(String(control.value))) return true;\n    const aggregate = String(control.dataset.spenderPlateAngle || "");\n    const editable = typeof editableMachineMap === "function" ? editableMachineMap() : null;\n    if (!aggregate || !editable) return false;\n    editable.spenderPlateAngles = normalizeSpenderPlateAngles(editable.spenderPlateAngles);\n    editable.spenderPlateAngles[aggregate] = Math.max(0, Math.min(180, num(control.value, editable.spenderPlateAngles[aggregate])));\n    refreshAfterBuilderEdit({ persist: true });\n    return true;\n  }\n\n  function updateMachineSlot(control) {')
+          replace_once('app/controllers/map-builder-layout-controller.js', '    if (!(target instanceof Element) || !updateAggregateAngle(target)) return;\n    consume(event);', '    if (!(target instanceof Element)) return;\n    if (updateAggregateAngle(target) || updateSpenderPlateAngle(target)) consume(event);')
+          replace_once('app/controllers/map-builder-layout-controller.js', '    if (updateMachineSlot(target) || updateAggregateAngle(target)) consume(event);', '    if (updateMachineSlot(target) || updateAggregateAngle(target) || updateSpenderPlateAngle(target)) consume(event);')
+          replace_once('app/controllers/map-builder-layout-controller.js', '    aggregateAngleControl,\n    machineSlotControl,\n    updateAggregateAngle,\n    updateMachineSlot', '    aggregateAngleControl,\n    spenderPlateAngleControl,\n    machineSlotControl,\n    updateAggregateAngle,\n    updateSpenderPlateAngle,\n    updateMachineSlot')
+          replace_once('app/map-builder-controller.js', '  map.aggregateAngles = normalizeAggregateAngles(map.aggregateAngles, map.applicationMode, map.objects);\n  map.stationAngles = normalizeStationAngles({ ...map.stationAngles, ...map.aggregateAngles });', '  map.aggregateAngles = normalizeAggregateAngles(map.aggregateAngles, map.applicationMode, map.objects);\n  map.spenderPlateAngles = normalizeSpenderPlateAngles(map.spenderPlateAngles);\n  map.stationAngles = normalizeStationAngles({ ...map.stationAngles, ...map.aggregateAngles });')
+          replace_once('app/map-builder-controller.js', '  map.aggregateCount = stations;\n  map.stationCount = stations;\n  map.stationSections = {};', '  map.aggregateCount = stations;\n  map.stationCount = stations;\n  map.spenderPlateAngles = normalizeSpenderPlateAngles(map.spenderPlateAngles);\n  map.stationSections = {};')
+
+          defaults = read('app/defaults.js').replace('localStorage.getItem("labelerThemePreset") || "dark-green"', 'localStorage.getItem("labelerThemePreset") || "servoforge"', 1).replace('return "dark-green";', 'return "servoforge";', 1)
+          if 'workspaceView: "direct"' not in defaults: raise RuntimeError('Direct workspace default missing.')
+          write('app/defaults.js', defaults)
+          p = ROOT / 'config/company-default-settings.json'; cfg = json.loads(p.read_text()); cfg['settings']['themePreset'] = 'servoforge'; cfg['settings']['workspaceView'] = 'direct'; p.write_text(json.dumps(cfg, indent=2) + '\n')
+
+          bootstrap = read('app/bootstrap.js'); bootstrap = re.sub(r'const build = "[^"]+";', 'const build = "spender-plate-visual-controls-v35-20260807-1402";', bootstrap, count=1); bootstrap = re.sub(r'const buildUpdatedAt = "[^"]+";', 'const buildUpdatedAt = "Aug 7, 2026 2:02 PM ET";', bootstrap, count=1); bootstrap = bootstrap.replace('    "app/wipe-pad-bevel-direction-integration.js",\n', ''); write('app/bootstrap.js', bootstrap)
+          obsolete = ROOT / 'app/wipe-pad-bevel-direction-integration.js'; obsolete.unlink(missing_ok=True)
+
+          write('tests/wipe-component-visuals.test.js', '''"use strict";\nconst assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),vm=require("node:vm");\nconst root=path.resolve(__dirname,".."),read=r=>fs.readFileSync(path.join(root,r),"utf8");\nconst a=read("app/assembly-map-renderer.js"),m=read("app/mechanical-map-scene-renderer.js"),s=read("app/simulation-map-scene-renderer.js");\nassert.doesNotThrow(()=>new vm.Script(a)); assert.match(a,/WIPE_DOWN_PAD_WIDTH_MM = 22/); assert.match(a,/servoforge-wipe-sponge-pattern/); assert.match(a,/function machineTrailingPadPath/); assert.match(a,/innerTrailingStart = start \\+ bevelDeg/); assert.match(a,/const d = machineTrailingPadPath/); assert.match(a,/against-machine-direction/); assert.doesNotMatch(a,/function machineForwardPadPath/); assert.doesNotMatch(a,/"data-bevel-facing": "machine-forward"/); assert.match(a,/servoforge-roller-sponge-pattern/); assert.match(a,/data-roller-hub/); assert.match(m,/drawSpongeRoller\\(add, equipmentLayer/); assert.match(s,/drawConfiguredAssemblies\\(add, configuredAssemblyLayer\\)/);\nconsole.log("Authoritative sponge wipe-down pad and roller visual regression passed.");\n''')
+          write('tests/spender-plate-visual-controls.test.js', '''"use strict";\nconst assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),vm=require("node:vm");\nconst root=path.resolve(__dirname,".."),read=r=>fs.readFileSync(path.join(root,r),"utf8"),schema=require(path.join(root,"drivers/map/map-schema-driver.js"));\nassert.equal(schema.DEFAULT_SPENDER_PLATE_ANGLE_DEG,75); assert.deepEqual(schema.normalizeSpenderPlateAngles({"2":92.5,"3":-10,"4":220}),{"1":75,"2":92.5,"3":0,"4":180,"5":75,"6":75});\nconst map=schema.createMachineMap({id:"test-map",applicationMode:"apl",aggregateCount:3,stationCount:3,objects:[],restoreDefaultObjects:false}); assert.equal(map.spenderPlateAngles["1"],75); assert.equal(map.spenderPlateAngles["6"],75);\nconst renderer=read("app/assembly-map-renderer.js"),controls=read("app/map-builder-controls.js"),layout=read("app/controllers/map-builder-layout-controller.js"),adapter=read("app/map-schema-adapter-integration.js"),migration=read("drivers/map/map-migration-driver.js"); [renderer,controls,layout,adapter,migration].forEach(x=>assert.doesNotThrow(()=>new vm.Script(x)));\nassert.match(renderer,/function drawAplSpenderAssembly/); assert.match(renderer,/data-application-arm/); assert.match(renderer,/data-spender-plate/); assert.match(renderer,/data-application-arm-pivot/); assert.match(renderer,/machineSign \\* plateAngleDeg/); assert.match(controls,/data-spender-plate-angle/); assert.match(controls,/Default 75°/); assert.match(layout,/function updateSpenderPlateAngle/); assert.match(adapter,/normalizeSpenderPlateAngles/); assert.match(migration,/schema\\.normalizeSpenderPlateAngles/); console.log("Per-spender application arm and plate angle regression passed.");\n''')
+          write('.github/workflows/validate-spender-plate-visual-controls.yml', '''name: Validate spender plate visual controls\non:\n  push:\n    branches: [main]\n    paths: ["app/assembly-map-renderer.js", "app/map-builder-controls.js", "app/map-builder-controller.js", "app/controllers/map-builder-layout-controller.js", "app/map-schema-adapter-integration.js", "drivers/map/map-schema-driver.js", "drivers/map/map-migration-driver.js", "tests/spender-plate-visual-controls.test.js", ".github/workflows/validate-spender-plate-visual-controls.yml"]\n  pull_request:\n    paths: ["app/assembly-map-renderer.js", "app/map-builder-controls.js", "app/map-builder-controller.js", "app/controllers/map-builder-layout-controller.js", "app/map-schema-adapter-integration.js", "drivers/map/map-schema-driver.js", "drivers/map/map-migration-driver.js", "tests/spender-plate-visual-controls.test.js", ".github/workflows/validate-spender-plate-visual-controls.yml"]\npermissions: { contents: read }\njobs:\n  validate:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with: { node-version: 22 }\n      - run: node --check app/assembly-map-renderer.js && node --check app/map-builder-controls.js && node --check app/map-builder-controller.js && node --check app/controllers/map-builder-layout-controller.js && node --check app/map-schema-adapter-integration.js && node --check drivers/map/map-schema-driver.js && node --check drivers/map/map-migration-driver.js && node tests/spender-plate-visual-controls.test.js\n''')
+
+          bt = read('tests/servoforge-brand-theme.test.js'); bt = re.sub(r'assert\\.match\\(bootstrap, /servoforge-brand-polish-[^/]+/\\);','assert.match(bootstrap, /spender-plate-visual-controls-v35-20260807-1402/);',bt); bt = re.sub(r'assert\\.match\\(bootstrap, /Aug 7, 2026 [^/]+/\\);','assert.match(bootstrap, /Aug 7, 2026 2:02 PM ET/);',bt); bt = bt.replace('console.log("ServoForge brand mark and selectable theme regression passed.");','const defaults=read("app/defaults.js"),companyDefaults=JSON.parse(read("config/company-default-settings.json"));\\nassert.match(defaults,/labelerThemePreset"\\\\) \\\\|\\\\| "servoforge"/);\\nassert.match(defaults,/workspaceView: "direct"/);\\nassert.equal(companyDefaults.settings.themePreset,"servoforge");\\nassert.equal(companyDefaults.settings.workspaceView,"direct");\\nconsole.log("ServoForge brand mark, default theme, and Direct view regression passed.");'); write('tests/servoforge-brand-theme.test.js',bt.replace('\\n','\n'))
+          bw=read('.github/workflows/validate-servoforge-brand-theme.yml'); bw=bw.replace('      - "app/bootstrap.js"\n','      - "app/bootstrap.js"\n      - "app/defaults.js"\n      - "config/company-default-settings.json"\n'); write('.github/workflows/validate-servoforge-brand-theme.yml',bw)
+          ww=read('.github/workflows/validate-wipe-component-visuals.yml').replace('      - "app/wipe-pad-bevel-direction-integration.js"\n','').replace('          node --check app/wipe-pad-bevel-direction-integration.js\n',''); write('.github/workflows/validate-wipe-component-visuals.yml',ww)
+          Path('.github/workflows/apply-spender-plate-visual-v35.yml').unlink()
+          PY
+          node --check app/assembly-map-renderer.js
+          node --check drivers/map/map-schema-driver.js
+          node --check drivers/map/map-migration-driver.js
+          node --check app/map-schema-adapter-integration.js
+          node --check app/map-builder-controls.js
+          node --check app/map-builder-controller.js
+          node --check app/controllers/map-builder-layout-controller.js
+          node --check app/bootstrap.js
+          node tests/wipe-component-visuals.test.js
+          node tests/spender-plate-visual-controls.test.js
+          node tests/servoforge-brand-theme.test.js
+          node tests/default-workspace-view.test.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add physical spender plates and authoritative wipe bevel"
+          git push
