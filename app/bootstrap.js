@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "physical-sensor-visibility-20260806-2324";
-  const buildUpdatedAt = "Aug 6, 2026 11:24 PM ET";
+  const build = "physical-sensor-visibility-20260806-2336";
+  const buildUpdatedAt = "Aug 6, 2026 11:36 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
