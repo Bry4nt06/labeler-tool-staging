@@ -9,22 +9,34 @@ const root = path.resolve(__dirname, "..");
 const geometrySource = fs.readFileSync(path.join(root, "app", "label-sensor-geometry-service.js"), "utf8");
 const targetSource = fs.readFileSync(path.join(root, "app", "orientation-constraint-target-service.js"), "utf8");
 const liveStatusSource = fs.readFileSync(path.join(root, "app", "sensor-direction-live-status-integration.js"), "utf8");
+const compactEditorSource = fs.readFileSync(path.join(root, "app", "sensor-editor-compact-interaction-integration.js"), "utf8");
 const startupSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const bootstrapSource = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
 
 assert.doesNotThrow(() => new vm.Script(geometrySource));
 assert.doesNotThrow(() => new vm.Script(targetSource));
 assert.doesNotThrow(() => new vm.Script(liveStatusSource));
+assert.doesNotThrow(() => new vm.Script(compactEditorSource));
 assert.match(targetSource, /function machineDirectionSign/);
 assert.match(targetSource, /function sensorPhysicalAimOffset/);
 assert.match(targetSource, /function labelSensorMapStatus/);
 assert.match(targetSource, /global\.labelSensorMapStatus\s*=\s*labelSensorMapStatus/);
+assert.match(liveStatusSource, /const VERSION = 2/);
 assert.match(liveStatusSource, /refreshAllStatusCards/);
 assert.match(liveStatusSource, /applyGeneratedServoProfileWithSensorStatus/);
 assert.match(liveStatusSource, /renderWipeDownBuilderWithDirectionAwareSensorStatus/);
-assert.match(startupSource, /first-application-zero-datum-v28-sensor-line-of-sight/);
+assert.match(liveStatusSource, /sensorStatusUpdatedAt/);
+assert.match(compactEditorSource, /const VERSION = 14/);
+assert.match(compactEditorSource, /function refreshLiveStatus/);
+assert.match(compactEditorSource, /refreshLiveStatus\(control\)/);
+assert.match(compactEditorSource, /function schedulePreviewRegeneration/);
+assert.match(compactEditorSource, /else schedulePreviewRegeneration\(160\)/);
+assert.match(compactEditorSource, /background:var\(--panel-hi\)!important/);
+assert.match(compactEditorSource, /sensor-station-inherited-row>summary/);
+assert.match(startupSource, /first-application-zero-datum-v29-sensor-live-ui/);
 assert.match(startupSource, /sensor-direction-live-status-integration\.js/);
-assert.match(bootstrapSource, /sensor-line-of-sight-20260806-2246/);
+assert.match(bootstrapSource, /sensor-live-ui-20260806-2301/);
+assert.match(bootstrapSource, /Aug 6, 2026 11:01 PM ET/);
 
 const map = {
   applicationMode: "apl",
@@ -146,4 +158,4 @@ assert.equal(status.percent, 100);
 assert.equal(status.passes, true);
 assert.equal(status.targetPlateAngle, 114, "CW sensor aim must allow a zero-turn solution when the generated bottle orientation already satisfies line of sight.");
 
-console.log("Direction-aware sensor line-of-sight and live status regression passed.");
+console.log("Direction-aware sensor line-of-sight, live editor refresh, and sensor-card contrast regression passed.");
