@@ -24,7 +24,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "first-application-zero-datum-v27-sensor-direction-v1";
+  const build = "first-application-zero-datum-v28-sensor-line-of-sight";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -88,6 +88,7 @@
     }
 
     await loadScript("app/sensor-editor-compact-interaction-integration.js", version);
+    await loadScript("app/sensor-direction-live-status-integration.js", version);
     const ready = window.ServoForgeOrientationConstraintPlannerReady;
     if (ready && typeof ready.then === "function") {
       await Promise.race([
