@@ -31,6 +31,19 @@
     return Math.max(-90, Math.min(90, num(item?.sensorAimOffsetDeg, 0)));
   }
 
+  // Servo plate angles describe the bottle/label orientation. Sensor aim is a
+  // physical hardware rotation relative to the radial sensor datum shown on
+  // the Mechanical Map. Both are rendered with the same machine-direction sign,
+  // so sensor-relative viewing coordinates subtract the hardware aim. Converting
+  // a solved viewing angle back to a physical bottle angle adds that aim again.
+  function sensorViewingAngle(item, plateAngle) {
+    return num(plateAngle, 0) - sensorAimOffset(item);
+  }
+
+  function bottleAngleForSensorView(item, viewedAngle) {
+    return num(viewedAngle, 0) + sensorAimOffset(item);
+  }
+
   function activeMap() {
     try { return typeof global.activeMachineMap === "function" ? global.activeMachineMap() : null; }
     catch { return null; }
@@ -134,11 +147,11 @@
     if (item.kind === "sensor") {
       const required = Math.min(100, Math.max(1, num(item.requiredVisibilityPercent, 50)));
       if (typeof global.nearestLabelSensorTarget === "function") {
-        // Solve in the sensor's viewing coordinate, then convert back to the
-        // physical bottle-plate target. Aimed hardware can therefore satisfy
-        // the same view with less bottle rotation.
+        // Solve in the sensor's physical viewing coordinate, then convert that
+        // view back to a bottle-plate target. If the sensor is already aimed at
+        // the label, this can reduce the required servo turn to zero.
         const viewedPlan = global.nearestLabelSensorTarget(
-          num(currentPlate, 0) + aim,
+          sensorViewingAngle(item, currentPlate),
           center,
           shape.width,
           required,
@@ -147,12 +160,12 @@
         sensorPlan = {
           ...viewedPlan,
           viewedTarget: viewedPlan.target,
-          target: num(viewedPlan.target, center) - aim,
+          target: bottleAngleForSensorView(item, num(viewedPlan.target, center)),
           sensorAimOffsetDeg: aim
         };
       } else {
         sensorPlan = {
-          target: center - aim,
+          target: bottleAngleForSensorView(item, center),
           viewedTarget: center,
           visibility: { percent: 100 },
           sensorAimOffsetDeg: aim
@@ -172,7 +185,7 @@
       codeBoxOffsetDeg: shape.code,
       inspectionOffsetDeg: shape.inspection
     }) || {
-      target: item.kind === "sensor" ? center - aim : currentPlate,
+      target: item.kind === "sensor" ? bottleAngleForSensorView(item, center) : currentPlate,
       mode: item.kind === "coding" ? "code-box" : "label-center",
       required: item.kind === "sensor" ? num(item.requiredVisibilityPercent, 50) : 100,
       visibility: 100,
@@ -184,6 +197,7 @@
       center: num(target.center, center),
       width: num(target.width, shape.width),
       sensorAimOffsetDeg: aim,
+      viewedCurrent: item.kind === "sensor" ? sensorViewingAngle(item, currentPlate) : undefined,
       viewedTarget: sensorPlan?.viewedTarget,
       required: item.kind === "sensor"
         ? Math.min(100, Math.max(1, num(target.required, item.requiredVisibilityPercent || 50)))
@@ -194,7 +208,7 @@
   function visibilityAt(object, plateAngle) {
     if (object?.item?.kind !== "sensor") return 100;
     if (typeof global.labelSensorVisibility !== "function") return num(object?.target?.visibility, 0);
-    const effectiveViewAngle = num(plateAngle, 0) + sensorAimOffset(object.item);
+    const effectiveViewAngle = sensorViewingAngle(object.item, plateAngle);
     return num(global.labelSensorVisibility(
       object.target.center,
       effectiveViewAngle,
@@ -221,6 +235,8 @@
     orientationDriver,
     sensorStationDriver,
     sensorAimOffset,
+    sensorViewingAngle,
+    bottleAngleForSensorView,
     activeMap,
     applications,
     stationSections,
