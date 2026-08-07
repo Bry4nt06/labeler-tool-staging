@@ -19,8 +19,8 @@ assert.ok(
   "The centerline policy must wrap the APL seed before zero-datum generation runs."
 );
 assert.match(startupSource, /label-centerline-policy-v31/);
-assert.match(bootstrapSource, /label-centerline-policy-20260807-0001/);
-assert.match(bootstrapSource, /Aug 7, 2026 12:01 AM ET/);
+assert.match(bootstrapSource, /sensor-visibility-colors-20260807-1234/);
+assert.match(bootstrapSource, /Aug 7, 2026 12:34 PM ET/);
 
 function baseSeed() {
   const rows = Array.from({ length: 32 }, (_, index) => ({
