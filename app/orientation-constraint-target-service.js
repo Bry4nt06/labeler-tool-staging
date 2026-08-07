@@ -31,17 +31,23 @@
     return Math.max(-90, Math.min(90, num(item?.sensorAimOffsetDeg, 0)));
   }
 
-  // Servo plate angles describe the bottle/label orientation. Sensor aim is a
-  // physical hardware rotation relative to the radial sensor datum shown on
-  // the Mechanical Map. Both are rendered with the same machine-direction sign,
-  // so sensor-relative viewing coordinates subtract the hardware aim. Converting
-  // a solved viewing angle back to a physical bottle angle adds that aim again.
+  function machineDirectionSign() {
+    return global.state?.direction === "cw" ? -1 : 1;
+  }
+
+  // sensorAimOffsetDeg is entered and rendered as a physical map direction.
+  // Convert it into the servo plate coordinate using the same CW/CCW sign that
+  // the Mechanical Map uses when drawing the sensor centerline.
+  function sensorPhysicalAimOffset(item) {
+    return sensorAimOffset(item) * machineDirectionSign();
+  }
+
   function sensorViewingAngle(item, plateAngle) {
-    return num(plateAngle, 0) - sensorAimOffset(item);
+    return num(plateAngle, 0) - sensorPhysicalAimOffset(item);
   }
 
   function bottleAngleForSensorView(item, viewedAngle) {
-    return num(viewedAngle, 0) + sensorAimOffset(item);
+    return num(viewedAngle, 0) + sensorPhysicalAimOffset(item);
   }
 
   function activeMap() {
@@ -142,14 +148,12 @@
     const center = typeof global.labelSensorInspectionCenter === "function"
       ? global.labelSensorInspectionCenter(section, application, shape.width)
       : application;
-    const aim = item?.kind === "sensor" ? sensorAimOffset(item) : 0;
+    const configuredAim = item?.kind === "sensor" ? sensorAimOffset(item) : 0;
+    const physicalAim = item?.kind === "sensor" ? sensorPhysicalAimOffset(item) : 0;
     let sensorPlan = null;
     if (item.kind === "sensor") {
       const required = Math.min(100, Math.max(1, num(item.requiredVisibilityPercent, 50)));
       if (typeof global.nearestLabelSensorTarget === "function") {
-        // Solve in the sensor's physical viewing coordinate, then convert that
-        // view back to a bottle-plate target. If the sensor is already aimed at
-        // the label, this can reduce the required servo turn to zero.
         const viewedPlan = global.nearestLabelSensorTarget(
           sensorViewingAngle(item, currentPlate),
           center,
@@ -161,14 +165,16 @@
           ...viewedPlan,
           viewedTarget: viewedPlan.target,
           target: bottleAngleForSensorView(item, num(viewedPlan.target, center)),
-          sensorAimOffsetDeg: aim
+          sensorAimOffsetDeg: configuredAim,
+          sensorPhysicalAimOffsetDeg: physicalAim
         };
       } else {
         sensorPlan = {
           target: bottleAngleForSensorView(item, center),
           viewedTarget: center,
           visibility: { percent: 100 },
-          sensorAimOffsetDeg: aim
+          sensorAimOffsetDeg: configuredAim,
+          sensorPhysicalAimOffsetDeg: physicalAim
         };
       }
     }
@@ -185,10 +191,10 @@
       codeBoxOffsetDeg: shape.code,
       inspectionOffsetDeg: shape.inspection
     }) || {
-      target: item.kind === "sensor" ? bottleAngleForSensorView(item, center) : currentPlate,
+      target: item.kind === "sensor" ? sensorPlan?.target ?? bottleAngleForSensorView(item, center) : currentPlate,
       mode: item.kind === "coding" ? "code-box" : "label-center",
       required: item.kind === "sensor" ? num(item.requiredVisibilityPercent, 50) : 100,
-      visibility: 100,
+      visibility: item.kind === "sensor" ? num(sensorPlan?.visibility?.percent, 100) : 100,
       center,
       width: shape.width
     };
@@ -196,7 +202,8 @@
       ...target,
       center: num(target.center, center),
       width: num(target.width, shape.width),
-      sensorAimOffsetDeg: aim,
+      sensorAimOffsetDeg: configuredAim,
+      sensorPhysicalAimOffsetDeg: physicalAim,
       viewedCurrent: item.kind === "sensor" ? sensorViewingAngle(item, currentPlate) : undefined,
       viewedTarget: sensorPlan?.viewedTarget,
       required: item.kind === "sensor"
@@ -217,6 +224,41 @@
     )?.percent, 0);
   }
 
+  function labelSensorMapStatus(item, rows = global.state?.program) {
+    const sourceRows = Array.isArray(rows) ? rows : [];
+    const map = activeMap();
+    const station = Number(item?.station);
+    const sections = stationSections(map);
+    const section = sections[String(station)]
+      || (typeof global.labelSectionForStation === "function" ? global.labelSectionForStation(station) : null);
+    const required = Math.min(100, Math.max(1, num(item?.requiredVisibilityPercent, 50)));
+    if (!item || item.kind !== "sensor" || !section || section === "none" || !applications()[section]) {
+      return { percent: 0, required, passes: false, section: section || "none" };
+    }
+
+    const placement = num(item.angle, item.start);
+    const currentPlate = plateAt(placement, sourceRows);
+    const window = windowFor(item, sourceRows);
+    const target = targetFor(item, section, sourceRows, currentPlate, placement);
+    const object = { item, section, window, target };
+    const percent = visibilityAt(object, currentPlate);
+    const resolvedRequired = Math.min(100, Math.max(1, num(target.required, required)));
+    return {
+      percent,
+      required: resolvedRequired,
+      passes: percent + EPS >= resolvedRequired,
+      section,
+      placement,
+      plateAngle: currentPlate,
+      viewedPlateAngle: sensorViewingAngle(item, currentPlate),
+      targetPlateAngle: num(target.target, currentPlate),
+      sensorAimOffsetDeg: sensorAimOffset(item),
+      sensorPhysicalAimOffsetDeg: sensorPhysicalAimOffset(item),
+      labelCenter: num(target.center, 0),
+      labelWidthDeg: num(target.width, 0)
+    };
+  }
+
   function enabled(item) {
     if (item?.kind === "sensor") {
       return item.enabled !== false && Boolean(item.orientBottle ?? item.servoAssist);
@@ -228,13 +270,15 @@
     return false;
   }
 
-  global.LabelerOrientationConstraintTargetService = Object.freeze({
+  const api = Object.freeze({
     EPS,
     num,
     done,
     orientationDriver,
     sensorStationDriver,
     sensorAimOffset,
+    machineDirectionSign,
+    sensorPhysicalAimOffset,
     sensorViewingAngle,
     bottleAngleForSensorView,
     activeMap,
@@ -247,6 +291,10 @@
     plateAt,
     targetFor,
     visibilityAt,
+    labelSensorMapStatus,
     enabled
   });
+
+  global.LabelerOrientationConstraintTargetService = api;
+  global.labelSensorMapStatus = labelSensorMapStatus;
 })(typeof window !== "undefined" ? window : globalThis);
