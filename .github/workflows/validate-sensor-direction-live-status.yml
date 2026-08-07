@@ -30,6 +30,7 @@ jobs:
         run: |
           node --check app/orientation-constraint-target-service.js
           node --check app/sensor-direction-live-status-integration.js
+          node --check app/sensor-editor-compact-interaction-integration.js
           node --check app.js
           node --check app/bootstrap.js
           node --check tests/sensor-direction-live-status.test.js
