@@ -25,6 +25,10 @@
       || null;
   }
 
+  function centerlinePolicy() {
+    return global.LabelerLabelCenterlinePolicy || null;
+  }
+
   function sensorAimOffset(item) {
     const driver = sensorStationDriver();
     if (driver?.sensorAimOffset) return driver.sensorAimOffset(item?.sensorAimOffsetDeg);
@@ -86,6 +90,16 @@
   }
 
   function applicationTarget(section, rows, before) {
+    // For an existing/imported program, the physical label centerline is the
+    // bottle plate angle at that label's actual application event. Use that row
+    // before any generated-plan fallback so sensors work for legacy programs,
+    // custom programs, and future ServoForge programs with the same rule.
+    const rowTarget = num(centerlinePolicy()?.centerlineForSection?.(section, rows), NaN);
+    if (Number.isFinite(rowTarget)) return rowTarget;
+
+    const motionTarget = num(global.state?.motionPlan?.[`${section}ApplicationTarget`], NaN);
+    if (Number.isFinite(motionTarget)) return motionTarget;
+
     let seedTarget = 0;
     try {
       const seed = global.generatedAplSeedProfile();
@@ -97,7 +111,7 @@
       section,
       rows,
       before,
-      plannedTarget: global.state?.motionPlan?.[`${section}ApplicationTarget`],
+      plannedTarget: motionTarget,
       seedTarget
     }) ?? seedTarget;
   }
@@ -276,6 +290,7 @@
     done,
     orientationDriver,
     sensorStationDriver,
+    centerlinePolicy,
     sensorAimOffset,
     machineDirectionSign,
     sensorPhysicalAimOffset,
