@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "sensor-line-of-sight-20260806-2246";
-  const buildUpdatedAt = "Aug 6, 2026 10:46 PM ET";
+  const build = "sensor-live-ui-20260806-2301";
+  const buildUpdatedAt = "Aug 6, 2026 11:01 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
@@ -53,7 +53,7 @@
     return new Promise((resolve, reject) => {
       const expected = new URL(`./${path}`, window.location.href).pathname;
       const existing = [...document.scripts].find((script) => {
-        try { return new URL(script.src, window.location.href).pathname === expected;
+        try { return new URL(script.src, window.location.href).pathname === expected.pathname;
         } catch { return false; }
       });
       if (existing) {
