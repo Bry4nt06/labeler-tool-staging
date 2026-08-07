@@ -1,0 +1,37 @@
+name: Validate sensor direction live status
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/orientation-constraint-target-service.js"
+      - "app/sensor-direction-live-status-integration.js"
+      - "app/sensor-editor-compact-interaction-integration.js"
+      - "app/label-sensor-geometry-service.js"
+      - "app.js"
+      - "app/bootstrap.js"
+      - "tests/sensor-direction-live-status.test.js"
+      - ".github/workflows/validate-sensor-direction-live-status.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check syntax
+        run: |
+          node --check app/orientation-constraint-target-service.js
+          node --check app/sensor-direction-live-status-integration.js
+          node --check app.js
+          node --check app/bootstrap.js
+          node --check tests/sensor-direction-live-status.test.js
+      - name: Run sensor direction regression
+        run: node tests/sensor-direction-live-status.test.js
