@@ -26,6 +26,14 @@ jobs:
           node-version: 22
       - name: Apply v35 patch
         run: python tools/apply_spender_plate_v35.py
+      - name: Keep workflow control files out of the runtime commit
+        run: |
+          git checkout -- .github/workflows/apply-spender-plate-visual-v35.yml
+          git checkout -- .github/workflows/apply-spender-plate-visual-v35b.yml
+          git checkout -- .github/workflows/validate-servoforge-brand-theme.yml
+          git checkout -- .github/workflows/validate-wipe-component-visuals.yml
+          git checkout -- tools/apply_spender_plate_v35.py
+          rm -f .github/workflows/validate-spender-plate-visual-controls.yml
       - name: Validate changed runtime
         run: |
           node --check app/assembly-map-renderer.js
