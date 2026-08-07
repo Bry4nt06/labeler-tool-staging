@@ -11,6 +11,17 @@
     capRadius: 2.2
   });
 
+  const BOTTLE_COLORS = Object.freeze({
+    body: "#6f3b20",
+    bodyStroke: "#b27a50",
+    shoulder: "#5c301d",
+    shoulderStroke: "#95623f",
+    neck: "#472417",
+    neckStroke: "#8f6042",
+    cap: "#2d9cff",
+    capStroke: "#a8ddff"
+  });
+
   const INDICATORS = Object.freeze({
     // Neck and Body share the front datum. Back remains 180 degrees opposite.
     // Colors follow the ServoForge UI language used in the bottle-table mockup.
@@ -228,13 +239,15 @@
       "stroke-linecap": "round"
     }, group);
 
-    // Bottle pockets stay tied to the actual computed head coordinates. This is
-    // decorative depth only; it never alters map geometry or animation.
+    // Every decorative pocket carries the same head identity as its bottle.
+    // The animation renderer updates both from the same live heads() result so
+    // pocket and bottle centers cannot drift apart as the table advances.
     (Array.isArray(bottleHeads) ? bottleHeads : []).forEach((head) => {
       if (!Number.isFinite(Number(head?.x)) || !Number.isFinite(Number(head?.y))) return;
       const pocket = add("g", {
         transform: `translate(${Number(head.x)} ${Number(head.y)})`,
-        "data-bottle-table-pocket": String(head.head ?? "")
+        "data-bottle-table-pocket": String(head.head ?? ""),
+        "data-animation-pocket": String(head.head ?? "")
       }, group);
       add("circle", {
         cx: 0, cy: 0, r: TABLE_VISUAL.pocketRadius,
@@ -282,16 +295,17 @@
   }
 
   function drawTopViewBottleStructure(add, bottleGroup) {
-    // Shoulder ring: the visible transition from the bottle body to the neck.
+    // Amber/brown glass body viewed from above. The label bands remain separate
+    // overlays, while the center cap stays blue for quick visual recognition.
     add("circle", {
       cx: 0,
       cy: 0,
       r: BOTTLE_GEOMETRY.shoulderRadius,
-      fill: "var(--map-surface)",
-      "fill-opacity": 0.82,
-      stroke: "var(--map-ring)",
+      fill: BOTTLE_COLORS.shoulder,
+      "fill-opacity": 0.96,
+      stroke: BOTTLE_COLORS.shoulderStroke,
       "stroke-width": 0.75,
-      "stroke-opacity": 0.92,
+      "stroke-opacity": 0.95,
       "data-bottle-top-view-shoulder": "true"
     }, bottleGroup);
 
@@ -299,8 +313,8 @@
       cx: 0,
       cy: 0,
       r: BOTTLE_GEOMETRY.neckRadius,
-      fill: "var(--map-head-fill)",
-      stroke: "var(--map-head-stroke)",
+      fill: BOTTLE_COLORS.neck,
+      stroke: BOTTLE_COLORS.neckStroke,
       "stroke-width": 0.95,
       "data-bottle-top-view-neck": "true"
     }, bottleGroup);
@@ -363,9 +377,9 @@
       cy: 0,
       r: 2.65,
       fill: "none",
-      stroke: "var(--map-text)",
+      stroke: BOTTLE_COLORS.capStroke,
       "stroke-width": 0.42,
-      "stroke-opacity": 0.34,
+      "stroke-opacity": 0.42,
       "pointer-events": "none",
       "aria-hidden": "true"
     }, bottleGroup);
@@ -376,8 +390,8 @@
       cx: 0,
       cy: 0,
       r: BOTTLE_GEOMETRY.bodyRadius,
-      fill: "var(--map-head-fill)",
-      stroke: "var(--map-head-stroke)",
+      fill: BOTTLE_COLORS.body,
+      stroke: BOTTLE_COLORS.bodyStroke,
       "stroke-width": 1.7,
       "data-bottle-top-view-body": "true"
     }, bottleGroup);
@@ -397,10 +411,10 @@
       cx: 0,
       cy: 0,
       r: BOTTLE_GEOMETRY.capRadius,
-      fill: "var(--map-head-stroke)",
-      stroke: "var(--map-text)",
-      "stroke-width": 0.35,
-      "stroke-opacity": 0.5,
+      fill: BOTTLE_COLORS.cap,
+      stroke: BOTTLE_COLORS.capStroke,
+      "stroke-width": 0.55,
+      "stroke-opacity": 0.92,
       "data-bottle-top-view-cap": "true"
     }, bottleGroup);
     return bottleGroup;
@@ -418,6 +432,7 @@
   global.LabelerBottleVisualRenderer = Object.freeze({
     indicators: INDICATORS,
     geometry: BOTTLE_GEOMETRY,
+    colors: BOTTLE_COLORS,
     tableVisual: TABLE_VISUAL,
     bottleLocalArcPath,
     bottleStrokeArcPath,
@@ -431,6 +446,8 @@
     drawTopViewBottle,
     topViewBottleV1: true,
     premiumBottleTableV1: true,
-    recipeSizedLabelBandsV1: true
+    recipeSizedLabelBandsV1: true,
+    synchronizedBottlePocketsV1: true,
+    amberBottleBlueCapV1: true
   });
 })(window);
