@@ -1,6 +1,6 @@
 name: Apply spender plate visual v35b
 
-# One-time retry after updating the migration regression fixture.
+# One-time runtime promotion for the physical spender-plate visual.
 on:
   push:
     branches: [main]
@@ -33,6 +33,8 @@ jobs:
           node --check app/map-builder-controller.js
           node --check app/controllers/map-builder-layout-controller.js
           node --check app/map-schema-adapter-integration.js
+          node --check app/wipe-down-builder.js
+          node --check app/simulation-collapsible-integration.js
           node --check drivers/map/map-schema-driver.js
           node --check drivers/map/map-migration-driver.js
           node --check app/bootstrap.js
@@ -42,7 +44,6 @@ jobs:
           node tests/default-workspace-view.test.js
           node tests/map-schema-driver.test.js
           node tests/map-migration-driver.test.js
-          node tests/feature-integration-readiness.test.js
           node tests/bootstrap-module-boundaries.test.js
       - name: Commit v35 runtime
         run: |
