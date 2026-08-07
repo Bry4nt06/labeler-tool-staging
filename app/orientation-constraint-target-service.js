@@ -35,11 +35,11 @@
     return global.state?.direction === "cw" ? -1 : 1;
   }
 
-  // sensorAimOffsetDeg is entered and rendered as a physical map direction.
-  // Convert it into the servo plate coordinate using the same CW/CCW sign that
-  // the Mechanical Map uses when drawing the sensor centerline.
+  // Bottle plate angle and sensor aim are both machine-relative logical angles.
+  // The map renderer mirrors both into screen/world coordinates for CW maps, so
+  // the visibility solver must not mirror sensor aim a second time.
   function sensorPhysicalAimOffset(item) {
-    return sensorAimOffset(item) * machineDirectionSign();
+    return sensorAimOffset(item);
   }
 
   function sensorViewingAngle(item, plateAngle) {
