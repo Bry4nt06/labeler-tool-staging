@@ -6,7 +6,9 @@ on:
     paths:
       - app.js
       - app/first-application-zero-datum-integration.js
+      - app/orientation-constraint-planner-integration.js
       - tests/landshark-first-application-zero-datum.test.js
+      - tests/sensor-live-visibility-alignment.test.js
       - .github/workflows/validate-landshark-first-application-zero-datum.yml
 
 permissions:
@@ -15,6 +17,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,6 +27,10 @@ jobs:
         run: |
           node --check app.js
           node --check app/first-application-zero-datum-integration.js
+          node --check app/orientation-constraint-planner-integration.js
           node --check tests/landshark-first-application-zero-datum.test.js
-      - name: Run Landshark zero-datum regression
-        run: node tests/landshark-first-application-zero-datum.test.js
+          node --check tests/sensor-live-visibility-alignment.test.js
+      - name: Run Landshark zero-datum regressions
+        run: |
+          node tests/landshark-first-application-zero-datum.test.js
+          node tests/sensor-live-visibility-alignment.test.js
