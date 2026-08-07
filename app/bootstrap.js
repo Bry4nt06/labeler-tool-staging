@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "label-centerline-policy-20260807-0001";
-  const buildUpdatedAt = "Aug 7, 2026 12:01 AM ET";
+  const build = "servoforge-brand-theme-20260807-1024";
+  const buildUpdatedAt = "Aug 7, 2026 10:24 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
@@ -12,6 +12,7 @@
     "app/export-service.js",
     "app/controllers/workspace-action-service.js",
     "app/controllers/theme-presets-controller.js",
+    "app/servoforge-brand-theme-integration.js",
     "app/controllers/health-status-ui-controller.js",
     "app/controllers/validation-panel-ui-controller.js",
     "app/controllers/settings-controller.js",
