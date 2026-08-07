@@ -24,7 +24,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "first-application-zero-datum-v26-workspace-visibility-v1";
+  const build = "first-application-zero-datum-v27-sensor-direction-v1";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
