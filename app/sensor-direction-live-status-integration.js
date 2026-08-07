@@ -3,7 +3,7 @@
 (function installSensorDirectionLiveStatusIntegration(global) {
   if (global.LabelerSensorDirectionLiveStatus?.installed) return;
 
-  const VERSION = 1;
+  const VERSION = 2;
   const RETRY_MS = 50;
   let wrappedProgramGenerator = false;
   let wrappedBuilderRenderer = false;
@@ -22,6 +22,14 @@
     return Number.isFinite(number) ? number.toFixed(digits).replace(/\.0$/, "") : "0";
   }
 
+  function sectionLabel(section) {
+    try {
+      if (typeof global.sectionLabel === "function") return global.sectionLabel(section);
+    } catch {}
+    const normalized = String(section || "").toLowerCase();
+    return normalized ? `${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}` : "Label";
+  }
+
   function statusFor(sensor) {
     const svc = service();
     if (!svc?.labelSensorMapStatus) return null;
@@ -38,7 +46,7 @@
     const strong = node.querySelector("strong");
     const detail = node.querySelector("span");
     if (strong) strong.textContent = `${fmt(status.percent, 1)}% visible`;
-    if (detail) detail.textContent = `Required: ${fmt(status.required, 0)}%`;
+    if (detail) detail.textContent = `Required: ${fmt(status.required, 0)}% • ${sectionLabel(status.section)} label`;
     node.title = [
       `Sensor aim: ${fmt(status.sensorAimOffsetDeg, 1)}°`,
       `Physical aim: ${fmt(status.sensorPhysicalAimOffsetDeg, 1)}°`,
@@ -48,6 +56,7 @@
     ].join(" • ");
     row.dataset.sensorVisiblePercent = String(status.percent);
     row.dataset.sensorPhysicalAimOffsetDeg = String(status.sensorPhysicalAimOffsetDeg);
+    row.dataset.sensorStatusUpdatedAt = String(Date.now());
     return true;
   }
 
@@ -70,7 +79,7 @@
       Promise.resolve(result).finally(() => global.setTimeout(refreshAllStatusCards, 0));
       return result;
     };
-    global.applyGeneratedServoProfile.sensorDirectionLiveStatusV1 = true;
+    global.applyGeneratedServoProfile.sensorDirectionLiveStatusV2 = true;
     global.applyGeneratedServoProfile.previousFunction = base;
     wrappedProgramGenerator = true;
     return true;
@@ -84,7 +93,7 @@
       refreshAllStatusCards();
       return result;
     };
-    global.renderWipeDownBuilder.sensorDirectionLiveStatusV1 = true;
+    global.renderWipeDownBuilder.sensorDirectionLiveStatusV2 = true;
     global.renderWipeDownBuilder.previousFunction = base;
     wrappedBuilderRenderer = true;
     return true;
