@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "sensor-live-ui-20260806-2301";
-  const buildUpdatedAt = "Aug 6, 2026 11:01 PM ET";
+  const build = "physical-sensor-visibility-20260806-2324";
+  const buildUpdatedAt = "Aug 6, 2026 11:24 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
@@ -53,8 +53,8 @@
     return new Promise((resolve, reject) => {
       const expected = new URL(`./${path}`, window.location.href).pathname;
       const existing = [...document.scripts].find((script) => {
-        try { return new URL(script.src, window.location.href).pathname === expected.pathname;
-        } catch { return false; }
+        try { return new URL(script.src, window.location.href).pathname === expected; }
+        catch { return false; }
       });
       if (existing) {
         if (existing.dataset.loaded === "true") resolve();
