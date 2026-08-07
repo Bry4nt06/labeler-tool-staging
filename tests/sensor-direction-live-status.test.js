@@ -37,9 +37,10 @@ assert.match(compactEditorSource, /else schedulePreviewRegeneration\(160\)/);
 assert.match(compactEditorSource, /background:var\(--panel-hi\)!important/);
 assert.match(compactEditorSource, /sensor-station-inherited-row>summary/);
 assert.match(startupSource, /first-application-zero-datum-v30-physical-sensor-visibility/);
+assert.match(startupSource, /label-centerline-policy-v31/);
 assert.match(startupSource, /sensor-direction-live-status-integration\.js/);
-assert.match(bootstrapSource, /physical-sensor-visibility-20260806-2336/);
-assert.match(bootstrapSource, /Aug 6, 2026 11:36 PM ET/);
+assert.match(bootstrapSource, /label-centerline-policy-20260807-0001/);
+assert.match(bootstrapSource, /Aug 7, 2026 12:01 AM ET/);
 
 const map = {
   applicationMode: "apl",
