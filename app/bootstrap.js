@@ -2,13 +2,14 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "label-application-reference-v32-20260807-1251";
-  const buildUpdatedAt = "Aug 7, 2026 12:51 PM ET";
+  const build = "startup-dom-binding-recovery-v33-20260807-1306";
+  const buildUpdatedAt = "Aug 7, 2026 1:06 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
   if (banner) banner.textContent = `STAGING ${version} • BUILD ${build} • UPDATED ${buildUpdatedAt} — NOT PRODUCTION`;
   const modules = Object.freeze([
+    "app/startup-dom-binding-guard-integration.js",
     "app/export-service.js",
     "app/controllers/workspace-action-service.js",
     "app/controllers/theme-presets-controller.js",
