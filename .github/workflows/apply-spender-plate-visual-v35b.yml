@@ -1,5 +1,6 @@
 name: Apply spender plate visual v35b
 
+# One-time retry after updating the migration regression fixture.
 on:
   push:
     branches: [main]
