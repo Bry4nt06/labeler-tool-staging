@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "app/assembly-map-renderer.js"
+      - "app/inside-wipe-mounting-correction-integration.js"
       - "app/bootstrap.js"
       - "app/mechanical-map-scene-renderer.js"
       - "app/simulation-map-scene-renderer.js"
@@ -13,6 +14,7 @@ on:
   pull_request:
     paths:
       - "app/assembly-map-renderer.js"
+      - "app/inside-wipe-mounting-correction-integration.js"
       - "app/bootstrap.js"
       - "app/mechanical-map-scene-renderer.js"
       - "app/simulation-map-scene-renderer.js"
@@ -34,6 +36,7 @@ jobs:
       - name: Check renderer syntax
         run: |
           node --check app/assembly-map-renderer.js
+          node --check app/inside-wipe-mounting-correction-integration.js
           node --check app/mechanical-map-scene-renderer.js
       - name: Run wipe component visual regression
         run: node tests/wipe-component-visuals.test.js
