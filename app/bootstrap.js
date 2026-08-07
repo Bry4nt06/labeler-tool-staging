@@ -4,6 +4,7 @@
   const version = "0.9.10";
   const build = "startup-dom-binding-recovery-v33-20260807-1306";
   const buildUpdatedAt = "Aug 7, 2026 1:06 PM ET";
+  // Regression lineage: label-application-reference-v32-20260807-1251 • Aug 7, 2026 12:51 PM ET
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
