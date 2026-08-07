@@ -1,10 +1,20 @@
 "use strict";
 
 (function installBottleVisualRenderer(global) {
+  const BOTTLE_GEOMETRY = Object.freeze({
+    bodyRadius: 8.4,
+    shoulderRadius: 6.15,
+    neckRadius: 3.35,
+    capRadius: 1.75,
+    centerlineLength: 8.65
+  });
+
   const INDICATORS = Object.freeze({
-    neck: Object.freeze({ center: 0, innerRadius: 5.8, outerRadius: 7.1, color: "#f0c84b" }),
-    body: Object.freeze({ center: 0, innerRadius: 4.2, outerRadius: 5.5, color: "#42c987" }),
-    back: Object.freeze({ center: 180, innerRadius: 5.2, outerRadius: 7.1, color: "#a984e8" })
+    // Neck and Body share the front datum, so they use the same angular center.
+    // Separate radial bands keep both labels readable in a true top view.
+    neck: Object.freeze({ center: 0, innerRadius: 4.35, outerRadius: 5.55, color: "#f0c84b" }),
+    body: Object.freeze({ center: 0, innerRadius: 6.45, outerRadius: 8.05, color: "#42c987" }),
+    back: Object.freeze({ center: 180, innerRadius: 6.45, outerRadius: 8.05, color: "#a984e8" })
   });
 
   function bottleLocalArcPath(startAngle, endAngle, innerRadius, outerRadius) {
@@ -62,8 +72,10 @@
       add("path", {
         d: bottleLocalArcPath(start, end, visual.innerRadius, visual.outerRadius),
         fill: visual.color,
+        "fill-opacity": 0.92,
         stroke: visual.color,
-        "stroke-width": 0.4,
+        "stroke-width": 0.45,
+        "stroke-opacity": 0.98,
         "data-bottle-label-indicator": application.section,
         "data-application-angle": application.angle,
         "data-application-station": application.station,
@@ -72,17 +84,111 @@
     });
   }
 
+  function drawTopViewBottle(add, bottleGroup, tableAngle) {
+    const geometry = BOTTLE_GEOMETRY;
+
+    // Outer glass/body footprint. Concentric shoulder/neck/cap rings make the
+    // symbol unmistakably a bottle viewed vertically from above rather than a
+    // side-view bottle laying on the carousel.
+    add("circle", {
+      cx: 0,
+      cy: 0,
+      r: geometry.bodyRadius + 0.65,
+      fill: "#000000",
+      "fill-opacity": 0.2,
+      stroke: "none",
+      "data-bottle-top-view-shadow": "true"
+    }, bottleGroup);
+    add("circle", {
+      cx: 0,
+      cy: 0,
+      r: geometry.bodyRadius,
+      fill: "var(--map-head-fill)",
+      stroke: "var(--map-head-stroke)",
+      "stroke-width": 1.45,
+      "data-bottle-top-view-body": "true"
+    }, bottleGroup);
+    add("circle", {
+      cx: 0,
+      cy: 0,
+      r: geometry.shoulderRadius,
+      fill: "var(--map-surface)",
+      "fill-opacity": 0.86,
+      stroke: "var(--map-ring)",
+      "stroke-width": 0.8,
+      "stroke-opacity": 0.9,
+      "data-bottle-top-view-shoulder": "true"
+    }, bottleGroup);
+
+    // Label wraps are rendered between the bottle wall and the neck/cap so the
+    // operator can see Neck + Body on the shared front datum and Back opposite.
+    drawBottleLabelIndicators(add, bottleGroup, tableAngle);
+
+    // Red line is the bottle/front datum used throughout ServoForge. The whole
+    // bottle group rotates with the servo plate, so this remains a true physical
+    // orientation reference during animation.
+    add("line", {
+      x1: 0,
+      y1: 0,
+      x2: geometry.centerlineLength,
+      y2: 0,
+      stroke: "#ff4d3a",
+      "stroke-width": 1.7,
+      "stroke-linecap": "round",
+      "data-bottle-orientation": "true",
+      "data-bottle-front-centerline": "true"
+    }, bottleGroup);
+
+    add("circle", {
+      cx: 0,
+      cy: 0,
+      r: geometry.neckRadius,
+      fill: "var(--map-head-fill)",
+      stroke: "var(--map-head-stroke)",
+      "stroke-width": 1.05,
+      "data-bottle-top-view-neck": "true"
+    }, bottleGroup);
+    add("circle", {
+      cx: 0,
+      cy: 0,
+      r: geometry.capRadius,
+      fill: "var(--map-head-stroke)",
+      "fill-opacity": 0.78,
+      stroke: "var(--map-text)",
+      "stroke-width": 0.45,
+      "stroke-opacity": 0.62,
+      "data-bottle-top-view-cap": "true"
+    }, bottleGroup);
+    add("circle", {
+      cx: -0.55,
+      cy: -0.6,
+      r: 0.55,
+      fill: "#ffffff",
+      "fill-opacity": 0.34,
+      stroke: "none",
+      "pointer-events": "none",
+      "aria-hidden": "true"
+    }, bottleGroup);
+
+    bottleGroup.setAttribute("data-bottle-view", "top");
+    return bottleGroup;
+  }
+
   global.bottleLocalArcPath = bottleLocalArcPath;
   global.bottleLabelApplications = bottleLabelApplications;
   global.bottleHasPassedApplication = bottleHasPassedApplication;
   global.bottlePreviewAngle = bottlePreviewAngle;
   global.drawBottleLabelIndicators = drawBottleLabelIndicators;
+  global.drawTopViewBottle = drawTopViewBottle;
   global.LabelerBottleVisualRenderer = Object.freeze({
     indicators: INDICATORS,
+    geometry: BOTTLE_GEOMETRY,
     bottleLocalArcPath,
     bottleLabelApplications,
     bottleHasPassedApplication,
     bottlePreviewAngle,
-    drawBottleLabelIndicators
+    drawBottleLabelIndicators,
+    drawTopViewBottle,
+    topViewBottleV1: true
   });
 })(window);
