@@ -2,7 +2,7 @@
 
 (function loadGeometryAndPlanningModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.2";
-  const build = "physical-sensor-visibility-20260806-2324";
+  const build = "physical-sensor-visibility-20260806-2336";
   const modules = Object.freeze([
     "app/geometry-primitives.js",
     "app/label-specification-service.js",
