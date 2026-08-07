@@ -4,12 +4,14 @@ on:
   push:
     branches: [main]
     paths:
+      - "app/geometry-and-planning.js"
+      - "app/label-sensor-geometry-service.js"
       - "app/orientation-constraint-target-service.js"
       - "app/sensor-direction-live-status-integration.js"
       - "app/sensor-editor-compact-interaction-integration.js"
-      - "app/label-sensor-geometry-service.js"
       - "app.js"
       - "app/bootstrap.js"
+      - "tests/sensor-physical-visibility-model.test.js"
       - "tests/sensor-direction-live-status.test.js"
       - ".github/workflows/validate-sensor-direction-live-status.yml"
   workflow_dispatch:
@@ -28,11 +30,16 @@ jobs:
           node-version: 22
       - name: Check syntax
         run: |
+          node --check app/geometry-and-planning.js
+          node --check app/label-sensor-geometry-service.js
           node --check app/orientation-constraint-target-service.js
           node --check app/sensor-direction-live-status-integration.js
           node --check app/sensor-editor-compact-interaction-integration.js
           node --check app.js
           node --check app/bootstrap.js
+          node --check tests/sensor-physical-visibility-model.test.js
           node --check tests/sensor-direction-live-status.test.js
-      - name: Run sensor direction regression
-        run: node tests/sensor-direction-live-status.test.js
+      - name: Run grounded sensor regressions
+        run: |
+          node tests/sensor-physical-visibility-model.test.js
+          node tests/sensor-direction-live-status.test.js
