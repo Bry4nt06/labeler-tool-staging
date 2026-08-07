@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "top-view-bottles-20260807-1054";
-  const buildUpdatedAt = "Aug 7, 2026 10:54 AM ET";
+  const build = "premium-bottle-table-20260807-1208";
+  const buildUpdatedAt = "Aug 7, 2026 12:08 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
