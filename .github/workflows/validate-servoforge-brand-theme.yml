@@ -1,0 +1,32 @@
+name: Validate ServoForge brand theme
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "assets/labeler-tool-icon.svg"
+      - "app/servoforge-brand-theme-integration.js"
+      - "app/bootstrap.js"
+      - "tests/servoforge-brand-theme.test.js"
+      - ".github/workflows/validate-servoforge-brand-theme.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: |
+          node --check app/servoforge-brand-theme-integration.js
+          node --check app/bootstrap.js
+          node --check tests/servoforge-brand-theme.test.js
+      - name: Run branding regression
+        run: node tests/servoforge-brand-theme.test.js
