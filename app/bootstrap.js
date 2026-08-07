@@ -16,6 +16,7 @@
     "app/controllers/theme-presets-controller.js",
     "app/servoforge-brand-theme-integration.js",
     "app/compact-layout-defaults-wipe-orientation-integration.js",
+    "app/inside-wipe-mounting-correction-integration.js",
     "app/controllers/health-status-ui-controller.js",
     "app/controllers/validation-panel-ui-controller.js",
     "app/controllers/settings-controller.js",
