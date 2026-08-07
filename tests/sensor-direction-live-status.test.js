@@ -20,6 +20,7 @@ assert.doesNotThrow(() => new vm.Script(compactEditorSource));
 assert.match(geometrySource, /application plate angle itself is the finished/);
 assert.doesNotMatch(geometrySource, /alignmentPercent/);
 assert.match(targetSource, /function machineDirectionSign/);
+assert.match(targetSource, /visibility solver must not mirror sensor aim a second time/);
 assert.match(targetSource, /function sensorPhysicalAimOffset/);
 assert.match(targetSource, /function labelSensorMapStatus/);
 assert.match(targetSource, /global\.labelSensorMapStatus\s*=\s*labelSensorMapStatus/);
@@ -137,17 +138,29 @@ assert.equal(context.labelSensorMapStatus, svc.labelSensorMapStatus, "Map Builde
 let status = svc.labelSensorMapStatus(sensor, context.state.program);
 assert.equal(status.labelCenter, 100, "Body application plate angle must remain the label centerline without a half-width shift.");
 assert.equal(status.sensorAimOffsetDeg, 16);
-assert.equal(status.sensorPhysicalAimOffsetDeg, 16, "CCW maps must preserve positive physical sensor aim.");
+assert.equal(status.sensorPhysicalAimOffsetDeg, 16);
 assert.equal(status.viewedPlateAngle, 130);
 assert.equal(status.percent, 100);
 assert.equal(status.passes, true);
 assert.equal(status.targetPlateAngle, 146, "A sensor already seeing enough label must not request another servo turn.");
 
+// Changing machine direction mirrors both the bottle and sensor on the physical
+// map. Their relative logical angle must therefore remain unchanged.
 context.state.direction = "cw";
 status = svc.labelSensorMapStatus(sensor, context.state.program);
-assert.equal(status.sensorPhysicalAimOffsetDeg, -16, "CW maps must mirror the physical sensor aim exactly like the map centerline renderer.");
+assert.equal(status.sensorPhysicalAimOffsetDeg, 16, "CW must not reverse aim a second time inside the visibility solver.");
+assert.equal(status.viewedPlateAngle, 130);
+assert.equal(status.percent, 100);
+assert.equal(status.passes, true);
+assert.equal(status.targetPlateAngle, 146);
+
+// Changing the actual aim direction must change visibility and generate only
+// the minimum correction needed to meet the configured physical overlap.
+sensor.sensorAimOffsetDeg = -16;
+status = svc.labelSensorMapStatus(sensor, context.state.program);
+assert.equal(status.sensorPhysicalAimOffsetDeg, -16);
 assert.equal(status.viewedPlateAngle, 162);
-assert.ok(status.percent > 96 && status.percent < 97, "Mirroring the sensor aim must change the physical label overlap.");
+assert.ok(status.percent > 96 && status.percent < 97, "Changing sensor aim must change the physical label overlap.");
 assert.equal(status.passes, false, "96.7% visible must fail a 98% requirement.");
 assert.ok(Math.abs(status.targetPlateAngle - 145.2) < 0.01, "The servo correction must be only the small move needed to reach 98% overlap.");
 
