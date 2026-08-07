@@ -1,0 +1,149 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+
+const root = path.resolve(__dirname, "..");
+const geometrySource = fs.readFileSync(path.join(root, "app", "label-sensor-geometry-service.js"), "utf8");
+const targetSource = fs.readFileSync(path.join(root, "app", "orientation-constraint-target-service.js"), "utf8");
+const liveStatusSource = fs.readFileSync(path.join(root, "app", "sensor-direction-live-status-integration.js"), "utf8");
+const startupSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const bootstrapSource = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
+
+assert.doesNotThrow(() => new vm.Script(geometrySource));
+assert.doesNotThrow(() => new vm.Script(targetSource));
+assert.doesNotThrow(() => new vm.Script(liveStatusSource));
+assert.match(targetSource, /function machineDirectionSign/);
+assert.match(targetSource, /function sensorPhysicalAimOffset/);
+assert.match(targetSource, /function labelSensorMapStatus/);
+assert.match(targetSource, /global\.labelSensorMapStatus\s*=\s*labelSensorMapStatus/);
+assert.match(liveStatusSource, /refreshAllStatusCards/);
+assert.match(liveStatusSource, /applyGeneratedServoProfileWithSensorStatus/);
+assert.match(liveStatusSource, /renderWipeDownBuilderWithDirectionAwareSensorStatus/);
+assert.match(startupSource, /first-application-zero-datum-v28-sensor-line-of-sight/);
+assert.match(startupSource, /sensor-direction-live-status-integration\.js/);
+assert.match(bootstrapSource, /sensor-line-of-sight-20260806-2246/);
+
+const map = {
+  applicationMode: "apl",
+  stationSections: { "4": "body" },
+  objects: []
+};
+const sensor = {
+  id: "body-sensor",
+  name: "Body Sensor",
+  kind: "sensor",
+  station: 4,
+  angle: 217.3,
+  start: 217.3,
+  sensorAimOffsetDeg: 16,
+  requiredVisibilityPercent: 80,
+  enabled: true,
+  servoAssist: true,
+  orientBottle: true
+};
+map.objects.push(sensor);
+
+const context = {
+  console,
+  state: {
+    direction: "ccw",
+    motionPlan: { bodyApplicationTarget: 100 },
+    program: [
+      { tableAngle: 0, cmd: 3, plateAngle: 146 },
+      { tableAngle: 217.3, cmd: 3, plateAngle: 146 },
+      { tableAngle: 220.3, cmd: 3, plateAngle: 146 }
+    ],
+    buildInputs: { backInspectionOffsetMm: 0 }
+  },
+  num(value, fallback = 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  },
+  activeMachineMap() { return map; },
+  selectedLabelApplicationState() { return { neck: false, body: true, back: false }; },
+  inferAplStationSections() { return { "4": "body" }; },
+  labelSectionForStation() { return "body"; },
+  sectionLabel(value) { return value === "body" ? "Body" : value; },
+  sectionWipePlan() { return { labelDeg: 60 }; },
+  selectedLabelSpec() { return { codeBoxCenterMm: 0, neckBottomCircumferenceMm: 100 }; },
+  selectedBottleSpec() { return {}; },
+  bodyCircumference() { return 188; },
+  degFromMm() { return 0; },
+  generatedAplSeedProfile() {
+    const rows = Array.from({ length: 22 }, () => ({ plateAngle: 0 }));
+    rows[11] = { plateAngle: 100 };
+    return rows;
+  },
+  plateAngleAt(tableAngle, rows) {
+    const sorted = [...rows].sort((a, b) => a.tableAngle - b.tableAngle);
+    let current = sorted[0];
+    sorted.forEach((row) => { if (row.tableAngle <= tableAngle) current = row; });
+    return current.plateAngle;
+  },
+  LabelerDriverRegistry: {
+    resolve(name) {
+      if (name === "profile.sensorStationLabel") {
+        return { sensorAimOffset(value) { return Math.max(-90, Math.min(90, Number(value || 0))); } };
+      }
+      if (name === "profile.mapObjectOrientation") {
+        return {
+          objectWindow({ item }) { return { start: item.angle, end: item.angle + 3 }; },
+          applicationTarget({ plannedTarget, seedTarget }) {
+            return Number.isFinite(Number(plannedTarget)) ? Number(plannedTarget) : Number(seedTarget || 0);
+          },
+          orientationTarget({ item, sensorTarget, sensorVisibilityPercent, labelCenter, labelWidthDeg }) {
+            return {
+              target: sensorTarget,
+              mode: "label-center",
+              required: Number(item.requiredVisibilityPercent || 50),
+              visibility: sensorVisibilityPercent,
+              center: labelCenter,
+              width: labelWidthDeg
+            };
+          }
+        };
+      }
+      return null;
+    }
+  }
+};
+context.window = context;
+context.globalThis = context;
+vm.createContext(context);
+vm.runInContext(geometrySource, context, { filename: "label-sensor-geometry-service.js" });
+vm.runInContext(targetSource, context, { filename: "orientation-constraint-target-service.js" });
+
+const svc = context.LabelerOrientationConstraintTargetService;
+assert.ok(svc);
+assert.equal(context.labelSensorMapStatus, svc.labelSensorMapStatus, "Map Builder status must use the shared orientation service.");
+
+let status = svc.labelSensorMapStatus(sensor, context.state.program);
+assert.equal(status.sensorAimOffsetDeg, 16);
+assert.equal(status.sensorPhysicalAimOffsetDeg, 16, "CCW maps must preserve positive physical sensor aim.");
+assert.equal(status.viewedPlateAngle, 130);
+assert.equal(status.percent, 100);
+assert.equal(status.passes, true);
+assert.equal(status.targetPlateAngle, 146, "A sensor already aimed at the label must not request another servo turn.");
+
+context.state.direction = "cw";
+status = svc.labelSensorMapStatus(sensor, context.state.program);
+assert.equal(status.sensorPhysicalAimOffsetDeg, -16, "CW maps must mirror the physical sensor aim exactly like the map centerline renderer.");
+assert.equal(status.viewedPlateAngle, 162);
+assert.ok(status.percent < 80, "The same bottle angle must no longer pass when the physical aim is mirrored on a CW map.");
+assert.equal(status.passes, false);
+
+context.state.program = [
+  { tableAngle: 0, cmd: 3, plateAngle: 114 },
+  { tableAngle: 217.3, cmd: 3, plateAngle: 114 },
+  { tableAngle: 220.3, cmd: 3, plateAngle: 114 }
+];
+status = svc.labelSensorMapStatus(sensor, context.state.program);
+assert.equal(status.viewedPlateAngle, 130);
+assert.equal(status.percent, 100);
+assert.equal(status.passes, true);
+assert.equal(status.targetPlateAngle, 114, "CW sensor aim must allow a zero-turn solution when the generated bottle orientation already satisfies line of sight.");
+
+console.log("Direction-aware sensor line-of-sight and live status regression passed.");
