@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "bottle-pocket-sync-20260807-1223";
-  const buildUpdatedAt = "Aug 7, 2026 12:23 PM ET";
+  const build = "sensor-visibility-colors-20260807-1234";
+  const buildUpdatedAt = "Aug 7, 2026 12:34 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
@@ -26,6 +26,7 @@
     "app/controllers/specification-sensor-guidance-controller.js",
     "app/controllers/specification-required-fields-controller.js",
     "app/controllers/sensor-activation-controller.js",
+    "app/sensor-map-visibility-color-integration.js",
     "app/controllers/coding-cycle-normalization-controller.js",
     "app/controllers/build-inputs-controller.js",
     "app/controllers/tabs-controller.js",
