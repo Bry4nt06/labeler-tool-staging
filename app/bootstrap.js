@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "servoforge-brand-theme-20260807-1024";
-  const buildUpdatedAt = "Aug 7, 2026 10:24 AM ET";
+  const build = "servoforge-brand-polish-20260807-1041";
+  const buildUpdatedAt = "Aug 7, 2026 10:41 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
