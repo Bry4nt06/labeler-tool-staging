@@ -211,9 +211,11 @@
     const bevelDeg = Math.min(span * 0.38, Math.max(0.75, Math.min(5, physicalBevelDeg)));
     const isInner = String(side) === "inner";
 
-    // The bevel remains on the trailing/start side (against machine travel).
-    // Inner pads are mirrored radially: their outer/large-radius sponge face is
-    // the bottle-facing face, so the diagonal bevel slopes the opposite way.
+    // Outside wipe-down: bottle is radially inside the pad, so the inner-radius
+    // edge carries the bevel. Inside wipe-down: bottle is radially outside the
+    // pad, so flip the geometry. The OUTER-radius edge is the short/beveled
+    // bottle-contact edge and the INNER-radius edge remains the long edge nearest
+    // the center/inside of the machine.
     const outerStartAngle = isInner ? start + bevelDeg : start;
     const innerStartAngle = isInner ? start : start + bevelDeg;
     const startOuter = angleToXY(outerStartAngle, outerRadius);
@@ -249,6 +251,8 @@
       "data-sponge-material": "orange-foam",
       "data-bevel-facing": "against-machine-direction",
       "data-pad-facing": side === "inner" ? "radially-outward-to-bottle" : "radially-inward-to-bottle",
+      "data-bevel-contact-side": "bottle",
+      "data-long-edge-facing": side === "inner" ? "machine-center" : "machine-outside",
       "data-machine-direction": state.direction
     }, parent);
     add("path", {
@@ -284,15 +288,38 @@
         machineTrailingPadPath: sideAwareTrailingPadPath,
         drawSpongeWipeDownPad: drawSideAwareSpongePad,
         bevelAgainstMachineDirectionV2: true,
-        innerPadFacesBottleV1: true
+        innerPadFacesBottleV1: true,
+        innerPadBottleBevelV2: true,
+        innerPadLongEdgeInsideV2: true
       });
     }
     return true;
   }
 
+  function installWipeOrientationWhenRendererReady() {
+    // This integration can execute before the geometry/planning module finishes
+    // loading assembly-map-renderer.js. Applying the override only once at that
+    // moment silently left the authoritative renderer unchanged. Apply it now if
+    // available, and apply it again after renderer readiness so every map render
+    // uses the side-aware inside-pad geometry.
+    const installedNow = installWipeOrientationOverride();
+    const readiness = global.ServoForgeGeometryPlanningReady;
+    if (readiness && typeof readiness.then === "function") {
+      readiness.then(() => {
+        if (installWipeOrientationOverride() && typeof global.renderMap === "function") {
+          global.renderMap();
+        }
+      }).catch(() => {
+        // Startup readiness reports its own failures; the normal renderer remains
+        // usable even if this presentation-only correction cannot be reapplied.
+      });
+    }
+    return installedNow;
+  }
+
   installEffectiveDefaults();
   installCompactStyles();
-  installWipeOrientationOverride();
+  installWipeOrientationWhenRendererReady();
 
   global.ServoForgeCompactLayoutDefaults = Object.freeze({
     installed: true,
@@ -305,7 +332,10 @@
     installEffectiveDefaults,
     installCompactStyles,
     installWipeOrientationOverride,
+    installWipeOrientationWhenRendererReady,
     compactValueLayoutV1: true,
-    innerPadFacesBottleV1: true
+    innerPadFacesBottleV1: true,
+    innerPadBottleBevelV2: true,
+    innerPadLongEdgeInsideV2: true
   });
 })(window);
