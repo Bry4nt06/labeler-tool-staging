@@ -15,7 +15,8 @@
       return element;
     };
 
-    add("circle", { cx: 0, cy: 0, r: state.radius, fill: "var(--map-surface)", stroke: "var(--map-ring)", "stroke-width": 2 });
+    const bottleHeads = heads();
+    drawBottleTableVisual(add, svg, state.radius, bottleHeads);
     const quadrantLayer = add("g", { "aria-label": "Table quadrant references" });
     drawMapQuadrantReferences(add, quadrantLayer);
     const zeroEnd = angleToXY(0, state.radius + 34);
@@ -25,7 +26,7 @@
     const preview = angleToXY(state.previewAngle, state.radius + 12);
     add("line", { x1: 0, y1: 0, x2: preview.x, y2: preview.y, stroke: "#ad3434", "stroke-width": 2, "stroke-dasharray": "6 5", "data-animation-preview": "true" });
 
-    heads().forEach((head) => {
+    bottleHeads.forEach((head) => {
       const padAngle = bottlePreviewAngle(head, program);
       const servoSign = state.direction === "cw" ? -1 : 1;
       const referenceRotation = angleToSvgRotation(head.tableAngle) + servoSign * padAngle;
@@ -66,5 +67,8 @@
   }
 
   global.renderSimulationMap = renderSimulationMap;
-  global.LabelerSimulationMapSceneRenderer = Object.freeze({ renderSimulationMap });
+  global.LabelerSimulationMapSceneRenderer = Object.freeze({
+    renderSimulationMap,
+    premiumBottleTableV1: true
+  });
 })(window);
