@@ -9,6 +9,7 @@ const root = path.resolve(__dirname, "..");
 const geometrySource = fs.readFileSync(path.join(root, "app", "label-sensor-geometry-service.js"), "utf8");
 const targetSource = fs.readFileSync(path.join(root, "app", "orientation-constraint-target-service.js"), "utf8");
 const liveStatusSource = fs.readFileSync(path.join(root, "app", "sensor-direction-live-status-integration.js"), "utf8");
+const sensorMapColorSource = fs.readFileSync(path.join(root, "app", "sensor-map-visibility-color-integration.js"), "utf8");
 const compactEditorSource = fs.readFileSync(path.join(root, "app", "sensor-editor-compact-interaction-integration.js"), "utf8");
 const startupSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const bootstrapSource = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
@@ -16,6 +17,7 @@ const bootstrapSource = fs.readFileSync(path.join(root, "app", "bootstrap.js"), 
 assert.doesNotThrow(() => new vm.Script(geometrySource));
 assert.doesNotThrow(() => new vm.Script(targetSource));
 assert.doesNotThrow(() => new vm.Script(liveStatusSource));
+assert.doesNotThrow(() => new vm.Script(sensorMapColorSource));
 assert.doesNotThrow(() => new vm.Script(compactEditorSource));
 assert.match(geometrySource, /application plate angle itself is the finished/);
 assert.doesNotMatch(geometrySource, /alignmentPercent/);
@@ -29,6 +31,16 @@ assert.match(liveStatusSource, /refreshAllStatusCards/);
 assert.match(liveStatusSource, /applyGeneratedServoProfileWithSensorStatus/);
 assert.match(liveStatusSource, /renderWipeDownBuilderWithDirectionAwareSensorStatus/);
 assert.match(liveStatusSource, /sensorStatusUpdatedAt/);
+assert.match(sensorMapColorSource, /visibilityColorScaleV1:\s*true/);
+assert.match(sensorMapColorSource, /#ff4d4f/);
+assert.match(sensorMapColorSource, /#ff8a32/);
+assert.match(sensorMapColorSource, /#ffd84d/);
+assert.match(sensorMapColorSource, /#9adf4f/);
+assert.match(sensorMapColorSource, /#2ed47a/);
+assert.match(sensorMapColorSource, /#4ca8ff/);
+assert.match(sensorMapColorSource, /global\.labelSensorMapColor\s*=\s*function/);
+assert.match(sensorMapColorSource, /data-sensor-visibility-percent/);
+assert.match(sensorMapColorSource, /drop-shadow/);
 assert.match(compactEditorSource, /const VERSION = 14/);
 assert.match(compactEditorSource, /function refreshLiveStatus/);
 assert.match(compactEditorSource, /refreshLiveStatus\(control\)/);
@@ -39,8 +51,9 @@ assert.match(compactEditorSource, /sensor-station-inherited-row>summary/);
 assert.match(startupSource, /first-application-zero-datum-v30-physical-sensor-visibility/);
 assert.match(startupSource, /label-centerline-policy-v31/);
 assert.match(startupSource, /sensor-direction-live-status-integration\.js/);
-assert.match(bootstrapSource, /label-centerline-policy-20260807-0001/);
-assert.match(bootstrapSource, /Aug 7, 2026 12:01 AM ET/);
+assert.match(bootstrapSource, /sensor-map-visibility-color-integration\.js/);
+assert.match(bootstrapSource, /sensor-visibility-colors-20260807-1234/);
+assert.match(bootstrapSource, /Aug 7, 2026 12:34 PM ET/);
 
 const map = {
   applicationMode: "apl",
@@ -176,4 +189,4 @@ assert.ok(status.percent > 98 && status.percent < 99);
 assert.equal(status.passes, true);
 assert.equal(status.targetPlateAngle, 145, "Once the required physical overlap is met, no further centering turn is allowed.");
 
-console.log("Direction-aware sensor line-of-sight, physical label overlap, live editor refresh, and sensor-card contrast regression passed.");
+console.log("Direction-aware sensor line-of-sight, physical label overlap, live editor refresh, sensor map colors, and sensor-card contrast regression passed.");
