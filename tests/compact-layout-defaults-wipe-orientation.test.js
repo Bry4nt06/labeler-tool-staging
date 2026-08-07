@@ -22,6 +22,10 @@ assert.match(integrationSource, /#buildInputs \.build-grid[\s\S]*grid-template-c
 assert.match(integrationSource, /data-bevel-facing": "against-machine-direction"/);
 assert.match(integrationSource, /data-pad-facing/);
 assert.match(integrationSource, /radially-outward-to-bottle/);
+assert.match(integrationSource, /data-bevel-contact-side": "bottle"/);
+assert.match(integrationSource, /data-long-edge-facing/);
+assert.match(integrationSource, /innerPadBottleBevelV2/);
+assert.match(integrationSource, /installWipeOrientationWhenRendererReady/);
 
 const storage = new Map([
   ["labelerToolSettings", JSON.stringify({
@@ -80,5 +84,56 @@ const innerPath = context.ServoForgeCompactLayoutDefaults.sideAwareTrailingPadPa
 assert.notEqual(innerPath, outerPath, "Inside pad geometry must be radially mirrored rather than reusing the outside bevel slope.");
 assert.equal(context.LabelerWipeComponentVisualRenderer.innerPadFacesBottleV1, true);
 assert.equal(context.LabelerWipeComponentVisualRenderer.bevelAgainstMachineDirectionV2, true);
+assert.equal(context.LabelerWipeComponentVisualRenderer.innerPadBottleBevelV2, true);
+assert.equal(context.LabelerWipeComponentVisualRenderer.innerPadLongEdgeInsideV2, true);
+
+// Regression: bootstrap can load this integration before assembly-map-renderer.
+// The inside-pad override must be applied again when geometry/planning becomes ready.
+let resolveGeometryPlanning;
+const lateStyles = [];
+const lateContext = {
+  console,
+  state: {
+    themePreset: "servoforge",
+    showAllProgramMovesOverlay: true,
+    showMoveDistanceOverlay: false,
+    referencePitchRadiusMm: 572.958,
+    tablePitchRadiusMm: 572.958,
+    radius: 250,
+    direction: "ccw"
+  },
+  localStorage: {
+    getItem() { return "true"; },
+    setItem() {}
+  },
+  document: {
+    getElementById() { return null; },
+    createElement(tag) { return { tagName: tag, id: "", textContent: "" }; },
+    head: { appendChild(node) { lateStyles.push(node); } }
+  },
+  angleToXY: context.angleToXY,
+  arcPath: context.arcPath,
+  ServoForgeGeometryPlanningReady: {
+    then(resolve) {
+      resolveGeometryPlanning = resolve;
+      return { catch() {} };
+    }
+  },
+  renderMapCalls: 0,
+  renderMap() { this.renderMapCalls += 1; }
+};
+lateContext.window = lateContext;
+lateContext.globalThis = lateContext;
+vm.createContext(lateContext);
+vm.runInContext(integrationSource, lateContext, { filename: "compact-layout-defaults-wipe-orientation-integration.js" });
+assert.equal(typeof resolveGeometryPlanning, "function", "The integration must wait for the authoritative map renderer when it is not loaded yet.");
+lateContext.drawSpongeWipeDownPad = function originalRenderer() {};
+lateContext.machineTrailingPadPath = function originalPath() {};
+lateContext.LabelerWipeComponentVisualRenderer = Object.freeze({ spongeWipePadsV2: true });
+resolveGeometryPlanning();
+assert.equal(lateContext.drawSpongeWipeDownPad, lateContext.ServoForgeCompactLayoutDefaults.drawSideAwareSpongePad);
+assert.equal(lateContext.LabelerWipeComponentVisualRenderer.innerPadBottleBevelV2, true);
+assert.equal(lateContext.LabelerWipeComponentVisualRenderer.innerPadLongEdgeInsideV2, true);
+assert.equal(lateContext.renderMapCalls, 1, "The map rerenders immediately after the corrected inside-pad renderer is installed.");
 
 console.log("Compact layout, default settings, bottle center, and wipe orientation regression passed.");
