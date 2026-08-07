@@ -6,6 +6,22 @@
   const THEME_VALUE = "servoforge";
   const THEME_LABEL = "ServoForge";
   const STYLE_ID = "servoforgeBrandThemeStyles";
+  const BRAND_ASSET = "./assets/servoforge-mark.svg";
+
+  function installBrowserBranding() {
+    const build = encodeURIComponent(global.ServoForgeBootstrapBuild || global.SERVOFORGE_RELEASE_VERSION || "current");
+    let icon = document.querySelector('link[rel="icon"]');
+    if (!icon) {
+      icon = document.createElement("link");
+      icon.rel = "icon";
+      icon.type = "image/svg+xml";
+      document.head.appendChild(icon);
+    }
+    icon.href = `${BRAND_ASSET}?brand=${build}`;
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    if (themeColor) themeColor.setAttribute("content", "#111820");
+    return true;
+  }
 
   function installThemeOption() {
     const select = document.querySelector("#themePreset");
@@ -29,7 +45,7 @@
     heading.classList.add("servoforge-brand-heading");
     heading.innerHTML = `
       <span class="servoforge-brand-lockup">
-        <img class="servoforge-brand-mark" src="./assets/labeler-tool-icon.svg?brand=${build}" alt="" aria-hidden="true" />
+        <img class="servoforge-brand-mark" src="${BRAND_ASSET}?brand=${build}" alt="" aria-hidden="true" />
         <span class="servoforge-brand-word">SERVOFORGE</span>
       </span>
       <span class="product-module">Labeler Tool</span>
@@ -199,6 +215,7 @@
   }
 
   installStyles();
+  installBrowserBranding();
   installThemeOption();
   installBrandHeader();
 
@@ -223,6 +240,7 @@
         divider: "#26313D"
       })
     }),
+    installBrowserBranding,
     installThemeOption,
     installBrandHeader,
     installStyles
