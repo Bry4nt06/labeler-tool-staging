@@ -31,10 +31,7 @@
       const servoSign = state.direction === "cw" ? -1 : 1;
       const referenceRotation = angleToSvgRotation(head.tableAngle) + servoSign * padAngle;
       const bottle = add("g", { transform: `translate(${head.x} ${head.y}) rotate(${referenceRotation})`, "data-animation-head": head.head });
-      add("circle", { cx: 0, cy: 0, r: 7.5, fill: "var(--map-head-fill)", stroke: "var(--map-head-stroke)", "stroke-width": 1.7 }, bottle);
-      drawBottleLabelIndicators(add, bottle, head.tableAngle);
-      add("line", { x1: 0, y1: 0, x2: 6.6, y2: 0, stroke: "#ad3434", "stroke-width": 2, "stroke-linecap": "round", "data-bottle-orientation": "true" }, bottle);
-      add("circle", { cx: 0, cy: 0, r: 2.2, fill: "var(--map-head-stroke)" }, bottle);
+      drawTopViewBottle(add, bottle, head.tableAngle);
     });
 
     const moveDistanceLayer = add("g", { "aria-label": "Active servo move distance overlay" });
@@ -69,6 +66,8 @@
   global.renderSimulationMap = renderSimulationMap;
   global.LabelerSimulationMapSceneRenderer = Object.freeze({
     renderSimulationMap,
-    premiumBottleTableV1: true
+    premiumBottleTableV1: true,
+    synchronizedBottlePocketsV1: true,
+    amberBottleBlueCapV1: true
   });
 })(window);
