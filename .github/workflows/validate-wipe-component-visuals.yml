@@ -1,0 +1,32 @@
+name: Validate sponge wipe component visuals
+
+on:
+  push:
+    paths:
+      - "app/assembly-map-renderer.js"
+      - "app/mechanical-map-scene-renderer.js"
+      - "app/simulation-map-scene-renderer.js"
+      - "tests/wipe-component-visuals.test.js"
+      - ".github/workflows/validate-wipe-component-visuals.yml"
+  pull_request:
+    paths:
+      - "app/assembly-map-renderer.js"
+      - "app/mechanical-map-scene-renderer.js"
+      - "app/simulation-map-scene-renderer.js"
+      - "tests/wipe-component-visuals.test.js"
+      - ".github/workflows/validate-wipe-component-visuals.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check renderer syntax
+        run: |
+          node --check app/assembly-map-renderer.js
+          node --check app/mechanical-map-scene-renderer.js
+      - name: Run wipe component visual regression
+        run: node tests/wipe-component-visuals.test.js
