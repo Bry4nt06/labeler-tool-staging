@@ -1,0 +1,41 @@
+name: Validate label centerline policy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/label-centerline-policy-integration.js"
+      - "app/orientation-constraint-target-service.js"
+      - "app/apl-label-sensor-reference-integration.js"
+      - "app.js"
+      - "app/bootstrap.js"
+      - "tests/label-centerline-policy.test.js"
+      - ".github/workflows/validate-label-centerline-policy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check syntax
+        run: |
+          node --check app/label-centerline-policy-integration.js
+          node --check app/orientation-constraint-target-service.js
+          node --check app/apl-label-sensor-reference-integration.js
+          node --check app.js
+          node --check app/bootstrap.js
+          node --check tests/label-centerline-policy.test.js
+      - name: Run centerline policy regression
+        run: node tests/label-centerline-policy.test.js
+      - name: Re-run physical sensor geometry regression
+        run: node tests/sensor-physical-visibility-model.test.js
+      - name: Re-run live sensor direction regression
+        run: node tests/sensor-direction-live-status.test.js
