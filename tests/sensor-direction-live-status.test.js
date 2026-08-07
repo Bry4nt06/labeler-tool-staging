@@ -38,8 +38,8 @@ assert.match(compactEditorSource, /background:var\(--panel-hi\)!important/);
 assert.match(compactEditorSource, /sensor-station-inherited-row>summary/);
 assert.match(startupSource, /first-application-zero-datum-v30-physical-sensor-visibility/);
 assert.match(startupSource, /sensor-direction-live-status-integration\.js/);
-assert.match(bootstrapSource, /physical-sensor-visibility-20260806-2324/);
-assert.match(bootstrapSource, /Aug 6, 2026 11:24 PM ET/);
+assert.match(bootstrapSource, /physical-sensor-visibility-20260806-2336/);
+assert.match(bootstrapSource, /Aug 6, 2026 11:36 PM ET/);
 
 const map = {
   applicationMode: "apl",
