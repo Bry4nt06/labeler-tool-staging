@@ -42,20 +42,21 @@ assert.match(assemblies, /drawSpongeRoller\(add, objectLayer/);
 assert.match(mechanical, /drawSpongeRoller\(add, equipmentLayer/);
 assert.match(simulation, /drawConfiguredAssemblies\(add, configuredAssemblyLayer\)/);
 
+const testState = {
+  radius: 250,
+  referencePitchRadiusMm: 572.958,
+  tablePitchRadiusMm: 572.958,
+  direction: "ccw"
+};
 const context = {
   console,
-  state: {
-    radius: 250,
-    referencePitchRadiusMm: 572.958,
-    tablePitchRadiusMm: 572.958,
-    direction: "ccw"
-  },
+  state: testState,
   num(value, fallback = 0) {
     const number = Number(value);
     return Number.isFinite(number) ? number : fallback;
   },
   angleToXY(angle, radius) {
-    const signed = this.state.direction === "cw" ? -1 : 1;
+    const signed = testState.direction === "cw" ? -1 : 1;
     const rad = signed * Number(angle) * Math.PI / 180;
     return { x: Math.cos(rad) * radius, y: Math.sin(rad) * radius };
   },
@@ -79,7 +80,7 @@ assert.match(pathD, / A /);
 assert.match(pathD, / L /);
 assert.match(pathD, / Z$/);
 
-context.state.direction = "cw";
+testState.direction = "cw";
 const clockwisePath = renderer.machineTrailingPadPath(149, 169, 266, renderer.wipeDownPadWidthMapUnits());
 assert.notEqual(clockwisePath, pathD, "CW and CCW maps must mirror the physical pad while keeping the bevel against travel.");
 
