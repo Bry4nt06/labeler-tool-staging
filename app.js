@@ -1,5 +1,28 @@
 "use strict";
 
+(function loadMobileWorkspaceStyles() {
+  const stylesheetId = "servoforge-mobile-workspace-styles";
+  if (document.getElementById(stylesheetId)) return;
+  const link = document.createElement("link");
+  link.id = stylesheetId;
+  link.rel = "stylesheet";
+  link.href = "./mobile.css?v=mobile-20260807-1";
+  document.head.appendChild(link);
+})();
+
+(function optimizeMobileNumberInputs() {
+  const applyInputModes = () => {
+    document.querySelectorAll('input[type="number"]').forEach((input) => {
+      if (!input.hasAttribute("inputmode")) input.setAttribute("inputmode", "decimal");
+    });
+  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", applyInputModes, { once: true });
+  } else {
+    applyInputModes();
+  }
+})();
+
 (function seedDefaultWorkspacePanelVisibility() {
   const preferencesKey = "servoforge-developer-preferences-v1";
   const migrationKey = "servoforge-default-hidden-panels-v2-applied";
