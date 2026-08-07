@@ -24,6 +24,26 @@ assert.match(bottleSource, /neck:\s*Object\.freeze\(\{\s*center:\s*0/);
 assert.match(bottleSource, /body:\s*Object\.freeze\(\{\s*center:\s*0/);
 assert.match(bottleSource, /back:\s*Object\.freeze\(\{\s*center:\s*180/);
 
+assert.match(bottleSource, /function drawBottleTableVisual\(/);
+assert.match(bottleSource, /data-bottle-table-visual/);
+assert.match(bottleSource, /data-bottle-table-guide-track/);
+assert.match(bottleSource, /data-bottle-table-face/);
+assert.match(bottleSource, /data-bottle-table-pocket/);
+assert.match(bottleSource, /premiumBottleTableV1:\s*true/);
+assert.match(bottleSource, /recipeSizedLabelBandsV1:\s*true/);
+assert.match(bottleSource, /sectionWipePlan\(section\)\?\.labelDeg/);
+assert.match(bottleSource, /stroke-linecap":\s*"round"/);
+
+assert.match(
+  mapSource,
+  /drawBottleTableVisual\(add, svg, state\.radius, bottleHeads\)/,
+  "Mechanical Map must render the shared premium bottle table."
+);
+assert.match(
+  simulationSource,
+  /drawBottleTableVisual\(add, svg, state\.radius, bottleHeads\)/,
+  "Servo Simulation must render the same premium bottle table."
+);
 assert.match(
   mapSource,
   /drawBottleLabelIndicators\(add, bottle, head\.tableAngle\)/,
@@ -34,7 +54,7 @@ assert.match(
   /drawBottleLabelIndicators\(add, bottle, head\.tableAngle\)/,
   "Servo Simulation must use the same shared top-view bottle renderer."
 );
-assert.match(bootstrapSource, /top-view-bottles-20260807-1054/);
+assert.match(bootstrapSource, /premium-bottle-table-20260807-1208/);
 
 const elements = [];
 const group = {
@@ -53,6 +73,9 @@ const context = {
     ];
   },
   labelSectionForStation(station) { return ({ 1: "neck", 3: "body", 5: "back" })[station]; },
+  sectionWipePlan(section) {
+    return { labelDeg: ({ neck: 62, body: 127, back: 96 })[section] };
+  },
   norm(value) { return ((Number(value) % 360) + 360) % 360; },
   currentProgram() { return []; },
   plateAngleAt() { return 0; },
@@ -62,15 +85,33 @@ context.window = context;
 vm.createContext(context);
 vm.runInContext(bottleSource, context, { filename: "bottle-visual-renderer.js" });
 
-context.drawBottleLabelIndicators((name, attrs, parent) => {
+const add = (name, attrs, parent) => {
   const element = { name, attrs, parent };
   elements.push(element);
   return element;
-}, group, 40);
+};
+
+context.drawBottleLabelIndicators(add, group, 40);
 
 assert.equal(group.attributes["data-bottle-view"], "top");
 assert.ok(elements.some((element) => element.attrs?.["data-bottle-top-view-shoulder"] === "true"));
 assert.ok(elements.some((element) => element.attrs?.["data-bottle-top-view-neck"] === "true"));
-assert.equal(elements.filter((element) => element.attrs?.["data-bottle-label-indicator"]).length, 3);
+const labelBands = elements.filter((element) => element.attrs?.["data-bottle-label-indicator"]);
+assert.equal(labelBands.length, 3);
+assert.equal(labelBands.find((element) => element.attrs["data-bottle-label-indicator"] === "body").attrs["data-bottle-label-arc-deg"], 127);
+assert.equal(labelBands.find((element) => element.attrs["data-bottle-label-indicator"] === "neck").attrs.stroke, "#ff8a32");
+assert.equal(labelBands.find((element) => element.attrs["data-bottle-label-indicator"] === "body").attrs.stroke, "#4ca8ff");
+assert.equal(labelBands.find((element) => element.attrs["data-bottle-label-indicator"] === "back").attrs.stroke, "#71d34f");
 
-console.log("ServoForge top-view bottle rendering regression passed.");
+const tableElementsStart = elements.length;
+context.drawBottleTableVisual(add, { kind: "svg" }, 150, [
+  { head: 1, x: 0, y: -150 },
+  { head: 2, x: 150, y: 0 }
+]);
+const tableElements = elements.slice(tableElementsStart);
+assert.ok(tableElements.some((element) => element.attrs?.["data-bottle-table-visual"] === "premium-v1"));
+assert.ok(tableElements.some((element) => element.attrs?.["data-bottle-table-face"] === "true"));
+assert.ok(tableElements.some((element) => element.attrs?.["data-bottle-table-guide-track"] === "true"));
+assert.equal(tableElements.filter((element) => element.attrs?.["data-bottle-table-pocket"]).length, 2);
+
+console.log("ServoForge premium bottle-table and top-view bottle rendering regression passed.");
