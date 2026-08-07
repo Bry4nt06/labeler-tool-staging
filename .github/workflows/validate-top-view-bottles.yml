@@ -1,0 +1,34 @@
+name: Validate top-view bottle rendering
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/bottle-visual-renderer.js"
+      - "app/mechanical-map-scene-renderer.js"
+      - "app/simulation-map-scene-renderer.js"
+      - "app/bootstrap.js"
+      - "tests/top-view-bottle-renderer.test.js"
+      - ".github/workflows/validate-top-view-bottles.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check syntax
+        run: |
+          node --check app/bottle-visual-renderer.js
+          node --check app/mechanical-map-scene-renderer.js
+          node --check app/simulation-map-scene-renderer.js
+          node --check tests/top-view-bottle-renderer.test.js
+      - name: Run top-view bottle regression
+        run: node tests/top-view-bottle-renderer.test.js
