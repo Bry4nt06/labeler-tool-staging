@@ -1,20 +1,22 @@
 "use strict";
 
 (function installBottleVisualRenderer(global) {
+  // The scene renderers own the outer 7.5-unit bottle footprint and the final
+  // red datum/cap mark. These dimensions add the concentric features that make
+  // the symbol read as a bottle viewed vertically from above.
   const BOTTLE_GEOMETRY = Object.freeze({
-    bodyRadius: 8.4,
-    shoulderRadius: 6.15,
-    neckRadius: 3.35,
-    capRadius: 1.75,
-    centerlineLength: 8.65
+    bodyRadius: 7.5,
+    shoulderRadius: 5.55,
+    neckRadius: 3.25,
+    capRadius: 2.2
   });
 
   const INDICATORS = Object.freeze({
     // Neck and Body share the front datum, so they use the same angular center.
     // Separate radial bands keep both labels readable in a true top view.
-    neck: Object.freeze({ center: 0, innerRadius: 4.35, outerRadius: 5.55, color: "#f0c84b" }),
-    body: Object.freeze({ center: 0, innerRadius: 6.45, outerRadius: 8.05, color: "#42c987" }),
-    back: Object.freeze({ center: 180, innerRadius: 6.45, outerRadius: 8.05, color: "#a984e8" })
+    neck: Object.freeze({ center: 0, innerRadius: 4.05, outerRadius: 5.15, color: "#f0c84b" }),
+    body: Object.freeze({ center: 0, innerRadius: 6.0, outerRadius: 7.25, color: "#42c987" }),
+    back: Object.freeze({ center: 180, innerRadius: 6.0, outerRadius: 7.25, color: "#a984e8" })
   });
 
   function bottleLocalArcPath(startAngle, endAngle, innerRadius, outerRadius) {
@@ -64,7 +66,40 @@
     return plateAngleAt(head?.tableAngle, program);
   }
 
+  function drawTopViewBottleStructure(add, bottleGroup) {
+    // Shoulder ring: the visible transition from the bottle body to the neck.
+    add("circle", {
+      cx: 0,
+      cy: 0,
+      r: BOTTLE_GEOMETRY.shoulderRadius,
+      fill: "var(--map-surface)",
+      "fill-opacity": 0.82,
+      stroke: "var(--map-ring)",
+      "stroke-width": 0.75,
+      "stroke-opacity": 0.92,
+      "data-bottle-top-view-shoulder": "true"
+    }, bottleGroup);
+
+    // Neck ring. The scene renderer's existing center circle becomes the cap,
+    // so together these concentric circles read like a bottle mouth from above.
+    add("circle", {
+      cx: 0,
+      cy: 0,
+      r: BOTTLE_GEOMETRY.neckRadius,
+      fill: "var(--map-head-fill)",
+      stroke: "var(--map-head-stroke)",
+      "stroke-width": 0.95,
+      "data-bottle-top-view-neck": "true"
+    }, bottleGroup);
+
+    bottleGroup.setAttribute("data-bottle-view", "top");
+  }
+
   function drawBottleLabelIndicators(add, bottleGroup, tableAngle) {
+    // Draw the bottle's top-view structure first. Both the Mechanical Map and
+    // Servo Simulation call this function, keeping their bottle visuals aligned.
+    drawTopViewBottleStructure(add, bottleGroup);
+
     bottleLabelApplications().forEach((application) => {
       const visual = INDICATORS[application.section];
       const start = visual.center - 45;
@@ -74,7 +109,7 @@
         fill: visual.color,
         "fill-opacity": 0.92,
         stroke: visual.color,
-        "stroke-width": 0.45,
+        "stroke-width": 0.42,
         "stroke-opacity": 0.98,
         "data-bottle-label-indicator": application.section,
         "data-application-angle": application.angle,
@@ -82,95 +117,56 @@
         display: bottleHasPassedApplication(tableAngle, application.angle) ? "inline" : "none"
       }, bottleGroup);
     });
+
+    // Small inner rim sits above the label bands but below the red front datum.
+    add("circle", {
+      cx: 0,
+      cy: 0,
+      r: 2.65,
+      fill: "none",
+      stroke: "var(--map-text)",
+      "stroke-width": 0.42,
+      "stroke-opacity": 0.34,
+      "pointer-events": "none",
+      "aria-hidden": "true"
+    }, bottleGroup);
   }
 
+  // Complete helper for any future renderer that wants to delegate the whole
+  // top-view bottle to this module. Current map scenes keep their existing outer
+  // circle/datum/cap drawing so animation behavior remains unchanged.
   function drawTopViewBottle(add, bottleGroup, tableAngle) {
-    const geometry = BOTTLE_GEOMETRY;
-
-    // Outer glass/body footprint. Concentric shoulder/neck/cap rings make the
-    // symbol unmistakably a bottle viewed vertically from above rather than a
-    // side-view bottle laying on the carousel.
     add("circle", {
       cx: 0,
       cy: 0,
-      r: geometry.bodyRadius + 0.65,
-      fill: "#000000",
-      "fill-opacity": 0.2,
-      stroke: "none",
-      "data-bottle-top-view-shadow": "true"
-    }, bottleGroup);
-    add("circle", {
-      cx: 0,
-      cy: 0,
-      r: geometry.bodyRadius,
+      r: BOTTLE_GEOMETRY.bodyRadius,
       fill: "var(--map-head-fill)",
       stroke: "var(--map-head-stroke)",
-      "stroke-width": 1.45,
+      "stroke-width": 1.7,
       "data-bottle-top-view-body": "true"
     }, bottleGroup);
-    add("circle", {
-      cx: 0,
-      cy: 0,
-      r: geometry.shoulderRadius,
-      fill: "var(--map-surface)",
-      "fill-opacity": 0.86,
-      stroke: "var(--map-ring)",
-      "stroke-width": 0.8,
-      "stroke-opacity": 0.9,
-      "data-bottle-top-view-shoulder": "true"
-    }, bottleGroup);
-
-    // Label wraps are rendered between the bottle wall and the neck/cap so the
-    // operator can see Neck + Body on the shared front datum and Back opposite.
     drawBottleLabelIndicators(add, bottleGroup, tableAngle);
-
-    // Red line is the bottle/front datum used throughout ServoForge. The whole
-    // bottle group rotates with the servo plate, so this remains a true physical
-    // orientation reference during animation.
     add("line", {
       x1: 0,
       y1: 0,
-      x2: geometry.centerlineLength,
+      x2: 6.6,
       y2: 0,
       stroke: "#ff4d3a",
-      "stroke-width": 1.7,
+      "stroke-width": 2,
       "stroke-linecap": "round",
       "data-bottle-orientation": "true",
       "data-bottle-front-centerline": "true"
     }, bottleGroup);
-
     add("circle", {
       cx: 0,
       cy: 0,
-      r: geometry.neckRadius,
-      fill: "var(--map-head-fill)",
-      stroke: "var(--map-head-stroke)",
-      "stroke-width": 1.05,
-      "data-bottle-top-view-neck": "true"
-    }, bottleGroup);
-    add("circle", {
-      cx: 0,
-      cy: 0,
-      r: geometry.capRadius,
+      r: BOTTLE_GEOMETRY.capRadius,
       fill: "var(--map-head-stroke)",
-      "fill-opacity": 0.78,
       stroke: "var(--map-text)",
-      "stroke-width": 0.45,
-      "stroke-opacity": 0.62,
+      "stroke-width": 0.35,
+      "stroke-opacity": 0.5,
       "data-bottle-top-view-cap": "true"
     }, bottleGroup);
-    add("circle", {
-      cx: -0.55,
-      cy: -0.6,
-      r: 0.55,
-      fill: "#ffffff",
-      "fill-opacity": 0.34,
-      stroke: "none",
-      "pointer-events": "none",
-      "aria-hidden": "true"
-    }, bottleGroup);
-
-    bottleGroup.setAttribute("data-bottle-view", "top");
     return bottleGroup;
   }
 
@@ -187,6 +183,7 @@
     bottleLabelApplications,
     bottleHasPassedApplication,
     bottlePreviewAngle,
+    drawTopViewBottleStructure,
     drawBottleLabelIndicators,
     drawTopViewBottle,
     topViewBottleV1: true
