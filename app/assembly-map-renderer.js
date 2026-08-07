@@ -47,42 +47,35 @@ function ensureWipeComponentVisualDefs(add, parent) {
   add("circle", { cx: 5.6, cy: 5.2, r: 0.46, fill: "#5d646b", "fill-opacity": 0.48 }, rollerPattern);
 }
 
-function machineForwardPadPath(startAngle, endAngle, centerRadius, widthMapUnits) {
+function machineTrailingPadPath(startAngle, endAngle, centerRadius, widthMapUnits) {
   const start = num(startAngle, 0);
   let end = num(endAngle, start);
   while (end < start) end += 360;
-
   const width = Math.max(1, num(widthMapUnits, wipeDownPadWidthMapUnits()));
   const innerRadius = Math.max(1, centerRadius - width / 2);
   const outerRadius = Math.max(innerRadius + 0.5, centerRadius + width / 2);
   const span = Math.max(0.1, end - start);
   const physicalBevelDeg = (width / Math.max(1, centerRadius)) * 180 / Math.PI * 0.8;
   const bevelDeg = Math.min(span * 0.38, Math.max(0.75, Math.min(5, physicalBevelDeg)));
-  const innerForwardEnd = end - bevelDeg;
-
+  // Logical map angles increase in machine travel direction. Chamfer the
+  // trailing/start side so the bevel faces against machine travel.
+  const innerTrailingStart = start + bevelDeg;
   const startOuter = angleToXY(start, outerRadius);
   const endOuter = angleToXY(end, outerRadius);
-  const startInner = angleToXY(start, innerRadius);
-  const endInner = angleToXY(innerForwardEnd, innerRadius);
+  const startInner = angleToXY(innerTrailingStart, innerRadius);
+  const endInner = angleToXY(end, innerRadius);
   const largeOuter = span > 180 ? 1 : 0;
-  const innerSpan = Math.max(0.1, innerForwardEnd - start);
+  const innerSpan = Math.max(0.1, end - innerTrailingStart);
   const largeInner = innerSpan > 180 ? 1 : 0;
   const sweepOuter = state.direction === "cw" ? 0 : 1;
   const sweepInner = sweepOuter ? 0 : 1;
-
-  return [
-    `M ${startOuter.x} ${startOuter.y}`,
-    `A ${outerRadius} ${outerRadius} 0 ${largeOuter} ${sweepOuter} ${endOuter.x} ${endOuter.y}`,
-    `L ${endInner.x} ${endInner.y}`,
-    `A ${innerRadius} ${innerRadius} 0 ${largeInner} ${sweepInner} ${startInner.x} ${startInner.y}`,
-    "Z"
-  ].join(" ");
+  return [`M ${startOuter.x} ${startOuter.y}`, `A ${outerRadius} ${outerRadius} 0 ${largeOuter} ${sweepOuter} ${endOuter.x} ${endOuter.y}`, `L ${endInner.x} ${endInner.y}`, `A ${innerRadius} ${innerRadius} 0 ${largeInner} ${sweepInner} ${startInner.x} ${startInner.y}`, "Z"].join(" ");
 }
 
 function drawSpongeWipeDownPad(add, parent, item, centerRadius) {
   ensureWipeComponentVisualDefs(add, parent);
   const widthMapUnits = wipeDownPadWidthMapUnits();
-  const d = machineForwardPadPath(item.start, item.end, centerRadius, widthMapUnits);
+  const d = machineTrailingPadPath(item.start, item.end, centerRadius, widthMapUnits);
   const pad = add("path", {
     d,
     fill: `url(#${WIPE_SPONGE_PATTERN_ID})`,
@@ -92,7 +85,7 @@ function drawSpongeWipeDownPad(add, parent, item, centerRadius) {
     "data-wipe-down-pad": item.id,
     "data-pad-width-mm": WIPE_DOWN_PAD_WIDTH_MM,
     "data-sponge-material": "orange-foam",
-    "data-bevel-facing": "machine-forward",
+    "data-bevel-facing": "against-machine-direction",
     "data-machine-direction": state.direction
   }, parent);
   add("path", {
@@ -145,10 +138,12 @@ window.LabelerWipeComponentVisualRenderer = Object.freeze({
   WIPE_DOWN_PAD_WIDTH_MM,
   mapUnitsPerMillimeter,
   wipeDownPadWidthMapUnits,
-  machineForwardPadPath,
+  machineTrailingPadPath,
   drawSpongeWipeDownPad,
   drawSpongeRoller,
   spongeWipePadsV1: true,
+  spongeWipePadsV2: true,
+  bevelAgainstMachineDirectionV1: true,
   spongeRollersV1: true
 });
 
@@ -161,9 +156,8 @@ function activeAggregateDefinitions() {
   if (!machineMap) return [];
   const enabled = normalizeEnabledSlots(machineMap.enabledAggregates, machineMap.aggregateCount);
   const angles = normalizeAggregateAngles(machineMap.aggregateAngles, machineMap.applicationMode, machineMap.objects);
-  return enabled
-    .map((isEnabled, index) => isEnabled ? { number: index + 1, angle: num(angles[String(index + 1)], 0) } : null)
-    .filter(Boolean);
+  const spenderAngles = typeof normalizeSpenderPlateAngles === "function" ? normalizeSpenderPlateAngles(machineMap.spenderPlateAngles) : Object.fromEntries(Array.from({ length: 6 }, (_, index) => [String(index + 1), 75]));
+  return enabled.map((isEnabled, index) => isEnabled ? { number: index + 1, angle: num(angles[String(index + 1)], 0), spenderPlateAngleDeg: Math.max(0, Math.min(180, num(spenderAngles[String(index + 1)], 75))) } : null).filter(Boolean);
 }
 
 const AGGREGATE_CENTERLINE_MIN_GAP_DEG = 6;
@@ -189,18 +183,29 @@ function aggregateCenterlineGaps() {
   });
 }
 
-function drawIndependentAggregates(add, layer) {
+function drawAplSpenderAssembly(add, layer, aggregate) {
   const machineSign = state.direction === "cw" ? 1 : -1;
+  const plateAngleDeg = Math.max(0, Math.min(180, num(aggregate.spenderPlateAngleDeg, 75)));
+  const xy = angleToXY(aggregate.angle, state.radius + state.depths.spender);
+  const rotation = angleToSvgRotation(aggregate.angle) + machineSign * plateAngleDeg;
+  const group = add("g", { transform: `translate(${xy.x} ${xy.y}) rotate(${rotation})`, "data-aggregate-marker": aggregate.number, "data-application-arm": aggregate.number, "data-spender-plate-angle": plateAngleDeg }, layer);
+  add("polygon", { points: "-4,-2.6 20,-3.2 25,-1.5 25,1.5 20,3.2 -4,2.6", fill: "#c5ccd2", stroke: "#69737c", "stroke-width": 1, "stroke-linejoin": "round", "data-spender-plate": aggregate.number }, group);
+  add("line", { x1: -2, y1: -1.4, x2: 21, y2: -1.8, stroke: "#f1f4f6", "stroke-width": 0.7, "stroke-opacity": 0.72, "pointer-events": "none" }, group);
+  add("line", { x1: 21, y1: 0, x2: 47, y2: 0, stroke: "#59636c", "stroke-width": 6, "stroke-linecap": "round", "data-application-arm-member": aggregate.number }, group);
+  add("line", { x1: 23, y1: -1.1, x2: 44, y2: -1.1, stroke: "#aab3bb", "stroke-width": 0.85, "stroke-opacity": 0.65, "pointer-events": "none" }, group);
+  add("circle", { cx: 47, cy: 0, r: 5.2, fill: "#7a848d", stroke: "#c8ced3", "stroke-width": 1.1, "data-application-arm-pivot": aggregate.number }, group);
+  add("circle", { cx: 47, cy: 0, r: 2.1, fill: "#20262b", stroke: "#111519", "stroke-width": 0.7 }, group);
+  add("line", { x1: -4, y1: -2.8, x2: -4, y2: 2.8, stroke: "#ff8a00", "stroke-width": 1.4, "stroke-linecap": "round", "data-spender-contact-edge": aggregate.number }, group);
+  return group;
+}
+
+function drawIndependentAggregates(add, layer) {
   activeAggregateDefinitions().forEach((aggregate) => {
+    if (state.applicationMode !== "cold-glue") { drawAplSpenderAssembly(add, layer, aggregate); return; }
     const xy = angleToXY(aggregate.angle, state.radius + state.depths.spender);
-    const rotation = angleToSvgRotation(aggregate.angle) + (state.applicationMode === "cold-glue" ? 90 : machineSign * SPENDER_PLATE_ARM_ANGLE);
+    const rotation = angleToSvgRotation(aggregate.angle) + 90;
     const group = add("g", { transform: `translate(${xy.x} ${xy.y}) rotate(${rotation})`, "data-aggregate-marker": aggregate.number }, layer);
-    if (state.applicationMode === "cold-glue") {
-      add("line", { x1: -9, y1: 0, x2: 9, y2: 0, stroke: "#d71920", "stroke-width": 3, "stroke-linecap": "round" }, group);
-    } else {
-      add("line", { x1: 0, y1: 0, x2: 30, y2: 0, stroke: "#d71920", "stroke-width": 4, "stroke-linecap": "round" }, group);
-      add("circle", { cx: 0, cy: 0, r: 3, fill: "#d71920", stroke: "#ffffff", "stroke-width": 1 }, group);
-    }
+    add("line", { x1: -9, y1: 0, x2: 9, y2: 0, stroke: "#d71920", "stroke-width": 3, "stroke-linecap": "round" }, group);
   });
 }
 

@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "wipe-pad-reverse-bevel-v34-20260807-1343";
-  const buildUpdatedAt = "Aug 7, 2026 1:43 PM ET";
+  const build = "spender-plate-visual-controls-v35-20260807-1402";
+  const buildUpdatedAt = "Aug 7, 2026 2:02 PM ET";
   // Regression lineage: startup-dom-binding-recovery-v33-20260807-1306 • label-application-reference-v32-20260807-1251
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
@@ -49,7 +49,6 @@
     "app/controllers/map-builder-popup-controller.js",
     "app/controllers/setup-event-controller-integration.js",
     "app/application-reference-build-input-integration.js",
-    "app/wipe-pad-bevel-direction-integration.js",
     "app/global-actions.js",
     "app/animation-runtime.js",
     "app/startup-runtime.js"

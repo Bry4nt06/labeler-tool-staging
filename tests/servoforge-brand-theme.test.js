@@ -51,7 +51,12 @@ assert.match(mark, /filter="url\(#servoforgeMarkGlow\)"/);
 assert.match(mark, /stroke-linecap="square"/);
 
 assert.match(bootstrap, /app\/servoforge-brand-theme-integration\.js/);
-assert.match(bootstrap, /servoforge-brand-polish-20260807-1041/);
-assert.match(bootstrap, /Aug 7, 2026 10:41 AM ET/);
+assert.match(bootstrap, /spender-plate-visual-controls-v35-20260807-1402/);
+assert.match(bootstrap, /Aug 7, 2026 2:02 PM ET/);
 
-console.log("ServoForge brand mark and selectable theme regression passed.");
+const defaults=read("app/defaults.js"),companyDefaults=JSON.parse(read("config/company-default-settings.json"));
+assert.match(defaults,/labelerThemePreset"\) \|\| "servoforge"/);
+assert.match(defaults,/workspaceView: "direct"/);
+assert.equal(companyDefaults.settings.themePreset,"servoforge");
+assert.equal(companyDefaults.settings.workspaceView,"direct");
+console.log("ServoForge brand mark, default theme, and Direct view regression passed.");

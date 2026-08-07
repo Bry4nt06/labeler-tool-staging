@@ -124,9 +124,9 @@ const defaultLabelSpecs = [
 const state = {
   themePreset: (() => {
     try {
-      return localStorage.getItem("labelerThemePreset") || "dark-green";
+      return localStorage.getItem("labelerThemePreset") || "servoforge";
     } catch {
-      return "dark-green";
+      return "servoforge";
     }
   })(),
   activeTab: "specs",
