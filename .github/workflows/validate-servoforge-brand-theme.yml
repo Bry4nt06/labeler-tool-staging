@@ -7,6 +7,8 @@ on:
       - "assets/labeler-tool-icon.svg"
       - "app/servoforge-brand-theme-integration.js"
       - "app/bootstrap.js"
+      - "app/defaults.js"
+      - "config/company-default-settings.json"
       - "tests/servoforge-brand-theme.test.js"
       - ".github/workflows/validate-servoforge-brand-theme.yml"
   workflow_dispatch:
@@ -27,6 +29,7 @@ jobs:
         run: |
           node --check app/servoforge-brand-theme-integration.js
           node --check app/bootstrap.js
+          node --check app/defaults.js
           node --check tests/servoforge-brand-theme.test.js
-      - name: Run branding regression
+      - name: Run branding and defaults regression
         run: node tests/servoforge-brand-theme.test.js
