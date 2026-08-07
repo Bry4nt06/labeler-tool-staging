@@ -123,7 +123,8 @@
       return element;
     };
 
-    add("circle", { cx: 0, cy: 0, r: state.radius, fill: "var(--map-surface)", stroke: "var(--map-ring)", "stroke-width": 2 });
+    const bottleHeads = heads();
+    drawBottleTableVisual(add, svg, state.radius, bottleHeads);
     const quadrantLayer = add("g", { "aria-label": "Table quadrant references" });
     drawMapQuadrantReferences(add, quadrantLayer);
     const zeroEnd = angleToXY(0, state.radius + 34);
@@ -140,7 +141,7 @@
         .map((point) => point.id)
     );
 
-    heads().forEach((head) => {
+    bottleHeads.forEach((head) => {
       const padAngle = bottlePreviewAngle(head);
       const servoSign = state.direction === "cw" ? -1 : 1;
       const referenceRotation = angleToSvgRotation(head.tableAngle) + servoSign * padAngle;
@@ -208,6 +209,7 @@
     SENSOR_FIELD_OF_VIEW_DEG,
     sensorConeGeometry,
     drawSensorFieldOfViewCones,
-    sensorFieldOfViewCoreV1: true
+    sensorFieldOfViewCoreV1: true,
+    premiumBottleTableV1: true
   });
 })(window);
