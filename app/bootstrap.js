@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "sensor-direction-20260806-2242";
-  const buildUpdatedAt = "Aug 6, 2026 10:42 PM ET";
+  const build = "sensor-line-of-sight-20260806-2246";
+  const buildUpdatedAt = "Aug 6, 2026 10:46 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
