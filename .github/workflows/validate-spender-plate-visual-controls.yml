@@ -1,0 +1,50 @@
+name: Validate spender plate visual controls
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/assembly-map-renderer.js"
+      - "app/map-builder-controls.js"
+      - "app/map-builder-controller.js"
+      - "app/controllers/map-builder-layout-controller.js"
+      - "app/map-schema-adapter-integration.js"
+      - "drivers/map/map-schema-driver.js"
+      - "drivers/map/map-migration-driver.js"
+      - "tests/spender-plate-visual-controls.test.js"
+      - ".github/workflows/validate-spender-plate-visual-controls.yml"
+  pull_request:
+    paths:
+      - "app/assembly-map-renderer.js"
+      - "app/map-builder-controls.js"
+      - "app/map-builder-controller.js"
+      - "app/controllers/map-builder-layout-controller.js"
+      - "app/map-schema-adapter-integration.js"
+      - "drivers/map/map-schema-driver.js"
+      - "drivers/map/map-migration-driver.js"
+      - "tests/spender-plate-visual-controls.test.js"
+      - ".github/workflows/validate-spender-plate-visual-controls.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate spender plate implementation
+        run: |
+          node --check app/assembly-map-renderer.js
+          node --check app/map-builder-controls.js
+          node --check app/map-builder-controller.js
+          node --check app/controllers/map-builder-layout-controller.js
+          node --check app/map-schema-adapter-integration.js
+          node --check drivers/map/map-schema-driver.js
+          node --check drivers/map/map-migration-driver.js
+          node --check tests/spender-plate-visual-controls.test.js
+          node tests/spender-plate-visual-controls.test.js
