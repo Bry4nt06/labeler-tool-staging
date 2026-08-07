@@ -1,0 +1,30 @@
+name: Validate compact layout defaults and wipe orientation
+
+on:
+  push:
+    paths:
+      - "app/compact-layout-defaults-wipe-orientation-integration.js"
+      - "app/bootstrap.js"
+      - "config/company-default-settings.json"
+      - "tests/compact-layout-defaults-wipe-orientation.test.js"
+      - ".github/workflows/validate-compact-layout-defaults-wipe-orientation.yml"
+  pull_request:
+    paths:
+      - "app/compact-layout-defaults-wipe-orientation-integration.js"
+      - "app/bootstrap.js"
+      - "config/company-default-settings.json"
+      - "tests/compact-layout-defaults-wipe-orientation.test.js"
+      - ".github/workflows/validate-compact-layout-defaults-wipe-orientation.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check integration syntax
+        run: node --check app/compact-layout-defaults-wipe-orientation-integration.js
+      - name: Run compact defaults and wipe orientation regression
+        run: node tests/compact-layout-defaults-wipe-orientation.test.js
