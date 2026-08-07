@@ -1,0 +1,70 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+
+const root = path.resolve(__dirname, "..");
+const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
+
+const assemblies = read("app/assembly-map-renderer.js");
+const mechanical = read("app/mechanical-map-scene-renderer.js");
+const simulation = read("app/simulation-map-scene-renderer.js");
+
+assert.doesNotThrow(() => new vm.Script(assemblies, { filename: "assembly-map-renderer.js" }));
+assert.doesNotThrow(() => new vm.Script(mechanical, { filename: "mechanical-map-scene-renderer.js" }));
+
+assert.match(assemblies, /WIPE_DOWN_PAD_WIDTH_MM = 22/);
+assert.match(assemblies, /servoforge-wipe-sponge-pattern/);
+assert.match(assemblies, /#ee7418/i);
+assert.match(assemblies, /data-bevel-facing/);
+assert.match(assemblies, /machine-forward/);
+assert.match(assemblies, /data-pad-width-mm/);
+assert.match(assemblies, /drawSpongeWipeDownPad\(add, objectLayer, item, centerRadius\)/);
+
+assert.match(assemblies, /servoforge-roller-sponge-pattern/);
+assert.match(assemblies, /#969da4/i);
+assert.match(assemblies, /r: 4\.2/);
+assert.match(assemblies, /fill: "#111417"/i);
+assert.match(assemblies, /data-roller-hub/);
+assert.match(assemblies, /drawSpongeRoller\(add, objectLayer/);
+
+assert.match(mechanical, /drawSpongeRoller\(add, equipmentLayer/);
+assert.match(simulation, /drawConfiguredAssemblies\(add, configuredAssemblyLayer\)/);
+
+const context = {
+  console,
+  state: {
+    radius: 250,
+    referencePitchRadiusMm: 572.958,
+    tablePitchRadiusMm: 572.958,
+    direction: "ccw"
+  },
+  num(value, fallback = 0) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  },
+  angleToXY(angle, radius) {
+    const rad = Number(angle) * Math.PI / 180;
+    return { x: Math.cos(rad) * radius, y: Math.sin(rad) * radius };
+  },
+  Object
+};
+context.window = context;
+context.globalThis = context;
+vm.createContext(context);
+vm.runInContext(assemblies, context, { filename: "assembly-map-renderer.js" });
+
+const renderer = context.LabelerWipeComponentVisualRenderer;
+assert.equal(renderer.WIPE_DOWN_PAD_WIDTH_MM, 22);
+const expectedWidth = 22 * 250 / 572.958;
+assert.ok(Math.abs(renderer.wipeDownPadWidthMapUnits() - expectedWidth) < 1e-9, "Pad width must scale from the physical 22 mm width.");
+
+const pathD = renderer.machineForwardPadPath(149, 169, 266, renderer.wipeDownPadWidthMapUnits());
+assert.match(pathD, /^M /);
+assert.match(pathD, / A /);
+assert.match(pathD, / L /);
+assert.match(pathD, / Z$/);
+
+console.log("Sponge wipe-down pad and roller visual regression passed.");
