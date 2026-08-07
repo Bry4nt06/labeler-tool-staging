@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - "app/assembly-map-renderer.js"
+      - "app/wipe-pad-bevel-direction-integration.js"
+      - "app/bootstrap.js"
       - "app/mechanical-map-scene-renderer.js"
       - "app/simulation-map-scene-renderer.js"
       - "tests/wipe-component-visuals.test.js"
@@ -11,6 +13,8 @@ on:
   pull_request:
     paths:
       - "app/assembly-map-renderer.js"
+      - "app/wipe-pad-bevel-direction-integration.js"
+      - "app/bootstrap.js"
       - "app/mechanical-map-scene-renderer.js"
       - "app/simulation-map-scene-renderer.js"
       - "tests/wipe-component-visuals.test.js"
@@ -27,6 +31,7 @@ jobs:
       - name: Check renderer syntax
         run: |
           node --check app/assembly-map-renderer.js
+          node --check app/wipe-pad-bevel-direction-integration.js
           node --check app/mechanical-map-scene-renderer.js
       - name: Run wipe component visual regression
         run: node tests/wipe-component-visuals.test.js
