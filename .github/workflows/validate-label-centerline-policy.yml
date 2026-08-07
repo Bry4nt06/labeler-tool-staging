@@ -10,6 +10,8 @@ on:
       - "app.js"
       - "app/bootstrap.js"
       - "tests/label-centerline-policy.test.js"
+      - "tests/sensor-physical-visibility-model.test.js"
+      - "tests/sensor-direction-live-status.test.js"
       - ".github/workflows/validate-label-centerline-policy.yml"
   workflow_dispatch:
 
@@ -33,6 +35,8 @@ jobs:
           node --check app.js
           node --check app/bootstrap.js
           node --check tests/label-centerline-policy.test.js
+          node --check tests/sensor-physical-visibility-model.test.js
+          node --check tests/sensor-direction-live-status.test.js
       - name: Run centerline policy regression
         run: node tests/label-centerline-policy.test.js
       - name: Re-run physical sensor geometry regression
