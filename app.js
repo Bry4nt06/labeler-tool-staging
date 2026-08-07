@@ -24,7 +24,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "first-application-zero-datum-v29-sensor-live-ui";
+  const build = "first-application-zero-datum-v30-physical-sensor-visibility";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
