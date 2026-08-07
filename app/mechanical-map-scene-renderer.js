@@ -161,9 +161,13 @@
           ? state.radius + state.depths.opRoller
           : state.radius + state.depths.nonOpRoller;
         const position = angleToXY(point.angle, rollerRadius);
-        const group = add("g", { transform: `translate(${position.x} ${position.y})` }, equipmentLayer);
-        add("circle", { cx: 0, cy: 0, r: 10, fill: "#477664", "fill-opacity": 0.78, stroke: "none" }, group);
-        add("circle", { cx: -3, cy: -3, r: 3, fill: "#789b8d", "fill-opacity": 0.55 }, group);
+        if (typeof drawSpongeRoller === "function") {
+          drawSpongeRoller(add, equipmentLayer, position.x, position.y, { "data-map-point-roller": point.id });
+        } else {
+          const group = add("g", { transform: `translate(${position.x} ${position.y})` }, equipmentLayer);
+          add("circle", { cx: 0, cy: 0, r: 10, fill: "#969da4", stroke: "#d0d5da", "stroke-width": 1 }, group);
+          add("circle", { cx: 0, cy: 0, r: 4.2, fill: "#111417", stroke: "#050607", "stroke-width": 0.9 }, group);
+        }
         return;
       }
       if (/Inspection|Coding/i.test(point.name)) return;
@@ -209,6 +213,7 @@
     sensorFieldOfViewCoreV1: true,
     premiumBottleTableV1: true,
     synchronizedBottlePocketsV1: true,
-    amberBottleBlueCapV1: true
+    amberBottleBlueCapV1: true,
+    spongeWipeComponentsV1: true
   });
 })(window);
