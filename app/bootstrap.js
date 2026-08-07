@@ -2,10 +2,12 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "bottle-type-selection-20260806-v3";
+  const build = "sensor-direction-20260806-2242";
+  const buildUpdatedAt = "Aug 6, 2026 10:42 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
+  window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
-  if (banner) banner.textContent = `STAGING ${version} / TEST BUILD — NOT PRODUCTION`;
+  if (banner) banner.textContent = `STAGING ${version} • BUILD ${build} • UPDATED ${buildUpdatedAt} — NOT PRODUCTION`;
   const modules = Object.freeze([
     "app/export-service.js",
     "app/controllers/workspace-action-service.js",
