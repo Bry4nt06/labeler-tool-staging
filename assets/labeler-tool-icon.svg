@@ -1,42 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ServoForge">
   <defs>
-    <linearGradient id="servoforgeMarkGradient" x1="96" y1="112" x2="416" y2="400" gradientUnits="userSpaceOnUse">
+    <linearGradient id="servoforgeMarkGradient" x1="108" y1="104" x2="404" y2="408" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#ff8a00"/>
-      <stop offset="0.38" stop-color="#ff5a36"/>
+      <stop offset="0.42" stop-color="#ff5a36"/>
       <stop offset="1" stop-color="#ff3d2e"/>
     </linearGradient>
-    <filter id="servoforgeGlow" x="-40%" y="-40%" width="180%" height="180%">
-      <feGaussianBlur stdDeviation="12" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+    <filter id="servoforgeMarkGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-  <path
-    d="M392 132H198c-19 0-34 6-47 19l-31 31c-19 19-19 49 0 68l31 31c13 13 28 19 47 19h116c19 0 34 6 47 19l29 29c19 19 19 49 0 68l-30 30c-13 13-28 19-47 19H120"
-    fill="none"
-    stroke="#ff4d2e"
-    stroke-width="54"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    opacity="0.42"
-    filter="url(#servoforgeGlow)"
-  />
-  <path
-    d="M392 132H198c-19 0-34 6-47 19l-31 31c-19 19-19 49 0 68l31 31c13 13 28 19 47 19h116c19 0 34 6 47 19l29 29c19 19 19 49 0 68l-30 30c-13 13-28 19-47 19H120"
-    fill="none"
-    stroke="url(#servoforgeMarkGradient)"
-    stroke-width="34"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-  <path
-    d="M376 148H201c-14 0-24 4-34 14l-28 28"
-    fill="none"
-    stroke="#ffd0bf"
-    stroke-width="6"
-    stroke-linecap="round"
-    opacity="0.78"
-  />
+  <path d="M394 153 L354 111 L170 111 L116 157 L116 214 L161 258 L323 258 L394 326 L394 363 L347 406 L158 406 L116 367" fill="none" stroke="#ff4d2e" stroke-width="52" stroke-linecap="square" stroke-linejoin="round" opacity="0.30" filter="url(#servoforgeMarkGlow)"/>
+  <path d="M394 153 L354 111 L170 111 L116 157 L116 214 L161 258 L323 258 L394 326 L394 363 L347 406 L158 406 L116 367" fill="none" stroke="url(#servoforgeMarkGradient)" stroke-width="34" stroke-linecap="square" stroke-linejoin="round"/>
+  <path d="M374 143 L344 125 L177 125 L136 162" fill="none" stroke="#ffd0bf" stroke-width="5" stroke-linecap="round" opacity="0.62"/>
 </svg>
