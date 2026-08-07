@@ -17,6 +17,8 @@ assert.doesNotThrow(() => new vm.Script(geometrySource));
 assert.doesNotThrow(() => new vm.Script(targetSource));
 assert.doesNotThrow(() => new vm.Script(liveStatusSource));
 assert.doesNotThrow(() => new vm.Script(compactEditorSource));
+assert.match(geometrySource, /application plate angle itself is the finished/);
+assert.doesNotMatch(geometrySource, /alignmentPercent/);
 assert.match(targetSource, /function machineDirectionSign/);
 assert.match(targetSource, /function sensorPhysicalAimOffset/);
 assert.match(targetSource, /function labelSensorMapStatus/);
@@ -33,10 +35,10 @@ assert.match(compactEditorSource, /function schedulePreviewRegeneration/);
 assert.match(compactEditorSource, /else schedulePreviewRegeneration\(160\)/);
 assert.match(compactEditorSource, /background:var\(--panel-hi\)!important/);
 assert.match(compactEditorSource, /sensor-station-inherited-row>summary/);
-assert.match(startupSource, /first-application-zero-datum-v29-sensor-live-ui/);
+assert.match(startupSource, /first-application-zero-datum-v30-physical-sensor-visibility/);
 assert.match(startupSource, /sensor-direction-live-status-integration\.js/);
-assert.match(bootstrapSource, /sensor-live-ui-20260806-2301/);
-assert.match(bootstrapSource, /Aug 6, 2026 11:01 PM ET/);
+assert.match(bootstrapSource, /physical-sensor-visibility-20260806-2324/);
+assert.match(bootstrapSource, /Aug 6, 2026 11:24 PM ET/);
 
 const map = {
   applicationMode: "apl",
@@ -51,7 +53,7 @@ const sensor = {
   angle: 217.3,
   start: 217.3,
   sensorAimOffsetDeg: 16,
-  requiredVisibilityPercent: 80,
+  requiredVisibilityPercent: 98,
   enabled: true,
   servoAssist: true,
   orientBottle: true
@@ -133,29 +135,31 @@ assert.ok(svc);
 assert.equal(context.labelSensorMapStatus, svc.labelSensorMapStatus, "Map Builder status must use the shared orientation service.");
 
 let status = svc.labelSensorMapStatus(sensor, context.state.program);
+assert.equal(status.labelCenter, 100, "Body application plate angle must remain the label centerline without a half-width shift.");
 assert.equal(status.sensorAimOffsetDeg, 16);
 assert.equal(status.sensorPhysicalAimOffsetDeg, 16, "CCW maps must preserve positive physical sensor aim.");
 assert.equal(status.viewedPlateAngle, 130);
 assert.equal(status.percent, 100);
 assert.equal(status.passes, true);
-assert.equal(status.targetPlateAngle, 146, "A sensor already aimed at the label must not request another servo turn.");
+assert.equal(status.targetPlateAngle, 146, "A sensor already seeing enough label must not request another servo turn.");
 
 context.state.direction = "cw";
 status = svc.labelSensorMapStatus(sensor, context.state.program);
 assert.equal(status.sensorPhysicalAimOffsetDeg, -16, "CW maps must mirror the physical sensor aim exactly like the map centerline renderer.");
 assert.equal(status.viewedPlateAngle, 162);
-assert.ok(status.percent < 80, "The same bottle angle must no longer pass when the physical aim is mirrored on a CW map.");
-assert.equal(status.passes, false);
+assert.ok(status.percent > 96 && status.percent < 97, "Mirroring the sensor aim must change the physical label overlap.");
+assert.equal(status.passes, false, "96.7% visible must fail a 98% requirement.");
+assert.ok(Math.abs(status.targetPlateAngle - 145.2) < 0.01, "The servo correction must be only the small move needed to reach 98% overlap.");
 
 context.state.program = [
-  { tableAngle: 0, cmd: 3, plateAngle: 114 },
-  { tableAngle: 217.3, cmd: 3, plateAngle: 114 },
-  { tableAngle: 220.3, cmd: 3, plateAngle: 114 }
+  { tableAngle: 0, cmd: 3, plateAngle: 145 },
+  { tableAngle: 217.3, cmd: 3, plateAngle: 145 },
+  { tableAngle: 220.3, cmd: 3, plateAngle: 145 }
 ];
 status = svc.labelSensorMapStatus(sensor, context.state.program);
-assert.equal(status.viewedPlateAngle, 130);
-assert.equal(status.percent, 100);
+assert.equal(status.viewedPlateAngle, 161);
+assert.ok(status.percent > 98 && status.percent < 99);
 assert.equal(status.passes, true);
-assert.equal(status.targetPlateAngle, 114, "CW sensor aim must allow a zero-turn solution when the generated bottle orientation already satisfies line of sight.");
+assert.equal(status.targetPlateAngle, 145, "Once the required physical overlap is met, no further centering turn is allowed.");
 
-console.log("Direction-aware sensor line-of-sight, live editor refresh, and sensor-card contrast regression passed.");
+console.log("Direction-aware sensor line-of-sight, physical label overlap, live editor refresh, and sensor-card contrast regression passed.");
