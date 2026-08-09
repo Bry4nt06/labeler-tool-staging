@@ -47,9 +47,10 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "first-application-zero-datum-v30-physical-sensor-visibility-label-application-reference-v32-finished-centerline-completion-v39-label-datum-servo-flow-v40-first-tack-datum-flow-v41-common-apl-active-sections-v42-canonical-station-reset-v43-canonical-section-handoff-v44-20260809-0203";
+  const version = "0.9.10";
+  const build = "coder-terminal-source-policy-v52-20260809-1940";
 
-  function loadScript(path, version) {
+  function loadScript(path, scriptVersion) {
     return new Promise((resolve, reject) => {
       const expected = new URL(`./${path}`, window.location.href).pathname;
       const existing = [...document.scripts].find((script) => {
@@ -65,7 +66,7 @@
         return;
       }
       const script = document.createElement("script");
-      script.src = `./${path}?v=${encodeURIComponent(version)}&build=${encodeURIComponent(build)}`;
+      script.src = `./${path}?v=${encodeURIComponent(scriptVersion)}&build=${encodeURIComponent(build)}`;
       script.async = false;
       script.dataset.orientationConstraintModule = path;
       script.dataset.orientationConstraintBuild = build;
@@ -79,7 +80,9 @@
   }
 
   async function loadOrientationConstraintPlanner() {
-    const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
+    // Use the release version owned by this startup build. Older integrations
+    // still expose legacy component versions and must not be allowed to change
+    // which runtime modules this build requests.
     await loadScript("app/global-machine-parameter-defaults-integration.js", version);
     await loadScript("drivers/profile/orientation-constraint-planner-driver.js", version);
     await loadScript("drivers/profile/sensor-target-policy-driver.js", version);
