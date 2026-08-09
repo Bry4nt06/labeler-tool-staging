@@ -3,11 +3,10 @@
 (function installAplFirstTackDatumFlow(global) {
   if (global.LabelerAplFirstTackDatumFlow?.installed) return;
 
-  const VERSION = 1;
-  const BUILD = "first-tack-datum-flow-v41";
+  const VERSION = 2;
+  const BUILD = "canonical-body-back-stations-v43";
   const EPS = 0.001;
   const RETRY_MS = 50;
-  const MIN_SEGMENT_DEG = 0.5;
 
   const finite = (value, fallback = NaN) => {
     if (value === null || value === undefined || value === "") return fallback;
@@ -128,7 +127,12 @@
     const first = sequence[0] || null;
     const startPlate = finite(stateRef()?.buildInputs?.plateStartPositionDeg, 0);
     if (!first) {
-      return { sequence, first: null, startPlate, front: finite(stateRef()?.buildInputs?.centerLineFrontDeg, 0) };
+      return {
+        sequence,
+        first: null,
+        startPlate,
+        front: finite(stateRef()?.buildInputs?.centerLineFrontDeg, 0)
+      };
     }
 
     const firstCenter = finishedCenterlineFromApplication(first.section, startPlate);
@@ -182,11 +186,12 @@
     let hold = -1;
     for (let index = w2 + 1; index < rows.length; index += 1) {
       const row = rows[index];
-      if (rowStation(row) === Number(station) && rowSection(row) === section && Number(row?.cmd) === 3) {
+      if (rowStation(row) === Number(station)
+        && rowSection(row) === section
+        && Number(row?.cmd) === 3) {
         hold = index;
         break;
       }
-      if (rowStation(row) !== Number(station) && /Application/i.test(text(row?.action))) break;
     }
     return hold >= 0 ? { w1, w2, hold } : null;
   }
@@ -198,7 +203,9 @@
         && rowStation(row) === Number(descriptor.station)
         && rowSection(row) === descriptor.section
         && Number(row?.cmd) === 3
-        && (row?.applicationReference || row?.wipeResetReference || /Application|Re-Wipe/i.test(text(row?.action))));
+        && (row?.applicationReference
+          || row?.wipeResetReference
+          || /Application|Re-Wipe/i.test(text(row?.action))));
     const anchorEntry = candidates.at(-1) || null;
     if (!anchorEntry) return { anchor: null, anchorIndex: -1, transition: null, transitionIndex: -1 };
     const transitionIndex = anchorEntry.index - 1;
@@ -225,134 +232,88 @@
     return result;
   }
 
-  function removeRows(rows, indexes) {
-    [...new Set(indexes.filter((index) => index >= 0))]
-      .sort((a, b) => b - a)
-      .forEach((index) => rows.splice(index, 1));
-  }
-
-  function normalizeSplit(w1, w2, hold, firstRotation, secondRotation) {
-    const start = finite(w1?.tableAngle, NaN);
-    const end = finite(hold?.tableAngle, NaN);
-    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start + MIN_SEGMENT_DEG * 2) return;
-    const firstMagnitude = Math.abs(finite(firstRotation, 0));
-    const secondMagnitude = Math.abs(finite(secondRotation, 0));
-    const totalMagnitude = firstMagnitude + secondMagnitude;
-    if (totalMagnitude <= EPS) return;
-    const totalSpan = end - start;
-    const ideal = start + totalSpan * firstMagnitude / totalMagnitude;
-    w2.tableAngle = round(Math.min(end - MIN_SEGMENT_DEG, Math.max(start + MIN_SEGMENT_DEG, ideal)));
-  }
-
   function recompute(rows) {
     rows.sort((left, right) => finite(left?.tableAngle, 0) - finite(right?.tableAngle, 0));
-    for (let index = 0; index < rows.length; index += 1) {
-      const row = rows[index];
+    rows.forEach((row, index) => {
       row.hmi = index + 1;
       row.plc = index;
-      if (Number(row?.cmd) !== 7 || !rows[index + 1]) continue;
+      if (Number(row?.cmd) !== 7 || !rows[index + 1]) return;
       const next = rows[index + 1];
       const rotation = finite(next?.plateAngle, 0) - finite(row?.plateAngle, 0);
       const span = Math.max(EPS, finite(next?.tableAngle, 0) - finite(row?.tableAngle, 0));
       row.plannedRotation = rotation;
       row.plannedRatio = Math.abs(rotation) / span;
-    }
+    });
     return rows;
   }
 
   function correctProfile(sourceRows, machineMap, datum) {
     if (!Array.isArray(sourceRows) || !sourceRows.length || !datum?.first) return sourceRows;
     const rows = sourceRows.map((row) => ({ ...row }));
-    const priorRotations = new Map();
+    const firstDescriptor = datum.sequence[0];
+    const group = firstDescriptor
+      ? findWipeGroup(rows, firstDescriptor.station, firstDescriptor.section)
+      : null;
 
-    datum.sequence.forEach((descriptor, sequenceIndex) => {
-      let group = findWipeGroup(rows, descriptor.station, descriptor.section);
-      if (!group) return;
-      let refs = referenceRows(rows, descriptor, group);
-
-      if (!descriptor.isFirstSectionStation) {
-        // A second aggregate for the same label is a physical re-wipe. It must
-        // continue from the previous wipe orientation instead of resetting the
-        // bottle to the original application/tack angle in free air.
-        removeRows(rows, [refs.anchorIndex, refs.transitionIndex]);
-        group = findWipeGroup(rows, descriptor.station, descriptor.section);
-        refs = referenceRows(rows, descriptor, group);
-      }
-
-      if (!group) return;
+    if (group) {
+      const refs = referenceRows(rows, firstDescriptor, group);
+      const startPlate = round(datum.startPlate);
       const w1 = rows[group.w1];
       const w2 = rows[group.w2];
       const hold = rows[group.hold];
-      if (!w1 || !w2 || !hold) return;
+      const firstRotation = finite(w1?.plannedRotation, finite(w2?.plateAngle, startPlate) - finite(w1?.plateAngle, startPlate));
+      const secondRotation = finite(w2?.plannedRotation, finite(hold?.plateAngle, startPlate) - finite(w2?.plateAngle, startPlate));
 
-      let startPlate;
-      let rotations;
-      if (descriptor.isFirstSectionStation) {
-        const target = sequenceIndex === 0
-          ? datum.startPlate
-          : targetFor(descriptor.section, datum);
-        const anchor = refs.anchor;
-        if (anchor) {
-          anchor.plateAngle = round(target);
-          anchor.applicationReference = true;
-          anchor.applicationReferenceMode = applicationReference(descriptor.section);
-          anchor.finishedLabelCenterlineDeg = round(centerlineFor(descriptor.section, datum));
-          anchor.firstTackDatumFlowV41 = true;
-          anchor.action = `Hold for ${global.sectionLabel?.(descriptor.section) || descriptor.section} Application - Agg ${descriptor.station}`;
-        }
-
-        if (sequenceIndex === 0 && refs.transitionIndex >= 0) {
-          // The machine arrives at the first active label with the bottle at
-          // its servo-start datum. No pre-application turn is permitted.
-          removeRows(rows, [refs.transitionIndex]);
-          group = findWipeGroup(rows, descriptor.station, descriptor.section);
-        } else if (refs.transition) {
-          const prior = precedingRow(rows, finite(refs.transition.tableAngle, 0));
-          refs.transition.plateAngle = round(finite(prior?.plateAngle, refs.transition.plateAngle));
-          refs.transition.firstTackDatumFlowV41 = true;
-        }
-
-        if (!group) return;
-        const freshW1 = rows[group.w1];
-        const freshW2 = rows[group.w2];
-        startPlate = round(target);
-        rotations = [
-          finite(freshW1?.plannedRotation, finite(freshW2?.plateAngle, startPlate) - startPlate),
-          finite(freshW2?.plannedRotation, finite(rows[group.hold]?.plateAngle, startPlate) - finite(freshW2?.plateAngle, startPlate))
-        ];
-      } else {
-        const prior = precedingRow(rows, finite(w1.tableAngle, 0));
-        startPlate = round(finite(prior?.plateAngle, w1.plateAngle));
-        const previous = priorRotations.get(descriptor.section);
-        if (previous) {
-          // Retrace the previous wipe path over the label. Reversing the order
-          // and sign eliminates the free-air reset while preserving complete
-          // surface coverage.
-          rotations = [-previous[1], -previous[0]];
-        } else {
-          rotations = [finite(w1.plannedRotation, 0), finite(w2.plannedRotation, 0)];
-        }
+      if (refs.anchor) {
+        refs.anchor.plateAngle = startPlate;
+        refs.anchor.applicationReference = true;
+        refs.anchor.applicationReferenceMode = applicationReference(firstDescriptor.section);
+        refs.anchor.finishedLabelCenterlineDeg = round(centerlineFor(firstDescriptor.section, datum));
+        refs.anchor.firstTackDatumFlowV41 = true;
+        refs.anchor.canonicalStationResetV43 = true;
+        refs.anchor.action = `Hold for ${global.sectionLabel?.(firstDescriptor.section) || firstDescriptor.section} Application - Agg ${firstDescriptor.station}`;
       }
 
-      const refreshed = findWipeGroup(rows, descriptor.station, descriptor.section);
-      if (!refreshed) return;
-      const rw1 = rows[refreshed.w1];
-      const rw2 = rows[refreshed.w2];
-      const rhold = rows[refreshed.hold];
-      const firstRotation = finite(rotations?.[0], 0);
-      const secondRotation = finite(rotations?.[1], 0);
+      // The first physical label starts from the configured servo-start datum.
+      // Remove only the unnecessary pre-application correction. Every later
+      // Body/Back aggregate keeps its normal Correction -> Rest application or
+      // re-wipe reference before repeating the same two wipe turns.
+      if (refs.transitionIndex >= 0) rows.splice(refs.transitionIndex, 1);
 
-      rw1.plateAngle = round(startPlate);
-      rw1.plannedRotation = firstRotation;
-      rw1.firstTackDatumFlowV41 = true;
-      rw2.plateAngle = round(startPlate + firstRotation);
-      rw2.plannedRotation = secondRotation;
-      rw2.firstTackDatumFlowV41 = true;
-      rhold.plateAngle = round(startPlate + firstRotation + secondRotation);
-      rhold.firstTackDatumFlowV41 = true;
-      rhold.finishedLabelCenterlineDeg = round(centerlineFor(descriptor.section, datum));
-      normalizeSplit(rw1, rw2, rhold, firstRotation, secondRotation);
-      priorRotations.set(descriptor.section, [firstRotation, secondRotation]);
+      const refreshed = findWipeGroup(rows, firstDescriptor.station, firstDescriptor.section);
+      if (refreshed) {
+        const rw1 = rows[refreshed.w1];
+        const rw2 = rows[refreshed.w2];
+        const rhold = rows[refreshed.hold];
+        rw1.plateAngle = startPlate;
+        rw1.plannedRotation = firstRotation;
+        rw1.firstTackDatumFlowV41 = true;
+        rw1.canonicalStationResetV43 = true;
+        rw2.plateAngle = round(startPlate + firstRotation);
+        rw2.plannedRotation = secondRotation;
+        rw2.firstTackDatumFlowV41 = true;
+        rw2.canonicalStationResetV43 = true;
+        rhold.plateAngle = round(startPlate + firstRotation + secondRotation);
+        rhold.firstTackDatumFlowV41 = true;
+        rhold.canonicalStationResetV43 = true;
+        rhold.finishedLabelCenterlineDeg = round(centerlineFor(firstDescriptor.section, datum));
+      }
+    }
+
+    // Do not rewrite any later aggregate's wipe path. The v40/common APL layer
+    // already owns those rows and matches the canonical 3-label structure:
+    // return to the section application reference, CMD 3, then repeat the same
+    // two wipe directions. A Body+Back recipe is therefore exactly the normal
+    // APL Body+Back station sequence with Neck inactive.
+    datum.sequence.slice(1).forEach((descriptor) => {
+      const descriptorGroup = findWipeGroup(rows, descriptor.station, descriptor.section);
+      if (!descriptorGroup) return;
+      const refs = referenceRows(rows, descriptor, descriptorGroup);
+      if (refs.anchor) refs.anchor.canonicalStationResetV43 = true;
+      if (refs.transition) refs.transition.canonicalStationResetV43 = true;
+      rows[descriptorGroup.w1].canonicalStationResetV43 = true;
+      rows[descriptorGroup.w2].canonicalStationResetV43 = true;
+      rows[descriptorGroup.hold].canonicalStationResetV43 = true;
     });
 
     const finalized = recompute(rows);
@@ -360,6 +321,7 @@
     target.motionPlan = target.motionPlan && typeof target.motionPlan === "object" ? target.motionPlan : {};
     target.motionPlan.rows = finalized;
     target.motionPlan.firstTackDatumFlowV41 = true;
+    target.motionPlan.canonicalStationResetV43 = true;
     target.motionPlan.firstApplicationZeroRebaseRetired = false;
     target.motionPlan.firstApplicationTackAnchoredToServoStart = true;
     target.motionPlan.initialApplicationSection = datum.first.section;
@@ -374,20 +336,24 @@
     target.motionPlan.bodyApplicationTarget = round(targetFor("body", datum));
     target.motionPlan.backApplicationTarget = round(targetFor("back", datum));
     target.motionPlan.finalPlateAngle = finalized.at(-1)?.plateAngle;
-
     target.motionPlan.stationPlans = (Array.isArray(target.motionPlan.stationPlans) ? target.motionPlan.stationPlans : []).map((plan) => {
       const descriptor = datum.sequence.find((entry) => Number(entry.station) === Number(plan.station));
       if (!descriptor) return plan;
-      const group = findWipeGroup(finalized, descriptor.station, descriptor.section);
-      if (!group) return plan;
-      const movePath = [finite(finalized[group.w1]?.plannedRotation, 0), finite(finalized[group.w2]?.plannedRotation, 0)];
+      const descriptorGroup = findWipeGroup(finalized, descriptor.station, descriptor.section);
+      if (!descriptorGroup) return plan;
+      const movePath = [
+        finite(finalized[descriptorGroup.w1]?.plannedRotation, 0),
+        finite(finalized[descriptorGroup.w2]?.plannedRotation, 0)
+      ];
       return {
         ...plan,
         movePath,
         requiredRotation: movePath.reduce((sum, value) => sum + Math.abs(value), 0),
         directionChanges: Math.sign(movePath[0]) !== Math.sign(movePath[1]) ? 1 : 0,
         firstTackDatumFlowV41: true,
-        reWipeContinuation: !descriptor.isFirstSectionStation
+        canonicalStationResetV43: true,
+        reWipeContinuation: false,
+        reWipeReferenceRestored: !descriptor.isFirstSectionStation
       };
     });
     return finalized;
@@ -396,21 +362,26 @@
   function wrapMapGenerator() {
     const current = global.generatedAplMapDrivenProfile;
     if (typeof current !== "function") return false;
-    if (current.firstTackDatumFlowV41) return true;
+    if (current.canonicalStationResetV43) return true;
     const base = current;
-    const wrapped = function generatedAplMapDrivenProfileWithFirstTackDatum(machineMap, ...args) {
-      if (String(stateRef()?.applicationMode || "").toLowerCase() !== "apl") return base.call(this, machineMap, ...args);
+    const wrapped = function generatedAplMapDrivenProfileWithCanonicalStationResets(machineMap, ...args) {
+      if (String(stateRef()?.applicationMode || "").toLowerCase() !== "apl") {
+        return base.call(this, machineMap, ...args);
+      }
       const datum = establishDatum(machineMap);
       if (datum?.first && Number.isFinite(datum.front)) {
-        stateRef().buildInputs = stateRef().buildInputs && typeof stateRef().buildInputs === "object" ? stateRef().buildInputs : {};
-        // The first physical tack establishes the finished-label coordinate
-        // frame. This makes downstream Back/coder/sensor targets derive from
-        // the label actually applied to the bottle, not from a stale nominal 0°.
+        stateRef().buildInputs = stateRef().buildInputs && typeof stateRef().buildInputs === "object"
+          ? stateRef().buildInputs
+          : {};
+        // Establish the finished-label coordinate frame before the v40/common
+        // generator runs so every Body/Back station receives the same targets
+        // it would have in the corresponding three-label program.
         stateRef().buildInputs.centerLineFrontDeg = datum.front;
       }
       return correctProfile(base.call(this, machineMap, ...args), machineMap, datum);
     };
     wrapped.firstTackDatumFlowV41 = true;
+    wrapped.canonicalStationResetV43 = true;
     wrapped.previousGeneratedAplMapDrivenProfile = base;
     global.generatedAplMapDrivenProfile = wrapped;
 
@@ -420,7 +391,8 @@
         ...generator,
         generate: wrapped,
         establishDatum,
-        firstTackDatumFlowV41: true
+        firstTackDatumFlowV41: true,
+        canonicalStationResetV43: true
       });
     }
     return true;
