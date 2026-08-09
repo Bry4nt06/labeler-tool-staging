@@ -24,7 +24,12 @@ const context = {
     tableAngleSequence: null
   },
   activeMachineMap() {
-    return { machineType: "TopModul", applicationMode: "apl" };
+    return {
+      machineType: "TopModul",
+      applicationMode: "apl",
+      aggregateCount: 6,
+      objects: [{ id: "apl-coding-default", kind: "coding", start: 304, end: 309 }]
+    };
   },
   applyGeneratedServoProfile() {
     context.state.program = [
@@ -33,32 +38,35 @@ const context = {
         hmi: 25,
         plc: 24,
         cmd: 7,
-        tableAngle: 298,
+        tableAngle: 290.5,
         plateAngle: 225,
-        action: "Orient Back Code Box for Back Label Coding",
-        codingObjectId: "default-back-coding",
+        action: "Orient Back Code Box for Coding",
+        codingObjectId: "apl-coding-default",
         plannedRotation: -67.5
       },
       {
         hmi: 26,
         plc: 25,
         cmd: 3,
-        tableAngle: 304,
+        tableAngle: 299,
         plateAngle: 157.5,
-        action: "Hold Back Code Box Through Back Label Coding",
+        action: "Hold Back Code Box Through Coding",
         orientationHold: true,
-        codingObjectId: "default-back-coding",
-        codingReadyTableAngle: 304
+        codingHold: true,
+        codingObjectId: "apl-coding-default",
+        codingReadyTableAngle: 299,
+        coderStartTableAngle: 304,
+        preCoderMarginDeg: 5
       },
       {
         hmi: 27,
         plc: 26,
         cmd: 3,
-        tableAngle: 315,
+        tableAngle: 309,
         plateAngle: 157.5,
         action: "Return Bottle to End Curve Reference After Coding",
         orientationConstraintContinuation: true,
-        codingObjectId: "default-back-coding"
+        codingObjectId: "apl-coding-default"
       },
       {
         hmi: 28,
@@ -102,14 +110,15 @@ vm.runInContext(source, context);
 context.applyGeneratedServoProfile();
 
 assert.equal(context.state.program.length, 3);
-assert.equal(context.state.program.at(-1).tableAngle, 304);
+assert.equal(context.state.program.at(-1).tableAngle, 299);
 assert.equal(context.state.program.at(-1).cmd, 3);
 assert.equal(context.state.program.at(-1).action, "Hold for Coding");
 assert.equal(context.state.program.at(-1).codingHold, true);
 assert.equal(context.state.program.at(-1).terminalRest, true);
 assert.equal(context.state.program.at(-1).motionSource, "terminal-coding-rest");
-assert.equal(context.state.program.some((row) => row.tableAngle === 315), false);
+assert.equal(context.state.program.at(-1).preCoderMarginDeg, 5);
+assert.equal(context.state.program.some((row) => row.tableAngle === 309), false);
 assert.equal(context.state.program.some((row) => row.tableAngle === 359), false);
-assert.equal(context.state.motionPlan.termination.tableAngle, 304);
+assert.equal(context.state.motionPlan.termination.tableAngle, 299);
 
-console.log("TopModul rebuilt coding hold terminal regression passed.");
+console.log("TopModul six-aggregate five-degree pre-coder terminal hold regression passed.");
