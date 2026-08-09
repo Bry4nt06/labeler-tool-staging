@@ -13,6 +13,8 @@ on:
       - "drivers/profile/coder-handoff-driver.js"
       - "config/default-programs/map-apl-6-aggregate.json"
       - "tests/apl-6-aggregate-default.test.js"
+      - "tests/coder-hold-allowed-corrections-and-neck-progress.test.js"
+      - "tests/coder-visible-move-prehold.test.js"
       - "tests/topmodul-coder-terminal-source-policy.test.js"
       - "tests/topmodul-terminal-coding-hold.test.js"
       - ".github/workflows/validate-coder-hold-allowed-corrections.yml"
@@ -41,5 +43,9 @@ jobs:
         run: node tests/apl-6-aggregate-default.test.js
       - name: Reproduce and block the 290.5-to-359 coding move
         run: node tests/topmodul-coder-terminal-source-policy.test.js
+      - name: Verify retired 299-degree prehold path
+        run: node tests/coder-visible-move-prehold.test.js
+      - name: Verify coder diagnostics and wipe telemetry compatibility
+        run: node tests/coder-hold-allowed-corrections-and-neck-progress.test.js
       - name: Preserve terminal coding hold policy
         run: node tests/topmodul-terminal-coding-hold.test.js
