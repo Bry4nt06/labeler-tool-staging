@@ -3,8 +3,8 @@
 (function installAplFirstTackDatumFlow(global) {
   if (global.LabelerAplFirstTackDatumFlow?.installed) return;
 
-  const VERSION = 2;
-  const BUILD = "canonical-body-back-stations-v43";
+  const VERSION = 3;
+  const BUILD = "canonical-section-handoff-v44";
   const EPS = 0.001;
   const RETRY_MS = 50;
 
@@ -18,6 +18,8 @@
   const round = (value) => typeof global.finishAngle === "function"
     ? global.finishAngle(value)
     : Math.round(finite(value, 0) * 10) / 10;
+  const sectionName = (section) => global.sectionLabel?.(section)
+    || `${String(section || "").charAt(0).toUpperCase()}${String(section || "").slice(1)}`;
 
   function policy() {
     return global.LabelerLabelCenterlinePolicy || null;
@@ -37,7 +39,8 @@
     const api = policy();
     if (api?.applicationReference) return api.applicationReference(section, null, stateRef());
     const inputs = stateRef()?.buildInputs || {};
-    const raw = text(inputs[`${section}ApplicationReference`] || (section === "neck" ? inputs.neckApplication : "Leading Edge")).toLowerCase();
+    const raw = text(inputs[`${section}ApplicationReference`]
+      || (section === "neck" ? inputs.neckApplication : "Leading Edge")).toLowerCase();
     return raw.includes("center") ? "center-tack" : "leading-edge";
   }
 
@@ -89,7 +92,8 @@
         if (["neck", "body", "back"].includes(section)) seen.add(section);
         return { station, objects, section, isFirstSectionStation };
       })
-      .filter((entry) => ["neck", "body", "back"].includes(entry.section) && active?.[entry.section] !== false);
+      .filter((entry) => ["neck", "body", "back"].includes(entry.section)
+        && active?.[entry.section] !== false);
   }
 
   function finishedCenterlineFromApplication(section, applicationAngle) {
@@ -139,7 +143,6 @@
     let front = firstCenter;
     if (first.section === "body") front = firstCenter - sectionOffsetDeg("body");
     if (first.section === "back") front = firstCenter - 180 - sectionOffsetDeg("back");
-
     return {
       sequence,
       first,
@@ -197,6 +200,7 @@
   }
 
   function referenceRows(rows, descriptor, group) {
+    if (!group) return { anchor: null, anchorIndex: -1, transition: null, transitionIndex: -1 };
     const candidates = rows
       .map((row, index) => ({ row, index }))
       .filter(({ row, index }) => index < group.w1
@@ -232,6 +236,113 @@
     return result;
   }
 
+  function normalizeReference(anchor, transition, descriptor, datum) {
+    if (!anchor) return;
+    const section = descriptor.section;
+    const station = descriptor.station;
+    const target = round(targetFor(section, datum));
+    anchor.plateAngle = target;
+    anchor.applicationReferenceMode = applicationReference(section);
+    anchor.finishedLabelCenterlineDeg = round(centerlineFor(section, datum));
+    anchor.firstTackDatumFlowV41 = true;
+    anchor.canonicalStationResetV43 = true;
+    anchor.canonicalSectionHandoffV44 = true;
+
+    if (descriptor.isFirstSectionStation) {
+      anchor.applicationReference = true;
+      delete anchor.wipeResetReference;
+      anchor.action = `Hold for ${sectionName(section)} Application - Agg ${station}`;
+      anchor.finishedLabelReference = "fixed-label-datum";
+    } else {
+      anchor.applicationReference = false;
+      anchor.wipeResetReference = true;
+      anchor.action = `Orient ${sectionName(section)} for Re-Wipe - Agg ${station}`;
+    }
+
+    if (transition) {
+      transition.firstTackDatumFlowV41 = true;
+      transition.canonicalStationResetV43 = true;
+      transition.canonicalSectionHandoffV44 = true;
+      transition.action = descriptor.isFirstSectionStation
+        ? `Orient ${sectionName(section)} to Tack Reference - Agg ${station}`
+        : `Orient ${sectionName(section)} for Re-Wipe - Agg ${station}`;
+      transition.applicationTransition = descriptor.isFirstSectionStation;
+      transition.wipeResetTransition = !descriptor.isFirstSectionStation;
+    }
+  }
+
+  function ensureReference(rows, descriptor, datum) {
+    let group = findWipeGroup(rows, descriptor.station, descriptor.section);
+    if (!group) return null;
+    let refs = referenceRows(rows, descriptor, group);
+    if (refs.anchor) {
+      normalizeReference(refs.anchor, refs.transition, descriptor, datum);
+      return refs.anchor;
+    }
+
+    const w1 = rows[group.w1];
+    const wipeStart = finite(w1?.tableAngle, NaN);
+    if (!Number.isFinite(wipeStart)) return null;
+    const previous = precedingRow(rows, wipeStart);
+    const previousTable = finite(previous?.tableAngle, wipeStart - 2);
+    const previousPlate = finite(previous?.plateAngle, targetFor(descriptor.section, datum));
+    const targetPlate = round(targetFor(descriptor.section, datum));
+    const anchorTable = round(Math.max(previousTable + 1, wipeStart - 1.5));
+    const insertion = [];
+    const delta = targetPlate - previousPlate;
+
+    // The common generator historically allowed the prior section's final wipe
+    // to pre-land on the next label target. That removed the next label's own
+    // stopped application reference. Restore an explicit station handoff so a
+    // Body -> Back change is always Correction -> Rest before Back wiping.
+    if (Math.abs(delta) > EPS) {
+      const transitionTable = round(Math.min(anchorTable - 0.5, previousTable + 0.5));
+      insertion.push({
+        hmi: 0,
+        plc: 0,
+        cmd: 7,
+        tableAngle: transitionTable,
+        plateAngle: round(previousPlate),
+        action: descriptor.isFirstSectionStation
+          ? `Orient ${sectionName(descriptor.section)} to Tack Reference - Agg ${descriptor.station}`
+          : `Orient ${sectionName(descriptor.section)} for Re-Wipe - Agg ${descriptor.station}`,
+        station: descriptor.station,
+        section: descriptor.section,
+        motionSource: "canonical-section-handoff-v44",
+        mapDriven: true,
+        applicationTransition: descriptor.isFirstSectionStation,
+        wipeResetTransition: !descriptor.isFirstSectionStation,
+        canonicalSectionHandoffV44: true
+      });
+    }
+
+    insertion.push({
+      hmi: 0,
+      plc: 0,
+      cmd: 3,
+      tableAngle: anchorTable,
+      plateAngle: targetPlate,
+      action: descriptor.isFirstSectionStation
+        ? `Hold for ${sectionName(descriptor.section)} Application - Agg ${descriptor.station}`
+        : `Orient ${sectionName(descriptor.section)} for Re-Wipe - Agg ${descriptor.station}`,
+      station: descriptor.station,
+      section: descriptor.section,
+      motionSource: "canonical-section-handoff-v44",
+      mapDriven: true,
+      applicationReference: descriptor.isFirstSectionStation,
+      applicationReferenceMode: applicationReference(descriptor.section),
+      wipeResetReference: !descriptor.isFirstSectionStation,
+      finishedLabelCenterlineDeg: round(centerlineFor(descriptor.section, datum)),
+      canonicalSectionHandoffV44: true
+    });
+
+    rows.splice(group.w1, 0, ...insertion);
+    group = findWipeGroup(rows, descriptor.station, descriptor.section);
+    refs = referenceRows(rows, descriptor, group);
+    normalizeReference(refs.anchor, refs.transition, descriptor, datum);
+    return refs.anchor;
+  }
+
   function recompute(rows) {
     rows.sort((left, right) => finite(left?.tableAngle, 0) - finite(right?.tableAngle, 0));
     rows.forEach((row, index) => {
@@ -251,69 +362,39 @@
     if (!Array.isArray(sourceRows) || !sourceRows.length || !datum?.first) return sourceRows;
     const rows = sourceRows.map((row) => ({ ...row }));
     const firstDescriptor = datum.sequence[0];
-    const group = firstDescriptor
-      ? findWipeGroup(rows, firstDescriptor.station, firstDescriptor.section)
-      : null;
+    const firstGroup = findWipeGroup(rows, firstDescriptor.station, firstDescriptor.section);
 
-    if (group) {
-      const refs = referenceRows(rows, firstDescriptor, group);
-      const startPlate = round(datum.startPlate);
-      const w1 = rows[group.w1];
-      const w2 = rows[group.w2];
-      const hold = rows[group.hold];
-      const firstRotation = finite(w1?.plannedRotation, finite(w2?.plateAngle, startPlate) - finite(w1?.plateAngle, startPlate));
-      const secondRotation = finite(w2?.plannedRotation, finite(hold?.plateAngle, startPlate) - finite(w2?.plateAngle, startPlate));
-
+    if (firstGroup) {
+      let refs = referenceRows(rows, firstDescriptor, firstGroup);
+      if (!refs.anchor) refs.anchor = ensureReference(rows, firstDescriptor, datum);
+      refs = referenceRows(rows, firstDescriptor, findWipeGroup(rows, firstDescriptor.station, firstDescriptor.section));
       if (refs.anchor) {
-        refs.anchor.plateAngle = startPlate;
-        refs.anchor.applicationReference = true;
-        refs.anchor.applicationReferenceMode = applicationReference(firstDescriptor.section);
-        refs.anchor.finishedLabelCenterlineDeg = round(centerlineFor(firstDescriptor.section, datum));
-        refs.anchor.firstTackDatumFlowV41 = true;
-        refs.anchor.canonicalStationResetV43 = true;
-        refs.anchor.action = `Hold for ${global.sectionLabel?.(firstDescriptor.section) || firstDescriptor.section} Application - Agg ${firstDescriptor.station}`;
+        refs.anchor.plateAngle = round(datum.startPlate);
+        normalizeReference(refs.anchor, refs.transition, firstDescriptor, datum);
+        refs.anchor.plateAngle = round(datum.startPlate);
       }
 
       // The first physical label starts from the configured servo-start datum.
-      // Remove only the unnecessary pre-application correction. Every later
-      // Body/Back aggregate keeps its normal Correction -> Rest application or
-      // re-wipe reference before repeating the same two wipe turns.
+      // Remove only its unnecessary pre-application correction. Every later
+      // Body/Back aggregate keeps a real Correction -> Rest reference and then
+      // repeats the same two wipe directions as the preceding aggregate.
       if (refs.transitionIndex >= 0) rows.splice(refs.transitionIndex, 1);
-
-      const refreshed = findWipeGroup(rows, firstDescriptor.station, firstDescriptor.section);
-      if (refreshed) {
-        const rw1 = rows[refreshed.w1];
-        const rw2 = rows[refreshed.w2];
-        const rhold = rows[refreshed.hold];
-        rw1.plateAngle = startPlate;
-        rw1.plannedRotation = firstRotation;
-        rw1.firstTackDatumFlowV41 = true;
-        rw1.canonicalStationResetV43 = true;
-        rw2.plateAngle = round(startPlate + firstRotation);
-        rw2.plannedRotation = secondRotation;
-        rw2.firstTackDatumFlowV41 = true;
-        rw2.canonicalStationResetV43 = true;
-        rhold.plateAngle = round(startPlate + firstRotation + secondRotation);
-        rhold.firstTackDatumFlowV41 = true;
-        rhold.canonicalStationResetV43 = true;
-        rhold.finishedLabelCenterlineDeg = round(centerlineFor(firstDescriptor.section, datum));
-      }
     }
 
-    // Do not rewrite any later aggregate's wipe path. The v40/common APL layer
-    // already owns those rows and matches the canonical 3-label structure:
-    // return to the section application reference, CMD 3, then repeat the same
-    // two wipe directions. A Body+Back recipe is therefore exactly the normal
-    // APL Body+Back station sequence with Neck inactive.
-    datum.sequence.slice(1).forEach((descriptor) => {
-      const descriptorGroup = findWipeGroup(rows, descriptor.station, descriptor.section);
-      if (!descriptorGroup) return;
-      const refs = referenceRows(rows, descriptor, descriptorGroup);
-      if (refs.anchor) refs.anchor.canonicalStationResetV43 = true;
-      if (refs.transition) refs.transition.canonicalStationResetV43 = true;
-      rows[descriptorGroup.w1].canonicalStationResetV43 = true;
-      rows[descriptorGroup.w2].canonicalStationResetV43 = true;
-      rows[descriptorGroup.hold].canonicalStationResetV43 = true;
+    // Canonical three-label behavior: each aggregate has its own stopped
+    // application/re-wipe reference. A Body+Back recipe is the identical
+    // Body/Back sequence with the Neck stations inactive.
+    datum.sequence.slice(1).forEach((descriptor) => ensureReference(rows, descriptor, datum));
+
+    datum.sequence.forEach((descriptor) => {
+      const group = findWipeGroup(rows, descriptor.station, descriptor.section);
+      if (!group) return;
+      rows[group.w1].canonicalStationResetV43 = true;
+      rows[group.w1].canonicalSectionHandoffV44 = true;
+      rows[group.w2].canonicalStationResetV43 = true;
+      rows[group.w2].canonicalSectionHandoffV44 = true;
+      rows[group.hold].canonicalStationResetV43 = true;
+      rows[group.hold].canonicalSectionHandoffV44 = true;
     });
 
     const finalized = recompute(rows);
@@ -322,6 +403,7 @@
     target.motionPlan.rows = finalized;
     target.motionPlan.firstTackDatumFlowV41 = true;
     target.motionPlan.canonicalStationResetV43 = true;
+    target.motionPlan.canonicalSectionHandoffV44 = true;
     target.motionPlan.firstApplicationZeroRebaseRetired = false;
     target.motionPlan.firstApplicationTackAnchoredToServoStart = true;
     target.motionPlan.initialApplicationSection = datum.first.section;
@@ -336,14 +418,16 @@
     target.motionPlan.bodyApplicationTarget = round(targetFor("body", datum));
     target.motionPlan.backApplicationTarget = round(targetFor("back", datum));
     target.motionPlan.finalPlateAngle = finalized.at(-1)?.plateAngle;
-    target.motionPlan.stationPlans = (Array.isArray(target.motionPlan.stationPlans) ? target.motionPlan.stationPlans : []).map((plan) => {
+    target.motionPlan.stationPlans = (Array.isArray(target.motionPlan.stationPlans)
+      ? target.motionPlan.stationPlans
+      : []).map((plan) => {
       const descriptor = datum.sequence.find((entry) => Number(entry.station) === Number(plan.station));
       if (!descriptor) return plan;
-      const descriptorGroup = findWipeGroup(finalized, descriptor.station, descriptor.section);
-      if (!descriptorGroup) return plan;
+      const group = findWipeGroup(finalized, descriptor.station, descriptor.section);
+      if (!group) return plan;
       const movePath = [
-        finite(finalized[descriptorGroup.w1]?.plannedRotation, 0),
-        finite(finalized[descriptorGroup.w2]?.plannedRotation, 0)
+        finite(finalized[group.w1]?.plannedRotation, 0),
+        finite(finalized[group.w2]?.plannedRotation, 0)
       ];
       return {
         ...plan,
@@ -352,6 +436,7 @@
         directionChanges: Math.sign(movePath[0]) !== Math.sign(movePath[1]) ? 1 : 0,
         firstTackDatumFlowV41: true,
         canonicalStationResetV43: true,
+        canonicalSectionHandoffV44: true,
         reWipeContinuation: false,
         reWipeReferenceRestored: !descriptor.isFirstSectionStation
       };
@@ -362,9 +447,9 @@
   function wrapMapGenerator() {
     const current = global.generatedAplMapDrivenProfile;
     if (typeof current !== "function") return false;
-    if (current.canonicalStationResetV43) return true;
+    if (current.canonicalSectionHandoffV44) return true;
     const base = current;
-    const wrapped = function generatedAplMapDrivenProfileWithCanonicalStationResets(machineMap, ...args) {
+    const wrapped = function generatedAplMapDrivenProfileWithCanonicalSectionHandoffs(machineMap, ...args) {
       if (String(stateRef()?.applicationMode || "").toLowerCase() !== "apl") {
         return base.call(this, machineMap, ...args);
       }
@@ -373,15 +458,13 @@
         stateRef().buildInputs = stateRef().buildInputs && typeof stateRef().buildInputs === "object"
           ? stateRef().buildInputs
           : {};
-        // Establish the finished-label coordinate frame before the v40/common
-        // generator runs so every Body/Back station receives the same targets
-        // it would have in the corresponding three-label program.
         stateRef().buildInputs.centerLineFrontDeg = datum.front;
       }
       return correctProfile(base.call(this, machineMap, ...args), machineMap, datum);
     };
     wrapped.firstTackDatumFlowV41 = true;
     wrapped.canonicalStationResetV43 = true;
+    wrapped.canonicalSectionHandoffV44 = true;
     wrapped.previousGeneratedAplMapDrivenProfile = base;
     global.generatedAplMapDrivenProfile = wrapped;
 
@@ -392,7 +475,8 @@
         generate: wrapped,
         establishDatum,
         firstTackDatumFlowV41: true,
-        canonicalStationResetV43: true
+        canonicalStationResetV43: true,
+        canonicalSectionHandoffV44: true
       });
     }
     return true;
@@ -415,6 +499,7 @@
     centerlineFor,
     targetFor,
     correctProfile,
+    ensureReference,
     install
   });
 
