@@ -8,10 +8,12 @@ on:
       - app/bootstrap.js
       - app/first-application-zero-datum-integration.js
       - app/apl-finished-centerline-completion-integration.js
+      - app/apl-first-tack-datum-flow-integration.js
       - app/orientation-constraint-target-service.js
       - app/orientation-constraint-planner-integration.js
       - tests/landshark-first-application-zero-datum.test.js
       - tests/apl-finished-centerline-completion.test.js
+      - tests/apl-first-tack-datum-flow.test.js
       - tests/sensor-aim-geometry.test.js
       - tests/sensor-live-visibility-alignment.test.js
       - .github/workflows/validate-landshark-first-application-zero-datum.yml
@@ -33,16 +35,20 @@ jobs:
           node --check app.js
           node --check app/first-application-zero-datum-integration.js
           node --check app/apl-finished-centerline-completion-integration.js
+          node --check app/apl-first-tack-datum-flow-integration.js
           node --check app/orientation-constraint-target-service.js
           node --check app/orientation-constraint-planner-integration.js
           node --check tests/landshark-first-application-zero-datum.test.js
           node --check tests/apl-finished-centerline-completion.test.js
+          node --check tests/apl-first-tack-datum-flow.test.js
           node --check tests/sensor-aim-geometry.test.js
           node --check tests/sensor-live-visibility-alignment.test.js
-      - name: Run legacy zero-datum regression
+      - name: Run bottle-datum regression
         run: node tests/landshark-first-application-zero-datum.test.js
       - name: Run authoritative finished-centerline regression
         run: node tests/apl-finished-centerline-completion.test.js
+      - name: Run first-tack and continuous re-wipe regression
+        run: node tests/apl-first-tack-datum-flow.test.js
       - name: Run sensor-direction regressions
         run: |
           node tests/sensor-aim-geometry.test.js
