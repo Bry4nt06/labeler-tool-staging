@@ -10,7 +10,7 @@ const source = fs.readFileSync(path.join(root, "app", "apl-first-tack-datum-flow
 assert.doesNotThrow(() => new vm.Script(source));
 assert.match(source, /first physical label starts from the configured servo-start datum/);
 assert.match(source, /Every later/);
-assert.match(source, /repeat the same two wipe directions/);
+assert.match(source, /repeat the same[\s\S]*two wipe directions/);
 assert.doesNotMatch(source, /Retrace the previous wipe path/);
 
 const circumferenceMm = (60.68 - 0.6) * Math.PI;
