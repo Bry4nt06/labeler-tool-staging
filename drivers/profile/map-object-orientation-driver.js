@@ -5,6 +5,7 @@
 
   const FULL_CYCLE_DEG = 360;
   const COMMAND_RESOLUTION_DEG = 0.1;
+  const CODER_PRE_ORIENTATION_MARGIN_DEG = 5;
   const VALID_SECTIONS = Object.freeze(["neck", "body", "back", "none"]);
 
   function finite(value, fallback = NaN) {
@@ -84,21 +85,46 @@
     defaultSpan = 5
   } = {}) {
     const point = finite(item?.angle, item?.start);
-    let start = item?.kind === "sensor"
+    const isSensor = item?.kind === "sensor";
+    const isCoding = item?.kind === "coding";
+    let physicalStart = isSensor
       ? point - sensorHalfWindow
       : finite(item?.start, point);
-    let end = item?.kind === "sensor"
+    let physicalEnd = isSensor
       ? point + sensorHalfWindow
-      : Math.max(start + minimumSpan, finite(item?.end, start + defaultSpan));
-    while (end <= start) end += FULL_CYCLE_DEG;
+      : finite(item?.end, physicalStart + defaultSpan);
+    while (physicalEnd <= physicalStart) physicalEnd += FULL_CYCLE_DEG;
+    physicalEnd = Math.max(physicalStart + minimumSpan, physicalEnd);
+
+    // A coder is a physical no-motion zone. The bottle must already be at the
+    // required code-box orientation before it reaches that hardware. Treat the
+    // orientation-ready point as five table degrees ahead of the physical coder
+    // while preserving the real coder start/end as metadata.
+    const preOrientationMarginDeg = isCoding
+      ? Math.max(0, finite(
+        item?.preCoderOrientationDeg,
+        finite(item?.orientationLeadDeg, CODER_PRE_ORIENTATION_MARGIN_DEG)
+      ))
+      : 0;
+    let start = physicalStart - preOrientationMarginDeg;
+    let end = physicalEnd;
+
     const minimum = rows.length
       ? Math.min(...rows.map((row) => finite(row?.tableAngle, 0)))
       : 0;
     while (end < minimum) {
       start += FULL_CYCLE_DEG;
       end += FULL_CYCLE_DEG;
+      physicalStart += FULL_CYCLE_DEG;
+      physicalEnd += FULL_CYCLE_DEG;
     }
-    return { start, end };
+    return {
+      start,
+      end,
+      physicalStart,
+      physicalEnd,
+      preOrientationMarginDeg
+    };
   }
 
   function applicationSection(row) {
@@ -233,6 +259,7 @@
   const api = Object.freeze({
     FULL_CYCLE_DEG,
     COMMAND_RESOLUTION_DEG,
+    CODER_PRE_ORIENTATION_MARGIN_DEG,
     VALID_SECTIONS,
     finite,
     commandAngle,
