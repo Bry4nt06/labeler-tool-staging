@@ -6,7 +6,7 @@ on:
     paths:
       - "app/controllers/specification-table-ui-controller.js"
       - "app/bootstrap.js"
-      - "tests/spec-table-compact-layout.test.js"
+      - "tests/mobile-specs-horizontal-scroll.test.js"
       - ".github/workflows/validate-mobile-specs-horizontal-scroll.yml"
   workflow_dispatch:
 
@@ -25,7 +25,7 @@ jobs:
           node-version: 22
       - name: Check Specs UI syntax
         run: node --check app/controllers/specification-table-ui-controller.js
-      - name: Run compact Specs mobile regression
-        run: node tests/spec-table-compact-layout.test.js
+      - name: Run mobile Specs scroll regression
+        run: node tests/mobile-specs-horizontal-scroll.test.js
       - name: Verify mobile build marker
         run: grep -q 'mobile-specs-horizontal-scroll-v45-20260809-0214' app/bootstrap.js
