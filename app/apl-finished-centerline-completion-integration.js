@@ -359,6 +359,11 @@
     if (!Number.isFinite(current)) return;
     const center = nearestEquivalent(finishedCenterline(section), current);
     hold.action = `Wipe Hold ${global.sectionLabel?.(section) || section} - Agg ${station}`;
+    // A map generator can reuse its previous terminal Rest row as the final wipe
+    // hold. Once that row becomes part of the physical wipe, it must stop being
+    // treated as terminal or finalization will overwrite the completed wipe.
+    if (hold.terminalRest) delete hold.terminalRest;
+    if (hold.motionSource === "terminal-end-curve-rest") hold.motionSource = "apl-finished-centerline-completion-v39";
     hold.finishedLabelCenterlineDeg = round(finishedCenterline(section));
     hold.finishedCenterlineCompletionV39 = true;
     if (circularDistance(current, center) <= 0.05) {
