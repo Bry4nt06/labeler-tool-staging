@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "first-application-zero-datum-v30-physical-sensor-visibility-label-application-reference-v32";
+  const build = "finished-centerline-completion-v39-20260808-2118";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -88,6 +88,7 @@
     await loadScript("app/label-centerline-policy-integration.js", version);
     await loadScript("app/orientation-constraint-target-service.js", version);
     await loadScript("app/first-application-zero-datum-integration.js", version);
+    await loadScript("app/apl-finished-centerline-completion-integration.js", version);
     await loadScript("app/orientation-constraint-program-planner.js", version);
     await loadScript("app/coder-window-reference-handoff-integration.js", version);
     await loadScript("app/sensor-editor-focus-guard-integration.js", version);
