@@ -199,6 +199,6 @@ assert.match(orientationDriverSource, /CODER_PRE_ORIENTATION_MARGIN_DEG = 5/);
 assert.match(diagnosticSource, /LabelerPostWipeCoveragePolicy/);
 assert.match(bootstrapSource, /topmodul-coder-prehold-finalizer-integration\.js/);
 assert.match(bootstrapSource, /topmodul-allowed-correction-diagnostics-integration\.js/);
-assert.match(bootstrapSource, /coder-physical-five-degree-lead-v50-20260809-1905/);
+assert.match(bootstrapSource, /coder-visible-cutoff-v51-20260809-1923/);
 
 console.log("APL 6-Aggregate coder five-degree physical lead, allowed correction diagnostics, and neck progress regression passed.");
