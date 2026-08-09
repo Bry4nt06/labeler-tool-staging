@@ -62,31 +62,52 @@
     return -1;
   }
 
+  function codingOrientationTurn(row) {
+    if (!row || Number(row.cmd) !== 7) return false;
+    if (row.codingMotion || row.coderAfterWipeHandoff || row.mapObjectOrientation) {
+      const action = String(row.action || "");
+      if (/coding|code box|coder/i.test(action) || row.codingObjectId || row.codingObjectIds?.length) return true;
+    }
+    return /(?:orient|direct\s+turn|turn).*?(?:coding|code\s*box|coder)|(?:coding|code\s*box|coder).*?(?:orient|turn)/i
+      .test(String(row.action || ""));
+  }
+
+  function finalCodingTurnIndex(rows) {
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+      if (codingOrientationTurn(rows[index])) return index;
+    }
+    return -1;
+  }
+
   function codingObjects(map = activeMap()) {
     return (Array.isArray(map?.objects) ? map.objects : [])
       .filter((item) => item?.kind === "coding" && item?.enabled !== false && item?.orientBottle !== false);
   }
 
-  function codingObjectForHold(hold, map = activeMap()) {
+  function codingObjectForRow(row, map = activeMap()) {
     const objects = codingObjects(map);
     if (!objects.length) return null;
     const ids = [
-      hold?.codingObjectId,
-      hold?.orientationObjectId,
-      ...(Array.isArray(hold?.codingObjectIds) ? hold.codingObjectIds : []),
-      ...(Array.isArray(hold?.orientationObjectIds) ? hold.orientationObjectIds : [])
+      row?.codingObjectId,
+      row?.orientationObjectId,
+      ...(Array.isArray(row?.codingObjectIds) ? row.codingObjectIds : []),
+      ...(Array.isArray(row?.orientationObjectIds) ? row.orientationObjectIds : [])
     ].filter((value) => value !== null && value !== undefined && value !== "").map(String);
     const exact = objects.find((item) => ids.includes(String(item?.id || "")));
     if (exact) return exact;
     if (objects.length === 1) return objects[0];
 
-    const anchor = number(hold?.tableAngle, number(hold?.codingReadyTableAngle, NaN));
+    const anchor = number(row?.tableAngle, number(row?.codingReadyTableAngle, NaN));
     if (!Number.isFinite(anchor)) return objects[0];
     return [...objects].sort((left, right) => {
       const leftStart = number(left?.start, number(left?.angle, Infinity));
       const rightStart = number(right?.start, number(right?.angle, Infinity));
       return Math.abs(leftStart - anchor) - Math.abs(rightStart - anchor);
     })[0];
+  }
+
+  function codingObjectForHold(hold, map = activeMap()) {
+    return codingObjectForRow(hold, map);
   }
 
   function equivalentNear(angle, reference) {
@@ -97,41 +118,69 @@
     return base + FULL_CYCLE_DEG * Math.round((anchor - base) / FULL_CYCLE_DEG);
   }
 
-  function coderStartForHold(hold, map = activeMap()) {
-    // Prefer the physical coding object. The orientation planner now exposes a
-    // pre-coder ready window whose start is already 5° early; using that value
-    // here would subtract the margin twice. The map object's start remains the
-    // actual coder hardware location.
-    const item = codingObjectForHold(hold, map);
+  function coderStartForRow(row, map = activeMap()) {
+    // The map object is the physical coder position. Planner windows may begin
+    // earlier because they represent the orientation-ready deadline, so do not
+    // treat those logical window starts as the hardware location.
+    const item = codingObjectForRow(row, map);
     const rawStart = number(item?.start, number(item?.angle, NaN));
     if (Number.isFinite(rawStart)) {
       return equivalentNear(
         rawStart,
-        number(hold?.tableAngle, number(hold?.codingReadyTableAngle, rawStart))
+        number(row?.tableAngle, number(row?.codingReadyTableAngle, rawStart))
       );
     }
 
-    const explicitStart = number(
-      hold?.physicalCodingWindowStart,
-      number(hold?.coderStartTableAngle,
-        number(hold?.codingWindowStart, number(hold?.inspectionWindowStart, NaN)))
+    return number(
+      row?.physicalCodingWindowStart,
+      number(row?.coderStartTableAngle,
+        number(row?.codingWindowStart, number(row?.inspectionWindowStart, NaN)))
     );
-    return explicitStart;
   }
 
-  function preCoderStopForHold(hold, map = activeMap()) {
-    const coderStart = coderStartForHold(hold, map);
+  function coderStartForHold(hold, map = activeMap()) {
+    return coderStartForRow(hold, map);
+  }
+
+  function preCoderStopForRow(row, map = activeMap()) {
+    const coderStart = coderStartForRow(row, map);
     if (!Number.isFinite(coderStart)) {
-      return number(hold?.codingReadyTableAngle, number(hold?.tableAngle, NaN));
+      return number(row?.codingReadyTableAngle, number(row?.tableAngle, NaN));
     }
     return done(coderStart - PRE_CODER_MARGIN_DEG);
   }
 
-  function rowsBeforeStop(rows, holdIndex, stoppedTable) {
-    return rows.slice(0, holdIndex).filter((row) => {
+  function preCoderStopForHold(hold, map = activeMap()) {
+    return preCoderStopForRow(hold, map);
+  }
+
+  function rowsBeforeStop(rows, exclusiveEndIndex, stoppedTable) {
+    return rows.slice(0, exclusiveEndIndex).filter((row) => {
       const table = number(row?.tableAngle, NaN);
       return !Number.isFinite(table) || table < stoppedTable - EPS;
     });
+  }
+
+  function codingTargetPlate(rows, turnIndex, holdIndex) {
+    if (holdIndex >= 0) {
+      const held = number(rows[holdIndex]?.plateAngle, NaN);
+      if (Number.isFinite(held)) return held;
+    }
+
+    if (turnIndex >= 0) {
+      const turn = rows[turnIndex];
+      const next = rows.slice(turnIndex + 1).find((row) =>
+        number(row?.tableAngle, Infinity) > number(turn?.tableAngle, -Infinity) + EPS
+        && Number.isFinite(number(row?.plateAngle, NaN))
+      );
+      const destination = number(next?.plateAngle, NaN);
+      if (Number.isFinite(destination)) return destination;
+      const rotation = number(turn?.plannedRotation, NaN);
+      const startPlate = number(turn?.plateAngle, NaN);
+      if (Number.isFinite(rotation) && Number.isFinite(startPlate)) return startPlate + rotation;
+      if (Number.isFinite(startPlate)) return startPlate;
+    }
+    return NaN;
   }
 
   function canonicalRows(sourceRows) {
@@ -139,27 +188,61 @@
     if (!rows.length || !isTopModul()) return rows;
 
     const holdIndex = finalCodingHoldIndex(rows);
-    if (holdIndex < 0) return rows;
+    const turnIndex = finalCodingTurnIndex(rows);
+    if (holdIndex < 0 && turnIndex < 0) return rows;
 
-    const hold = rows[holdIndex];
-    const coderStart = coderStartForHold(hold);
-    let stoppedTable = preCoderStopForHold(hold);
-    if (!Number.isFinite(stoppedTable)) stoppedTable = number(hold.tableAngle, 0);
+    // In the live APL path the visible brown coding segment can exist even when
+    // a later planner failed to tag its destination as codingHold. Use the turn
+    // itself as the authoritative fallback so the real map segment is clipped,
+    // not merely a terminal row after it.
+    const anchor = holdIndex >= 0 ? rows[holdIndex] : rows[turnIndex];
+    const coderStart = coderStartForRow(anchor);
+    let stoppedTable = preCoderStopForRow(anchor);
+    if (!Number.isFinite(stoppedTable)) {
+      stoppedTable = number(rows[holdIndex]?.tableAngle, number(rows[turnIndex]?.tableAngle, 0));
+    }
 
-    const output = rowsBeforeStop(rows, holdIndex, stoppedTable);
+    const targetPlate = codingTargetPlate(rows, turnIndex, holdIndex);
+    const exclusiveEndIndex = holdIndex >= 0 ? holdIndex : turnIndex + 1;
+    const output = rowsBeforeStop(rows, exclusiveEndIndex, stoppedTable);
+
+    // If the coding turn begins before the deadline, keep that CMD 7 row. The
+    // newly inserted CMD 3 at the deadline becomes its destination, which makes
+    // both the actual servo interpolation and the brown map wedge stop there.
+    if (turnIndex >= 0) {
+      const turn = rows[turnIndex];
+      const turnTable = number(turn?.tableAngle, NaN);
+      const alreadyKept = output.some((row) => row === turn || (
+        Number(row?.cmd) === 7
+        && Math.abs(number(row?.tableAngle, Infinity) - turnTable) <= EPS
+        && String(row?.action || "") === String(turn?.action || "")
+      ));
+      if (!alreadyKept && Number.isFinite(turnTable) && turnTable < stoppedTable - EPS) {
+        output.push({ ...turn });
+      }
+    }
+
+    output.sort((left, right) => number(left?.tableAngle, 0) - number(right?.tableAngle, 0));
+    const sourceHold = holdIndex >= 0 ? rows[holdIndex] : (turnIndex >= 0 ? rows[turnIndex] : {});
+    const codingObject = codingObjectForRow(anchor);
+    const codingObjectId = sourceHold?.codingObjectId || codingObject?.id;
     output.push({
-      ...hold,
+      ...sourceHold,
       cmd: 3,
       baseCmd: 3,
       tableAngle: stoppedTable,
       generatedTableAngle: stoppedTable,
+      plateAngle: Number.isFinite(targetPlate) ? done(targetPlate) : number(sourceHold?.plateAngle, 0),
       action: "Hold for Coding",
       codingHold: true,
+      codingMotion: false,
       explicitCodingWindowHold: true,
       codingReadyTableAngle: stoppedTable,
       coderStartTableAngle: Number.isFinite(coderStart) ? coderStart : undefined,
       physicalCodingWindowStart: Number.isFinite(coderStart) ? coderStart : undefined,
       preCoderMarginDeg: PRE_CODER_MARGIN_DEG,
+      codingObjectId,
+      codingObjectIds: codingObjectId ? [codingObjectId] : sourceHold?.codingObjectIds,
       terminalRest: true,
       activeHold: false,
       plannerIntent: "HOLD",
@@ -241,15 +324,21 @@
 
     global.LabelerTopModulCoderPreholdFinalizer = Object.freeze({
       installed: true,
-      version: 4,
+      version: 5,
       PRE_CODER_MARGIN_DEG,
       lateProfilePipelineReady,
       explicitCodingHold,
       finalCodingHoldIndex,
+      codingOrientationTurn,
+      finalCodingTurnIndex,
       codingObjects,
+      codingObjectForRow,
       codingObjectForHold,
+      coderStartForRow,
       coderStartForHold,
+      preCoderStopForRow,
       preCoderStopForHold,
+      codingTargetPlate,
       canonicalRows,
       finalizeCurrentProgram
     });
