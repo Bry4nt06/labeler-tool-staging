@@ -48,14 +48,25 @@
     const turnStart = finite(holdTable, 0) + Math.max(0, finite(gap, DEFAULT_GAP));
     const safeRatio = Math.max(0.1, finite(maxRatio, 21) * Math.max(0.1, finite(safetyFactor, DEFAULT_SAFETY_FACTOR)));
     const requiredSpan = Math.abs(finite(rotation, 0)) / safeRatio;
-    const readyTable = Math.max(finite(resolvedWindow.start, turnStart), turnStart + requiredSpan);
+    const earliestReadyTable = turnStart + requiredSpan;
+    const readyDeadline = finite(resolvedWindow.start, turnStart);
+
+    // `window.start` is the orientation-ready deadline. For coding objects the
+    // orientation driver places it five table degrees ahead of the physical
+    // coder. If the move can finish in time, land exactly on that deadline and
+    // hold there. If it cannot, report the capacity failure instead of allowing
+    // the turn to continue into or beyond the coder hardware.
+    const meetsDeadline = earliestReadyTable <= readyDeadline + epsilon;
+    const readyTable = meetsDeadline ? readyDeadline : earliestReadyTable;
     return {
       turnStart,
       safeRatio,
       requiredSpan,
+      earliestReadyTable,
+      readyDeadline,
       readyTable,
-      available: turnStart < finite(resolvedWindow.end, turnStart) - epsilon,
-      withinWindow: readyTable <= finite(resolvedWindow.end, readyTable) - epsilon
+      available: turnStart < readyDeadline - epsilon,
+      withinWindow: meetsDeadline
     };
   }
 
