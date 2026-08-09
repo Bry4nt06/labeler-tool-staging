@@ -4,7 +4,7 @@
   const version = "0.9.10";
   const build = "canonical-section-handoff-v44-20260809-0203";
   const buildUpdatedAt = "Aug 9, 2026 2:03 AM ET";
-  // Regression lineage: common-apl-active-sections-v42-20260809-0133 • first-tack-datum-flow-v41-20260808-2330 • label-datum-servo-flow-v40-20260808-2300 • finished-centerline-completion-v39-20260808-2148 • inside-wipe-rendered-geometry-v38-20260807-2000 • compact-layout-defaults-pad-orientation-v36-20260807-1545 • bottle-pocket-sync-20260807-1223 • label-application-reference-v32-20260807-1251
+  // Regression lineage: common-apl-active-sections-v42-20260809-0133 • first-tack-datum-flow-v41-20260808-2330 (Aug 8, 2026 11:30 PM ET) • label-datum-servo-flow-v40-20260808-2300 • finished-centerline-completion-v39-20260808-2148 • inside-wipe-rendered-geometry-v38-20260807-2000 • compact-layout-defaults-pad-orientation-v36-20260807-1545 • bottle-pocket-sync-20260807-1223 • label-application-reference-v32-20260807-1251
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
