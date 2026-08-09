@@ -5,6 +5,10 @@ const map = require("../config/default-programs/map-apl-6-aggregate.json");
 
 assert.equal(map.id, "map-apl-default");
 assert.equal(map.name, "APL 6-Aggregate");
+assert.equal(map.aggregateCount, 6);
+assert.equal(map.stationCount, 6);
+assert.equal(map.enabledAggregates.length, 6);
+assert.equal(map.enabledStations.length, 6);
 assert.equal(map.companyDefaultProgram, true);
 assert.equal(map.protectedDefaultMap, true);
 assert.equal(map.companyDefaultProgramVersion, 12);
