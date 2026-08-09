@@ -14,6 +14,7 @@ on:
       - "config/default-programs/map-apl-6-aggregate.json"
       - "tests/apl-6-aggregate-default.test.js"
       - "tests/coder-hold-allowed-corrections-and-neck-progress.test.js"
+      - "tests/coder-visible-move-prehold.test.js"
       - "tests/topmodul-terminal-coding-hold.test.js"
       - ".github/workflows/validate-coder-hold-allowed-corrections.yml"
   workflow_dispatch:
@@ -41,5 +42,7 @@ jobs:
         run: node tests/apl-6-aggregate-default.test.js
       - name: Run targeted regression
         run: node tests/coder-hold-allowed-corrections-and-neck-progress.test.js
+      - name: Verify visible coding move cutoff
+        run: node tests/coder-visible-move-prehold.test.js
       - name: Preserve terminal coding hold policy
         run: node tests/topmodul-terminal-coding-hold.test.js
