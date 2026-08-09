@@ -1,0 +1,31 @@
+name: Validate Mobile Specs Horizontal Scroll
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/controllers/specification-table-ui-controller.js"
+      - "app/bootstrap.js"
+      - "tests/spec-table-compact-layout.test.js"
+      - ".github/workflows/validate-mobile-specs-horizontal-scroll.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check Specs UI syntax
+        run: node --check app/controllers/specification-table-ui-controller.js
+      - name: Run compact Specs mobile regression
+        run: node tests/spec-table-compact-layout.test.js
+      - name: Verify mobile build marker
+        run: grep -q 'mobile-specs-horizontal-scroll-v45-20260809-0214' app/bootstrap.js
