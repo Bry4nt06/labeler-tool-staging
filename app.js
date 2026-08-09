@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "first-application-zero-datum-v30-physical-sensor-visibility-label-application-reference-v32-finished-centerline-completion-v39-label-datum-servo-flow-v40-first-tack-datum-flow-v41-common-apl-active-sections-v42-20260809-0125";
+  const build = "first-application-zero-datum-v30-physical-sensor-visibility-label-application-reference-v32-finished-centerline-completion-v39-label-datum-servo-flow-v40-first-tack-datum-flow-v41-common-apl-active-sections-v42-canonical-station-reset-v43-canonical-section-handoff-v44-20260809-0203";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
