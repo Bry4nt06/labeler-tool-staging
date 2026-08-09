@@ -57,4 +57,13 @@ assert.ok(!uiSource.includes("padding-top: 31px"), "Selected actions must remain
 assert.ok(!uiSource.includes("position: absolute"), "Specs actions must not use an overlay marker.");
 assert.ok(!uiSource.includes("flex: 1 1 70px"), "Icon buttons must not expand the action column.");
 
-console.log("Compact Specs actions and dimension-driven label presence regression passed.");
+assert.ok(uiSource.includes("@media (max-width: 760px)"), "Specs must define phone-specific scrolling behavior.");
+assert.ok(uiSource.includes("#specs.table-wrap"), "The outer Specs sheet must release horizontal scrolling on phones.");
+assert.ok(uiSource.includes("#specs #bottleSpecs"), "Bottle Specs must own a mobile horizontal scroll region.");
+assert.ok(uiSource.includes("#specs #labelSpecs"), "Label Specs must own a mobile horizontal scroll region.");
+assert.ok(uiSource.includes("overflow-x: auto"), "Spec tables must be horizontally scrollable.");
+assert.ok(uiSource.includes("-webkit-overflow-scrolling: touch"), "iOS momentum scrolling must stay enabled.");
+assert.ok(uiSource.includes("touch-action: pan-x pan-y"), "Touch gestures over spec inputs must permit horizontal panning.");
+assert.ok(uiSource.includes("overscroll-behavior-x: contain"), "Horizontal spec swipes must stay inside the table region.");
+
+console.log("Compact Specs actions, mobile horizontal scrolling, and dimension-driven label presence regression passed.");
