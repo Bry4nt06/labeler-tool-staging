@@ -6,8 +6,8 @@
    Preview & Animation speed header stable everywhere. The readout gets a
    reserved column and both pieces stay on one line as the value changes. */
 .preview-panel .animation-step-control {
-  grid-template-columns: minmax(0, 1fr) 72px;
-  column-gap: 6px;
+  grid-template-columns: minmax(0, 1fr) 68px;
+  column-gap: 4px;
 }
 
 .preview-panel .animation-step-label {
@@ -15,12 +15,14 @@
   white-space: nowrap;
   overflow-wrap: normal;
   word-break: normal;
+  transform: translateX(-4px);
+  font-size: 10px;
 }
 
 .preview-panel #animationStepReadout {
-  width: 72px;
-  min-width: 72px;
-  max-width: 72px;
+  width: 68px;
+  min-width: 68px;
+  max-width: 68px;
   justify-self: end;
   white-space: nowrap;
   text-align: right;
