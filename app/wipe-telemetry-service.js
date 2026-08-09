@@ -112,6 +112,17 @@ function wipeObjectSideForRow(row) {
   return null;
 }
 
+function wipeVisualSideForPlateTravel(plateTravel, machineDirection = state.direction) {
+  const travel = Number(plateTravel);
+  if (!Number.isFinite(travel) || Math.abs(travel) <= 0.000001) return null;
+  const renderedBottleRotation = (String(machineDirection).toLowerCase() === "cw" ? -1 : 1) * travel;
+  // The fixed wipe contact sweeps across the label in the opposite local
+  // direction from the rendered bottle rotation. This relationship stays true
+  // for both outside and inside contact hardware, so hardware side must not
+  // override the actual servo-motion sign for Center Tack progress.
+  return renderedBottleRotation > 0 ? "left" : "right";
+}
+
 function contactedLabelCoverage(program, section, station, throughTableAngle, visual) {
   const objects = wipeObjectsForSection(section, station);
   const labelLengthMm = wipeLabelLengthMm(section);
@@ -121,8 +132,6 @@ function contactedLabelCoverage(program, section, station, throughTableAngle, vi
   if (!objects.length || !Number.isFinite(labelDegrees) || labelDegrees <= 0) return { percentage: 0, leftPercent: 0, rightPercent: 0 };
   const intervalsByVisualSide = { left: [], right: [] };
   const leadingIntervals = [];
-  const physicalSides = new Set(objects.map((item) => item?.side === "inner" ? "inner" : "outer"));
-  const usesOppositeContactSides = physicalSides.size > 1;
   programSegments(program).forEach((row) => {
     const tableStart = Number(row.tableAngle);
     const tableTravel = Number(row.tableTravel);
@@ -147,16 +156,8 @@ function contactedLabelCoverage(program, section, station, throughTableAngle, vi
           leadingIntervals.push(bottleInterval);
           return;
         }
-        let visualSide;
-        if (usesOppositeContactSides) {
-          const physicalSide = item?.side === "inner" ? "inner" : "outer";
-          visualSide = state.direction === "cw"
-            ? (physicalSide === "inner" ? "right" : "left")
-            : (physicalSide === "inner" ? "left" : "right");
-        } else {
-          const movesRightToLeft = plateTravel >= 0 ? state.direction !== "cw" : state.direction === "cw";
-          visualSide = movesRightToLeft ? "left" : "right";
-        }
+        const visualSide = wipeVisualSideForPlateTravel(plateTravel, state.direction);
+        if (!visualSide) return;
         intervalsByVisualSide[visualSide].push(bottleInterval);
       });
     });
@@ -257,7 +258,9 @@ window.LabelerWipeTelemetryService = Object.freeze({
   objectContactIntervals,
   mergedIntervalLength,
   wipeObjectSideForRow,
+  wipeVisualSideForPlateTravel,
   contactedLabelCoverage,
   wipeVisualApplication,
-  wipeDownTelemetry
+  wipeDownTelemetry,
+  centerTackServoDirectionV2: true
 });
