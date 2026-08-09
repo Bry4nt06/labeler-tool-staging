@@ -4,7 +4,6 @@
   if (global.LabelerTopModulCoderPreholdFinalizer?.installed) return;
 
   const RETRY_MS = 25;
-  const EPS = 0.001;
   let installed = false;
 
   const number = (value, fallback = NaN) => {
@@ -16,6 +15,12 @@
   function activeMap() {
     try { return typeof global.activeMachineMap === "function" ? global.activeMachineMap() : null; }
     catch { return null; }
+  }
+
+  function lateProfilePipelineReady() {
+    return global.LabelerProfilePipelineOrchestratorInstalled === true
+      && global.LabelerCoderWindowReferenceHandoff?.installed === true
+      && global.LabelerTopModulCorrectionChainLimit?.installed === true;
   }
 
   function isTopModul() {
@@ -146,7 +151,9 @@
 
   function install() {
     if (installed) return true;
-    if (!global.state || typeof global.applyGeneratedServoProfile !== "function") return false;
+    if (!global.state
+      || typeof global.applyGeneratedServoProfile !== "function"
+      || !lateProfilePipelineReady()) return false;
 
     const base = global.applyGeneratedServoProfile;
     global.applyGeneratedServoProfile = function applyGeneratedServoProfileWithTopModulPreCoderHold(...args) {
@@ -156,7 +163,8 @@
 
     global.LabelerTopModulCoderPreholdFinalizer = Object.freeze({
       installed: true,
-      version: 1,
+      version: 2,
+      lateProfilePipelineReady,
       explicitCodingHold,
       finalCodingHoldIndex,
       canonicalRows,
