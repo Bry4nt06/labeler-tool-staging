@@ -51,10 +51,12 @@ assert.match(compactEditorSource, /background:var\(--panel-hi\)!important/);
 assert.match(compactEditorSource, /sensor-station-inherited-row>summary/);
 assert.match(startupSource, /first-application-zero-datum-v30-physical-sensor-visibility/);
 assert.match(startupSource, /label-application-reference-v32/);
+assert.match(startupSource, /finished-centerline-completion-v39-20260808-2118/);
 assert.match(startupSource, /sensor-direction-live-status-integration\.js/);
 assert.match(bootstrapSource, /sensor-map-visibility-color-integration\.js/);
 assert.match(bootstrapSource, /label-application-reference-v32-20260807-1251/);
-assert.match(bootstrapSource, /Aug 7, 2026 12:51 PM ET/);
+assert.match(bootstrapSource, /finished-centerline-completion-v39-20260808-2118/);
+assert.match(bootstrapSource, /Aug 8, 2026 9:18 PM ET/);
 
 const map = {
   applicationMode: "apl",
