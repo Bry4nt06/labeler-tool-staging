@@ -98,18 +98,25 @@
   }
 
   function coderStartForHold(hold, map = activeMap()) {
-    const explicitStart = number(
-      hold?.codingWindowStart,
-      number(hold?.inspectionWindowStart, NaN)
-    );
-    if (Number.isFinite(explicitStart)) return explicitStart;
-
+    // Prefer the physical coding object. The orientation planner now exposes a
+    // pre-coder ready window whose start is already 5° early; using that value
+    // here would subtract the margin twice. The map object's start remains the
+    // actual coder hardware location.
     const item = codingObjectForHold(hold, map);
     const rawStart = number(item?.start, number(item?.angle, NaN));
-    return equivalentNear(
-      rawStart,
-      number(hold?.tableAngle, number(hold?.codingReadyTableAngle, rawStart))
+    if (Number.isFinite(rawStart)) {
+      return equivalentNear(
+        rawStart,
+        number(hold?.tableAngle, number(hold?.codingReadyTableAngle, rawStart))
+      );
+    }
+
+    const explicitStart = number(
+      hold?.physicalCodingWindowStart,
+      number(hold?.coderStartTableAngle,
+        number(hold?.codingWindowStart, number(hold?.inspectionWindowStart, NaN)))
     );
+    return explicitStart;
   }
 
   function preCoderStopForHold(hold, map = activeMap()) {
@@ -151,6 +158,7 @@
       explicitCodingWindowHold: true,
       codingReadyTableAngle: stoppedTable,
       coderStartTableAngle: Number.isFinite(coderStart) ? coderStart : undefined,
+      physicalCodingWindowStart: Number.isFinite(coderStart) ? coderStart : undefined,
       preCoderMarginDeg: PRE_CODER_MARGIN_DEG,
       terminalRest: true,
       activeHold: false,
@@ -233,7 +241,7 @@
 
     global.LabelerTopModulCoderPreholdFinalizer = Object.freeze({
       installed: true,
-      version: 3,
+      version: 4,
       PRE_CODER_MARGIN_DEG,
       lateProfilePipelineReady,
       explicitCodingHold,
