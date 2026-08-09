@@ -2,6 +2,31 @@
    Keeps the desktop layout unchanged while turning the phone layout into a
    single-column, touch-friendly workspace with a full-screen Settings drawer. */
 
+/* The mobile stylesheet is loaded on every viewport, so keep the compact
+   Preview & Animation speed header stable everywhere. The readout gets a
+   reserved column and both pieces stay on one line as the value changes. */
+.preview-panel .animation-step-control {
+  grid-template-columns: minmax(0, 1fr) 72px;
+  column-gap: 6px;
+}
+
+.preview-panel .animation-step-label {
+  min-width: 0;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.preview-panel #animationStepReadout {
+  width: 72px;
+  min-width: 72px;
+  max-width: 72px;
+  justify-self: end;
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 1050px) {
   html,
   body {
