@@ -5,7 +5,10 @@
 
   const FULL_CYCLE_DEG = 360;
   const COMMAND_RESOLUTION_DEG = 0.1;
-  const CODER_PRE_ORIENTATION_MARGIN_DEG = 5;
+  // Coding is a physical no-motion window. The coding orientation must be
+  // complete when the bottle reaches the actual coder start. Do not invent an
+  // earlier logical deadline; the machine map owns the hardware position.
+  const CODER_PRE_ORIENTATION_MARGIN_DEG = 0;
   const VALID_SECTIONS = Object.freeze(["neck", "body", "back", "none"]);
 
   function finite(value, fallback = NaN) {
@@ -48,9 +51,6 @@
     if (explicit === "none") return "none";
     if (["neck", "body", "back"].includes(explicit)) {
       if (activeApplications[explicit] !== false) return explicit;
-      // A physical label sensor has no inspection duty when its assigned label
-      // is absent from the selected brand. Ignore it without creating a turn,
-      // hold, or validation issue. Coders still retarget to the active label.
       if (item?.kind === "coding") return activeFallback(activeApplications);
       return "none";
     }
@@ -96,10 +96,9 @@
     while (physicalEnd <= physicalStart) physicalEnd += FULL_CYCLE_DEG;
     physicalEnd = Math.max(physicalStart + minimumSpan, physicalEnd);
 
-    // A coder is a physical no-motion zone. The bottle must already be at the
-    // required code-box orientation before it reaches that hardware. Treat the
-    // orientation-ready point as five table degrees ahead of the physical coder
-    // while preserving the real coder start/end as metadata.
+    // For a coder, the physical start itself is the orientation-ready deadline.
+    // The move may use any open travel before this point, but it must not use
+    // travel inside the coder window or a synthetic 359° terminal destination.
     const preOrientationMarginDeg = isCoding
       ? Math.max(0, finite(
         item?.preCoderOrientationDeg,
@@ -135,11 +134,6 @@
     ).trim().toLowerCase();
     if (["neck", "body", "back"].includes(explicit)) return explicit;
 
-    // A section-boundary Rest can finish the current wipe while already
-    // holding the next label's application angle. In that case row.section
-    // describes the completed wipe, while the action identifies the actual
-    // application reference. Prefer that named application so a Body sensor
-    // cannot accidentally use the following Back-label target.
     const match = String(row?.action || "").match(/\b(neck|body|back)\s+application\b/i);
     return match ? match[1].toLowerCase() : "none";
   }
