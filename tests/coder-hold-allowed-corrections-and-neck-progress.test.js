@@ -27,13 +27,19 @@ assert.doesNotThrow(() => new vm.Script(telemetrySource, { filename: "wipe-telem
     LabelerCoderWindowReferenceHandoff: { installed: true },
     LabelerTopModulCorrectionChainLimit: { installed: true },
     activeMachineMap() {
-      return { machineType: "TopModul", applicationMode: "apl" };
+      return {
+        machineType: "TopModul",
+        applicationMode: "apl",
+        objects: [
+          { id: "default-back-coding", kind: "coding", start: 304, end: 315, orientBottle: true }
+        ]
+      };
     },
     applyGeneratedServoProfile() {
       const rows = [
         { cmd: 3, tableAngle: 290, plateAngle: 180, action: "Back Wipe Hold" },
         { cmd: 7, tableAngle: 290.5, plateAngle: 180, action: "Direct Turn for Coding", codingMotion: "direct-shortest-path", codingWindowStart: 304 },
-        { cmd: 7, tableAngle: 303, plateAngle: 162.5, action: "Hold for Coding", codingHold: true, activeHold: true, codingReadyTableAngle: 303, codingWindowStart: 304, codingWindowStop: 315 },
+        { cmd: 7, tableAngle: 303, plateAngle: 162.5, action: "Hold for Coding", codingHold: true, activeHold: true, codingObjectId: "default-back-coding", codingReadyTableAngle: 303, codingWindowStart: 304, codingWindowStop: 315 },
         { cmd: 3, tableAngle: 359, plateAngle: 163.2, action: "End Curve - Rest", terminalRest: true }
       ].map((row, index) => ({ ...row, hmi: index + 1, plc: index }));
       context.state.program = rows;
@@ -48,16 +54,20 @@ assert.doesNotThrow(() => new vm.Script(telemetrySource, { filename: "wipe-telem
   vm.runInContext(coderSource, context);
 
   assert.equal(context.LabelerTopModulCoderPreholdFinalizer.lateProfilePipelineReady(), true);
+  assert.equal(context.LabelerTopModulCoderPreholdFinalizer.PRE_CODER_MARGIN_DEG, 5);
   const rows = context.applyGeneratedServoProfile();
-  assert.equal(rows.length, 3, "TopModul must end at the coding-ready hold, not at a 359° terminal row.");
+  assert.equal(rows.length, 3, "TopModul must end at the pre-coder hold, not at a 359° terminal row.");
   assert.equal(rows.at(-1).cmd, 3, "Coding-ready row must be a stopped CMD 3 hold.");
-  assert.equal(rows.at(-1).tableAngle, 303, "The stop must occur before the 304° coder window begins.");
+  assert.equal(rows.at(-1).tableAngle, 299, "The coding orientation must be completed exactly 5° before the 304° coder window begins.");
   assert.equal(rows.at(-1).plateAngle, 162.5, "The coding orientation must remain the achieved target angle.");
   assert.equal(rows.at(-1).action, "Hold for Coding");
   assert.equal(rows.at(-1).topModulPreCoderHold, true);
   assert.equal(rows.at(-1).terminalRest, true);
+  assert.equal(rows.at(-1).preCoderMarginDeg, 5);
+  assert.equal(rows.at(-1).coderStartTableAngle, 304);
+  assert.equal(rows.some((row) => Number(row.tableAngle) > 299), false, "No servo-program row may continue beyond the five-degree pre-coder completion point.");
   assert.equal(rows.some((row) => Number(row.tableAngle) === 359), false, "TopModul must not continue a coding move to 359°.");
-  assert.equal(context.state.motionPlan.termination.tableAngle, 303);
+  assert.equal(context.state.motionPlan.termination.tableAngle, 299);
   assert.equal(context.state.motionPlan.termination.command, "Rest");
 }
 
@@ -138,9 +148,10 @@ assert.doesNotThrow(() => new vm.Script(telemetrySource, { filename: "wipe-telem
 
 assert.match(coderSource, /LabelerProfilePipelineOrchestratorInstalled/);
 assert.match(coderSource, /LabelerCoderWindowReferenceHandoff/);
+assert.match(coderSource, /PRE_CODER_MARGIN_DEG = 5/);
 assert.match(diagnosticSource, /LabelerPostWipeCoveragePolicy/);
 assert.match(bootstrapSource, /topmodul-coder-prehold-finalizer-integration\.js/);
 assert.match(bootstrapSource, /topmodul-allowed-correction-diagnostics-integration\.js/);
-assert.match(bootstrapSource, /coder-prehold-allowed-corrections-v48-20260809-1836/);
+assert.match(bootstrapSource, /coder-five-degree-prehold-v49-20260809-1854/);
 
-console.log("Coder hold, allowed correction diagnostics, and neck progress direction regression passed.");
+console.log("Coder five-degree prehold, allowed correction diagnostics, and neck progress direction regression passed.");
