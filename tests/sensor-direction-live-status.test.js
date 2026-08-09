@@ -51,12 +51,13 @@ assert.match(compactEditorSource, /background:var\(--panel-hi\)!important/);
 assert.match(compactEditorSource, /sensor-station-inherited-row>summary/);
 assert.match(startupSource, /first-application-zero-datum-v30-physical-sensor-visibility/);
 assert.match(startupSource, /label-application-reference-v32/);
-assert.match(startupSource, /finished-centerline-completion-v39-20260808-2148/);
+assert.match(startupSource, /first-tack-datum-flow-v41-20260808-2330/);
+assert.match(startupSource, /apl-first-tack-datum-flow-integration\.js/);
 assert.match(startupSource, /sensor-direction-live-status-integration\.js/);
 assert.match(bootstrapSource, /sensor-map-visibility-color-integration\.js/);
 assert.match(bootstrapSource, /label-application-reference-v32-20260807-1251/);
-assert.match(bootstrapSource, /finished-centerline-completion-v39-20260808-2148/);
-assert.match(bootstrapSource, /Aug 8, 2026 9:48 PM ET/);
+assert.match(bootstrapSource, /first-tack-datum-flow-v41-20260808-2330/);
+assert.match(bootstrapSource, /Aug 8, 2026 11:30 PM ET/);
 
 const map = {
   applicationMode: "apl",
@@ -161,8 +162,6 @@ assert.equal(status.percent, 100);
 assert.equal(status.passes, true);
 assert.equal(status.targetPlateAngle, 146, "A sensor already seeing enough label must not request another servo turn.");
 
-// Changing machine direction mirrors both the bottle and sensor on the physical
-// map. Their relative logical angle must therefore remain unchanged.
 context.state.direction = "cw";
 status = svc.labelSensorMapStatus(sensor, context.state.program);
 assert.equal(status.sensorPhysicalAimOffsetDeg, 16, "CW must not reverse aim a second time inside the visibility solver.");
@@ -171,8 +170,6 @@ assert.equal(status.percent, 100);
 assert.equal(status.passes, true);
 assert.equal(status.targetPlateAngle, 146);
 
-// Changing the actual aim direction must change visibility and generate only
-// the minimum correction needed to meet the configured physical overlap.
 sensor.sensorAimOffsetDeg = -16;
 status = svc.labelSensorMapStatus(sensor, context.state.program);
 assert.equal(status.sensorPhysicalAimOffsetDeg, -16);
