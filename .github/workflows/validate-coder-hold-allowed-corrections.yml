@@ -6,8 +6,13 @@ on:
     paths:
       - "app/topmodul-coder-prehold-finalizer-integration.js"
       - "app/topmodul-allowed-correction-diagnostics-integration.js"
+      - "app/machine-terminal-policy-integration.js"
       - "app/wipe-telemetry-service.js"
       - "app/bootstrap.js"
+      - "drivers/profile/map-object-orientation-driver.js"
+      - "drivers/profile/coder-handoff-driver.js"
+      - "config/default-programs/map-apl-6-aggregate.json"
+      - "tests/apl-6-aggregate-default.test.js"
       - "tests/coder-hold-allowed-corrections-and-neck-progress.test.js"
       - "tests/topmodul-terminal-coding-hold.test.js"
       - ".github/workflows/validate-coder-hold-allowed-corrections.yml"
@@ -28,7 +33,12 @@ jobs:
         run: |
           node --check app/topmodul-coder-prehold-finalizer-integration.js
           node --check app/topmodul-allowed-correction-diagnostics-integration.js
+          node --check app/machine-terminal-policy-integration.js
           node --check app/wipe-telemetry-service.js
+          node --check drivers/profile/map-object-orientation-driver.js
+          node --check drivers/profile/coder-handoff-driver.js
+      - name: Verify six-aggregate default
+        run: node tests/apl-6-aggregate-default.test.js
       - name: Run targeted regression
         run: node tests/coder-hold-allowed-corrections-and-neck-progress.test.js
       - name: Preserve terminal coding hold policy
