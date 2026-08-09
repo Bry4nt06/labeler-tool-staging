@@ -11,6 +11,11 @@
     catch { return null; }
   }
 
+  function lateOptimizerReady() {
+    return global.LabelerTopModulCorrectionChainLimit?.installed === true
+      && Number(global.LabelerPostWipeCoveragePolicy?.version || 0) >= 3;
+  }
+
   function isTopModul() {
     const map = activeMap();
     const machine = String(map?.machineType || map?.name || "").toUpperCase();
@@ -54,7 +59,7 @@
   function install() {
     if (installed) return true;
     const driver = global.LabelerProgramOptimizerDriver;
-    if (!driver?.analyze) return false;
+    if (!driver?.analyze || !lateOptimizerReady()) return false;
 
     const baseAnalyze = driver.analyze.bind(driver);
     global.LabelerProgramOptimizerDriver = Object.freeze({
@@ -62,12 +67,13 @@
       analyze(rows, options = {}) {
         return filteredResult(baseAnalyze(rows, options), rows, options, driver);
       },
-      topModulRestSeparatedCorrectionsAllowedV1: true
+      topModulRestSeparatedCorrectionsAllowedV2: true
     });
 
     global.LabelerTopModulAllowedCorrectionDiagnostics = Object.freeze({
       installed: true,
-      version: 1,
+      version: 2,
+      lateOptimizerReady,
       allowedRestSeparatedCorrectionDiagnostic,
       filteredResult
     });
