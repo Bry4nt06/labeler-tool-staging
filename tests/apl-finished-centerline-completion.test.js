@@ -12,7 +12,7 @@ const startupSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
 
 assert.doesNotThrow(() => new vm.Script(completionSource));
 assert.match(startupSource, /apl-finished-centerline-completion-integration\.js/);
-assert.match(startupSource, /finished-centerline-completion-v39-20260808-2118/);
+assert.match(startupSource, /finished-centerline-completion-v39-20260808-2148/);
 
 const effectiveDiameterMm = 60.68 - 2 * 0.3;
 const circumferenceMm = effectiveDiameterMm * Math.PI;
