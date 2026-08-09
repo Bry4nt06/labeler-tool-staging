@@ -40,8 +40,12 @@ assert.match(genericSource, /Wipe Turn 2/);
 assert.match(genericSource, /Wipe Hold/);
 
 const firstTackSource = read("app/apl-first-tack-datum-flow-integration.js");
-assert.match(firstTackSource, /No pre-application turn is permitted/);
-assert.match(firstTackSource, /Retrace the previous wipe path/);
+assert.match(firstTackSource, /canonicalStationResetV43/,
+  "Body+Back must use the canonical per-aggregate reset sequence.");
+assert.match(firstTackSource, /return to the section application reference, CMD 3/,
+  "The second aggregate must restore a stopped section reference before wiping again.");
+assert.doesNotMatch(firstTackSource, /Retrace the previous wipe path/,
+  "Body and Back re-wipes must repeat the same wipe directions, not retrace the prior aggregate.");
 
 const limitSource = read("app/topmodul-correction-chain-limit-integration.js");
 assert.doesNotThrow(() => new vm.Script(limitSource, { filename: "topmodul-correction-chain-limit-integration.js" }));
