@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "first-application-zero-datum-v30-physical-sensor-visibility-label-application-reference-v32-finished-centerline-completion-v39-20260808-2148-label-datum-servo-flow-v40-20260808-2300-first-tack-datum-flow-v41-20260808-2330";
+  const build = "first-application-zero-datum-v30-physical-sensor-visibility-label-application-reference-v32-finished-centerline-completion-v39-label-datum-servo-flow-v40-first-tack-datum-flow-v41-common-apl-active-sections-v42-20260809-0125";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -90,6 +90,7 @@
     await loadScript("app/first-application-zero-datum-integration.js", version);
     await loadScript("app/apl-finished-centerline-completion-integration.js", version);
     await loadScript("app/apl-first-tack-datum-flow-integration.js", version);
+    await loadScript("app/topmodul-correction-chain-limit-integration.js", version);
     await loadScript("app/orientation-constraint-program-planner.js", version);
     await loadScript("app/coder-window-reference-handoff-integration.js", version);
     await loadScript("app/sensor-editor-focus-guard-integration.js", version);
@@ -137,7 +138,7 @@
     progress?.set(53, "Loading feature integrations…");
     if (window.ServoForgeFeatureIntegrationsReady) await window.ServoForgeFeatureIntegrationsReady;
 
-    progress?.set(61, "Applying label application and sensor rules…");
+    progress?.set(61, "Applying common APL label and servo rules…");
     await loadOrientationConstraintPlanner();
 
     progress?.set(70, "Loading workspace controllers…");
