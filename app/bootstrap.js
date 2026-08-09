@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "finished-centerline-completion-v39-20260808-2118";
-  const buildUpdatedAt = "Aug 8, 2026 9:18 PM ET";
+  const build = "finished-centerline-completion-v39-20260808-2148";
+  const buildUpdatedAt = "Aug 8, 2026 9:48 PM ET";
   // Regression lineage: inside-wipe-rendered-geometry-v38-20260807-2000 • compact-layout-defaults-pad-orientation-v36-20260807-1545 • spender-plate-visual-controls-v35-20260807-1402 • label-application-reference-v32-20260807-1251
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
