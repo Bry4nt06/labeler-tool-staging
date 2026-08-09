@@ -1,0 +1,36 @@
+name: Validate coder hold and allowed correction rules
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/topmodul-coder-prehold-finalizer-integration.js"
+      - "app/topmodul-allowed-correction-diagnostics-integration.js"
+      - "app/wipe-telemetry-service.js"
+      - "app/bootstrap.js"
+      - "tests/coder-hold-allowed-corrections-and-neck-progress.test.js"
+      - ".github/workflows/validate-coder-hold-allowed-corrections.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check runtime syntax
+        run: |
+          node --check app/topmodul-coder-prehold-finalizer-integration.js
+          node --check app/topmodul-allowed-correction-diagnostics-integration.js
+          node --check app/wipe-telemetry-service.js
+      - name: Run targeted regression
+        run: node tests/coder-hold-allowed-corrections-and-neck-progress.test.js
+      - name: Preserve TopModul correction-chain limit
+        run: node tests/topmodul-correction-chain-limit.test.js
+      - name: Preserve terminal coding hold policy
+        run: node tests/topmodul-terminal-coding-hold.test.js
