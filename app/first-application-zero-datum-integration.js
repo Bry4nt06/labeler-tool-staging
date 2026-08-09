@@ -9,7 +9,6 @@
   const PREVIOUS_DEFAULT_SPENDER_DEG = 75;
   const RETRY_MS = 50;
   const EPS = 0.001;
-  let activeApplicationDatumOffset = 0;
 
   const finite = (value, fallback = NaN) => {
     const parsed = Number(value);
@@ -119,25 +118,24 @@
     const firstSection = Number.isFinite(firstStation)
       ? sectionForStation(firstStation, sections)
       : "";
-    const rawFirstTarget = firstSection ? finite(rawTargets[firstSection], startPlate) : startPlate;
-    const offset = rawFirstTarget - startPlate;
-    const rebasedTargets = Object.fromEntries(
-      Object.entries(rawTargets).map(([section, value]) => [section, value - offset])
-    );
+
+    // Servo zero is the bottle coordinate datum. A label's tack/application
+    // reference may legitimately be non-zero (for example Leading Edge), so the
+    // first active application must never be rebased onto servo zero.
     return {
       startPlate,
       firstStation: Number.isFinite(firstStation) ? firstStation : null,
       firstSection,
       rawTargets,
-      offset,
-      rebasedTargets
+      offset: 0,
+      rebasedTargets: { ...rawTargets },
+      firstApplicationZeroRebaseRetired: true
     };
   }
 
   function effectiveCenterLineFront(target = stateRef()) {
     ensureBuildInputDefaults(target);
-    return finite(target?.buildInputs?.centerLineFrontDeg, DEFAULT_FRONT_CENTERLINE_DEG)
-      - activeApplicationDatumOffset;
+    return finite(target?.buildInputs?.centerLineFrontDeg, DEFAULT_FRONT_CENTERLINE_DEG);
   }
 
   function rewriteSummary(summary, target = stateRef()) {
@@ -156,11 +154,12 @@
   function wrapBuildProgramSummary() {
     const base = global.buildProgramSummary;
     if (typeof base !== "function") return false;
-    if (base.firstApplicationZeroDatumV1) return true;
-    const wrapped = function buildProgramSummaryWithZeroDatum(...args) {
+    if (base.firstApplicationDatumV2) return true;
+    const wrapped = function buildProgramSummaryWithBottleDatum(...args) {
       ensureBuildInputDefaults(stateRef());
       return rewriteSummary(base.apply(this, args), stateRef());
     };
+    wrapped.firstApplicationDatumV2 = true;
     wrapped.firstApplicationZeroDatumV1 = true;
     wrapped.previousBuildProgramSummary = base;
     global.buildProgramSummary = wrapped;
@@ -184,13 +183,14 @@
   function wrapRenderBuildInputs() {
     const base = global.renderBuildInputs;
     if (typeof base !== "function") return false;
-    if (base.firstApplicationZeroDatumV1) return true;
-    const wrapped = function renderBuildInputsWithZeroDatum(...args) {
+    if (base.firstApplicationDatumV2) return true;
+    const wrapped = function renderBuildInputsWithBottleDatum(...args) {
       ensureBuildInputDefaults(stateRef());
       const result = base.apply(this, args);
       patchBuildInputs(stateRef());
       return result;
     };
+    wrapped.firstApplicationDatumV2 = true;
     wrapped.firstApplicationZeroDatumV1 = true;
     wrapped.previousRenderBuildInputs = base;
     global.renderBuildInputs = wrapped;
@@ -217,7 +217,7 @@
   function wrapBuildInputsController() {
     const base = global.LabelerBuildInputsController;
     if (!base) return false;
-    if (base.firstApplicationZeroDatumV1) return true;
+    if (base.firstApplicationDatumV2) return true;
     global.LabelerBuildInputsController = Object.freeze({
       ...base,
       updateCalculatedField(id, rawValue) {
@@ -225,6 +225,7 @@
         if (id === "programCenterLineBackDeg") return commitCenterLine(finite(rawValue, 180) - 180);
         return base.updateCalculatedField(id, rawValue);
       },
+      firstApplicationDatumV2: true,
       firstApplicationZeroDatumV1: true
     });
     return true;
@@ -233,12 +234,13 @@
   function wrapLoadSavedSettings() {
     const base = global.loadSavedSettings;
     if (typeof base !== "function") return false;
-    if (base.firstApplicationZeroDatumV1) return true;
-    const wrapped = function loadSavedSettingsWithZeroDatum(...args) {
+    if (base.firstApplicationDatumV2) return true;
+    const wrapped = function loadSavedSettingsWithBottleDatum(...args) {
       const result = base.apply(this, args);
       ensureBuildInputDefaults(stateRef());
       return result;
     };
+    wrapped.firstApplicationDatumV2 = true;
     wrapped.firstApplicationZeroDatumV1 = true;
     wrapped.previousLoadSavedSettings = base;
     global.loadSavedSettings = wrapped;
@@ -248,24 +250,16 @@
   function wrapMapGenerator() {
     const base = global.generatedAplMapDrivenProfile;
     if (typeof base !== "function") return false;
-    if (base.firstApplicationZeroDatumV1) return true;
+    if (base.firstApplicationDatumV2) return true;
 
-    const wrapped = function generatedAplMapDrivenProfileWithZeroDatum(machineMap) {
+    const wrapped = function generatedAplMapDrivenProfileWithBottleDatum(machineMap) {
       const target = stateRef();
       ensureBuildInputDefaults(target);
       const rawSeed = typeof global.generatedAplSeedProfile === "function"
         ? global.generatedAplSeedProfile()
         : [];
       const datum = resolveApplicationDatum(machineMap, rawSeed, target);
-      const previousOffset = activeApplicationDatumOffset;
-      activeApplicationDatumOffset = datum.offset;
-      let rows;
-      try {
-        rows = base.call(this, machineMap);
-      } finally {
-        activeApplicationDatumOffset = previousOffset;
-      }
-
+      const rows = base.call(this, machineMap);
       const initialAction = Number.isFinite(datum.firstStation)
         ? `Hold for ${datum.firstSection ? `${datum.firstSection.charAt(0).toUpperCase()}${datum.firstSection.slice(1)}` : "Label"} Application - Agg ${datum.firstStation}`
         : "";
@@ -273,8 +267,8 @@
         initialAction && text(row?.action) === initialAction
           ? {
               ...row,
-              initialApplicationDatum: true,
-              applicationDatumOffset: datum.offset,
+              firstPhysicalApplication: true,
+              firstApplicationZeroRebaseRetired: true,
               initialApplicationSection: datum.firstSection,
               initialApplicationStation: datum.firstStation
             }
@@ -283,16 +277,18 @@
 
       if (target?.motionPlan && typeof target.motionPlan === "object") {
         target.motionPlan.rows = finalized;
-        target.motionPlan.initialApplicationDatum = true;
+        target.motionPlan.initialApplicationDatum = false;
         target.motionPlan.initialApplicationSection = datum.firstSection;
         target.motionPlan.initialApplicationStation = datum.firstStation;
-        target.motionPlan.applicationDatumOffset = datum.offset;
-        target.motionPlan.neckApplicationTarget = datum.rebasedTargets.neck;
-        target.motionPlan.bodyApplicationTarget = datum.rebasedTargets.body;
-        target.motionPlan.backApplicationTarget = datum.rebasedTargets.back;
+        target.motionPlan.applicationDatumOffset = 0;
+        target.motionPlan.firstApplicationZeroRebaseRetired = true;
+        target.motionPlan.neckApplicationTarget = datum.rawTargets.neck;
+        target.motionPlan.bodyApplicationTarget = datum.rawTargets.body;
+        target.motionPlan.backApplicationTarget = datum.rawTargets.back;
       }
       return finalized;
     };
+    wrapped.firstApplicationDatumV2 = true;
     wrapped.firstApplicationZeroDatumV1 = true;
     wrapped.previousGeneratedAplMapDrivenProfile = base;
     global.generatedAplMapDrivenProfile = wrapped;
@@ -303,6 +299,7 @@
         ...generator,
         generate: wrapped,
         resolveApplicationDatum,
+        firstApplicationDatumV2: true,
         firstApplicationZeroDatumV1: true
       });
     }
@@ -317,7 +314,7 @@
       wrapLoadSavedSettings(),
       wrapMapGenerator()
     ].every(Boolean);
-    if (!ready) global.setTimeout(installWrappers, RETRY_MS);
+    if (!ready) global.setTimeout?.(installWrappers, RETRY_MS);
   }
 
   ensureBuildInputDefaults(stateRef());
@@ -325,7 +322,7 @@
 
   global.LabelerFirstApplicationZeroDatum = Object.freeze({
     installed: true,
-    version: 1,
+    version: 2,
     DEFAULT_SERVO_START_DEG,
     DEFAULT_FRONT_CENTERLINE_DEG,
     legacyCenterLineFront,
@@ -334,6 +331,7 @@
     resolveApplicationDatum,
     effectiveCenterLineFront,
     rewriteSummary,
-    patchBuildInputs
+    patchBuildInputs,
+    firstApplicationZeroRebaseRetired: true
   });
 })(typeof window !== "undefined" ? window : globalThis);
