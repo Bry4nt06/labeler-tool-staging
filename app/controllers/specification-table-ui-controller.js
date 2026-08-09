@@ -89,6 +89,51 @@
         margin: 0;
         padding: 5px;
       }
+
+      @media (max-width: 760px) {
+        /* The Specs sheet itself must not compete with its tables for the
+           horizontal swipe. Each rendered spec table owns its own x-axis so
+           iOS can pan across inputs without moving or clipping the page. */
+        #specs.table-wrap {
+          overflow: visible;
+          max-width: 100%;
+          min-width: 0;
+        }
+
+        #specs .spec-stack,
+        #specs .spec-section {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+        }
+
+        #specs #bottleSpecs,
+        #specs #labelSpecs {
+          display: block;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          overflow-x: auto;
+          overflow-y: hidden;
+          overscroll-behavior-x: contain;
+          touch-action: pan-x pan-y;
+          -webkit-overflow-scrolling: touch;
+          padding-bottom: 8px;
+        }
+
+        #specs #bottleSpecs > table,
+        #specs #labelSpecs > table {
+          width: max-content;
+          max-width: none;
+        }
+
+        #specs #bottleSpecs input,
+        #specs #bottleSpecs select,
+        #specs #labelSpecs input,
+        #specs #labelSpecs select {
+          touch-action: pan-x pan-y;
+        }
+      }
     `;
     document.head.appendChild(style);
   }
