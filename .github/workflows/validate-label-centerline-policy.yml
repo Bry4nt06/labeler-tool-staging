@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - "app/label-centerline-policy-integration.js"
+      - "app/apl-finished-centerline-completion-integration.js"
       - "app/orientation-constraint-target-service.js"
       - "app/apl-label-sensor-reference-integration.js"
       - "app.js"
       - "app/bootstrap.js"
       - "tests/label-centerline-policy.test.js"
+      - "tests/apl-finished-centerline-completion.test.js"
       - "tests/sensor-physical-visibility-model.test.js"
       - "tests/sensor-direction-live-status.test.js"
       - ".github/workflows/validate-label-centerline-policy.yml"
@@ -30,15 +32,19 @@ jobs:
       - name: Check syntax
         run: |
           node --check app/label-centerline-policy-integration.js
+          node --check app/apl-finished-centerline-completion-integration.js
           node --check app/orientation-constraint-target-service.js
           node --check app/apl-label-sensor-reference-integration.js
           node --check app.js
           node --check app/bootstrap.js
           node --check tests/label-centerline-policy.test.js
+          node --check tests/apl-finished-centerline-completion.test.js
           node --check tests/sensor-physical-visibility-model.test.js
           node --check tests/sensor-direction-live-status.test.js
       - name: Run centerline policy regression
         run: node tests/label-centerline-policy.test.js
+      - name: Run full wipe and finished-centerline regression
+        run: node tests/apl-finished-centerline-completion.test.js
       - name: Re-run physical sensor geometry regression
         run: node tests/sensor-physical-visibility-model.test.js
       - name: Re-run live sensor direction regression
