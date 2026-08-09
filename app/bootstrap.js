@@ -2,9 +2,9 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "label-datum-servo-flow-v40-20260808-2300";
-  const buildUpdatedAt = "Aug 8, 2026 11:00 PM ET";
-  // Regression lineage: finished-centerline-completion-v39-20260808-2148 (Aug 8, 2026 9:48 PM ET) • inside-wipe-rendered-geometry-v38-20260807-2000 • compact-layout-defaults-pad-orientation-v36-20260807-1545 • spender-plate-visual-controls-v35-20260807-1402 • label-application-reference-v32-20260807-1251
+  const build = "first-tack-datum-flow-v41-20260808-2330";
+  const buildUpdatedAt = "Aug 8, 2026 11:30 PM ET";
+  // Regression lineage: label-datum-servo-flow-v40-20260808-2300 • finished-centerline-completion-v39-20260808-2148 • inside-wipe-rendered-geometry-v38-20260807-2000 • compact-layout-defaults-pad-orientation-v36-20260807-1545 • spender-plate-visual-controls-v35-20260807-1402 • label-application-reference-v32-20260807-1251
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
