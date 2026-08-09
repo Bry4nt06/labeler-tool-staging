@@ -1,0 +1,33 @@
+name: Validate Progressive Label Fill
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/progressive-label-fill-integration.js"
+      - "app/bootstrap.js"
+      - "tests/progressive-label-fill.test.js"
+      - ".github/workflows/validate-progressive-label-fill.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check integration syntax
+        run: node --check app/progressive-label-fill-integration.js
+      - name: Run progressive label fill regression
+        run: node tests/progressive-label-fill.test.js
+      - name: Preserve base bottle renderer regression
+        run: node tests/top-view-bottle-renderer.test.js
+      - name: Verify v46 build marker
+        run: grep -q 'progressive-label-application-v46-20260809-1735' app/bootstrap.js
