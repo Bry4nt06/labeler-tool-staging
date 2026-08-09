@@ -4,6 +4,9 @@
   if (global.LabelerTopModulCoderPreholdFinalizer?.installed) return;
 
   const RETRY_MS = 25;
+  const EPS = 0.001;
+  const FULL_CYCLE_DEG = 360;
+  const PRE_CODER_MARGIN_DEG = 5;
   let installed = false;
 
   const number = (value, fallback = NaN) => {
@@ -11,6 +14,10 @@
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
   };
+
+  const done = (value) => typeof global.finishAngle === "function"
+    ? global.finishAngle(value)
+    : Math.round(number(value, 0) * 10) / 10;
 
   function activeMap() {
     try { return typeof global.activeMachineMap === "function" ? global.activeMachineMap() : null; }
@@ -55,6 +62,71 @@
     return -1;
   }
 
+  function codingObjects(map = activeMap()) {
+    return (Array.isArray(map?.objects) ? map.objects : [])
+      .filter((item) => item?.kind === "coding" && item?.enabled !== false && item?.orientBottle !== false);
+  }
+
+  function codingObjectForHold(hold, map = activeMap()) {
+    const objects = codingObjects(map);
+    if (!objects.length) return null;
+    const ids = [
+      hold?.codingObjectId,
+      hold?.orientationObjectId,
+      ...(Array.isArray(hold?.codingObjectIds) ? hold.codingObjectIds : []),
+      ...(Array.isArray(hold?.orientationObjectIds) ? hold.orientationObjectIds : [])
+    ].filter((value) => value !== null && value !== undefined && value !== "").map(String);
+    const exact = objects.find((item) => ids.includes(String(item?.id || "")));
+    if (exact) return exact;
+    if (objects.length === 1) return objects[0];
+
+    const anchor = number(hold?.tableAngle, number(hold?.codingReadyTableAngle, NaN));
+    if (!Number.isFinite(anchor)) return objects[0];
+    return [...objects].sort((left, right) => {
+      const leftStart = number(left?.start, number(left?.angle, Infinity));
+      const rightStart = number(right?.start, number(right?.angle, Infinity));
+      return Math.abs(leftStart - anchor) - Math.abs(rightStart - anchor);
+    })[0];
+  }
+
+  function equivalentNear(angle, reference) {
+    const base = number(angle, NaN);
+    const anchor = number(reference, base);
+    if (!Number.isFinite(base)) return NaN;
+    if (!Number.isFinite(anchor)) return base;
+    return base + FULL_CYCLE_DEG * Math.round((anchor - base) / FULL_CYCLE_DEG);
+  }
+
+  function coderStartForHold(hold, map = activeMap()) {
+    const explicitStart = number(
+      hold?.codingWindowStart,
+      number(hold?.inspectionWindowStart, NaN)
+    );
+    if (Number.isFinite(explicitStart)) return explicitStart;
+
+    const item = codingObjectForHold(hold, map);
+    const rawStart = number(item?.start, number(item?.angle, NaN));
+    return equivalentNear(
+      rawStart,
+      number(hold?.tableAngle, number(hold?.codingReadyTableAngle, rawStart))
+    );
+  }
+
+  function preCoderStopForHold(hold, map = activeMap()) {
+    const coderStart = coderStartForHold(hold, map);
+    if (!Number.isFinite(coderStart)) {
+      return number(hold?.codingReadyTableAngle, number(hold?.tableAngle, NaN));
+    }
+    return done(coderStart - PRE_CODER_MARGIN_DEG);
+  }
+
+  function rowsBeforeStop(rows, holdIndex, stoppedTable) {
+    return rows.slice(0, holdIndex).filter((row) => {
+      const table = number(row?.tableAngle, NaN);
+      return !Number.isFinite(table) || table < stoppedTable - EPS;
+    });
+  }
+
   function canonicalRows(sourceRows) {
     const rows = (Array.isArray(sourceRows) ? sourceRows : []).map((row) => ({ ...row }));
     if (!rows.length || !isTopModul()) return rows;
@@ -63,17 +135,12 @@
     if (holdIndex < 0) return rows;
 
     const hold = rows[holdIndex];
-    const ready = number(hold.codingReadyTableAngle, number(hold.tableAngle, NaN));
-    const coderStart = number(
-      hold.codingWindowStart,
-      number(hold.inspectionWindowStart, NaN)
-    );
-    let stoppedTable = ready;
-    if (Number.isFinite(coderStart)) stoppedTable = Math.min(stoppedTable, coderStart);
+    const coderStart = coderStartForHold(hold);
+    let stoppedTable = preCoderStopForHold(hold);
     if (!Number.isFinite(stoppedTable)) stoppedTable = number(hold.tableAngle, 0);
 
-    rows.splice(holdIndex + 1);
-    rows[holdIndex] = {
+    const output = rowsBeforeStop(rows, holdIndex, stoppedTable);
+    output.push({
       ...hold,
       cmd: 3,
       baseCmd: 3,
@@ -83,6 +150,8 @@
       codingHold: true,
       explicitCodingWindowHold: true,
       codingReadyTableAngle: stoppedTable,
+      coderStartTableAngle: Number.isFinite(coderStart) ? coderStart : undefined,
+      preCoderMarginDeg: PRE_CODER_MARGIN_DEG,
       terminalRest: true,
       activeHold: false,
       plannerIntent: "HOLD",
@@ -90,9 +159,9 @@
       plannerRecommendedCommand: 3,
       motionSource: "topmodul-pre-coder-terminal-hold",
       topModulPreCoderHold: true
-    };
+    });
 
-    return rows.map((row, index) => ({ ...row, hmi: index + 1, plc: index }));
+    return output.map((row, index) => ({ ...row, hmi: index + 1, plc: index }));
   }
 
   function syncPlan(plan, rows) {
@@ -123,6 +192,7 @@
       global.state.motionPlan.rows = rows;
       global.state.motionPlan.finalPlateAngle = finalRow?.plateAngle;
       global.state.motionPlan.topModulPreCoderHold = finalRow?.topModulPreCoderHold === true;
+      global.state.motionPlan.preCoderMarginDeg = finalRow?.preCoderMarginDeg;
       global.state.motionPlan.termination = {
         ...(global.state.motionPlan.termination || {}),
         section: "coding",
@@ -163,10 +233,15 @@
 
     global.LabelerTopModulCoderPreholdFinalizer = Object.freeze({
       installed: true,
-      version: 2,
+      version: 3,
+      PRE_CODER_MARGIN_DEG,
       lateProfilePipelineReady,
       explicitCodingHold,
       finalCodingHoldIndex,
+      codingObjects,
+      codingObjectForHold,
+      coderStartForHold,
+      preCoderStopForHold,
       canonicalRows,
       finalizeCurrentProgram
     });
