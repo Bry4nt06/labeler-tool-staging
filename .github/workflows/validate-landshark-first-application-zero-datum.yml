@@ -9,11 +9,16 @@ on:
       - app/first-application-zero-datum-integration.js
       - app/apl-finished-centerline-completion-integration.js
       - app/apl-first-tack-datum-flow-integration.js
+      - app/apl-body-back-two-label-transition-integration.js
+      - app/apl-back-wipe-direction-correction-integration.js
+      - app/apl-body-back-opposite-reference-integration.js
+      - app/topmodul-correction-chain-limit-integration.js
       - app/orientation-constraint-target-service.js
       - app/orientation-constraint-planner-integration.js
       - tests/landshark-first-application-zero-datum.test.js
       - tests/apl-finished-centerline-completion.test.js
       - tests/apl-first-tack-datum-flow.test.js
+      - tests/apl-two-label-common-path.test.js
       - tests/sensor-aim-geometry.test.js
       - tests/sensor-live-visibility-alignment.test.js
       - .github/workflows/validate-landshark-first-application-zero-datum.yml
@@ -36,11 +41,16 @@ jobs:
           node --check app/first-application-zero-datum-integration.js
           node --check app/apl-finished-centerline-completion-integration.js
           node --check app/apl-first-tack-datum-flow-integration.js
+          node --check app/apl-body-back-two-label-transition-integration.js
+          node --check app/apl-back-wipe-direction-correction-integration.js
+          node --check app/apl-body-back-opposite-reference-integration.js
+          node --check app/topmodul-correction-chain-limit-integration.js
           node --check app/orientation-constraint-target-service.js
           node --check app/orientation-constraint-planner-integration.js
           node --check tests/landshark-first-application-zero-datum.test.js
           node --check tests/apl-finished-centerline-completion.test.js
           node --check tests/apl-first-tack-datum-flow.test.js
+          node --check tests/apl-two-label-common-path.test.js
           node --check tests/sensor-aim-geometry.test.js
           node --check tests/sensor-live-visibility-alignment.test.js
       - name: Run bottle-datum regression
@@ -49,6 +59,8 @@ jobs:
         run: node tests/apl-finished-centerline-completion.test.js
       - name: Run first-tack and continuous re-wipe regression
         run: node tests/apl-first-tack-datum-flow.test.js
+      - name: Run common two-label APL path and command-chain regression
+        run: node tests/apl-two-label-common-path.test.js
       - name: Run sensor-direction regressions
         run: |
           node tests/sensor-aim-geometry.test.js
