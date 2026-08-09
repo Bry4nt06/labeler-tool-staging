@@ -3,8 +3,8 @@
 (function installAplFinishedCenterlineCompletion(global) {
   if (global.LabelerAplFinishedCenterlineCompletion?.installed) return;
 
-  const VERSION = 1;
-  const BUILD = "finished-centerline-completion-v39";
+  const VERSION = 2;
+  const BUILD = "label-datum-servo-flow-v40";
   const EPS = 0.001;
   const RETRY_MS = 50;
 
@@ -23,10 +23,6 @@
     const base = finite(target, 0);
     const current = finite(reference, base);
     return base + 360 * Math.round((current - base) / 360);
-  }
-
-  function circularDistance(left, right) {
-    return Math.abs(((finite(left, 0) - finite(right, 0) + 540) % 360) - 180);
   }
 
   function applications() {
@@ -55,8 +51,7 @@
     const api = policy();
     if (api?.sectionOffsetDeg) return finite(api.sectionOffsetDeg(section, stateRef()), 0);
     if (section === "neck") return 0;
-    const target = stateRef();
-    const mm = finite(target?.buildInputs?.[`${section}OffsetMm`], 0);
+    const mm = finite(stateRef()?.buildInputs?.[`${section}OffsetMm`], 0);
     if (!mm) return 0;
     try {
       const circumference = typeof global.bodyCircumference === "function"
@@ -131,7 +126,7 @@
   function wrapSectionWipePlan() {
     const current = global.sectionWipePlan;
     if (typeof current !== "function") return false;
-    if (current.finishedCenterlineCompletionV39) return true;
+    if (current.labelDatumServoFlowV40) return true;
     const base = current;
     const wrapped = function sectionWipePlanWithPerSectionApplicationReference(section) {
       const normalized = text(section).toLowerCase();
@@ -141,6 +136,7 @@
       }
       return solveAplWipe(normalized) || base.apply(this, arguments);
     };
+    wrapped.labelDatumServoFlowV40 = true;
     wrapped.finishedCenterlineCompletionV39 = true;
     wrapped.previousSectionWipePlan = base;
     global.sectionWipePlan = wrapped;
@@ -179,23 +175,16 @@
         if (!grouped.has(station)) grouped.set(station, []);
         grouped.get(station).push(item);
       });
+    const seenSections = new Set();
     return [...grouped.entries()]
       .sort((a, b) => a[0] - b[0])
-      .map(([station, objects]) => ({ station, objects, section: sectionForStation(station, sections) }))
+      .map(([station, objects]) => {
+        const section = sectionForStation(station, sections);
+        const isFirstSectionStation = !seenSections.has(section);
+        if (["neck", "body", "back"].includes(section)) seenSections.add(section);
+        return { station, objects, section, isFirstSectionStation };
+      })
       .filter((entry) => ["neck", "body", "back"].includes(entry.section) && active?.[entry.section] !== false);
-  }
-
-  function aggregateAngle(machineMap, station) {
-    return finite(
-      machineMap?.aggregateAngles?.[String(station)],
-      finite(machineMap?.stationAngles?.[String(station)], NaN)
-    );
-  }
-
-  function applicationPoint(machineMap, station) {
-    const aggregate = aggregateAngle(machineMap, station);
-    const early = finite(global.profileTiming?.spenderArriveEarly, 7.5);
-    return Number.isFinite(aggregate) ? aggregate - early : NaN;
   }
 
   function rowStation(row) {
@@ -260,163 +249,54 @@
     return [firstRequired * orientation, -secondRequired * orientation];
   }
 
-  function makeRow(cmd, tableAngle, plateAngle, action, extra = {}) {
-    return {
-      hmi: 0,
-      plc: 0,
-      cmd,
-      tableAngle: round(tableAngle),
-      plateAngle: round(plateAngle),
-      action,
-      motionSource: "apl-finished-centerline-completion-v39",
-      mapDriven: true,
-      finishedCenterlineCompletionV39: true,
-      ...extra
-    };
-  }
-
-  function insertSorted(rows, row) {
-    const table = finite(row?.tableAngle, Infinity);
-    let index = rows.findIndex((candidate) => finite(candidate?.tableAngle, Infinity) > table + EPS);
-    if (index < 0) index = rows.length;
-    rows.splice(index, 0, row);
-    return row;
-  }
-
-  function precedingRow(rows, tableAngle) {
-    let result = null;
-    rows.forEach((row) => {
-      const table = finite(row?.tableAngle, NaN);
-      if (!Number.isFinite(table) || table >= tableAngle - EPS) return;
-      if (!result || table > finite(result.tableAngle, -Infinity)) result = row;
-    });
-    return result;
-  }
-
-  function ensureApplicationReference(rows, descriptor) {
-    const { station, section, machineMap } = descriptor;
-    const targetTable = applicationPoint(machineMap, station);
-    const targetPlateRaw = applicationTarget(section);
-    if (!Number.isFinite(targetTable) || !Number.isFinite(targetPlateRaw)) return null;
-    const wipe = findWipeGroup(rows, station, section);
-    const wipeStartTable = wipe ? finite(rows[wipe.w1]?.tableAngle, targetTable + 1) : Infinity;
-    let anchor = rows.find((row) => isApplicationRow(row, station, section)
+  function retargetExistingStationReference(rows, descriptor) {
+    const { station, section, isFirstSectionStation } = descriptor;
+    const group = findWipeGroup(rows, station, section);
+    if (!group) return null;
+    const targetRaw = applicationTarget(section);
+    if (!Number.isFinite(targetRaw)) return null;
+    const wipeStartTable = finite(rows[group.w1]?.tableAngle, Infinity);
+    const anchor = rows.find((row) => isApplicationRow(row, station, section)
       && Number(row?.cmd) === 3
       && finite(row?.tableAngle, Infinity) <= wipeStartTable + EPS);
-    if (!anchor) {
-      anchor = makeRow(3, targetTable, targetPlateRaw, `Hold for ${global.sectionLabel?.(section) || section} Application - Agg ${station} - Reference`, {
-        station,
-        section,
-        applicationReference: true,
-        applicationReferenceMode: applicationReference(section),
-        finishedLabelCenterlineDeg: round(finishedCenterline(section))
-      });
-      insertSorted(rows, anchor);
-    }
-    const targetPlate = nearestEquivalent(targetPlateRaw, finite(anchor.plateAngle, targetPlateRaw));
-    anchor.tableAngle = round(targetTable);
-    anchor.plateAngle = round(targetPlate);
-    anchor.applicationReference = true;
-    anchor.applicationReferenceMode = applicationReference(section);
+    if (!anchor) return null;
+
+    const target = nearestEquivalent(targetRaw, finite(anchor.plateAngle, targetRaw));
+    anchor.plateAngle = round(target);
     anchor.finishedLabelCenterlineDeg = round(finishedCenterline(section));
+    anchor.labelDatumServoFlowV40 = true;
     anchor.finishedCenterlineCompletionV39 = true;
-    const before = precedingRow(rows, targetTable);
-    if (!before) return anchor;
-    const beforePlate = finite(before.plateAngle, targetPlate);
-    if (circularDistance(beforePlate, targetPlate) <= EPS) return anchor;
-    const existingTurn = rows.find((row) => Number(row?.cmd) === 7
-      && isApplicationRow(row, station, section)
-      && finite(row?.tableAngle, -Infinity) > finite(before.tableAngle, -Infinity) - EPS
-      && finite(row?.tableAngle, Infinity) < targetTable - EPS);
-    const startTable = Math.max(finite(before.tableAngle, 0) + 0.5, targetTable - Math.max(0.5, (targetTable - finite(before.tableAngle, 0)) * 0.8));
-    const turn = existingTurn || insertSorted(rows, makeRow(7, startTable, beforePlate, `Turn for ${global.sectionLabel?.(section) || section} Application - Agg ${station}`, {
-      station,
-      section,
-      applicationTransition: true
-    }));
-    turn.cmd = 7;
-    turn.plateAngle = round(beforePlate);
-    turn.station = station;
-    turn.section = section;
-    turn.applicationTransition = true;
-    turn.finishedCenterlineCompletionV39 = true;
+
+    const anchorIndex = rows.indexOf(anchor);
+    const transition = anchorIndex > 0 ? rows[anchorIndex - 1] : null;
+    const transitionBelongsToStation = transition
+      && Number(transition?.cmd) === 7
+      && rowStation(transition) === Number(station)
+      && rowSection(transition) === section;
+
+    if (isFirstSectionStation) {
+      anchor.applicationReference = true;
+      anchor.applicationReferenceMode = applicationReference(section);
+      anchor.finishedLabelReference = "fixed-label-datum";
+      if (transitionBelongsToStation) {
+        transition.action = `Orient ${global.sectionLabel?.(section) || section} to Tack Reference - Agg ${station}`;
+        transition.applicationTransition = true;
+        transition.labelDatumServoFlowV40 = true;
+      }
+    } else {
+      anchor.applicationReference = false;
+      anchor.wipeResetReference = true;
+      anchor.action = `Orient ${global.sectionLabel?.(section) || section} for Re-Wipe - Agg ${station}`;
+      delete anchor.initialApplicationDatum;
+      delete anchor.applicationDatumOffset;
+      if (transitionBelongsToStation) {
+        transition.action = `Orient ${global.sectionLabel?.(section) || section} for Re-Wipe - Agg ${station}`;
+        transition.applicationTransition = false;
+        transition.wipeResetTransition = true;
+        transition.labelDatumServoFlowV40 = true;
+      }
+    }
     return anchor;
-  }
-
-  function addRecoveryIssue(message, station, section) {
-    const target = stateRef();
-    if (!target?.motionPlan || typeof target.motionPlan !== "object") return;
-    target.motionPlan.issues = Array.isArray(target.motionPlan.issues) ? target.motionPlan.issues : [];
-    if (target.motionPlan.issues.some((issue) => issue?.code === "apl-finished-centerline-recovery-window" && Number(issue.station) === Number(station))) return;
-    target.motionPlan.issues.push({ level: "bad", code: "apl-finished-centerline-recovery-window", station, section, message });
-  }
-
-  function ensureFinishedCenterlineRecovery(rows, descriptor, group) {
-    const { station, section, machineMap } = descriptor;
-    const hold = rows[group.hold];
-    if (!hold) return;
-    const current = finite(hold.plateAngle, NaN);
-    if (!Number.isFinite(current)) return;
-    const center = nearestEquivalent(finishedCenterline(section), current);
-    hold.action = `Wipe Hold ${global.sectionLabel?.(section) || section} - Agg ${station}`;
-    // A map generator can reuse its previous terminal Rest row as the final wipe
-    // hold. Once that row becomes part of the physical wipe, it must stop being
-    // treated as terminal or finalization will overwrite the completed wipe.
-    if (hold.terminalRest) delete hold.terminalRest;
-    if (hold.motionSource === "terminal-end-curve-rest") hold.motionSource = "apl-finished-centerline-completion-v39";
-    hold.finishedLabelCenterlineDeg = round(finishedCenterline(section));
-    hold.finishedCenterlineCompletionV39 = true;
-    if (circularDistance(current, center) <= 0.05) {
-      hold.finishedCenterlineRecovered = true;
-      return;
-    }
-    const holdTable = finite(hold.tableAngle, NaN);
-    const sequence = stationSequence(machineMap);
-    const currentIndex = sequence.findIndex((entry) => Number(entry.station) === Number(station));
-    const nextStation = sequence[currentIndex + 1];
-    const nextApplication = nextStation ? applicationPoint(machineMap, nextStation.station) : NaN;
-    const sameStationSensors = (machineMap?.objects || [])
-      .filter((item) => item?.kind === "sensor" && Number(item.station) === Number(station))
-      .map((item) => finite(item.angle, finite(item.start, NaN)) - 1.5)
-      .filter(Number.isFinite);
-    const coding = (machineMap?.objects || []).find((item) => item?.kind === "coding");
-    const codingReady = coding ? finite(coding.start, NaN) - finite(global.profileTiming?.codingArriveEarlyDeg, 75) : NaN;
-    const candidates = [nextApplication, ...sameStationSensors, codingReady, 359]
-      .filter((value) => Number.isFinite(value) && value > holdTable + 0.5)
-      .sort((a, b) => a - b);
-    const deadline = candidates[0] ?? (holdTable + 1.5);
-    const start = holdTable + 0.5;
-    let reserve = 0.5;
-    if (nextStation && Math.abs(deadline - nextApplication) <= EPS) {
-      const nextCenterTarget = applicationTarget(nextStation.section);
-      const nextEquivalent = nearestEquivalent(nextCenterTarget, center);
-      const nextRotation = Math.abs(nextEquivalent - center);
-      const maxRatio = Math.max(0.1, finite(stateRef()?.maxMoveRatio, 21));
-      reserve = Math.max(1, nextRotation / maxRatio * 1.1 + 0.5);
-    }
-    const end = deadline - reserve;
-    if (!(end > start + EPS)) {
-      addRecoveryIssue(
-        `Aggregate ${station} completes the ${section} wipe at ${round(current)} deg, but the finished ${section} centerline is ${round(finishedCenterline(section))} deg and there is no table window to recover that datum before the next machine event. Finish the wipe earlier or move the next event later.`,
-        station,
-        section
-      );
-      return;
-    }
-    insertSorted(rows, makeRow(7, start, current, `Return ${global.sectionLabel?.(section) || section} to Finished Centerline - Agg ${station}`, {
-      station,
-      section,
-      centerlineRecovery: true,
-      plannedRotation: center - current,
-      finishedLabelCenterlineDeg: round(finishedCenterline(section))
-    }));
-    insertSorted(rows, makeRow(3, end, center, `Hold Finished ${global.sectionLabel?.(section) || section} Centerline - Agg ${station}`, {
-      station,
-      section,
-      centerlineRecovery: true,
-      finishedCenterlineRecovered: true,
-      finishedLabelCenterlineDeg: round(finishedCenterline(section))
-    }));
   }
 
   function recomputeTransitions(rows) {
@@ -436,68 +316,83 @@
   }
 
   function correctGeneratedProfile(sourceRows, machineMap) {
-    if (String(stateRef()?.applicationMode || "").toLowerCase() !== "apl" || !Array.isArray(sourceRows) || !sourceRows.length || !machineMap) return sourceRows;
-    const rows = sourceRows.map((row) => ({ ...row }));
-    const sequence = stationSequence(machineMap).map((entry) => ({ ...entry, machineMap }));
+    if (String(stateRef()?.applicationMode || "").toLowerCase() !== "apl"
+      || !Array.isArray(sourceRows) || !sourceRows.length || !machineMap) return sourceRows;
 
-    sequence.forEach((descriptor) => ensureApplicationReference(rows, descriptor));
+    const rows = sourceRows.map((row) => ({ ...row }));
+    const sequence = stationSequence(machineMap);
+
+    // The label centerline is a coordinate on the bottle, not a required servo
+    // resting angle. Keep the physical curve continuous and never insert a
+    // "return to centerline" move merely to preserve label identity.
+    sequence.forEach((descriptor) => retargetExistingStationReference(rows, descriptor));
 
     sequence.forEach((descriptor) => {
       const group = findWipeGroup(rows, descriptor.station, descriptor.section);
       if (!group) return;
       const wipe = solveAplWipe(descriptor.section) || global.sectionWipePlan?.(descriptor.section);
       if (!wipe) return;
-      const [firstRotation, secondRotation] = fullWipeRotations(descriptor.section, descriptor.objects, wipe, rows, group);
+      const [firstRotation, secondRotation] = fullWipeRotations(
+        descriptor.section,
+        descriptor.objects,
+        wipe,
+        rows,
+        group
+      );
       const startTarget = applicationTarget(descriptor.section);
       const w1 = rows[group.w1];
       const w2 = rows[group.w2];
       const hold = rows[group.hold];
       const start = nearestEquivalent(startTarget, finite(w1?.plateAngle, startTarget));
+
       w1.plateAngle = round(start);
       w1.plannedRotation = firstRotation;
       w1.fullPhysicalWipe = true;
+      w1.labelDatumServoFlowV40 = true;
       w1.finishedCenterlineCompletionV39 = true;
+
       w2.plateAngle = round(start + firstRotation);
       w2.plannedRotation = secondRotation;
       w2.fullPhysicalWipe = true;
+      w2.labelDatumServoFlowV40 = true;
       w2.finishedCenterlineCompletionV39 = true;
+
       hold.plateAngle = round(start + firstRotation + secondRotation);
+      hold.action = `Wipe Hold ${global.sectionLabel?.(descriptor.section) || descriptor.section} - Agg ${descriptor.station}`;
       hold.fullPhysicalWipe = true;
+      hold.finishedLabelCenterlineDeg = round(finishedCenterline(descriptor.section));
+      hold.labelDatumServoFlowV40 = true;
       hold.finishedCenterlineCompletionV39 = true;
+      if (hold.terminalRest) delete hold.terminalRest;
+      if (hold.motionSource === "terminal-end-curve-rest") hold.motionSource = "apl-label-datum-servo-flow-v40";
+
       const anchor = rows.find((row) => Number(row?.cmd) === 3
-        && isApplicationRow(row, descriptor.station, descriptor.section)
+        && rowStation(row) === Number(descriptor.station)
+        && rowSection(row) === descriptor.section
+        && (row.applicationReference || row.wipeResetReference)
         && finite(row?.tableAngle, Infinity) <= finite(w1.tableAngle, Infinity));
       if (anchor) anchor.plateAngle = round(start);
     });
 
-    sequence.forEach((descriptor) => {
-      const group = findWipeGroup(rows, descriptor.station, descriptor.section);
-      if (group) ensureFinishedCenterlineRecovery(rows, descriptor, group);
-    });
-
-    sequence.forEach((descriptor) => ensureApplicationReference(rows, descriptor));
-
     const terminalRows = rows.filter((row) => row?.terminalRest || /End Curve\s*-\s*Rest/i.test(text(row?.action)));
-    const latest = rows.reduce((winner, row) => !winner || finite(row?.tableAngle, -Infinity) > finite(winner?.tableAngle, -Infinity) ? row : winner, null);
+    const latest = rows.reduce(
+      (winner, row) => !winner || finite(row?.tableAngle, -Infinity) > finite(winner?.tableAngle, -Infinity) ? row : winner,
+      null
+    );
     if (!terminalRows.length) {
       const terminalTable = Math.max(359, finite(latest?.tableAngle, 0) + 0.5);
-      rows.push(makeRow(3, terminalTable, finite(latest?.plateAngle, 0), "End Curve - Rest", { terminalRest: true }));
-    } else {
-      terminalRows.forEach((terminal) => {
-        const before = precedingRow(rows, finite(terminal.tableAngle, Infinity));
-        if (before && Number(terminal.cmd) === 3 && !terminal.codingHold) terminal.plateAngle = round(finite(before.plateAngle, terminal.plateAngle));
+      rows.push({
+        hmi: 0,
+        plc: 0,
+        cmd: 3,
+        tableAngle: round(terminalTable),
+        plateAngle: round(finite(latest?.plateAngle, 0)),
+        action: "End Curve - Rest",
+        terminalRest: true,
+        motionSource: "terminal-end-curve-rest",
+        mapDriven: true,
+        labelDatumServoFlowV40: true
       });
-    }
-
-    rows.sort((left, right) => finite(left?.tableAngle, 0) - finite(right?.tableAngle, 0));
-    for (let index = rows.length - 2; index >= 0; index -= 1) {
-      const row = rows[index];
-      const next = rows[index + 1];
-      if (row?.finishedCenterlineRecovered
-        && Number(row?.cmd) === 3
-        && Number(next?.cmd) === 3
-        && (next?.terminalRest || /End Curve\s*-\s*Rest/i.test(text(next?.action)))
-        && circularDistance(row.plateAngle, next.plateAngle) <= 0.05) rows.splice(index, 1);
     }
 
     const finalized = recomputeTransitions(rows);
@@ -507,6 +402,8 @@
     target.motionPlan.applicationDatumOffset = 0;
     target.motionPlan.firstApplicationZeroRebaseRetired = true;
     target.motionPlan.finishedCenterlineCompletionV39 = true;
+    target.motionPlan.labelDatumServoFlowV40 = true;
+    target.motionPlan.centerlineRecoveryRequired = false;
     target.motionPlan.finishedCenterlines = {
       neck: round(finishedCenterline("neck")),
       body: round(finishedCenterline("body")),
@@ -516,37 +413,49 @@
     target.motionPlan.bodyApplicationTarget = round(applicationTarget("body"));
     target.motionPlan.backApplicationTarget = round(applicationTarget("back"));
     target.motionPlan.finalPlateAngle = finalized.at(-1)?.plateAngle;
+
     target.motionPlan.stationPlans = (Array.isArray(target.motionPlan.stationPlans) ? target.motionPlan.stationPlans : []).map((plan) => {
       const descriptor = sequence.find((entry) => Number(entry.station) === Number(plan.station));
       if (!descriptor) return plan;
       const group = findWipeGroup(finalized, descriptor.station, descriptor.section);
       if (!group) return plan;
-      const movePath = [finite(finalized[group.w1]?.plannedRotation, 0), finite(finalized[group.w2]?.plannedRotation, 0)];
+      const movePath = [
+        finite(finalized[group.w1]?.plannedRotation, 0),
+        finite(finalized[group.w2]?.plannedRotation, 0)
+      ];
       return {
         ...plan,
         movePath,
         requiredRotation: movePath.reduce((sum, value) => sum + Math.abs(value), 0),
         directionChanges: Math.sign(movePath[0]) !== Math.sign(movePath[1]) ? 1 : 0,
-        finishedCenterlineCompletionV39: true
+        finishedCenterlineCompletionV39: true,
+        labelDatumServoFlowV40: true
       };
     });
+
     return finalized;
   }
 
   function wrapMapGenerator() {
     const current = global.generatedAplMapDrivenProfile;
     if (typeof current !== "function") return false;
-    if (current.finishedCenterlineCompletionV39) return true;
+    if (current.labelDatumServoFlowV40) return true;
     const base = current;
-    const wrapped = function generatedAplMapDrivenProfileWithFinishedCenterlineCompletion(machineMap, ...args) {
+    const wrapped = function generatedAplMapDrivenProfileWithLabelDatumServoFlow(machineMap, ...args) {
       return correctGeneratedProfile(base.call(this, machineMap, ...args), machineMap);
     };
+    wrapped.labelDatumServoFlowV40 = true;
     wrapped.finishedCenterlineCompletionV39 = true;
     wrapped.previousGeneratedAplMapDrivenProfile = base;
     global.generatedAplMapDrivenProfile = wrapped;
     const generator = global.LabelerAplMapProfileGenerator;
     if (generator?.generate) {
-      global.LabelerAplMapProfileGenerator = Object.freeze({ ...generator, generate: wrapped, finishedCenterlineCompletionV39: true });
+      global.LabelerAplMapProfileGenerator = Object.freeze({
+        ...generator,
+        generate: wrapped,
+        finishedCenterlineCompletionV39: true,
+        labelDatumServoFlowV40: true
+      });
     }
     return true;
   }
@@ -575,7 +484,7 @@
 
   ensureInstalled();
   global.setTimeout?.(() => {
-    if (!global.generatedAplMapDrivenProfile?.finishedCenterlineCompletionV39) wrapMapGenerator();
-    if (!global.sectionWipePlan?.finishedCenterlineCompletionV39) wrapSectionWipePlan();
+    if (!global.generatedAplMapDrivenProfile?.labelDatumServoFlowV40) wrapMapGenerator();
+    if (!global.sectionWipePlan?.labelDatumServoFlowV40) wrapSectionWipePlan();
   }, 500);
 })(typeof window !== "undefined" ? window : globalThis);
