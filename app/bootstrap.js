@@ -2,9 +2,9 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "first-tack-datum-flow-v41-20260808-2330";
-  const buildUpdatedAt = "Aug 8, 2026 11:30 PM ET";
-  // Regression lineage: label-datum-servo-flow-v40-20260808-2300 • finished-centerline-completion-v39-20260808-2148 • inside-wipe-rendered-geometry-v38-20260807-2000 • compact-layout-defaults-pad-orientation-v36-20260807-1545 • spender-plate-visual-controls-v35-20260807-1402 • label-application-reference-v32-20260807-1251
+  const build = "common-apl-active-sections-v42-20260809-0133";
+  const buildUpdatedAt = "Aug 9, 2026 1:33 AM ET";
+  // Regression lineage: first-tack-datum-flow-v41-20260808-2330 • label-datum-servo-flow-v40-20260808-2300 • finished-centerline-completion-v39-20260808-2148 • inside-wipe-rendered-geometry-v38-20260807-2000 • compact-layout-defaults-pad-orientation-v36-20260807-1545 • label-application-reference-v32-20260807-1251
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
@@ -60,8 +60,8 @@
     return new Promise((resolve, reject) => {
       const expected = new URL(`./${path}`, window.location.href).pathname;
       const existing = [...document.scripts].find((script) => {
-        try { return new URL(script.src, window.location.href).pathname === expected;
-        } catch { return false; }
+        try { return new URL(script.src, window.location.href).pathname === expected; }
+        catch { return false; }
       });
       if (existing) {
         if (existing.dataset.loaded === "true") resolve();
