@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-coder-window-wipe-hold-v22";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-coder-terminal-source-policy-v52";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -165,6 +165,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/optimizer-map-contact-integration.js",
   "./app/optimizer-brush-channel-expansion-integration.js",
   "./app/optimizer-post-wipe-coverage-fix-integration.js",
+  "./app/topmodul-coder-terminal-source-policy-integration.js",
   "./app/update-manager.js",
   "./app.js"
 ]);
