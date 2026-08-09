@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "app/progressive-label-fill-integration.js"
+      - "app/simulation-collapsible-integration.js"
       - "app/bootstrap.js"
       - "tests/progressive-label-fill.test.js"
       - ".github/workflows/validate-progressive-label-fill.yml"
@@ -27,7 +28,9 @@ jobs:
         run: node --check app/progressive-label-fill-integration.js
       - name: Run progressive label fill regression
         run: node tests/progressive-label-fill.test.js
+      - name: Preserve feature loader readiness regression
+        run: node tests/feature-integration-readiness.test.js
       - name: Preserve base bottle renderer regression
         run: node tests/top-view-bottle-renderer.test.js
-      - name: Verify v46 build marker
-        run: grep -q 'progressive-label-application-v46-20260809-1735' app/bootstrap.js
+      - name: Verify v47 build marker
+        run: grep -q 'progressive-label-loader-order-v47-20260809-1802' app/bootstrap.js
