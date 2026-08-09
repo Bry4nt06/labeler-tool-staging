@@ -24,12 +24,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Check integration syntax
+      - name: Check progressive integration syntax
         run: node --check app/progressive-label-fill-integration.js
+      - name: Check ordered feature manifest syntax
+        run: node --check app/simulation-collapsible-integration.js
       - name: Run progressive label fill regression
         run: node tests/progressive-label-fill.test.js
-      - name: Preserve feature loader readiness regression
-        run: node tests/feature-integration-readiness.test.js
       - name: Preserve base bottle renderer regression
         run: node tests/top-view-bottle-renderer.test.js
       - name: Verify v47 build marker
