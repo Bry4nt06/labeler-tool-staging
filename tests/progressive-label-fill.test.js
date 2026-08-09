@@ -8,6 +8,7 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const source = fs.readFileSync(path.join(root, "app", "progressive-label-fill-integration.js"), "utf8");
 const bootstrapSource = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
+const featureManifestSource = fs.readFileSync(path.join(root, "app", "simulation-collapsible-integration.js"), "utf8");
 
 assert.doesNotThrow(() => new vm.Script(source, { filename: "progressive-label-fill-integration.js" }));
 
@@ -132,7 +133,27 @@ assert.ok(source.includes("data-bottle-label-footprint"), "The full label footpr
 assert.ok(source.includes("data-bottle-label-progress"), "Progress arcs must be rendered separately from the full footprint.");
 assert.ok(source.includes("updateMapAnimationFrameWithLabelProgress"), "Mechanical Map animation must refresh label fill continuously.");
 assert.ok(source.includes("updateSimulationAnimationFrameWithLabelProgress"), "Simulation animation must refresh label fill continuously.");
-assert.ok(bootstrapSource.includes("app/progressive-label-fill-integration.js"), "Progressive fill integration must load before runtime animation starts.");
-assert.ok(bootstrapSource.includes("progressive-label-application-v46-20260809-1735"), "The v46 build marker must be active.");
+
+const dependencyMarkers = [
+  "app/wipe-telemetry-service.js",
+  "app/bottle-visual-renderer.js",
+  "app/mechanical-map-scene-renderer.js",
+  "app/simulation-map-scene-renderer.js",
+  "app/map-animation-renderer.js"
+];
+const progressiveMarker = "app/progressive-label-fill-integration.js";
+const progressiveIndex = featureManifestSource.indexOf(progressiveMarker);
+assert.ok(progressiveIndex >= 0, "Progressive fill must be owned by the ordered feature manifest.");
+dependencyMarkers.forEach((marker) => {
+  const dependencyIndex = featureManifestSource.indexOf(marker);
+  assert.ok(dependencyIndex >= 0, `${marker} must be present in the feature manifest.`);
+  assert.ok(dependencyIndex < progressiveIndex, `${marker} must load before progressive label fill.`);
+});
+assert.equal(
+  bootstrapSource.includes(`\"${progressiveMarker}\"`),
+  false,
+  "Bootstrap must not race-load progressive label fill before renderer dependencies are ready."
+);
+assert.ok(bootstrapSource.includes("progressive-label-loader-order-v47-20260809-1802"), "The v47 loader-order build marker must be active.");
 
 console.log("Progressive bottle label fill regression passed.");
