@@ -23,6 +23,9 @@ assert.doesNotThrow(() => new vm.Script(telemetrySource, { filename: "wipe-telem
       program: [],
       motionPlan: { rows: [], termination: {} }
     },
+    LabelerProfilePipelineOrchestratorInstalled: true,
+    LabelerCoderWindowReferenceHandoff: { installed: true },
+    LabelerTopModulCorrectionChainLimit: { installed: true },
     activeMachineMap() {
       return { machineType: "TopModul", applicationMode: "apl" };
     },
@@ -44,6 +47,7 @@ assert.doesNotThrow(() => new vm.Script(telemetrySource, { filename: "wipe-telem
   vm.createContext(context);
   vm.runInContext(coderSource, context);
 
+  assert.equal(context.LabelerTopModulCoderPreholdFinalizer.lateProfilePipelineReady(), true);
   const rows = context.applyGeneratedServoProfile();
   assert.equal(rows.length, 3, "TopModul must end at the coding-ready hold, not at a 359° terminal row.");
   assert.equal(rows.at(-1).cmd, 3, "Coding-ready row must be a stopped CMD 3 hold.");
@@ -62,6 +66,8 @@ assert.doesNotThrow(() => new vm.Script(telemetrySource, { filename: "wipe-telem
   const context = {
     console,
     state: { machineFamilyGrammar: { family: "TOPMODUL" }, programOptimization: {} },
+    LabelerTopModulCorrectionChainLimit: { installed: true },
+    LabelerPostWipeCoveragePolicy: { installed: true, version: 3 },
     activeMachineMap() { return { machineType: "TopModul" }; },
     LabelerProgramOptimizerDriver: {
       analyze() {
@@ -99,6 +105,7 @@ assert.doesNotThrow(() => new vm.Script(telemetrySource, { filename: "wipe-telem
   vm.createContext(context);
   vm.runInContext(diagnosticSource, context);
 
+  assert.equal(context.LabelerTopModulAllowedCorrectionDiagnostics.lateOptimizerReady(), true);
   const mixed = context.LabelerProgramOptimizerDriver.analyze([], { maxMoveRatio: 21 });
   assert.equal(mixed.diagnostics.some((item) => /nonstandard correction chain/i.test(item.message)), false, "CMD 7 → CMD 3 → CMD 7 must not be treated as an illegal chain.");
   assert.equal(mixed.diagnostics.some((item) => item.code === "optimizer-speed-limit"), true, "Actual servo-speed faults must remain visible.");
@@ -129,6 +136,9 @@ assert.doesNotThrow(() => new vm.Script(telemetrySource, { filename: "wipe-telem
   assert.equal(/usesOppositeContactSides/.test(telemetrySource), false, "Center Tack direction must not be overridden by the inside/outside hardware shortcut.");
 }
 
+assert.match(coderSource, /LabelerProfilePipelineOrchestratorInstalled/);
+assert.match(coderSource, /LabelerCoderWindowReferenceHandoff/);
+assert.match(diagnosticSource, /LabelerPostWipeCoveragePolicy/);
 assert.match(bootstrapSource, /topmodul-coder-prehold-finalizer-integration\.js/);
 assert.match(bootstrapSource, /topmodul-allowed-correction-diagnostics-integration\.js/);
 assert.match(bootstrapSource, /coder-prehold-allowed-corrections-v48-20260809-1836/);
