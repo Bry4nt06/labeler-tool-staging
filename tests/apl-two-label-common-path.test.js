@@ -42,8 +42,10 @@ assert.match(genericSource, /Wipe Hold/);
 const firstTackSource = read("app/apl-first-tack-datum-flow-integration.js");
 assert.match(firstTackSource, /canonicalStationResetV43/,
   "Body+Back must use the canonical per-aggregate reset sequence.");
-assert.match(firstTackSource, /return to the section application reference, CMD 3/,
-  "The second aggregate must restore a stopped section reference before wiping again.");
+assert.match(firstTackSource, /canonicalSectionHandoffV44/,
+  "A new Body/Back label section must have an explicit section handoff.");
+assert.match(firstTackSource, /Correction -> Rest before Back wiping/,
+  "Body-to-Back must establish the Back stopped reference before Back wiping begins.");
 assert.doesNotMatch(firstTackSource, /Retrace the previous wipe path/,
   "Body and Back re-wipes must repeat the same wipe directions, not retrace the prior aggregate.");
 
@@ -127,4 +129,4 @@ const pipelineResult = sandbox.LabelerServoPipelineValidator.analyze({
 assert.equal(pipelineResult.valid, false);
 assert.ok(pipelineResult.issues.some((issue) => issue.code === "topmodul-correction-chain-too-long"));
 
-console.log("Body+Back common APL path and maximum-two-CMD7 regression passed.");
+console.log("Body+Back common APL path, explicit section handoff, and maximum-two-CMD7 regression passed.");
