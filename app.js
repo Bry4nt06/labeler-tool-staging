@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "first-application-zero-datum-v30-physical-sensor-visibility-label-application-reference-v32-finished-centerline-completion-v39-20260808-2118";
+  const build = "first-application-zero-datum-v30-physical-sensor-visibility-label-application-reference-v32-finished-centerline-completion-v39-20260808-2148";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
