@@ -79,6 +79,16 @@
     });
   }
 
+  async function waitForRequiredIntegration(predicate, label, timeoutMs = 2000) {
+    const started = Date.now();
+    while (!predicate()) {
+      if (Date.now() - started >= timeoutMs) {
+        throw new Error(`${label} did not install before ServoForge startup.`);
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 25));
+    }
+  }
+
   async function loadOrientationConstraintPlanner() {
     // Use the release version owned by this startup build. Older integrations
     // still expose legacy component versions and must not be allowed to change
@@ -119,6 +129,16 @@
 
     await loadScript("app/sensor-editor-compact-interaction-integration.js", version);
     await loadScript("app/sensor-direction-live-status-integration.js", version);
+
+    // This terminal stage is mandatory, not best-effort. It must be registered
+    // before the first generated program is allowed to render; otherwise the
+    // old 359-degree terminal can briefly become the coder move destination.
+    await loadScript("app/topmodul-coder-terminal-source-policy-integration.js", version);
+    await waitForRequiredIntegration(
+      () => window.LabelerTopModulCoderTerminalSourcePolicy?.installed === true,
+      "TopModul coder terminal source policy"
+    );
+
     const ready = window.ServoForgeOrientationConstraintPlannerReady;
     if (ready && typeof ready.then === "function") {
       await Promise.race([
