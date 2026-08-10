@@ -51,9 +51,21 @@
 
   function physicalContactFrame(frame) {
     const action = text(frame?.action);
-    if (/wipe\s+hold/i.test(action)) return false;
-    return /wipe|brush|pad|roller/i.test(action)
-      && [1, 2, 4, 5, 6, 7].includes(Number(frame?.command));
+    const row = frame?.row || {};
+    const command = Number(frame?.command);
+    if (![1, 2, 4, 5, 6, 7].includes(command)) return false;
+    if (/\bwipe\s+hold\b/i.test(action)) return false;
+    if (/^\s*orient\b/i.test(action)
+      || row?.orientationOnly === true
+      || row?.mapObjectOrientation === true
+      || row?.sensorSetupAfterHold === true
+      || row?.codingMotion === true) return false;
+
+    const explicitContact = row?.physicalContact === true
+      || row?.wipeContact === true
+      || row?.contactMotion === true;
+    const namedContact = /\bwipe\s+turn\b|\bbrush\b|\bpad\b|\broller\b/i.test(action);
+    return explicitContact || namedContact;
   }
 
   function activeObjects(options = {}) {
@@ -267,7 +279,7 @@
     global.LabelerProgramOptimizerDriver = Object.freeze({
       ...driver,
       analyze: wrappedAnalyze,
-      mapAwareCoverageV2: true,
+      mapAwareCoverageV3: true,
       physicalContactFrame
     });
     installed = true;
