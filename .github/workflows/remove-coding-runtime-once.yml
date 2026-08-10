@@ -78,10 +78,11 @@ jobs:
           ! grep -E 'coder-orientation-driver|coder-handoff-driver|map-object-coder-after-wipe|coder-window-reference-handoff|coding-cycle-normalization|topmodul-coder-prehold|clockwise-code-box-orientation|coder-rest-grammar-repair' app.js app/bootstrap.js app/simulation-collapsible-integration.js
           ! grep -E 'Direct Turn for Coding|Hold for Coding|Turn for Coding|codingWindow|codingObject' app/apl-map-profile-generation.js app/apl-seed-profile.js
           git diff --check
-      - name: Commit staging coding removal
+      - name: Commit tested runtime only
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git restore --source=HEAD -- .github/workflows
           git add -A
           git commit -m "Disable coding servo path and stop after final aggregate"
           git push origin HEAD:main
