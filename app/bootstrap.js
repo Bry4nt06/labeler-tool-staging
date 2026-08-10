@@ -2,9 +2,9 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "animation-frame-coordinator-v53-20260809-2015";
-  const buildUpdatedAt = "Aug 9, 2026 8:15 PM ET";
-  // Regression lineage: animation-frame-coordinator-v53-20260809-2015 • coder-terminal-source-policy-v52-20260809-1940 • coder-visible-cutoff-v51-20260809-1923 • coder-physical-five-degree-lead-v50-20260809-1905 • coder-five-degree-prehold-v49-20260809-1854 • coder-prehold-allowed-corrections-v48-20260809-1836 • progressive-label-loader-order-v47-20260809-1802 • progressive-label-application-v46-20260809-1735 • mobile-specs-horizontal-scroll-v45-20260809-0214 • canonical-section-handoff-v44-20260809-0203 • common-apl-active-sections-v42-20260809-0133 • first-tack-datum-flow-v41-20260808-2330 • label-datum-servo-flow-v40-20260808-2300 • finished-centerline-completion-v39-20260808-2148
+  const build = "runtime-startup-animation-v54-20260809-2038";
+  const buildUpdatedAt = "Aug 9, 2026 8:38 PM ET";
+  // Regression lineage: runtime-startup-animation-v54-20260809-2038 • animation-frame-coordinator-v53-20260809-2015 • coder-terminal-source-policy-v52-20260809-1940 • coder-visible-cutoff-v51-20260809-1923 • coder-physical-five-degree-lead-v50-20260809-1905 • coder-five-degree-prehold-v49-20260809-1854 • coder-prehold-allowed-corrections-v48-20260809-1836 • progressive-label-loader-order-v47-20260809-1802 • progressive-label-application-v46-20260809-1735 • mobile-specs-horizontal-scroll-v45-20260809-0214 • canonical-section-handoff-v44-20260809-0203 • common-apl-active-sections-v42-20260809-0133 • first-tack-datum-flow-v41-20260808-2330 • label-datum-servo-flow-v40-20260808-2300 • finished-centerline-completion-v39-20260808-2148
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
