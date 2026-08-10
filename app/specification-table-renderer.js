@@ -24,7 +24,7 @@ function specificationInfoHeader(label, title, tooltip, ariaLabel) {
   const safeTitle = specificationAttributeValue(title || label);
   const safeTooltip = specificationAttributeValue(tooltip || title || label);
   const safeAria = specificationAttributeValue(ariaLabel || `About ${label}`);
-  return `<span class="spec-header-stack" title="${safeTitle}"><span class="spec-header-label">${label}</span><button class="info-tip spec-header-info" type="button" title="${safeTooltip}" aria-label="${safeAria}">i</button></span>`;
+  return `<span class="spec-header-stack" title="${safeTitle}" style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.05;text-align:center;"><span class="spec-header-label">${label}</span><button class="info-tip spec-header-info" style="margin:0 auto;" type="button" title="${safeTooltip}" aria-label="${safeAria}">i</button></span>`;
 }
 
 function renderBottleSpecs() {
