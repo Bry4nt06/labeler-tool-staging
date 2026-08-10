@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "coding-disabled-startup-animation-v50-20260809-2138",
+  "buildId": "coder-codebox-pad-rules-v51-20260809-2143",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging: coding servo generation remains disabled and APL 6-Aggregate terminates at Aggregate 6. Removed the retired coding-cycle controller from startup so the workspace and animation loop initialize normally."
+  "notes": "Staging: reintroduces coder orientation using the same physical motion rules as wipe-down pad moves. The target is calculated from the selected recipe's Code Box Center from Left Edge, the move starts after the final aggregate, uses the configured max move ratio, and completes on CMD 3 five degrees before the physical coder."
 }
