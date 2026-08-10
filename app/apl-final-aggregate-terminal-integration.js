@@ -67,7 +67,7 @@
       || /wipe\s+hold|wipe.*rest|(?:hold|rest|complete).*agg/i.test(action);
   }
 
-  function terminalIndex(rows, aggregate) {
+  function aggregateTerminalIndex(rows, aggregate) {
     for (let index = rows.length - 1; index >= 0; index -= 1) {
       if (isPhysicalAggregateHold(rows[index], aggregate)) return index;
     }
@@ -80,6 +80,24 @@
     return -1;
   }
 
+  function isTrustedCoderTerminal(row) {
+    return Boolean(row
+      && Number(row.cmd) === 3
+      && row.codingHold === true
+      && row.coderTerminalHold === true
+      && row.motionSource === "apl-coder-codebox"
+      && row.codeBoxTargetSource === "label-code-box-center-from-left-edge");
+  }
+
+  function terminalIndex(rows, aggregate) {
+    const aggregateIndex = aggregateTerminalIndex(rows, aggregate);
+    if (aggregateIndex < 0) return -1;
+    for (let index = rows.length - 1; index > aggregateIndex; index -= 1) {
+      if (isTrustedCoderTerminal(rows[index])) return index;
+    }
+    return aggregateIndex;
+  }
+
   function canonicalRows(sourceRows, map = activeMap()) {
     const source = (Array.isArray(sourceRows) ? sourceRows : []).map((row) => ({ ...row }));
     if (!source.length || !isApl(map)) return source;
@@ -87,14 +105,21 @@
     const index = terminalIndex(source, aggregate);
     if (index < 0) return source;
 
-    const rows = source.slice(0, index + 1);
+    const rows = source.slice(0, index + 1).map((row) => ({
+      ...row,
+      terminalRest: false,
+      aggregateTerminal: false,
+      codingTerminal: false
+    }));
+    const coderTerminal = isTrustedCoderTerminal(rows[index]);
     rows[index] = {
       ...rows[index],
       cmd: 3,
       baseCmd: 3,
       terminalRest: true,
       activeHold: false,
-      aggregateTerminal: true,
+      aggregateTerminal: !coderTerminal,
+      codingTerminal: coderTerminal,
       terminalAggregate: aggregate,
       plannerIntent: "HOLD",
       plannerRequestedCommand: 3,
@@ -128,15 +153,17 @@
     current.program = rows;
     const finalRow = rows.at(-1);
     const aggregate = finalRow?.terminalAggregate;
+    const coderTerminal = finalRow?.codingTerminal === true;
 
     if (current.motionPlan) {
       current.motionPlan.rows = rows;
       current.motionPlan.finalPlateAngle = finalRow?.plateAngle;
-      current.motionPlan.finalAggregateTerminal = true;
+      current.motionPlan.finalAggregateTerminal = !coderTerminal;
+      current.motionPlan.coderTerminal = coderTerminal;
       current.motionPlan.termination = {
         ...(current.motionPlan.termination || {}),
-        section: finalRow?.section || current.motionPlan.termination?.section || "none",
-        station: aggregate,
+        section: coderTerminal ? "coding" : (finalRow?.section || current.motionPlan.termination?.section || "none"),
+        station: coderTerminal ? null : aggregate,
         hmi: finalRow?.hmi,
         tableAngle: finalRow?.tableAngle,
         command: "Rest"
@@ -172,11 +199,13 @@
 
     global.LabelerAplFinalAggregateTerminal = Object.freeze({
       installed: true,
-      version: 3,
+      version: 4,
       runtimeState,
       finalAggregateNumber,
       belongsToAggregate,
       isPhysicalAggregateHold,
+      aggregateTerminalIndex,
+      isTrustedCoderTerminal,
       terminalIndex,
       canonicalRows,
       finalizeCurrentProgram
@@ -188,7 +217,7 @@
       global.render?.();
       global.renderValidation?.();
     } catch (error) {
-      console.error("Unable to apply final aggregate terminal policy.", error);
+      console.error("Unable to apply final aggregate/coder terminal policy.", error);
     }
     return true;
   }
