@@ -159,18 +159,10 @@
     return synchronize(canonicalRows(source));
   }
 
-  function latePipelineReady() {
-    return global.LabelerProfilePipelineOrchestratorInstalled === true
-      && global.LabelerOrientationConstraintPlannerInstalled === true
-      && global.LabelerTopModulCorrectionChainLimit?.installed === true;
-  }
-
   function install() {
     if (installed) return true;
     const current = runtimeState();
-    if (!current
-      || typeof global.applyGeneratedServoProfile !== "function"
-      || !latePipelineReady()) return false;
+    if (!current || typeof global.applyGeneratedServoProfile !== "function") return false;
 
     const base = global.applyGeneratedServoProfile;
     global.applyGeneratedServoProfile = function applyGeneratedServoProfileWithFinalAggregateTerminal(...args) {
@@ -180,7 +172,7 @@
 
     global.LabelerAplFinalAggregateTerminal = Object.freeze({
       installed: true,
-      version: 2,
+      version: 3,
       runtimeState,
       finalAggregateNumber,
       belongsToAggregate,
