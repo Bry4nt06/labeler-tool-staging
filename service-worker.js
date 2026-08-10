@@ -40,7 +40,7 @@ const CORE_ASSETS = Object.freeze([
   "./drivers/servo/servo-command-driver.js",
   "./drivers/servo/rest-correction-grammar-driver.js",
   "./drivers/planning/motion-planner-driver.js",
-  "./drivers/planning/mechanical-event-planner.js",
+  "./drivers/planning/mechanical-event-planner-driver.js",
   "./drivers/planning/incremental-rotation-driver.js",
   "./drivers/translation/profile-translator-driver.js",
   "./drivers/validation/motion-validation-driver.js",
