@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - "app/apl-final-aggregate-terminal-integration.js"
       - ".github/workflows/verify-coder-apply-v51-once.yml"
   workflow_dispatch:
 
@@ -74,7 +75,8 @@ jobs:
                     codingTerminal: row.codingTerminal,
                     terminalRest: row.terminalRest,
                     preCoderMarginDeg: row.preCoderMarginDeg,
-                    codeBoxCenterMm: row.codeBoxCenterMm
+                    codeBoxCenterMm: row.codeBoxCenterMm,
+                    codingReadyTableAngle: row.codingReadyTableAngle
                   })),
                   coderPlan: state.motionPlan?.coderPlan || null,
                   termination: state.motionPlan?.termination || null
@@ -89,6 +91,7 @@ jobs:
               assert.equal(turn.tableAngle, 290.5);
               assert.equal(turn.cmd, 7);
               assert.equal(hold.tableAngle, 299);
+              assert.equal(hold.codingReadyTableAngle, 299);
               assert.equal(hold.cmd, 3);
               assert.equal(hold.plateAngle, -135);
               assert.equal(hold.preCoderMarginDeg, 5);
