@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-coder-terminal-source-policy-v52";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-animation-frame-coordinator-v53";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -93,6 +93,14 @@ const CORE_ASSETS = Object.freeze([
   "./app/setup-bindings.js",
   "./app/map-rendering.js",
   "./app/table-rendering.js",
+  "./app/bottle-visual-renderer.js",
+  "./app/map-overlay-renderer.js",
+  "./app/map-reference-presenter.js",
+  "./app/mechanical-map-scene-renderer.js",
+  "./app/simulation-map-scene-renderer.js",
+  "./app/map-animation-renderer.js",
+  "./app/servo-program-active-row-renderer.js",
+  "./app/wipe-telemetry-renderer.js",
   "./app/bootstrap.js",
   "./app/export-service.js",
   "./app/global-actions.js",
