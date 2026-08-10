@@ -39,11 +39,21 @@ jobs:
               await page.goto('http://127.0.0.1:8000/index.html', { waitUntil:'domcontentloaded', timeout:30000 });
               await page.waitForFunction(() => typeof state !== 'undefined'
                 && typeof applyGeneratedServoProfile === 'function'
-                && window.LabelerAplPostWipeSensorHold?.version >= 3
-                && window.LabelerPostWipeCoveragePolicy?.version >= 4
                 && window.LabelerProgramOptimizerDriver?.analyze
                 && window.LabelerServoPipelineValidator?.analyze, { timeout:20000 });
-              await sleep(3500);
+              await sleep(6000);
+              const readiness = await page.evaluate(() => ({
+                postWipeVersion: window.LabelerAplPostWipeSensorHold?.version || null,
+                coverageVersion: window.LabelerPostWipeCoveragePolicy?.version || null,
+                mapCoverageV3: window.LabelerProgramOptimizerDriver?.mapAwareCoverageV3 === true,
+                targetService: Boolean(window.LabelerOrientationConstraintTargetService?.targetFor),
+                profilePipeline: Boolean(window.LabelerProfilePipelineDriver?.getStage?.('orientation.map-objects')),
+                postWipeStage: Boolean(window.LabelerProfilePipelineDriver?.getStage?.('motion.apl-post-wipe-sensor-hold')),
+                startupBanner: document.querySelector('.staging-environment-banner')?.textContent || ''
+              }));
+              console.log('V52 READINESS', JSON.stringify({readiness, pageErrors}, null, 2));
+              assert.ok(readiness.postWipeVersion >= 3, `Post-wipe sensor integration did not install v3: ${JSON.stringify(readiness)}`);
+              assert.ok(readiness.coverageVersion >= 4, `Coverage policy did not install v4: ${JSON.stringify(readiness)}`);
 
               const result = await page.evaluate(async () => {
                 const [labelSpecs, bottleSpecs, map] = await Promise.all([
@@ -67,11 +77,9 @@ jobs:
                 const rows = state.program;
                 const plan = state.motionTranslation?.plan || state.motionPlan?.planner || state.plannerPreview || null;
                 const pipeline = window.LabelerServoPipelineValidator.analyze({
-                  rows,
-                  map,
+                  rows, map,
                   machineType: map.machineType || map.name,
-                  applicationMode:'apl',
-                  plan,
+                  applicationMode:'apl', plan,
                   translation: state.motionTranslation || state.motionPlan?.translation || null,
                   machineProfile: state.motionTranslation?.machineProfile || state.motionPlan?.translation?.machineProfile || 'TOPMODUL',
                   profileId: state.motionTranslation?.profileId || state.motionPlan?.translation?.profileId || state.selectedMotionProfileId || state.defaultMotionProfileId || 'rest-correction',
@@ -82,8 +90,7 @@ jobs:
                 const frames = window.LabelerProgramOptimizerDriver.buildFrames(rows, { map, plan });
                 const contactClass = typeof window.LabelerProgramOptimizerDriver.physicalContactFrame === 'function'
                   ? frames.filter(frame => /Wipe Turn|Orient .*Re-Wipe/i.test(frame.action || '')).map(frame => ({
-                      hmi:frame.hmi,
-                      action:frame.action,
+                      hmi:frame.hmi, action:frame.action,
                       physicalContact:window.LabelerProgramOptimizerDriver.physicalContactFrame(frame)
                     }))
                   : [];
