@@ -15,6 +15,7 @@ let requestedFrame = null;
 
 const context = {
   console,
+  performance: { now() { return 1000; } },
   state: {
     previewAngle: 42.3,
     animationSpeed: 10,
@@ -37,11 +38,16 @@ const context = {
   updateActiveServoProgramRow() { activeRowUpdates += 1; },
   renderWipeDownData() { wipeUpdates += 1; },
   fmt(value, decimals = 1) { return Number(value).toFixed(decimals); },
+  num(value, fallback = 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  },
   norm(value) { return ((Number(value) % 360) + 360) % 360; },
   requestAnimationFrame(callback) {
     requestedFrame = callback;
     return 1;
-  }
+  },
+  cancelAnimationFrame() {}
 };
 context.window = context;
 context.globalThis = context;
@@ -63,7 +69,7 @@ assert.equal(wipeUpdates, 1, "An open wipe telemetry panel must follow animation
 // Exercise the real requestAnimationFrame runtime. The historical regression
 // advanced previewAngle but threw because renderAnimationFrame was undefined.
 assert.doesNotThrow(() => vm.runInContext(runtimeSource, context));
-context.LabelerAnimationRuntime.startAnimationLoop();
+context.LabelerAnimationRuntime.start();
 assert.equal(typeof requestedFrame, "function");
 
 const before = context.state.previewAngle;
