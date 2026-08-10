@@ -35,6 +35,8 @@ const context = {
   document: { activeElement: null },
   currentProgram() { return []; },
   simulationProgram() { return []; },
+  renderMap() {},
+  renderSimulationMap() {},
   updateActiveServoProgramRow() { activeRowUpdates += 1; },
   renderWipeDownData() { wipeUpdates += 1; },
   fmt(value, decimals = 1) { return Number(value).toFixed(decimals); },
