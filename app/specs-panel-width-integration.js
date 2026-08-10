@@ -40,6 +40,6 @@
 
   global.LabelerSpecsPanelWidthIntegration = Object.freeze({
     installed: true,
-    version: 1
+    version: 2
   });
 })(typeof window !== "undefined" ? window : globalThis);
