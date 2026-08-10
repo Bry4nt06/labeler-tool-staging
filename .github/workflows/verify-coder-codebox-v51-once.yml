@@ -1,0 +1,105 @@
+name: Verify coder code-box orientation v51
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/verify-coder-codebox-v51-once.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check coder modules
+        run: |
+          node --check drivers/profile/coder-orientation-driver.js
+          node --check app/apl-coder-codebox-orientation-integration.js
+          node --check app/apl-final-aggregate-terminal-integration.js
+          node --check app/profile-generation.js
+      - name: Install browser harness
+        run: npm install --no-save puppeteer-core@24.16.0
+      - name: Verify LandShark coder program and parameter response
+        run: |
+          python3 -m http.server 8000 >/tmp/servoforge-http.log 2>&1 &
+          cat > /tmp/verify-coder-codebox.cjs <<'NODE'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const puppeteer = require(process.cwd() + '/node_modules/puppeteer-core');
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+          (async () => {
+            const executablePath = ['/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'].find((candidate) => fs.existsSync(candidate));
+            assert.ok(executablePath, 'Chrome/Chromium executable not found.');
+            const browser = await puppeteer.launch({ executablePath, headless: true, args: ['--no-sandbox','--disable-dev-shm-usage'] });
+            try {
+              const page = await browser.newPage();
+              const pageErrors = [];
+              page.on('pageerror', (error) => pageErrors.push(error.stack || error.message || String(error)));
+              await page.goto('http://127.0.0.1:8000/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+              await page.waitForFunction(() => typeof state !== 'undefined' && typeof generatedServoProfile === 'function' && window.LabelerAplCoderCodeBoxOrientation?.installed, { timeout: 20000 });
+              await sleep(6500);
+
+              const result = await page.evaluate(() => {
+                state.applicationMode = 'apl';
+                const map = state.mapLibrary.find((entry) => entry.id === 'map-apl-default' || entry.name === 'APL 6-Aggregate');
+                if (!map) throw new Error('APL 6-Aggregate map not found.');
+                loadMachineMapIntoRuntime(map, false);
+                const landShark = state.labelSpecs.find((entry) => /LandShark/i.test(entry.brand));
+                if (!landShark) throw new Error('LandShark label recipe not found.');
+                state.selectedBrand = landShark.brand;
+                state.selectedBottle = landShark.bottleType;
+                applyLabelLengthStationRules();
+                const rows = generatedServoProfile();
+                state.program = rows;
+                const first = {
+                  codeBoxCenterMm: landShark.codeBoxCenterMm,
+                  rows: rows.map((row) => ({ hmi: row.hmi, cmd: row.cmd, tableAngle: row.tableAngle, plateAngle: row.plateAngle, action: row.action, codingMotion: row.codingMotion, codingHold: row.codingHold, preCoderMarginDeg: row.preCoderMarginDeg, codeBoxCenterMm: row.codeBoxCenterMm })),
+                  coderPlan: state.motionPlan?.coderPlan || null
+                };
+
+                landShark.codeBoxCenterMm = Number(landShark.codeBoxCenterMm) + 5;
+                const changed = generatedServoProfile();
+                const second = {
+                  codeBoxCenterMm: landShark.codeBoxCenterMm,
+                  rows: changed.map((row) => ({ hmi: row.hmi, cmd: row.cmd, tableAngle: row.tableAngle, plateAngle: row.plateAngle, action: row.action, codingMotion: row.codingMotion, codingHold: row.codingHold, preCoderMarginDeg: row.preCoderMarginDeg, codeBoxCenterMm: row.codeBoxCenterMm })),
+                  coderPlan: state.motionPlan?.coderPlan || null
+                };
+                landShark.codeBoxCenterMm = first.codeBoxCenterMm;
+                return { first, second };
+              });
+
+              console.log('CODER RESULT', JSON.stringify(result, null, 2));
+              const firstRows = result.first.rows;
+              const turn = firstRows.find((row) => row.codingMotion === true);
+              const hold = firstRows.find((row) => row.codingHold === true);
+              assert.ok(turn, 'Coder CMD 7 orientation row was not generated.');
+              assert.ok(hold, 'Coder CMD 3 hold row was not generated.');
+              assert.equal(turn.cmd, 7);
+              assert.match(turn.action, /Orient .* Code Box for Coding/i);
+              assert.equal(hold.cmd, 3);
+              assert.equal(hold.tableAngle, 299, 'Coder orientation must be complete 5 degrees before the physical 304-degree coder.');
+              assert.equal(hold.preCoderMarginDeg, 5);
+              assert.equal(hold.codeBoxCenterMm, 15);
+              assert.equal(firstRows.at(-1).hmi, hold.hmi, 'Coder hold must be the terminal program row.');
+              assert.equal(firstRows.some((row) => Number(row.tableAngle) > 299), false, 'No generated servo row may continue after the 5-degree pre-coder hold.');
+              assert.ok(result.first.coderPlan?.plannedRatio < 21, 'LandShark coder orientation must fit the configured 21:1 speed envelope.');
+              assert.notEqual(result.first.coderPlan?.targetPlateAngle, result.second.coderPlan?.targetPlateAngle, 'Changing Code Box Center from Left Edge must change the coder target plate angle.');
+              assert.ok(Math.abs(result.first.coderPlan.targetPlateAngle - result.second.coderPlan.targetPlateAngle) > 1, 'Code-box parameter change should materially move the coder target.');
+
+              const unexpected = pageErrors.filter((message) => !/normalizeAssembly is not defined/i.test(message));
+              assert.deepEqual(unexpected, [], `Unexpected browser errors: ${unexpected.join('\n\n')}`);
+            } finally {
+              await browser.close();
+            }
+          })().catch((error) => { console.error(error.stack || error); process.exitCode = 1; });
+          NODE
+          node /tmp/verify-coder-codebox.cjs
