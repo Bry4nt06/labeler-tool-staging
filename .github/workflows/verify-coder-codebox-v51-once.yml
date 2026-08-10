@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - "app/apl-coder-codebox-orientation-integration.js"
       - ".github/workflows/verify-coder-codebox-v51-once.yml"
   workflow_dispatch:
 
