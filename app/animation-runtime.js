@@ -7,6 +7,13 @@ function resetAnimationClock() {
   lastAnimationTime = performance.now();
 }
 
+function animationFrameRenderer() {
+  const ownedRenderer = window.LabelerMapAnimationRenderer?.renderAnimationFrame;
+  if (typeof ownedRenderer === "function") return ownedRenderer;
+  if (typeof window.renderAnimationFrame === "function") return window.renderAnimationFrame;
+  throw new Error("Map animation frame renderer is unavailable.");
+}
+
 function animationFrame(now) {
   if (animationTimerId === null) return;
   const elapsedSeconds = Math.min(0.05, Math.max(0, now - lastAnimationTime) / 1000);
@@ -15,7 +22,7 @@ function animationFrame(now) {
     const degreesPerSecond = Math.min(50, Math.max(1, num(state.animationSpeed, 10)));
     state.previewAngle = norm(state.previewAngle + degreesPerSecond * elapsedSeconds);
     try {
-      renderAnimationFrame();
+      animationFrameRenderer()();
     } catch (error) {
       console.error("Animation frame render failed", error);
     }
@@ -35,8 +42,15 @@ function stopAnimationLoop() {
   animationTimerId = null;
 }
 
+function animationLoopRunning() {
+  return animationTimerId !== null;
+}
+
 window.LabelerAnimationRuntime = Object.freeze({
   start: startAnimationLoop,
   stop: stopAnimationLoop,
-  resetClock: resetAnimationClock
+  resetClock: resetAnimationClock,
+  isRunning: animationLoopRunning,
+  renderer: animationFrameRenderer,
+  explicitRendererOwnerV1: true
 });
