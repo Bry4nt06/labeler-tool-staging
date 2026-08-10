@@ -24,6 +24,7 @@
     "app/controllers/local-persistence-controller.js",
     "app/controllers/map-controller.js",
     "app/controllers/specs-controller.js",
+    "app/specs-panel-width-integration.js",
     "app/controllers/specification-event-controller.js",
     "app/controllers/label-section-event-controller.js",
     "app/controllers/specification-table-ui-controller.js",
