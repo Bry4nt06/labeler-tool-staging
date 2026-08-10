@@ -2,9 +2,9 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "coding-disabled-aggregate6-terminal-v49-20260809-2103";
-  const buildUpdatedAt = "Aug 9, 2026 9:03 PM ET";
-  // Regression lineage: coding-disabled-aggregate6-terminal-v49-20260809-2103 • coder-prehold-allowed-corrections-v48-20260809-1836 • progressive-label-loader-order-v47-20260809-1802 • progressive-label-application-v46-20260809-1735 • mobile-specs-horizontal-scroll-v45-20260809-0214 • canonical-section-handoff-v44-20260809-0203 • common-apl-active-sections-v42-20260809-0133 • first-tack-datum-flow-v41-20260808-2330 (Aug 8, 2026 11:30 PM ET) • label-datum-servo-flow-v40-20260808-2300 • finished-centerline-completion-v39-20260808-2148 • inside-wipe-rendered-geometry-v38-20260807-2000 • compact-layout-defaults-pad-orientation-v36-20260807-1545 • bottle-pocket-sync-20260807-1223 • bottle-type-selection-20260806-v3 • label-application-reference-v32-20260807-1251
+  const build = "coding-disabled-startup-animation-v50-20260809-2138";
+  const buildUpdatedAt = "Aug 9, 2026 9:38 PM ET";
+  // Regression lineage: coding-disabled-startup-animation-v50-20260809-2138 • coding-disabled-aggregate6-terminal-v49-20260809-2103 • coder-prehold-allowed-corrections-v48-20260809-1836 • progressive-label-loader-order-v47-20260809-1802 • progressive-label-application-v46-20260809-1735 • mobile-specs-horizontal-scroll-v45-20260809-0214 • canonical-section-handoff-v44-20260809-0203 • common-apl-active-sections-v42-20260809-0133 • first-tack-datum-flow-v41-20260808-2330 (Aug 8, 2026 11:30 PM ET) • label-datum-servo-flow-v40-20260808-2300 • finished-centerline-completion-v39-20260808-2148 • inside-wipe-rendered-geometry-v38-20260807-2000 • compact-layout-defaults-pad-orientation-v36-20260807-1545 • bottle-pocket-sync-20260807-1223 • bottle-type-selection-20260806-v3 • label-application-reference-v32-20260807-1251
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
