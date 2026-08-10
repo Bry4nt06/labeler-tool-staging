@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "animation-frame-coordinator-v53-20260809-2015",
+  "buildId": "runtime-startup-animation-v54-20260809-2038",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING 0.9.10 build v53 restores the public renderAnimationFrame coordinator used by Play and the requestAnimationFrame runtime after the map renderer refactor. Mechanical-map animation, simulation animation, table-angle controls, active servo rows, and open wipe telemetry now repaint from the same animation frame without restoring the removed 359-degree TopModul terminal move."
+  "notes": "STAGING 0.9.10 build v54 fixes the actual startup chain that prevented animation from ever starting. Map Builder now loads its assembly dependencies before map migration, the integration runtime receives the real application state and DOM registry, the mandatory TopModul coder terminal policy installs before startup completes, and the animation loop binds to the explicit map-animation renderer. Map Overlay switches are also moved from the standalone right-rail panel into Map Builder while preserving their existing settings and persistence."
 }
