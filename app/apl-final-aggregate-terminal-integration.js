@@ -12,13 +12,28 @@
     return Number.isFinite(parsed) ? parsed : fallback;
   };
 
+  function runtimeState() {
+    try {
+      if (typeof state !== "undefined" && state) return state;
+    } catch {
+      // Fall back to a Window property only when the lexical runtime binding is unavailable.
+    }
+    return global.state || null;
+  }
+
   function activeMap() {
-    try { return typeof global.activeMachineMap === "function" ? global.activeMachineMap() : null; }
-    catch { return null; }
+    try {
+      if (typeof activeMachineMap === "function") return activeMachineMap();
+      if (typeof global.activeMachineMap === "function") return global.activeMachineMap();
+    } catch {
+      return null;
+    }
+    return null;
   }
 
   function isApl(map = activeMap()) {
-    return String(global.state?.applicationMode || map?.applicationMode || "apl").toLowerCase() === "apl";
+    const current = runtimeState();
+    return String(current?.applicationMode || map?.applicationMode || "apl").toLowerCase() === "apl";
   }
 
   function finalAggregateNumber(map, rows = []) {
@@ -108,36 +123,38 @@
   }
 
   function synchronize(rows) {
-    if (!Array.isArray(rows) || !rows.length || !global.state) return rows;
-    global.state.program = rows;
+    const current = runtimeState();
+    if (!Array.isArray(rows) || !rows.length || !current) return rows;
+    current.program = rows;
     const finalRow = rows.at(-1);
     const aggregate = finalRow?.terminalAggregate;
 
-    if (global.state.motionPlan) {
-      global.state.motionPlan.rows = rows;
-      global.state.motionPlan.finalPlateAngle = finalRow?.plateAngle;
-      global.state.motionPlan.finalAggregateTerminal = true;
-      global.state.motionPlan.termination = {
-        ...(global.state.motionPlan.termination || {}),
-        section: finalRow?.section || global.state.motionPlan.termination?.section || "none",
+    if (current.motionPlan) {
+      current.motionPlan.rows = rows;
+      current.motionPlan.finalPlateAngle = finalRow?.plateAngle;
+      current.motionPlan.finalAggregateTerminal = true;
+      current.motionPlan.termination = {
+        ...(current.motionPlan.termination || {}),
+        section: finalRow?.section || current.motionPlan.termination?.section || "none",
         station: aggregate,
         hmi: finalRow?.hmi,
         tableAngle: finalRow?.tableAngle,
         command: "Rest"
       };
-      syncPlan(global.state.motionPlan.planner, rows);
+      syncPlan(current.motionPlan.planner, rows);
     }
-    if (global.state.motionTranslation) {
-      global.state.motionTranslation.rows = rows;
-      syncPlan(global.state.motionTranslation.plan, rows);
+    if (current.motionTranslation) {
+      current.motionTranslation.rows = rows;
+      syncPlan(current.motionTranslation.plan, rows);
     }
-    syncPlan(global.state.plannerPreview, rows);
+    syncPlan(current.plannerPreview, rows);
     return rows;
   }
 
   function finalizeCurrentProgram(output) {
-    const source = Array.isArray(global.state?.program) && global.state.program.length
-      ? global.state.program
+    const current = runtimeState();
+    const source = Array.isArray(current?.program) && current.program.length
+      ? current.program
       : output;
     return synchronize(canonicalRows(source));
   }
@@ -150,7 +167,8 @@
 
   function install() {
     if (installed) return true;
-    if (!global.state
+    const current = runtimeState();
+    if (!current
       || typeof global.applyGeneratedServoProfile !== "function"
       || !latePipelineReady()) return false;
 
@@ -162,7 +180,8 @@
 
     global.LabelerAplFinalAggregateTerminal = Object.freeze({
       installed: true,
-      version: 1,
+      version: 2,
+      runtimeState,
       finalAggregateNumber,
       belongsToAggregate,
       isPhysicalAggregateHold,
