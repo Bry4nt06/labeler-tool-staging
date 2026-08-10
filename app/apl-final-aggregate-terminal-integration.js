@@ -4,6 +4,7 @@
   if (global.LabelerAplFinalAggregateTerminal?.installed) return;
 
   const RETRY_MS = 25;
+  const EPS = 0.001;
   let installed = false;
 
   const number = (value, fallback = NaN) => {
@@ -98,6 +99,20 @@
     return aggregateIndex;
   }
 
+  function coderReadyTableAngle(row) {
+    const current = runtimeState();
+    const direct = number(row?.codingReadyTableAngle, NaN);
+    if (Number.isFinite(direct)) return direct;
+
+    const coderStart = number(row?.codingWindowStart, number(row?.coderStartTableAngle, NaN));
+    const margin = number(row?.preCoderMarginDeg, NaN);
+    if (Number.isFinite(coderStart) && Number.isFinite(margin)) return coderStart - margin;
+
+    const planned = number(current?.motionPlan?.coderPlan?.readyTableAngle, NaN);
+    if (Number.isFinite(planned)) return planned;
+    return number(row?.tableAngle, NaN);
+  }
+
   function canonicalRows(sourceRows, map = activeMap()) {
     const source = (Array.isArray(sourceRows) ? sourceRows : []).map((row) => ({ ...row }));
     if (!source.length || !isApl(map)) return source;
@@ -112,10 +127,21 @@
       codingTerminal: false
     }));
     const coderTerminal = isTrustedCoderTerminal(rows[index]);
+    const previousTable = number(rows[index - 1]?.tableAngle, -Infinity);
+    const requestedCoderReady = coderTerminal ? coderReadyTableAngle(rows[index]) : NaN;
+    const canonicalTable = coderTerminal
+      && Number.isFinite(requestedCoderReady)
+      && requestedCoderReady > previousTable + EPS
+        ? requestedCoderReady
+        : number(rows[index]?.tableAngle, 0);
+
     rows[index] = {
       ...rows[index],
       cmd: 3,
       baseCmd: 3,
+      tableAngle: canonicalTable,
+      generatedTableAngle: coderTerminal ? canonicalTable : rows[index]?.generatedTableAngle,
+      tableAngleOverride: coderTerminal ? null : rows[index]?.tableAngleOverride,
       terminalRest: true,
       activeHold: false,
       aggregateTerminal: !coderTerminal,
@@ -168,6 +194,9 @@
         tableAngle: finalRow?.tableAngle,
         command: "Rest"
       };
+      if (coderTerminal && current.motionPlan.coderPlan) {
+        current.motionPlan.coderPlan.readyTableAngle = finalRow.tableAngle;
+      }
       syncPlan(current.motionPlan.planner, rows);
     }
     if (current.motionTranslation) {
@@ -175,6 +204,12 @@
       syncPlan(current.motionTranslation.plan, rows);
     }
     syncPlan(current.plannerPreview, rows);
+
+    if (coderTerminal && current.tableAngleSequence) {
+      current.tableAngleSequence.adjustedRows = (current.tableAngleSequence.adjustedRows || [])
+        .filter((hmi) => Number(hmi) !== Number(finalRow.hmi));
+      current.tableAngleSequence.adjustedCount = current.tableAngleSequence.adjustedRows.length;
+    }
     return rows;
   }
 
@@ -199,7 +234,7 @@
 
     global.LabelerAplFinalAggregateTerminal = Object.freeze({
       installed: true,
-      version: 4,
+      version: 5,
       runtimeState,
       finalAggregateNumber,
       belongsToAggregate,
@@ -207,6 +242,7 @@
       aggregateTerminalIndex,
       isTrustedCoderTerminal,
       terminalIndex,
+      coderReadyTableAngle,
       canonicalRows,
       finalizeCurrentProgram
     });
