@@ -124,20 +124,27 @@
   }
 
   function finalAggregateNumber(machineMap, rows = []) {
-    const candidates = [];
-    const configured = finite(machineMap?.aggregateCount, NaN);
-    if (Number.isFinite(configured)) candidates.push(configured);
-    Object.keys(machineMap?.aggregateAngles || {}).forEach((key) => {
-      const value = Number(key);
-      if (Number.isFinite(value)) candidates.push(value);
-    });
+    // A six-aggregate machine can run a Neck + Body recipe that physically
+    // finishes at Aggregate 4. Coding starts after the last aggregate that is
+    // actually present in the generated program, not the map's configured max.
+    const generated = [];
     rows.forEach((row) => {
       const station = finite(row?.station, NaN);
-      if (Number.isFinite(station)) candidates.push(station);
+      if (Number.isFinite(station)) generated.push(station);
       const match = String(row?.action || "").match(/\bAgg\s*(\d+)\b/i);
-      if (match) candidates.push(Number(match[1]));
+      if (match) generated.push(Number(match[1]));
     });
-    return candidates.length ? Math.max(...candidates.filter(Number.isFinite)) : NaN;
+    const activeGenerated = generated.filter(Number.isFinite);
+    if (activeGenerated.length) return Math.max(...activeGenerated);
+
+    const configured = [];
+    const aggregateCount = finite(machineMap?.aggregateCount, NaN);
+    if (Number.isFinite(aggregateCount)) configured.push(aggregateCount);
+    Object.keys(machineMap?.aggregateAngles || {}).forEach((key) => {
+      const value = Number(key);
+      if (Number.isFinite(value)) configured.push(value);
+    });
+    return configured.length ? Math.max(...configured) : NaN;
   }
 
   function belongsToAggregate(row, aggregate) {

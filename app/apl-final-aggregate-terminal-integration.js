@@ -38,20 +38,26 @@
   }
 
   function finalAggregateNumber(map, rows = []) {
-    const candidates = [];
-    const configured = number(map?.aggregateCount, NaN);
-    if (Number.isFinite(configured)) candidates.push(configured);
-    Object.keys(map?.aggregateAngles || {}).forEach((key) => {
-      const station = Number(key);
-      if (Number.isFinite(station)) candidates.push(station);
-    });
+    // Terminal ownership follows the last aggregate used by the generated
+    // recipe. Neck + Body ends at Aggregate 4; Body + Back still ends at 6.
+    const generated = [];
     (Array.isArray(rows) ? rows : []).forEach((row) => {
       const station = number(row?.station, NaN);
-      if (Number.isFinite(station)) candidates.push(station);
+      if (Number.isFinite(station)) generated.push(station);
       const match = String(row?.action || "").match(/\bAgg\s*(\d+)\b/i);
-      if (match) candidates.push(Number(match[1]));
+      if (match) generated.push(Number(match[1]));
     });
-    return candidates.length ? Math.max(...candidates.filter(Number.isFinite)) : NaN;
+    const activeGenerated = generated.filter(Number.isFinite);
+    if (activeGenerated.length) return Math.max(...activeGenerated);
+
+    const configured = [];
+    const aggregateCount = number(map?.aggregateCount, NaN);
+    if (Number.isFinite(aggregateCount)) configured.push(aggregateCount);
+    Object.keys(map?.aggregateAngles || {}).forEach((key) => {
+      const station = Number(key);
+      if (Number.isFinite(station)) configured.push(station);
+    });
+    return configured.length ? Math.max(...configured) : NaN;
   }
 
   function belongsToAggregate(row, aggregate) {

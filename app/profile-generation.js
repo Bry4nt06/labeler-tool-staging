@@ -2,6 +2,7 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.2";
+  const moduleBuild = "neck-body-coder-window-v53-20260810-0923";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",
@@ -35,7 +36,7 @@
       }
 
       const script = document.createElement("script");
-      script.src = `./${path}?v=${encodeURIComponent(version)}`;
+      script.src = `./${path}?v=${encodeURIComponent(version)}&build=${encodeURIComponent(moduleBuild)}`;
       script.async = false;
       script.dataset.profileGenerationModule = path;
       script.addEventListener("load", () => {
