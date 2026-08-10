@@ -11,7 +11,10 @@ on:
       - "app/animation-runtime.js"
       - "app/bootstrap.js"
       - "app.js"
+      - "service-worker.js"
+      - "update-manifest.json"
       - "tests/runtime-startup-browser.test.cjs"
+      - "tests/service-worker-core-assets.test.js"
       - ".github/workflows/validate-runtime-startup.yml"
   workflow_dispatch:
 
@@ -33,6 +36,11 @@ jobs:
           node --check app/wipe-down-builder.js
           node --check app/assembly-driver-adapter.js
           node --check app/animation-runtime.js
+          node --check app/bootstrap.js
+          node --check app.js
+          node --check service-worker.js
+      - name: Validate offline core asset catalog
+        run: node tests/service-worker-core-assets.test.js
       - name: Install browser harness
         run: npm install --no-save puppeteer-core@24.16.0
       - name: Serve staging app
