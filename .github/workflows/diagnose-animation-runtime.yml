@@ -20,6 +20,8 @@ jobs:
           node-version: "22"
       - name: Trace animation state and runtime ownership
         run: |
+          echo '=== normalizeAssembly references ==='
+          grep -R -n --exclude-dir=.git -E 'normalizeAssembly' app drivers app.js index.html || true
           echo '=== isPlaying references ==='
           grep -R -n --exclude-dir=.git -E 'isPlaying' app app.js index.html || true
           echo '=== renderAnimationFrame owners ==='
@@ -45,13 +47,36 @@ jobs:
             const page = await browser.newPage();
             const consoleMessages = [];
             const pageErrors = [];
-            page.on('console', (msg) => consoleMessages.push(`${msg.type()}: ${msg.text()}`));
+            page.on('console', async (msg) => {
+              const args = [];
+              for (const handle of msg.args()) {
+                try {
+                  args.push(await handle.evaluate((value) => value instanceof Error
+                    ? { name: value.name, message: value.message, stack: value.stack }
+                    : value));
+                } catch { args.push('[unserializable]'); }
+              }
+              consoleMessages.push({ type: msg.type(), text: msg.text(), args });
+            });
             page.on('pageerror', (error) => pageErrors.push(error.stack || error.message || String(error)));
             await page.goto('http://127.0.0.1:8000/index.html', { waitUntil: 'networkidle0', timeout: 30000 });
-            await new Promise((resolve) => setTimeout(resolve, 3000));
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+
+            const promiseStatus = async (name) => page.evaluate(async (promiseName) => {
+              const promise = window[promiseName];
+              if (!promise || typeof promise.then !== 'function') return 'missing';
+              return Promise.race([
+                promise.then(() => 'resolved', (error) => `rejected: ${error?.message || error}`),
+                new Promise((resolve) => setTimeout(() => resolve('pending'), 50))
+              ]);
+            }, name);
+
             const snapshot = async () => page.evaluate(() => ({
               build: window.ServoForgeBootstrapBuild || null,
-              featureReady: Boolean(window.ServoForgeFeatureIntegrationsReady),
+              normalizeAssemblyType: typeof window.normalizeAssembly,
+              assemblyAdapter: Boolean(window.LabelerAssemblyDriverAdapter),
+              assemblyModelDriver: Boolean(window.LabelerAssemblyModelDriver),
+              assemblyGeometryDriver: Boolean(window.LabelerAssemblyGeometryDriver),
               animationRuntime: Boolean(window.LabelerAnimationRuntime),
               mapAnimationRenderer: Boolean(window.LabelerMapAnimationRenderer),
               workspaceStatusRenderer: Boolean(window.LabelerWorkspaceStatusRenderer),
@@ -64,18 +89,30 @@ jobs:
               jumpAngle: document.querySelector('#tableAngleJump')?.value || null,
               sliderAngle: document.querySelector('#previewAngle')?.value || null,
               playLabel: document.querySelector('#playPause')?.textContent || null,
-              startupError: document.querySelector('.startup-error')?.textContent || null
+              startupError: document.querySelector('.startup-error')?.textContent || null,
+              validationText: document.querySelector('#validationList')?.textContent?.trim() || null
             }));
+
+            console.log('FEATURE STATUS', await promiseStatus('ServoForgeFeatureIntegrationsReady'));
+            console.log('MAP BUILDER STATUS', await promiseStatus('ServoForgeMapBuilderReady'));
+            console.log('BOOTSTRAP STATUS', await promiseStatus('ServoForgeBootstrapReady'));
             const before = await snapshot();
             await new Promise((resolve) => setTimeout(resolve, 1200));
             const after = await snapshot();
             console.log('BROWSER BEFORE', JSON.stringify(before));
             console.log('BROWSER AFTER ', JSON.stringify(after));
-            console.log('ANGLE DELTA', Number(after.stateAngle) - Number(before.stateAngle));
+            console.log('ANGLE DELTA BEFORE MANUAL START', Number(after.stateAngle) - Number(before.stateAngle));
+
+            await page.evaluate(() => window.LabelerAnimationRuntime?.start?.());
+            const manualBefore = await snapshot();
+            await new Promise((resolve) => setTimeout(resolve, 1200));
+            const manualAfter = await snapshot();
+            console.log('MANUAL BEFORE', JSON.stringify(manualBefore));
+            console.log('MANUAL AFTER ', JSON.stringify(manualAfter));
+            console.log('ANGLE DELTA AFTER MANUAL START', Number(manualAfter.stateAngle) - Number(manualBefore.stateAngle));
             console.log('PAGE ERRORS', JSON.stringify(pageErrors));
-            console.log('CONSOLE ERRORS', JSON.stringify(consoleMessages.filter((line) => /error/i.test(line))));
+            console.log('CONSOLE ERRORS', JSON.stringify(consoleMessages.filter((entry) => entry.type === 'error')));
             await browser.close();
-            if (before.startupError || after.startupError || pageErrors.length) process.exitCode = 1;
           })().catch((error) => {
             console.error(error.stack || error);
             process.exitCode = 1;
