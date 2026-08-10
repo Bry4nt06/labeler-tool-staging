@@ -53,8 +53,11 @@
     return new Promise((resolve, reject) => {
       const expected = new URL(`./${path}`, window.location.href).pathname;
       const existing = [...document.scripts].find((script) => {
-        try { return new URL(script.src, window.location.href).pathname === expected;
-        } catch { return false; }
+        try {
+          return new URL(script.src, window.location.href).pathname === expected;
+        } catch {
+          return false;
+        }
       });
       if (existing) {
         if (existing.dataset.loaded === "true") resolve();
@@ -107,6 +110,7 @@
       await loadScript("app/protected-default-map-integration.js", version);
       await loadScript("app/repository-brand-download-integration.js", version);
       await loadScript("app/workspace-panel-visibility-guard-integration.js", version);
+      await loadScript("app/apl-post-wipe-sensor-continuity-fallback-integration.js", version);
       await loadScript("app/optimizer-post-wipe-coverage-fix-integration.js", version);
       await window.LabelerSensorEditorFocusGuard?.waitForScopedObservers?.(2, 2000);
     } finally {
