@@ -82,16 +82,15 @@
       }
 
       #specs .label-specs-table .label-col-id { width: 28px; }
-      #specs .label-specs-table .label-col-brand { width: 110px; }
-      #specs .label-specs-table .label-col-spec { width: 60px; }
-      #specs .label-specs-table .label-col-application { width: 64px; }
+      #specs .label-specs-table .label-col-brand { width: 118px; }
+      #specs .label-specs-table .label-col-application { width: 60px; }
       #specs .label-specs-table .label-col-short { width: 58px; }
       #specs .label-specs-table .label-col-neck-height { width: 62px; }
       #specs .label-specs-table .label-col-neck-length { width: 62px; }
-      #specs .label-specs-table .label-col-curve { width: 72px; }
-      #specs .label-specs-table .label-col-circ { width: 72px; }
-      #specs .label-specs-table .label-col-code { width: 105px; }
-      #specs .label-specs-table .label-col-action { width: 76px; }
+      #specs .label-specs-table .label-col-curve { width: 70px; }
+      #specs .label-specs-table .label-col-circ { width: 70px; }
+      #specs .label-specs-table .label-col-code { width: 92px; }
+      #specs .label-specs-table .label-col-action { width: 80px; }
 
       #specs .label-specs-table th {
         padding-inline: 3px;
@@ -102,6 +101,17 @@
 
       #specs .label-specs-table td {
         padding-inline: 3px;
+      }
+
+      /* The action cell owns a fixed, protected lane. Two 32 px icon buttons
+         plus their 5 px gap always fit inside this 80 px column. */
+      #specs .label-specs-table th:last-child,
+      #specs .label-specs-table td:last-child {
+        width: 80px;
+        min-width: 80px;
+        max-width: 80px;
+        padding-inline: 3px;
+        overflow: visible;
       }
 
       #specs tr.selected-brand-spec > td {
@@ -146,7 +156,7 @@
         align-items: center;
         justify-content: center;
         gap: 5px;
-        width: auto;
+        width: 100%;
         max-width: 100%;
         min-width: 0;
         white-space: nowrap;
