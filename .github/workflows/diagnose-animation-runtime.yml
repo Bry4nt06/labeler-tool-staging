@@ -1,0 +1,27 @@
+name: Diagnose animation runtime
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/diagnose-animation-runtime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trace animation state and runtime ownership
+        run: |
+          echo '=== isPlaying references ==='
+          grep -R -n --exclude-dir=.git -E 'isPlaying' app app.js index.html || true
+          echo '=== animation loop references ==='
+          grep -R -n --exclude-dir=.git -E 'startAnimationLoop|stopAnimationLoop|animationFrame\(|renderAnimationFrame|requestAnimationFrame' app app.js index.html || true
+          echo '=== preview angle mutations ==='
+          grep -R -n --exclude-dir=.git -E 'previewAngle[[:space:]]*=' app app.js index.html || true
+          echo '=== overlay panel source ==='
+          grep -n -A12 -B3 'map-overlay-control' index.html || true
