@@ -46,15 +46,22 @@ jobs:
               page.on('pageerror', (error) => pageErrors.push(error.stack || error.message || String(error)));
               await page.goto('http://127.0.0.1:8000/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
               await page.waitForFunction(() => typeof state !== 'undefined' && typeof generatedServoProfile === 'function' && window.LabelerAplCoderCodeBoxOrientation?.installed, { timeout: 20000 });
-              await sleep(6500);
+              await sleep(3000);
 
-              const result = await page.evaluate(() => {
+              const result = await page.evaluate(async () => {
+                const [labelSpecs, bottleSpecs, defaultMap] = await Promise.all([
+                  fetch('./config/default-programs/label-specs.json', { cache: 'no-store' }).then((response) => response.json()),
+                  fetch('./config/default-programs/bottle-specs.json', { cache: 'no-store' }).then((response) => response.json()),
+                  fetch('./config/default-programs/map-apl-6-aggregate.json', { cache: 'no-store' }).then((response) => response.json())
+                ]);
+                state.labelSpecs = labelSpecs;
+                state.bottleSpecs = bottleSpecs;
+                state.mapLibrary = [defaultMap];
+                state.activeMapId = defaultMap.id;
                 state.applicationMode = 'apl';
-                const map = state.mapLibrary.find((entry) => entry.id === 'map-apl-default' || entry.name === 'APL 6-Aggregate');
-                if (!map) throw new Error('APL 6-Aggregate map not found.');
-                loadMachineMapIntoRuntime(map, false);
+                loadMachineMapIntoRuntime(defaultMap, false);
                 const landShark = state.labelSpecs.find((entry) => /LandShark/i.test(entry.brand));
-                if (!landShark) throw new Error('LandShark label recipe not found.');
+                if (!landShark) throw new Error('LandShark label recipe not found in repository specs.');
                 state.selectedBrand = landShark.brand;
                 state.selectedBottle = landShark.bottleType;
                 applyLabelLengthStationRules();
