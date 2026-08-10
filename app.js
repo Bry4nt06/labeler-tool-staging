@@ -48,7 +48,7 @@
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
   const version = "0.9.10";
-  const build = "coder-terminal-source-policy-v52-20260809-1940";
+  const build = "animation-frame-coordinator-v53-20260809-2015";
 
   function loadScript(path, scriptVersion) {
     return new Promise((resolve, reject) => {
