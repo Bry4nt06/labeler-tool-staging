@@ -122,7 +122,7 @@
           ? "the last completed label application"
           : "the selected label target";
         const merged = result.plan?.mergedConstraintGroup
-          ? " Its correction is merged with the overlapping coder/sensor orientation."
+          ? " Its correction is merged with the overlapping sensor orientation."
           : result.plan?.satisfiedByExistingMotion
             ? " The existing servo motion already satisfies the sensor."
             : "";
@@ -164,15 +164,14 @@
       || !constraintDriver()?.chooseSharedTarget
       || !targetService()?.targetFor
       || typeof process !== "function"
-      || !pipeline?.registerStage
-      || !pipeline.getStage?.(STAGE_ID)) return false;
+      || !pipeline?.registerStage) return false;
 
     pipeline.registerStage({
       id: STAGE_ID,
       phase: "orientation",
       order: 300,
       source: "app/orientation-constraint-planner-integration.js",
-      description: "Resolve the last applied label and merge compatible sensor/coder orientation turns.",
+      description: "Resolve the last applied label and merge compatible sensor orientation turns.",
       process
     });
     global.LabelerMapObjectOrientationProcessor = process;

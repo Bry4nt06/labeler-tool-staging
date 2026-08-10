@@ -9,9 +9,8 @@ function generatedServoProfile() {
     const assembly = state.assemblies.find((item) => Number(item.station) === station);
     return assembly && stationIsOperational(assembly);
   });
-  const codingObjectReady = Boolean(machineMap?.objects?.some((item) => item.kind === "coding"));
   const usesCompactTwoLabelProfile = applications.neck && applications.body && !applications.back
-    && compactStationsReady && codingObjectReady;
+    && compactStationsReady;
   if (usesCompactTwoLabelProfile) {
     const rows = generatedAplTwoLabelProfile();
     state.motionPlan = {
@@ -21,7 +20,7 @@ function generatedServoProfile() {
       pairPlans: [],
       finalPlateAngle: rows[rows.length - 1]?.plateAngle,
       termination: {
-        section: "coding",
+        section: "body",
         hmi: rows.length,
         tableAngle: rows[rows.length - 1]?.tableAngle,
         command: "Rest"

@@ -26,17 +26,11 @@
         || row?.orientationHold
         || row?.mapObjectOrientationContinuation
         || row?.orientationConstraintContinuation
-        || row?.coderAfterWipeHandoff
-        || row?.coderAfterWipeContinuation
-        || row?.codingHold
-        || row?.codingMotion
-        || row?.codingRelease
         || row?.sensorRelease
         || row?.orientationRelease
         || row?.sensorId
-        || row?.codingObjectId
         || row?.orientationConstraintMerged) return false;
-      return !/(?:orient|hold|continue).*?(?:sensor|coder|coding|code box|label inspection)|return.*(?:bottle|plate|orientation)|release.*(?:coder|sensor|inspection)/i
+      return !/(?:orient|hold|continue).*?(?:sensor|label inspection)|return.*(?:bottle|plate|orientation)|release.*(?:sensor|inspection)/i
         .test(String(row?.action || ""));
     });
   }
@@ -75,9 +69,7 @@
   }
 
   function groupLabel(objects) {
-    return objects
-      .map((object) => object.item.name || (object.item.kind === "coding" ? "Coder" : "Label Sensor"))
-      .join(" + ");
+    return objects.map((object) => object.item.name || "Label Sensor").join(" + ");
   }
 
   function groupSectionLabel(objects) {
@@ -89,8 +81,7 @@
   function metadata(objects) {
     const sections = [...new Set(objects.map((object) => object.section))];
     const sources = [...new Set(objects.map((object) => object.sectionResolution.source))];
-    const sensorIds = objects.filter((object) => object.item.kind === "sensor").map((object) => object.item.id);
-    const codingObjectIds = objects.filter((object) => object.item.kind === "coding").map((object) => object.item.id);
+    const sensorIds = objects.map((object) => object.item.id);
     return {
       section: sections.length === 1 ? sections[0] : "shared",
       orientationSections: sections,
@@ -103,8 +94,6 @@
       orientationObjectIds: objects.map((object) => object.item.id),
       sensorId: sensorIds[0],
       sensorIds,
-      codingObjectId: codingObjectIds[0],
-      codingObjectIds,
       autoTargetSource: sources.length === 1 ? sources[0] : "mixed"
     };
   }
@@ -114,7 +103,7 @@
     plans.push({
       objectId: object.item.id,
       kind: object.item.kind,
-      name: object.item.name || (object.item.kind === "coding" ? "Coder" : "Label Sensor"),
+      name: object.item.name || "Label Sensor",
       station: object.item.station,
       section: object.section,
       targetMode: object.target.mode,
@@ -385,7 +374,7 @@
     const issues = [];
     const plans = [];
     const objects = (map.objects || [])
-      .filter((item) => ["sensor", "coding"].includes(item?.kind) && svc.enabled(item))
+      .filter((item) => item?.kind === "sensor" && svc.enabled(item))
       .map((item) => {
         const window = svc.windowFor(item, source);
         const sectionResolution = driver.resolveSection({
@@ -427,7 +416,6 @@
           const code = String(entry?.code || "");
           return !/^map-object-/.test(code)
             && !/^label-sensor-/.test(code)
-            && !/^coder-/.test(code)
             && !/^orientation-constraint-/.test(code);
         });
       Object.assign(global.state.motionPlan, {

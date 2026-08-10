@@ -111,7 +111,7 @@
       }
 
       if (String(map?.applicationMode || "apl") !== "apl") return;
-      (map.objects || []).filter((item) => ["sensor", "coding"].includes(item?.kind)).forEach((item) => {
+      (map.objects || []).filter((item) => item?.kind === "sensor").forEach((item) => {
         const next = normalizedTarget(item, map);
         if (next && item.orientationLabelSection !== next) {
           item.orientationLabelSection = next;
@@ -133,7 +133,7 @@
       phase: "orientation",
       order: 300,
       source: "app/sensor-orientation-default-map-fix-integration.js",
-      description: "Use chronological label targets and merge compatible sensor/coder windows.",
+      description: "Use chronological label targets and merge compatible sensor windows.",
       process
     });
     global.LabelerMapObjectOrientationProcessor = process;
@@ -228,15 +228,13 @@
   function saveOrientation(itemId, field, control) {
     const map = editMap();
     const item = map?.objects?.find((entry) => String(entry.id) === String(itemId));
-    if (!item) return;
+    if (!item || item.kind !== "sensor") return;
     global.recordBuilderHistory?.(`Update ${item.name || item.kind} orientation`);
     if (field === "orientationLabelSection") {
       item.orientationLabelSection = policy()?.normalizeSelection({
         selection: control.value,
         ...policyOptions(item, map)
       }) || control.value;
-    } else if (field === "orientationTarget") {
-      item.orientationTarget = control.value === "label-center" ? "label-center" : "code-box";
     }
     item.orientationConfigured = true;
     ensureConstraintStage();
@@ -246,12 +244,8 @@
   }
 
   function orientationControls(item, map) {
-    const target = item.kind === "coding"
-      ? `<label>Orientation point<select data-corrected-orientation-field="orientationTarget"><option value="code-box"${item.orientationTarget !== "label-center" ? " selected" : ""}>Code box center</option><option value="label-center"${item.orientationTarget === "label-center" ? " selected" : ""}>Label centerline</option></select></label>`
-      : "";
     return `<div class="map-object-orientation-fields corrected-orientation-fields" data-orientation-object-id="${escapeHtml(item.id)}">
-      <label>${item.kind === "sensor" ? "Inspection label" : "Coding label"}<select data-corrected-orientation-field="orientationLabelSection">${sectionOptions(item, map)}</select><small>Only labels applied before this object are available. Auto uses the last completed label application.</small></label>
-      ${target}
+      <label>Inspection label<select data-corrected-orientation-field="orientationLabelSection">${sectionOptions(item, map)}</select><small>Only labels applied before this sensor are available. Auto uses the last completed label application.</small></label>
     </div>`;
   }
 
@@ -262,7 +256,7 @@
       const item = map.objects?.find((entry) => String(entry.id) === String(row.dataset.builderObjectId));
       if (!item) return;
       stationApplicationContext(row, item, map);
-      if (!["sensor", "coding"].includes(item.kind)) return;
+      if (item.kind !== "sensor") return;
 
       row.querySelectorAll(".map-object-orientation-fields").forEach((node) => node.remove());
       const grid = row.querySelector(".builder-row-grid");

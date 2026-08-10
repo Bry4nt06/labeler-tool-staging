@@ -9,7 +9,7 @@ function generatedAplMapDrivenProfile(machineMap) {
   const scaleMapSpan = (span) => num(span, 0);
   const objects = (machineMap?.objects || [])
     .filter((item) => item.application !== "cold-glue")
-    .filter((item) => item.kind === "coding" || ((item.kind === "roller" || item.kind === "pad" || item.kind === "sensor") && isStationEnabled(machineMap, Number(item.station))))
+    .filter((item) => (item.kind === "roller" || item.kind === "pad" || item.kind === "sensor") && isStationEnabled(machineMap, Number(item.station)))
     .map((item) => normalizeBuilderObject(item, "apl", 6))
     .map((item) => ({
       ...item,
@@ -291,87 +291,18 @@ function generatedAplMapDrivenProfile(machineMap) {
     });
   });
 
-  const codingObject = objects.find((item) => item.kind === "coding");
-  if (codingObject) {
-    const label = selectedLabelSpec();
-    const bottleCirc = bodyCircumference(selectedBottleSpec());
-    const neckCirc = num(label?.neckBottomCircumferenceMm, NaN);
-    const centerFront = buildProgramSummary().rows.find(([name]) => name === "Center Line Front (deg)")?.[1];
-    const neckContact = degFromMm(state.buildInputs.neckContactMm, neckCirc);
-    const neckOffset = degFromMm(state.buildInputs.neckOffsetMm, neckCirc) ?? 0;
-    const bodyOffset = degFromMm(state.buildInputs.bodyOffsetMm, bottleCirc) ?? 0;
-    const backOffset = degFromMm(state.buildInputs.backOffsetMm, bottleCirc) ?? 0;
-    const bodyFull = degFromMm(label?.bodyLengthMm, bottleCirc);
-    const backFull = degFromMm(label?.backLengthMm, bottleCirc);
-    const codeBox = degFromMm(label?.codeBoxCenterMm, bottleCirc);
-    const inspectionOffset = degFromMm(state.buildInputs.backInspectionOffsetMm, bottleCirc) ?? 0;
-    const leading = state.buildInputs.neckApplication === "Leading Edge";
-    // Code Box Center is measured along the label from its left edge to the
-    // centre of the 20 mm print area. Three-label bottles code the back label;
-    // two-label bottles code the body label. Convert that linear input to
-    // bottle degrees, then locate it from the selected label's centre line.
-    const codesBackLabel = Boolean(selectedLabelApplicationState().back && num(label?.backLengthMm, 0) > 0);
-    const codingLabelCenter = Number.isFinite(centerFront) ? centerFront + (codesBackLabel ? 180 : 0) : null;
-    const codingLabelFull = codesBackLabel ? backFull : bodyFull;
-    const codingLabelOffset = codesBackLabel ? backOffset : bodyOffset;
-    const rawCodingTarget = [codingLabelCenter, neckContact, codingLabelFull, codeBox].every(Number.isFinite)
-      ? (leading
-        ? (codingLabelCenter - (neckOffset + neckContact)) + (codingLabelFull / 2 - codeBox) + codingLabelOffset + inspectionOffset
-        : (codingLabelCenter - neckOffset + neckContact) + (codingLabelFull / 2 - codeBox) + codingLabelOffset + inspectionOffset)
-      : plate;
-    // Coding has no set-down/back-spin stage. Select the equivalent code-box
-    // orientation requiring the least rotation from the final wipe position.
-    const codingTarget = Number.isFinite(rawCodingTarget)
-      ? rawCodingTarget + 360 * Math.round((plate - rawCodingTarget) / 360)
-      : plate;
-    const codingStart = norm(num(codingObject.start, scaleMapAngle(304)));
-    const codingStop = Math.min(360, codingStart + Math.max(0.5, scaleMapSpan(5)));
-    const desiredCodingReady = codingStart - scaleMapSpan(profileTiming.codingArriveEarlyDeg);
-    // The preferred arrive-early point can fall behind the final wipe on a
-    // compact 60-head layout. Use the remaining forward window and reach the
-    // orientation no later than the coder, never by adding another revolution.
-    const codingTurnStart = lastTable + 0.5;
-    const codingReady = desiredCodingReady > codingTurnStart
-      ? Math.min(codingStart, desiredCodingReady)
-      : codingStart;
-    if (codingStart <= codingTurnStart) {
-      issues.push({
-        level: "bad",
-        code: "coding-window-passed",
-        message: `Coding starts at ${codingStart.toFixed(1)} deg, before the final label motion ends at ${lastTable.toFixed(1)} deg. Move the Coding Station later or finish the final wipe earlier.`
-      });
-    }
-    moveToReference(codingReady, codingTarget, "Direct Turn for Coding", {
-      codingWindowStart: finishAngle(codingStart),
-      codingWindowStop: finishAngle(codingStop),
-      codingReadyTableAngle: finishAngle(codingReady),
-      codingMotion: "direct-shortest-path"
-    });
-    const codingHold = rows[rows.length - 1];
-    rows[rows.length - 1] = {
-      ...codingHold,
-      // Keep the achieved coding orientation actively controlled through the
-      // coding window. A CMD 3 here followed by the terminal CMD 3 creates an
-      // illegal double-Rest ending on TopModul/TopMatic servos.
-      cmd: 7,
-      action: "Hold for Coding",
-      codingHold: true,
-      activeHold: true
-    };
-    add(3, Math.max(359, lastTable + 0.5), plate, "End Curve - Rest", {
-      terminalRest: true,
-      motionSource: "terminal-end-curve-rest"
-    });
-  }
-
-  if (!codingObject) {
-    const finalRow = rows[rows.length - 1];
+  const finalRow = rows[rows.length - 1];
+  if (finalRow) {
     rows[rows.length - 1] = {
       ...finalRow,
       cmd: 3,
-      action: "End Curve - Rest",
+      baseCmd: 3,
       terminalRest: true,
-      motionSource: "terminal-end-curve-rest"
+      activeHold: false,
+      aggregateTerminal: true,
+      plannerIntent: "HOLD",
+      plannerRequestedCommand: 3,
+      plannerRecommendedCommand: 3
     };
   }
   const finalized = commandDriver ? commandDriver.finalize(rows) : rows;
@@ -381,7 +312,7 @@ function generatedAplMapDrivenProfile(machineMap) {
     stationPlans,
     pairPlans: [],
     finalPlateAngle: finalized[finalized.length - 1]?.plateAngle,
-    termination: { section: codingObject ? "coding" : stationPlans[stationPlans.length - 1]?.section || "none", hmi: finalized.length, tableAngle: finalized[finalized.length - 1]?.tableAngle, command: "Rest" },
+    termination: { section: stationPlans[stationPlans.length - 1]?.section || "none", station: stationPlans[stationPlans.length - 1]?.station, hmi: finalized.length, tableAngle: finalized[finalized.length - 1]?.tableAngle, command: "Rest" },
     mapDriven: true,
     profileKind: "apl-map-driven"
   };

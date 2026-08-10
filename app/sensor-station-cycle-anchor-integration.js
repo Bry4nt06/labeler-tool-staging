@@ -75,7 +75,7 @@
 
     global.LabelerMapObjectOrientationDriver = patched;
     global.LabelerDriverRegistry?.register?.("profile.mapObjectOrientation", patched, {
-      dependencies: ["profile.coderOrientation"],
+      dependencies: [],
       source: "app/sensor-station-cycle-anchor-integration.js",
       replace: true
     });

@@ -34,17 +34,6 @@
     return "DEFAULT";
   }
 
-  function isCodingHold(row) {
-    if (Number(row?.cmd) !== 3) return false;
-    const action = String(row?.action || "");
-    const hasCodingObject = Boolean(row?.codingObjectId)
-      || (Array.isArray(row?.codingObjectIds) && row.codingObjectIds.length > 0);
-    return row?.codingHold === true
-      || (row?.orientationHold === true && (hasCodingObject || /coding|code box/i.test(action)))
-      || (Boolean(row?.codingReadyTableAngle) && !row?.orientationConstraintContinuation)
-      || /hold\s+for\s+coding/i.test(action)
-      || /hold.*(?:coding|code box)|(?:coding|code box).*hold/i.test(action);
-  }
 
   function isAutocolEndCurve(row) {
     return row?.autocolBoundary === "end-curve"
@@ -63,58 +52,17 @@
   function topModulTerminalRows(rows) {
     const source = Array.isArray(rows) ? rows.map((row) => ({ ...row })) : [];
     if (!source.length) return source;
-
-    let codingIndex = -1;
-    for (let index = source.length - 1; index >= 0; index -= 1) {
-      if (isCodingHold(source[index])) {
-        codingIndex = index;
-        break;
-      }
-    }
-
-    if (codingIndex >= 0) {
-      // A TopModul curve ends at the stopped coding reference. The prior
-      // implementation converted this row to CMD 7 and appended a separate
-      // End Curve row, producing a zero-motion Correction fault.
-      source.splice(codingIndex + 1);
-      const coding = source[codingIndex];
-      const codingReady = numeric(coding?.codingReadyTableAngle);
-      if (codingReady !== null) {
-        coding.tableAngle = codingReady;
-        coding.generatedTableAngle = codingReady;
-      }
-      coding.cmd = 3;
-      coding.baseCmd = 3;
-      coding.action = "Hold for Coding";
-      coding.codingHold = true;
-      coding.terminalRest = true;
-      coding.activeHold = false;
-      coding.motionSource = "terminal-coding-rest";
-      coding.plannerIntent = "HOLD";
-      coding.plannerRequestedCommand = 3;
-      coding.plannerRecommendedCommand = 3;
-      coding.translatedCommandName = restCommandName();
-      coding.commandTranslated = false;
-      coding.plannerFallbackUsed = false;
-      coding.plannerFallbackReason = "";
-    } else {
-      const finalRow = source[source.length - 1];
-      finalRow.cmd = 3;
-      finalRow.baseCmd = 3;
-      finalRow.terminalRest = true;
-      finalRow.activeHold = false;
-      finalRow.plannerIntent = "HOLD";
-      finalRow.plannerRequestedCommand = 3;
-      finalRow.plannerRecommendedCommand = 3;
-      finalRow.translatedCommandName = restCommandName();
-      finalRow.commandTranslated = false;
-    }
-
-    return source.map((row, index) => ({
-      ...row,
-      hmi: index + 1,
-      plc: index
-    }));
+    const finalRow = source[source.length - 1];
+    finalRow.cmd = 3;
+    finalRow.baseCmd = 3;
+    finalRow.terminalRest = true;
+    finalRow.activeHold = false;
+    finalRow.plannerIntent = "HOLD";
+    finalRow.plannerRequestedCommand = 3;
+    finalRow.plannerRecommendedCommand = 3;
+    finalRow.translatedCommandName = restCommandName();
+    finalRow.commandTranslated = false;
+    return source.map((row, index) => ({ ...row, hmi: index + 1, plc: index }));
   }
 
   function syncPlan(plan, rows) {

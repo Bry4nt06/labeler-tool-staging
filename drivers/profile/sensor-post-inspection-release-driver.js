@@ -18,8 +18,6 @@
     "orientationObjectIds",
     "sensorId",
     "sensorIds",
-    "codingObjectId",
-    "codingObjectIds",
     "autoTargetSource",
     "plannedRotation",
     "plannedRatio"

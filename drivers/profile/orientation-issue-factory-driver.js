@@ -57,7 +57,7 @@
       code: "map-object-overlaps-physical-wipe",
       item,
       section,
-      message: `${label} begins while "${action || "the current wipe"}" is still active. The sensor/coder cannot take control of the servo until the pad, roller, or brush wipe reaches its CMD 3 hold. Move the object later than that wipe hold.`
+      message: `${label} begins while "${action || "the current wipe"}" is still active. The sensor cannot take control of the servo until the pad, roller, or brush wipe reaches its CMD 3 hold. Move the object later than that wipe hold.`
     });
   }
 
@@ -88,55 +88,6 @@
     });
   }
 
-  function baseIssueExtras(baseIssue = {}) {
-    const {
-      level,
-      code,
-      objectId,
-      station,
-      section,
-      message,
-      issueFactoryDriver,
-      ...extras
-    } = baseIssue || {};
-    return { level, extras };
-  }
-
-  function coderWindowUnavailable({ baseIssue = {}, item, section, label, action, holdTable, windowEnd }) {
-    const inherited = baseIssueExtras(baseIssue);
-    return issue({
-      level: inherited.level || "bad",
-      code: "coder-window-after-wipe-unavailable",
-      item,
-      section,
-      message: `${label} cannot take control after ${action || "the final wipe"} completes at ${holdTable}°. Its coding window ends at ${windowEnd}°. Move the coder later or finish the wipe earlier.`,
-      extras: inherited.extras
-    });
-  }
-
-  function coderHandoffCapacity({ baseIssue = {}, item, section, label, action, holdTable, rotation, windowEnd }) {
-    const inherited = baseIssueExtras(baseIssue);
-    return issue({
-      level: inherited.level || "bad",
-      code: "coder-handoff-capacity",
-      item,
-      section,
-      message: `${label} waits for ${action || "the final wipe"} to finish at ${holdTable}°, but needs ${Math.abs(rotation).toFixed(1)}° of bottle rotation before the coding window ends at ${windowEnd}°. Move the coder later, increase the gap after the wipe, or reduce the required coding correction.`,
-      extras: inherited.extras
-    });
-  }
-
-  function coderHandoffStatus({ item, section, label, holdTable, readyTable, delayed }) {
-    return issue({
-      level: delayed ? "warn" : "ok",
-      code: "coder-after-wipe-handoff",
-      item,
-      section,
-      message: delayed
-        ? `${label} waits for the wipe to complete at ${holdTable}°, then reaches the coding orientation at ${readyTable}° inside its configured window.`
-        : `${label} waits for the wipe to complete, then takes control before its coding window begins.`
-    });
-  }
 
   const api = Object.freeze({
     issue,
@@ -148,14 +99,11 @@
     turnWindow,
     exitWindow,
     orientationCapacity,
-    coderWindowUnavailable,
-    coderHandoffCapacity,
-    coderHandoffStatus
   });
 
   global.LabelerOrientationIssueFactoryDriver = api;
   global.LabelerDriverRegistry?.register("profile.orientationIssueFactory", api, {
-    dependencies: ["profile.mapObjectOrientation", "profile.coderHandoff"],
+    dependencies: ["profile.mapObjectOrientation"],
     source: "drivers/profile/orientation-issue-factory-driver.js",
     replace: true
   });

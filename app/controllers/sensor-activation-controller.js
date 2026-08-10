@@ -305,7 +305,7 @@
     });
     global.LabelerMapObjectOrientationDriver = patched;
     global.LabelerDriverRegistry?.register?.("profile.mapObjectOrientation", patched, {
-      dependencies: ["profile.coderOrientation"],
+      dependencies: [],
       source: "app/controllers/sensor-activation-controller.js",
       replace: true
     });

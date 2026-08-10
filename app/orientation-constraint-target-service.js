@@ -119,18 +119,7 @@
   function geometry(section) {
     const wipe = typeof global.sectionWipePlan === "function" ? global.sectionWipePlan(section) : null;
     const width = Math.min(360, Math.max(0.1, num(wipe?.labelDeg, 0.1)));
-    const label = typeof global.selectedLabelSpec === "function" ? global.selectedLabelSpec() : null;
-    const bottle = typeof global.selectedBottleSpec === "function" ? global.selectedBottleSpec() : null;
-    const circumference = section === "neck"
-      ? num(label?.neckBottomCircumferenceMm, NaN)
-      : num(typeof global.bodyCircumference === "function" ? global.bodyCircumference(bottle) : NaN, NaN);
-    const code = typeof global.degFromMm === "function"
-      ? num(global.degFromMm(label?.codeBoxCenterMm, circumference), NaN)
-      : NaN;
-    const inspection = typeof global.degFromMm === "function"
-      ? num(global.degFromMm(global.state?.buildInputs?.backInspectionOffsetMm, circumference), 0)
-      : 0;
-    return { width, code, inspection };
+    return { width };
   }
 
   function plateAt(tableAngle, rows) {
@@ -200,13 +189,10 @@
       labelWidthDeg: shape.width,
       labelCenter: center,
       sensorTarget: sensorPlan?.target,
-      sensorVisibilityPercent: sensorPlan?.visibility?.percent,
-      coderCenterlineTarget: global.state?.motionPlan?.coderCenterlineTarget,
-      codeBoxOffsetDeg: shape.code,
-      inspectionOffsetDeg: shape.inspection
+      sensorVisibilityPercent: sensorPlan?.visibility?.percent
     }) || {
-      target: item.kind === "sensor" ? sensorPlan?.target ?? bottleAngleForSensorView(item, center) : currentPlate,
-      mode: item.kind === "coding" ? "code-box" : "label-center",
+      target: sensorPlan?.target ?? bottleAngleForSensorView(item, center),
+      mode: "label-center",
       required: item.kind === "sensor" ? num(item.requiredVisibilityPercent, 50) : 100,
       visibility: item.kind === "sensor" ? num(sensorPlan?.visibility?.percent, 100) : 100,
       center,
@@ -274,14 +260,9 @@
   }
 
   function enabled(item) {
-    if (item?.kind === "sensor") {
-      return item.enabled !== false && Boolean(item.orientBottle ?? item.servoAssist);
-    }
-    if (item?.kind === "coding") {
-      return String(item.orientationLabelSection || "auto").toLowerCase() !== "none"
-        && item.disableServoOrientation !== true;
-    }
-    return false;
+    return item?.kind === "sensor"
+      && item.enabled !== false
+      && Boolean(item.orientBottle ?? item.servoAssist);
   }
 
   const api = Object.freeze({

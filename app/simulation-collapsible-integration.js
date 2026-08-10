@@ -10,9 +10,7 @@
       "drivers/assembly/assembly-model-driver.js?v=0.9.7-assembly-drivers-v1",
       "drivers/assembly/assembly-geometry-driver.js?v=0.9.7-assembly-drivers-v1",
       "drivers/rendering/render-cycle-driver.js?v=0.9.7-rendering-coordinator-v1",
-      "drivers/profile/coder-orientation-driver.js?v=0.9.6-coder-driver-v1",
       "drivers/profile/map-object-orientation-driver.js?v=0.9.8-active-coder-fallback-v2",
-      "drivers/profile/coder-handoff-driver.js?v=0.9.6-orientation-drivers-v1",
       "drivers/profile/map-object-row-builder-driver.js?v=0.9.6-orientation-row-drivers-v1",
       "drivers/profile/orientation-issue-factory-driver.js?v=0.9.6-orientation-row-drivers-v1",
       "drivers/profile/profile-pipeline-driver.js?v=0.9.6-profile-pipeline-v1",
@@ -64,9 +62,6 @@
     ]),
 
     profilePipeline: Object.freeze([
-      "app/map-object-servo-orientation-integration.js?v=0.9.6-profile-pipeline-v2",
-      "app/map-object-coder-after-wipe-integration.js?v=0.9.6-profile-pipeline-v2",
-      "app/map-object-orientation-controls-integration.js?v=0.9.4-coder-orientation-off-v1",
       "app/motion-profile-regeneration-integration.js?v=0.9.4-motion-profile-regeneration-v1",
       "app/apl-continuous-motion-integration.js?v=0.9.4-apl-continuous-motion-v2"
     ]),
@@ -94,8 +89,6 @@
     ]),
 
     finalProfileStages: Object.freeze([
-      "app/clockwise-code-box-orientation-integration.js?v=0.9.6-profile-pipeline-v1",
-      "app/coder-rest-grammar-repair-integration.js?v=0.9.8-segment-command-finalizer-v2",
       "app/profile-pipeline-orchestrator-integration.js?v=0.9.6-profile-pipeline-v1",
       "app/production-motion-profile-reference-integration.js?v=0.9.7-production-motion-reference-v1",
       "app/motion-profile-workbench-integration.js?v=0.9.6-refactor-1"

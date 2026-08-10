@@ -92,7 +92,6 @@
     await loadScript("app/apl-first-tack-datum-flow-integration.js", version);
     await loadScript("app/topmodul-correction-chain-limit-integration.js", version);
     await loadScript("app/orientation-constraint-program-planner.js", version);
-    await loadScript("app/coder-window-reference-handoff-integration.js", version);
     await loadScript("app/sensor-editor-focus-guard-integration.js", version);
 
     try {

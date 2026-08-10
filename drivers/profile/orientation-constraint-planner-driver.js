@@ -98,10 +98,9 @@
     if (explicit === "none") return { section: "none", source: "manual-none", application: null };
     if (VALID_SECTIONS.includes(explicit)) {
       if (activeApplications[explicit]) return { section: explicit, source: "manual", application: null };
-      const fallback = activeFallback(activeApplications);
       return {
-        section: item?.kind === "coding" ? fallback : explicit,
-        source: item?.kind === "coding" ? "manual-inactive-fallback" : "manual-inactive",
+        section: "none",
+        source: "manual-inactive",
         application: null
       };
     }
@@ -161,42 +160,11 @@
   }
 
   function objectSatisfied(object, plateAngle, visibilityAt) {
-    if (object?.item?.kind === "coding") {
-      return sameCommandAngle(object?.target?.target, plateAngle);
-    }
     return sensorSatisfied(object, plateAngle, visibilityAt);
-  }
-
-  function uniqueCoderTargets(objects = []) {
-    const targets = [];
-    objects
-      .filter((object) => object?.item?.kind === "coding")
-      .forEach((object) => {
-        const target = finite(object?.target?.target, NaN);
-        if (!Number.isFinite(target)) return;
-        if (!targets.some((existing) => sameCommandAngle(existing, target))) targets.push(target);
-      });
-    return targets;
   }
 
   function chooseSharedTarget({ objects = [], currentPlate = 0, visibilityAt } = {}) {
     const source = Array.isArray(objects) ? objects : [];
-    const coderTargets = uniqueCoderTargets(source);
-    if (coderTargets.length > 1) {
-      return { compatible: false, reason: "multiple-coder-targets", coderTargets };
-    }
-
-    if (coderTargets.length === 1) {
-      const target = coderTargets[0];
-      const compatible = source.every((object) => objectSatisfied(object, target, visibilityAt));
-      return {
-        compatible,
-        reason: compatible ? "coder-target-satisfies-group" : "coder-target-misses-sensor",
-        target,
-        coderTargets
-      };
-    }
-
     const candidates = [
       finite(currentPlate, 0),
       ...source.map((object) => finite(object?.target?.target, NaN)).filter(Number.isFinite)
@@ -204,13 +172,12 @@
     const unique = candidates.filter((candidate, index) =>
       candidates.findIndex((other) => sameCommandAngle(other, candidate)) === index);
     const valid = unique.filter((candidate) => source.every((object) => objectSatisfied(object, candidate, visibilityAt)));
-    if (!valid.length) return { compatible: false, reason: "sensor-ranges-do-not-intersect", coderTargets: [] };
+    if (!valid.length) return { compatible: false, reason: "sensor-ranges-do-not-intersect" };
     valid.sort((left, right) => Math.abs(left - currentPlate) - Math.abs(right - currentPlate));
     return {
       compatible: true,
       reason: sameCommandAngle(valid[0], currentPlate) ? "existing-angle-satisfies-group" : "shared-sensor-target",
-      target: valid[0],
-      coderTargets: []
+      target: valid[0]
     };
   }
 
@@ -232,7 +199,6 @@
     groupObjects,
     sensorSatisfied,
     objectSatisfied,
-    uniqueCoderTargets,
     chooseSharedTarget
   });
 

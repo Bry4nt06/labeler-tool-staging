@@ -23,8 +23,6 @@
   }
 
   function nearestEquivalent(target, reference) {
-    const coder = global.LabelerCoderOrientationDriver;
-    if (coder?.nearestEquivalent) return coder.nearestEquivalent(target, reference);
     const base = finite(target, 0);
     const current = finite(reference, base);
     return base + FULL_CYCLE_DEG * Math.round((current - base) / FULL_CYCLE_DEG);
@@ -49,8 +47,7 @@
       if (activeApplications[explicit] !== false) return explicit;
       // A physical label sensor has no inspection duty when its assigned label
       // is absent from the selected brand. Ignore it without creating a turn,
-      // hold, or validation issue. Coders still retarget to the active label.
-      if (item?.kind === "coding") return activeFallback(activeApplications);
+      // hold, or validation issue.
       return "none";
     }
     if (item?.kind === "sensor") {
@@ -71,9 +68,7 @@
   }
 
   function enabled(item) {
-    if (item?.kind === "sensor") return Boolean(item.orientBottle ?? item.servoAssist);
-    if (item?.kind === "coding") return item.orientBottle !== false;
-    return false;
+    return item?.kind === "sensor" && Boolean(item.orientBottle ?? item.servoAssist);
   }
 
   function objectWindow({
@@ -143,53 +138,27 @@
 
   function orientationTarget({
     item,
-    section,
     currentPlate,
     applicationTarget: application,
     labelWidthDeg,
     labelCenter,
     sensorTarget,
-    sensorVisibilityPercent = 100,
-    coderCenterlineTarget,
-    codeBoxOffsetDeg,
-    inspectionOffsetDeg = 0
+    sensorVisibilityPercent = 100
   } = {}) {
     const width = Math.min(FULL_CYCLE_DEG, Math.max(0.1, finite(labelWidthDeg, 0.1)));
     const center = finite(labelCenter, finite(application, 0));
-    if (item?.kind === "sensor") {
-      const required = Math.min(100, Math.max(1, finite(item?.requiredVisibilityPercent, 50)));
-      const current = finite(currentPlate, center);
-      const rawTarget = nearestEquivalent(finite(sensorTarget, center), current);
-      const target = sameCommandAngle(rawTarget, current) ? current : rawTarget;
-      return {
-        target,
-        mode: "label-center",
-        required,
-        visibility: finite(sensorVisibilityPercent, 100),
-        center,
-        width,
-        satisfiedAtCommandResolution: target === current
-      };
-    }
-
-    const mode = item?.orientationTarget === "label-center" ? "label-center" : "code-box";
-    let target = center;
-    const plannedCoder = finite(coderCenterlineTarget, NaN);
-    const code = finite(codeBoxOffsetDeg, NaN);
-    if (mode === "code-box" && section === "back" && Number.isFinite(plannedCoder)) {
-      target = plannedCoder;
-    } else if (mode === "code-box" && Number.isFinite(code)) {
-      target = center + width / 2 - code + finite(inspectionOffsetDeg, 0);
-    }
+    const required = Math.min(100, Math.max(1, finite(item?.requiredVisibilityPercent, 50)));
+    const current = finite(currentPlate, center);
+    const rawTarget = nearestEquivalent(finite(sensorTarget, center), current);
+    const target = sameCommandAngle(rawTarget, current) ? current : rawTarget;
     return {
-      target: nearestEquivalent(target, currentPlate),
-      mode,
-      required: 100,
-      visibility: 100,
+      target,
+      mode: "label-center",
+      required,
+      visibility: finite(sensorVisibilityPercent, 100),
       center,
       width,
-      codeBoxOffsetDeg: code,
-      inspectionOffsetDeg: finite(inspectionOffsetDeg, 0)
+      satisfiedAtCommandResolution: target === current
     };
   }
 
@@ -252,7 +221,7 @@
 
   global.LabelerMapObjectOrientationDriver = api;
   global.LabelerDriverRegistry?.register("profile.mapObjectOrientation", api, {
-    dependencies: ["profile.coderOrientation"],
+    dependencies: [],
     source: "drivers/profile/map-object-orientation-driver.js",
     replace: true
   });

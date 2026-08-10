@@ -23,7 +23,6 @@
       mapObjectOrientation: true,
       orientationObjectId: item?.id,
       sensorId: item?.kind === "sensor" ? item?.id : undefined,
-      codingObjectId: item?.kind === "coding" ? item?.id : undefined,
       ...extras
     };
   }
@@ -131,25 +130,6 @@
     };
   }
 
-  function coderHandoffPlan({ item, label, section, target, window, holdTable, readyTable, rotation, formatter } = {}) {
-    return {
-      objectId: item?.id,
-      kind: "coding",
-      name: label,
-      section,
-      targetMode: target?.mode,
-      windowStart: round(window?.start, formatter),
-      windowStop: round(window?.end, formatter),
-      wipeHoldTableAngle: round(holdTable, formatter),
-      codingReadyTableAngle: round(readyTable, formatter),
-      targetPlateAngle: round(target?.target, formatter),
-      rotation: round(rotation, formatter),
-      coderAfterWipeHandoff: true,
-      orientationDriver: "profile.mapObjectOrientation",
-      handoffDriver: "profile.coderHandoff",
-      rowBuilderDriver: "profile.mapObjectRowBuilder"
-    };
-  }
 
   const api = Object.freeze({
     finite,
@@ -162,12 +142,11 @@
     continuation,
     retargetContinuation,
     orientationPlan,
-    coderHandoffPlan
   });
 
   global.LabelerMapObjectRowBuilderDriver = api;
   global.LabelerDriverRegistry?.register("profile.mapObjectRowBuilder", api, {
-    dependencies: ["profile.mapObjectOrientation", "profile.coderHandoff"],
+    dependencies: ["profile.mapObjectOrientation"],
     source: "drivers/profile/map-object-row-builder-driver.js",
     replace: true
   });

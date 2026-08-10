@@ -56,8 +56,6 @@
       "orientationObjectIds",
       "sensorId",
       "sensorIds",
-      "codingObjectId",
-      "codingObjectIds",
       "mapObjectOrientation",
       "mapObjectOrientationContinuation",
       "orientationConstraintPlanner",
