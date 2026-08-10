@@ -1,0 +1,41 @@
+name: Validate ServoForge runtime startup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/runtime-context-bridge.js"
+      - "app/map-overlay-builder-placement-integration.js"
+      - "app/wipe-down-builder.js"
+      - "app/assembly-driver-adapter.js"
+      - "app/animation-runtime.js"
+      - "app/bootstrap.js"
+      - "app.js"
+      - "tests/runtime-startup-browser.test.cjs"
+      - ".github/workflows/validate-runtime-startup.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check changed runtime modules
+        run: |
+          node --check app/runtime-context-bridge.js
+          node --check app/map-overlay-builder-placement-integration.js
+          node --check app/wipe-down-builder.js
+          node --check app/assembly-driver-adapter.js
+          node --check app/animation-runtime.js
+      - name: Install browser harness
+        run: npm install --no-save puppeteer-core@24.16.0
+      - name: Serve staging app
+        run: python3 -m http.server 8000 >/tmp/servoforge-http.log 2>&1 &
+      - name: Exercise real browser startup, animation, and overlays
+        run: node tests/runtime-startup-browser.test.cjs
