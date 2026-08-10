@@ -23,6 +23,16 @@
     return global.state || null;
   }
 
+  function activeMap() {
+    try {
+      if (typeof activeMachineMap === "function") return activeMachineMap();
+      if (typeof global.activeMachineMap === "function") return global.activeMachineMap();
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
   function codingObject(machineMap) {
     return (Array.isArray(machineMap?.objects) ? machineMap.objects : [])
       .find((item) => item?.kind === "coding" && item?.application !== "cold-glue" && item?.enabled !== false) || null;
@@ -61,27 +71,83 @@
     current.motionPlan.issues.push(issue);
   }
 
+  function finalAggregateNumber(machineMap, rows = []) {
+    const candidates = [];
+    const configured = finite(machineMap?.aggregateCount, NaN);
+    if (Number.isFinite(configured)) candidates.push(configured);
+    Object.keys(machineMap?.aggregateAngles || {}).forEach((key) => {
+      const value = Number(key);
+      if (Number.isFinite(value)) candidates.push(value);
+    });
+    rows.forEach((row) => {
+      const station = finite(row?.station, NaN);
+      if (Number.isFinite(station)) candidates.push(station);
+      const match = String(row?.action || "").match(/\bAgg\s*(\d+)\b/i);
+      if (match) candidates.push(Number(match[1]));
+    });
+    return candidates.length ? Math.max(...candidates.filter(Number.isFinite)) : NaN;
+  }
+
+  function belongsToAggregate(row, aggregate) {
+    if (!row || !Number.isFinite(aggregate)) return false;
+    if (finite(row.station, NaN) === aggregate) return true;
+    return new RegExp(`\\bAgg\\s*${aggregate}\\b`, "i").test(String(row.action || ""));
+  }
+
+  function finalAggregateHoldIndex(rows, machineMap) {
+    const aggregate = finalAggregateNumber(machineMap, rows);
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+      const row = rows[index];
+      if (!belongsToAggregate(row, aggregate) || Number(row?.cmd) !== 3) continue;
+      if (row?.stage === "complete"
+        || row?.wipeReference === true
+        || /wipe\s+hold|wipe.*rest|(?:hold|rest|complete).*agg/i.test(String(row?.action || ""))) {
+        return index;
+      }
+    }
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+      if (belongsToAggregate(rows[index], aggregate) && Number(rows[index]?.cmd) === 3) return index;
+    }
+    return -1;
+  }
+
+  function rowsThroughFinalAggregate(baseRows, machineMap) {
+    const source = (Array.isArray(baseRows) ? baseRows : []).map((row) => ({ ...row }));
+    const index = finalAggregateHoldIndex(source, machineMap);
+    if (index < 0) return source;
+    return source.slice(0, index + 1).map((row, rowIndex, rows) => ({
+      ...row,
+      hmi: rowIndex + 1,
+      plc: rowIndex,
+      terminalRest: rowIndex === rows.length - 1,
+      aggregateTerminal: rowIndex === rows.length - 1,
+      terminalAggregate: rowIndex === rows.length - 1 ? finalAggregateNumber(machineMap, source) : undefined
+    }));
+  }
+
   function clearTerminalFlags(row) {
     return {
       ...row,
       terminalRest: false,
       aggregateTerminal: false,
-      terminalAggregate: undefined,
-      plannerIntent: row?.plannerIntent === "HOLD" ? "HOLD" : row?.plannerIntent,
-      plannerRequestedCommand: row?.plannerRequestedCommand,
-      plannerRecommendedCommand: row?.plannerRecommendedCommand
+      codingTerminal: false,
+      terminalAggregate: undefined
     };
   }
 
   function appendCoderOrientation(machineMap, baseRows) {
     const current = runtimeState();
     const driver = global.LabelerCoderOrientationDriver;
-    const rows = (Array.isArray(baseRows) ? baseRows : []).map((row) => ({ ...row }));
-    if (!current || !driver?.codeBoxTarget || !rows.length) return rows;
+    const sourceRows = (Array.isArray(baseRows) ? baseRows : []).map((row) => ({ ...row }));
+    if (!current || !driver?.codeBoxTarget || !sourceRows.length) return sourceRows;
 
     const coder = codingObject(machineMap);
-    if (!coder) return rows;
+    if (!coder) return sourceRows;
 
+    // Strip every generic terminal/reference row after the final physical
+    // aggregate before planning coding. This makes the coder rule authoritative
+    // even when an older framing layer has already appended a 359° End Curve.
+    const rows = rowsThroughFinalAggregate(sourceRows, machineMap);
     const section = activeCodingSection();
     if (section === "none") return rows;
 
@@ -114,8 +180,9 @@
       return rows;
     }
 
-    // The coder must occur after the final aggregate in the same table cycle.
-    // Never unwrap it into a second revolution just to create a motion window.
+    // The same physical-window rule used by wipe moves applies here: use only
+    // real table travel after the final aggregate and finish before the object.
+    // Coding gets a 5° no-motion lead so the code box is stable before print.
     const readyTable = coderStart - PRE_CODER_MARGIN_DEG;
     const moveStart = lastTable + COMMAND_GAP_DEG;
     if (coderStart <= lastTable + EPS || readyTable <= moveStart + EPS) {
@@ -141,15 +208,14 @@
 
     const rotation = targetInfo.target - currentPlate;
     if (Math.abs(rotation) <= EPS) {
-      // The bottle is already correctly oriented. The existing final Aggregate
-      // 6 Rest holds that orientation through the coder, so do not create an
-      // unnecessary Rest -> Rest waypoint.
       if (current.motionPlan) {
+        current.motionPlan.rows = rows;
+        current.motionPlan.finalPlateAngle = rows.at(-1)?.plateAngle;
         current.motionPlan.coderPlan = {
           objectId: coder.id,
           section,
           codeBoxCenterMm,
-          codeBoxOffsetDeg,
+          codeBoxOffsetDeg: finish(codeBoxOffsetDeg),
           targetPlateAngle: finish(targetInfo.target),
           currentPlateAngle: finish(currentPlate),
           rotation: 0,
@@ -212,6 +278,7 @@
       codingHold: true,
       coderTerminalHold: true,
       terminalRest: true,
+      codingTerminal: true,
       activeHold: false,
       plannerIntent: "HOLD",
       plannerRequestedCommand: 3,
@@ -261,26 +328,33 @@
   }
 
   function install() {
-    const original = global.generatedAplMapDrivenProfile;
+    const original = global.generatedServoProfile;
     if (typeof original !== "function") return false;
-    if (original.aplCoderCodeBoxOrientationV1) return true;
+    if (original.aplCoderCodeBoxOrientationV2) return true;
 
-    const wrapped = function generatedAplMapDrivenProfileWithCoderCodeBox(machineMap) {
-      return appendCoderOrientation(machineMap, original.call(this, machineMap));
+    const wrapped = function generatedServoProfileWithCoderCodeBox(...args) {
+      const rows = original.apply(this, args);
+      const current = runtimeState();
+      if (String(current?.applicationMode || "apl").toLowerCase() !== "apl") return rows;
+      const machineMap = activeMap();
+      return machineMap ? appendCoderOrientation(machineMap, rows) : rows;
     };
-    wrapped.aplCoderCodeBoxOrientationV1 = true;
+    wrapped.aplCoderCodeBoxOrientationV2 = true;
     wrapped.previousGenerator = original;
 
-    global.generatedAplMapDrivenProfile = wrapped;
-    global.LabelerAplMapProfileGenerator = Object.freeze({
-      ...(global.LabelerAplMapProfileGenerator || {}),
+    global.generatedServoProfile = wrapped;
+    global.LabelerProfileRouter = Object.freeze({
+      ...(global.LabelerProfileRouter || {}),
       generate: wrapped
     });
     global.LabelerAplCoderCodeBoxOrientation = Object.freeze({
       installed: true,
-      version: 1,
+      version: 2,
       preCoderMarginDeg: PRE_CODER_MARGIN_DEG,
       activeCodingSection,
+      finalAggregateNumber,
+      finalAggregateHoldIndex,
+      rowsThroughFinalAggregate,
       appendCoderOrientation,
       refresh: install
     });
@@ -291,6 +365,10 @@
     if (!install()) global.setTimeout(wait, RETRY_MS);
   }
 
+  // This file loads inside the profile-generation chain before profile-routing.
+  // Install only after that complete chain settles so this wrapper owns the
+  // final generatedServoProfile entrypoint and cannot be overwritten later in
+  // the same loader.
   Promise.resolve(global.ServoForgeProfileGenerationReady)
     .catch(() => null)
     .finally(wait);
