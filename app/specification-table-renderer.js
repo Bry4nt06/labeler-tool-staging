@@ -20,8 +20,15 @@ function specificationDeleteButton(label) {
   return `<button class="danger small-button spec-icon-button spec-delete-button" type="button" title="Delete ${description}" aria-label="Delete ${description}">${specificationActionIcon("delete")}</button>`;
 }
 
+function specificationInfoHeader(label, title, tooltip, ariaLabel) {
+  const safeTitle = specificationAttributeValue(title || label);
+  const safeTooltip = specificationAttributeValue(tooltip || title || label);
+  const safeAria = specificationAttributeValue(ariaLabel || `About ${label}`);
+  return `<span class="spec-header-stack" title="${safeTitle}"><span class="spec-header-label">${label}</span><button class="info-tip spec-header-info" type="button" title="${safeTooltip}" aria-label="${safeAria}">i</button></span>`;
+}
+
 function renderBottleSpecs() {
-  els.bottleSpecs.innerHTML = `<div class="table-tools"><button id="addBottleSpec" type="button">Add Bottle</button></div><table><thead><tr><th>#</th><th>Bottle Type</th><th class="num" title="Diameter Target (mm)">Dia Target</th><th class="num" title="Radius Reduction (mm)">Radius Red.</th><th class="num" title="Body/Back Diameter (mm)">Body/Back Dia</th><th class="num" title="Body/Back Circumference (mm)">Body/Back Circ</th><th>Action</th></tr></thead><tbody></tbody></table>`;
+  els.bottleSpecs.innerHTML = `<div class="table-tools"><button id="addBottleSpec" type="button">Add Bottle</button></div><table><thead><tr><th>#</th><th>Bottle Type</th><th class="num">${specificationInfoHeader("Dia Target", "Diameter Target (mm)", "Target bottle diameter in mm.", "About Diameter Target")}</th><th class="num">${specificationInfoHeader("Radius Red.", "Radius Reduction (mm)", "Radius reduction applied to calculate the effective body/back diameter.", "About Radius Reduction")}</th><th class="num">${specificationInfoHeader("Body/Back Dia", "Body/Back Diameter (mm)", "Effective body/back bottle diameter after radius reduction, in mm.", "About Body and Back Diameter")}</th><th class="num">${specificationInfoHeader("Body/Back Circ", "Body/Back Circumference (mm)", "Effective body/back circumference calculated from the body/back diameter, in mm.", "About Body and Back Circumference")}</th><th>Action</th></tr></thead><tbody></tbody></table>`;
   const body = els.bottleSpecs.querySelector("tbody");
   state.bottleSpecs.forEach((spec, index) => {
     const tr = document.createElement("tr");
@@ -39,7 +46,7 @@ function renderLabelSpecs() {
       <span class="table-tool-note">Assign each brand to APL or Cold Glue. Build selections are filtered by the active application map.</span>
       <button id="addLabelSpec" type="button">Add Label</button>
     </div>
-    <table><thead><tr><th>#</th><th>Brand</th><th title="Application">App</th><th class="num" title="Body Length">Body Lgth</th><th class="num" title="Back Length">Back Lgth</th><th class="num" title="Neck Height">Neck Ht <button class="info-tip" type="button" title="Measure the vertical height of the neck label from its bottom edge to its top edge on the approved label drawing." aria-label="Where to get Neck Height information">i</button></th><th class="num" title="Neck Length">Neck Lgth</th><th class="num" title="Neck Curve Bottom">Neck Curve <button class="info-tip" type="button" title="Use the developed label width along the lower curved edge of the neck label from the approved label drawing." aria-label="Where to get Neck Curve Bottom information">i</button></th><th class="num" title="Neck Bottom Circumference">Neck Circ <button class="info-tip" type="button" title="Measure the bottle circumference at the exact height where the bottom edge of the neck label sits." aria-label="Where to get Neck Bottom Circumference information">i</button></th><th class="num" title="Code Box Center from Left Edge">Code Box Ctr <button class="info-tip" type="button" title="On the approved label drawing, measure from the label's left edge to the center of the 20 mm coding box." aria-label="Where to get Code Box Center information">i</button></th><th>Action</th></tr></thead><tbody></tbody></table>`;
+    <table><thead><tr><th>#</th><th>Brand</th><th title="Application">App</th><th class="num">${specificationInfoHeader("Body L", "Body Length", "Body label length in mm from the approved label drawing.", "About Body Label Length")}</th><th class="num">${specificationInfoHeader("Back L", "Back Length", "Back label length in mm from the approved label drawing.", "About Back Label Length")}</th><th class="num">${specificationInfoHeader("Neck Ht", "Neck Height", "Measure the vertical height of the neck label from its bottom edge to its top edge on the approved label drawing.", "About Neck Height")}</th><th class="num">${specificationInfoHeader("Neck L", "Neck Length", "Neck label length in mm from the approved label drawing.", "About Neck Label Length")}</th><th class="num">${specificationInfoHeader("Neck Curve", "Neck Curve Bottom", "Use the developed label width along the lower curved edge of the neck label from the approved label drawing.", "About Neck Curve Bottom")}</th><th class="num">${specificationInfoHeader("Neck Circ", "Neck Bottom Circumference", "Measure the bottle circumference at the exact height where the bottom edge of the neck label sits.", "About Neck Bottom Circumference")}</th><th class="num">${specificationInfoHeader("Code Box Ctr", "Code Box Center from Left Edge", "On the approved label drawing, measure from the label's left edge to the center of the coding box.", "About Code Box Center")}</th><th>Action</th></tr></thead><tbody></tbody></table>`;
   const labelSpecsTable = els.labelSpecs.querySelector("table");
   labelSpecsTable.classList.add("label-specs-table");
   labelSpecsTable.insertAdjacentHTML("afterbegin", '<colgroup><col class="label-col-id"><col class="label-col-brand"><col class="label-col-application"><col class="label-col-short"><col class="label-col-short"><col class="label-col-neck-height"><col class="label-col-neck-length"><col class="label-col-curve"><col class="label-col-circ"><col class="label-col-code"><col class="label-col-action"></colgroup>');
@@ -62,5 +69,6 @@ function renderLabelSpecs() {
 
 window.LabelerSpecificationTableRenderer = Object.freeze({
   renderBottleSpecs,
-  renderLabelSpecs
+  renderLabelSpecs,
+  specificationInfoHeader
 });
