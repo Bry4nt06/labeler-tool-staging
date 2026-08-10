@@ -9,6 +9,10 @@ on:
       - "app/simulation-collapsible-integration.js"
       - "app/controllers/simulation-controller.js"
       - "app/controllers/workspace-action-service.js"
+      - "app/bootstrap.js"
+      - "app.js"
+      - "service-worker.js"
+      - "update-manifest.json"
       - "tests/animation-frame-coordinator.test.js"
       - "tests/map-rendering-retirement.test.js"
       - ".github/workflows/validate-animation-frame-coordinator.yml"
@@ -25,11 +29,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Check animation runtime syntax
+      - name: Check v53 runtime syntax
         run: |
           node --check app/map-animation-renderer.js
           node --check app/animation-runtime.js
           node --check app/simulation-collapsible-integration.js
+          node --check app/bootstrap.js
+          node --check app.js
+          node --check service-worker.js
       - name: Exercise Play frame coordinator
         run: node tests/animation-frame-coordinator.test.js
       - name: Preserve renderer ownership
