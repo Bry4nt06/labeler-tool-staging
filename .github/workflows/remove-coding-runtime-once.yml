@@ -83,6 +83,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git restore --source=HEAD -- .github/workflows
+          rm -f .github/workflows/validate-no-coding-runtime.yml
           git add -A
           git commit -m "Disable coding servo path and stop after final aggregate"
           git push origin HEAD:main
