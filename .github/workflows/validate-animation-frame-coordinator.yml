@@ -1,0 +1,36 @@
+name: Validate animation frame coordinator
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/map-animation-renderer.js"
+      - "app/animation-runtime.js"
+      - "app/simulation-collapsible-integration.js"
+      - "app/controllers/simulation-controller.js"
+      - "app/controllers/workspace-action-service.js"
+      - "tests/animation-frame-coordinator.test.js"
+      - "tests/map-rendering-retirement.test.js"
+      - ".github/workflows/validate-animation-frame-coordinator.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check animation runtime syntax
+        run: |
+          node --check app/map-animation-renderer.js
+          node --check app/animation-runtime.js
+          node --check app/simulation-collapsible-integration.js
+      - name: Exercise Play frame coordinator
+        run: node tests/animation-frame-coordinator.test.js
+      - name: Preserve renderer ownership
+        run: node tests/map-rendering-retirement.test.js
