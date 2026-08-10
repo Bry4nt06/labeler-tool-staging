@@ -1,6 +1,8 @@
 "use strict";
 
 (function installAssemblyDriverAdapter(global) {
+  if (global.LabelerAssemblyDriverAdapter?.installed) return;
+
   const model = global.LabelerAssemblyModelDriver;
   const geometry = global.LabelerAssemblyGeometryDriver;
   if (!model || !geometry) throw new Error("Assembly drivers must load before the assembly adapter.");
@@ -61,9 +63,11 @@
   install("assemblySelectValue", model.selectValue);
 
   global.LabelerAssemblyDriverAdapter = Object.freeze({
+    installed: true,
     model,
     geometry,
     normalize,
-    geometryContext
+    geometryContext,
+    mapBuilderPrerequisiteV1: true
   });
 })(window);
