@@ -36,41 +36,49 @@ jobs:
           cat > /tmp/servoforge-browser-test.cjs <<'NODE'
           const puppeteer = require(process.cwd() + '/node_modules/puppeteer-core');
           const fs = require('fs');
-          const candidates = ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
-          const executablePath = candidates.find((path) => fs.existsSync(path));
-          if (!executablePath) throw new Error('No Chrome/Chromium executable found on runner.');
-          const browser = await puppeteer.launch({ executablePath, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
-          const page = await browser.newPage();
-          const consoleMessages = [];
-          const pageErrors = [];
-          page.on('console', (msg) => consoleMessages.push(`${msg.type()}: ${msg.text()}`));
-          page.on('pageerror', (error) => pageErrors.push(error.stack || error.message || String(error)));
-          await page.goto('http://127.0.0.1:8000/index.html', { waitUntil: 'networkidle0', timeout: 30000 });
-          await new Promise((resolve) => setTimeout(resolve, 1800));
-          const snapshot = async () => page.evaluate(() => ({
-            build: window.ServoForgeBootstrapBuild || null,
-            featureReady: Boolean(window.ServoForgeFeatureIntegrationsReady),
-            animationRuntime: Boolean(window.LabelerAnimationRuntime),
-            mapAnimationRenderer: Boolean(window.LabelerMapAnimationRenderer),
-            globalFrameIsMapCoordinator: window.renderAnimationFrame === window.LabelerMapAnimationRenderer?.renderAnimationFrame,
-            globalFrameIsWorkspaceStatus: window.renderAnimationFrame === window.LabelerWorkspaceStatusRenderer?.renderAnimationFrame,
-            playing: typeof state !== 'undefined' ? state.isPlaying : null,
-            stateAngle: typeof state !== 'undefined' ? state.previewAngle : null,
-            centerAngle: document.querySelector('[data-animation-center]')?.textContent || null,
-            jumpAngle: document.querySelector('#tableAngleJump')?.value || null,
-            sliderAngle: document.querySelector('#previewAngle')?.value || null,
-            playLabel: document.querySelector('#playPause')?.textContent || null,
-            startupError: document.querySelector('.startup-error')?.textContent || null
-          }));
-          const before = await snapshot();
-          await new Promise((resolve) => setTimeout(resolve, 1200));
-          const after = await snapshot();
-          console.log('BROWSER BEFORE', JSON.stringify(before));
-          console.log('BROWSER AFTER ', JSON.stringify(after));
-          console.log('ANGLE DELTA', Number(after.stateAngle) - Number(before.stateAngle));
-          console.log('PAGE ERRORS', JSON.stringify(pageErrors));
-          console.log('CONSOLE ERRORS', JSON.stringify(consoleMessages.filter((line) => /error/i.test(line))));
-          await browser.close();
-          if (before.startupError || after.startupError || pageErrors.length) process.exitCode = 1;
+
+          (async () => {
+            const candidates = ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
+            const executablePath = candidates.find((path) => fs.existsSync(path));
+            if (!executablePath) throw new Error('No Chrome/Chromium executable found on runner.');
+            const browser = await puppeteer.launch({ executablePath, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+            const page = await browser.newPage();
+            const consoleMessages = [];
+            const pageErrors = [];
+            page.on('console', (msg) => consoleMessages.push(`${msg.type()}: ${msg.text()}`));
+            page.on('pageerror', (error) => pageErrors.push(error.stack || error.message || String(error)));
+            await page.goto('http://127.0.0.1:8000/index.html', { waitUntil: 'networkidle0', timeout: 30000 });
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            const snapshot = async () => page.evaluate(() => ({
+              build: window.ServoForgeBootstrapBuild || null,
+              featureReady: Boolean(window.ServoForgeFeatureIntegrationsReady),
+              animationRuntime: Boolean(window.LabelerAnimationRuntime),
+              mapAnimationRenderer: Boolean(window.LabelerMapAnimationRenderer),
+              workspaceStatusRenderer: Boolean(window.LabelerWorkspaceStatusRenderer),
+              globalFrameIsMapCoordinator: window.renderAnimationFrame === window.LabelerMapAnimationRenderer?.renderAnimationFrame,
+              globalFrameIsWorkspaceStatus: window.renderAnimationFrame === window.LabelerWorkspaceStatusRenderer?.renderAnimationFrame,
+              playing: typeof state !== 'undefined' ? state.isPlaying : null,
+              activeTab: typeof state !== 'undefined' ? state.activeTab : null,
+              stateAngle: typeof state !== 'undefined' ? state.previewAngle : null,
+              centerAngle: document.querySelector('[data-animation-center]')?.textContent || null,
+              jumpAngle: document.querySelector('#tableAngleJump')?.value || null,
+              sliderAngle: document.querySelector('#previewAngle')?.value || null,
+              playLabel: document.querySelector('#playPause')?.textContent || null,
+              startupError: document.querySelector('.startup-error')?.textContent || null
+            }));
+            const before = await snapshot();
+            await new Promise((resolve) => setTimeout(resolve, 1200));
+            const after = await snapshot();
+            console.log('BROWSER BEFORE', JSON.stringify(before));
+            console.log('BROWSER AFTER ', JSON.stringify(after));
+            console.log('ANGLE DELTA', Number(after.stateAngle) - Number(before.stateAngle));
+            console.log('PAGE ERRORS', JSON.stringify(pageErrors));
+            console.log('CONSOLE ERRORS', JSON.stringify(consoleMessages.filter((line) => /error/i.test(line))));
+            await browser.close();
+            if (before.startupError || after.startupError || pageErrors.length) process.exitCode = 1;
+          })().catch((error) => {
+            console.error(error.stack || error);
+            process.exitCode = 1;
+          });
           NODE
           node /tmp/servoforge-browser-test.cjs
