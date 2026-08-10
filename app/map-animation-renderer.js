@@ -79,13 +79,45 @@
     updateAnimatedSvg(svg, program, () => renderSimulationMap(program));
   }
 
+  function synchronizeAnimationControls() {
+    if (els.previewAngle) els.previewAngle.value = String(state.previewAngle);
+    if (els.tableAngleJump && global.document?.activeElement !== els.tableAngleJump) {
+      els.tableAngleJump.value = typeof fmt === "function"
+        ? String(fmt(state.previewAngle, 1))
+        : String(Math.round(Number(state.previewAngle || 0) * 10) / 10);
+    }
+  }
+
+  function renderAnimationFrame() {
+    // This coordinator is the public animation-frame contract used by the
+    // requestAnimationFrame runtime and the workspace controllers. The map
+    // renderer refactor extracted the two low-level SVG updaters but omitted
+    // this coordinator, leaving Play to advance state.previewAngle without
+    // repainting the UI.
+    synchronizeAnimationControls();
+    updateMapAnimationFrame();
+    updateSimulationAnimationFrame();
+
+    if (typeof global.updateActiveServoProgramRow === "function") {
+      global.updateActiveServoProgramRow();
+    }
+    if (els.wipeDownDataPanel && els.wipeDownDataPanel.hidden === false
+      && typeof global.renderWipeDownData === "function") {
+      global.renderWipeDownData();
+    }
+  }
+
   global.updateAnimatedSvg = updateAnimatedSvg;
   global.updateMapAnimationFrame = updateMapAnimationFrame;
   global.updateSimulationAnimationFrame = updateSimulationAnimationFrame;
+  global.renderAnimationFrame = renderAnimationFrame;
   global.LabelerMapAnimationRenderer = Object.freeze({
     updateAnimatedSvg,
     updateMapAnimationFrame,
     updateSimulationAnimationFrame,
-    synchronizedBottlePocketsV1: true
+    synchronizeAnimationControls,
+    renderAnimationFrame,
+    synchronizedBottlePocketsV1: true,
+    animationFrameCoordinatorV2: true
   });
 })(window);
