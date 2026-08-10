@@ -34,8 +34,33 @@
   }
 
   function codingObject(machineMap) {
-    return (Array.isArray(machineMap?.objects) ? machineMap.objects : [])
-      .find((item) => item?.kind === "coding" && item?.application !== "cold-glue" && item?.enabled !== false) || null;
+    const current = runtimeState();
+    const sources = [
+      ...(Array.isArray(machineMap?.objects) ? machineMap.objects : []),
+      ...(Array.isArray(current?.aplMapObjects) ? current.aplMapObjects : []),
+      ...((Array.isArray(current?.mapLibrary) ? current.mapLibrary : [])
+        .filter((map) => map?.id === current?.activeMapId)
+        .flatMap((map) => Array.isArray(map?.objects) ? map.objects : []))
+    ];
+    return sources.find((item) => item?.kind === "coding"
+      && item?.application !== "cold-glue"
+      && item?.enabled !== false) || null;
+  }
+
+  function selectedRecipe() {
+    const current = runtimeState();
+    const selected = typeof selectedLabelSpec === "function" ? selectedLabelSpec() : null;
+    return selected || (Array.isArray(current?.labelSpecs)
+      ? current.labelSpecs.find((spec) => spec?.brand === current.selectedBrand)
+      : null) || null;
+  }
+
+  function selectedBottle() {
+    const current = runtimeState();
+    const selected = typeof selectedBottleSpec === "function" ? selectedBottleSpec() : null;
+    return selected || (Array.isArray(current?.bottleSpecs)
+      ? current.bottleSpecs.find((spec) => spec?.bottleType === current.selectedBottle)
+      : null) || null;
   }
 
   function activeCodingSection() {
@@ -52,7 +77,23 @@
     return typeof bodyCircumference === "function" ? finite(bodyCircumference(bottle), NaN) : NaN;
   }
 
-  function applicationTarget(section) {
+  function sectionLabelLength(section, label) {
+    if (section === "neck") return finite(label?.neckLengthMm, NaN);
+    if (section === "body") return finite(label?.bodyLengthMm, NaN);
+    if (section === "back") return finite(label?.backLengthMm, NaN);
+    return NaN;
+  }
+
+  function applicationTarget(section, rows = []) {
+    const sectionName = String(section || "");
+    const direct = (Array.isArray(rows) ? rows : []).find((row) => {
+      if (!Number.isFinite(finite(row?.plateAngle, NaN))) return false;
+      const explicit = String(row?.applicationSection || row?.applicationTargetSection || "").toLowerCase();
+      if (explicit === sectionName) return true;
+      return new RegExp(`hold\\s+for\\s+${sectionName}\\s+application`, "i").test(String(row?.action || ""));
+    });
+    if (direct) return finite(direct.plateAngle, NaN);
+
     if (typeof generatedAplSeedProfile !== "function") return NaN;
     const seed = generatedAplSeedProfile();
     const index = section === "neck" ? 1 : section === "body" ? 11 : section === "back" ? 21 : -1;
@@ -69,6 +110,17 @@
     current.motionPlan = current.motionPlan && typeof current.motionPlan === "object" ? current.motionPlan : {};
     current.motionPlan.issues = Array.isArray(current.motionPlan.issues) ? current.motionPlan.issues : [];
     current.motionPlan.issues.push(issue);
+  }
+
+  function setBlockedPlan(reason, details = {}) {
+    const current = runtimeState();
+    if (!current) return;
+    current.motionPlan = current.motionPlan && typeof current.motionPlan === "object" ? current.motionPlan : {};
+    current.motionPlan.coderPlan = {
+      status: "blocked",
+      reason,
+      ...details
+    };
   }
 
   function finalAggregateNumber(machineMap, rows = []) {
@@ -115,13 +167,14 @@
     const source = (Array.isArray(baseRows) ? baseRows : []).map((row) => ({ ...row }));
     const index = finalAggregateHoldIndex(source, machineMap);
     if (index < 0) return source;
+    const aggregate = finalAggregateNumber(machineMap, source);
     return source.slice(0, index + 1).map((row, rowIndex, rows) => ({
       ...row,
       hmi: rowIndex + 1,
       plc: rowIndex,
       terminalRest: rowIndex === rows.length - 1,
       aggregateTerminal: rowIndex === rows.length - 1,
-      terminalAggregate: rowIndex === rows.length - 1 ? finalAggregateNumber(machineMap, source) : undefined
+      terminalAggregate: rowIndex === rows.length - 1 ? aggregate : undefined
     }));
   }
 
@@ -142,25 +195,32 @@
     if (!current || !driver?.codeBoxTarget || !sourceRows.length) return sourceRows;
 
     const coder = codingObject(machineMap);
-    if (!coder) return sourceRows;
+    if (!coder) {
+      setBlockedPlan("missing-coder-object");
+      return sourceRows;
+    }
 
-    // Strip every generic terminal/reference row after the final physical
-    // aggregate before planning coding. This makes the coder rule authoritative
-    // even when an older framing layer has already appended a 359° End Curve.
+    // Remove any generic post-process terminal (for example the old 359° End
+    // Curve) before planning the coder. Aggregate 6 is the physical handoff.
     const rows = rowsThroughFinalAggregate(sourceRows, machineMap);
     const section = activeCodingSection();
-    if (section === "none") return rows;
+    if (section === "none") {
+      setBlockedPlan("no-active-label-section");
+      return rows;
+    }
 
-    const label = typeof selectedLabelSpec === "function" ? selectedLabelSpec() : null;
-    const bottle = typeof selectedBottleSpec === "function" ? selectedBottleSpec() : null;
+    const label = selectedRecipe();
+    const bottle = selectedBottle();
     const circumferenceMm = sectionCircumference(section, label, bottle);
+    const labelLengthMm = sectionLabelLength(section, label);
     const codeBoxCenterMm = finite(label?.codeBoxCenterMm, NaN);
-    const wipe = typeof sectionWipePlan === "function" ? sectionWipePlan(section) : null;
-    const labelWidthDeg = finite(wipe?.labelDeg, NaN);
+    const labelWidthDeg = typeof degFromMm === "function"
+      ? finite(degFromMm(labelLengthMm, circumferenceMm), NaN)
+      : NaN;
     const codeBoxOffsetDeg = typeof degFromMm === "function"
       ? finite(degFromMm(codeBoxCenterMm, circumferenceMm), NaN)
       : NaN;
-    const targetApplication = applicationTarget(section);
+    const targetApplication = applicationTarget(section, rows);
     const lastRow = rows.at(-1);
     const lastTable = finite(lastRow?.tableAngle, NaN);
     const currentPlate = finite(lastRow?.plateAngle, NaN);
@@ -170,7 +230,24 @@
       while (coderEnd <= coderStart + EPS) coderEnd += 360;
     }
 
-    if (![circumferenceMm, codeBoxCenterMm, labelWidthDeg, codeBoxOffsetDeg, targetApplication, lastTable, currentPlate, coderStart, coderEnd].every(Number.isFinite)) {
+    const geometry = {
+      section,
+      labelBrand: label?.brand || current.selectedBrand || "",
+      bottleType: bottle?.bottleType || current.selectedBottle || "",
+      circumferenceMm,
+      labelLengthMm,
+      labelWidthDeg,
+      codeBoxCenterMm,
+      codeBoxOffsetDeg,
+      applicationTarget: targetApplication,
+      finalAggregateTableAngle: lastTable,
+      finalAggregatePlateAngle: currentPlate,
+      coderStart,
+      coderEnd
+    };
+
+    if (![circumferenceMm, labelLengthMm, codeBoxCenterMm, labelWidthDeg, codeBoxOffsetDeg, targetApplication, lastTable, currentPlate, coderStart, coderEnd].every(Number.isFinite)) {
+      setBlockedPlan("invalid-codebox-geometry", geometry);
       appendIssue({
         level: "bad",
         code: "apl-coder-codebox-geometry",
@@ -180,12 +257,15 @@
       return rows;
     }
 
-    // The same physical-window rule used by wipe moves applies here: use only
-    // real table travel after the final aggregate and finish before the object.
-    // Coding gets a 5° no-motion lead so the code box is stable before print.
     const readyTable = coderStart - PRE_CODER_MARGIN_DEG;
     const moveStart = lastTable + COMMAND_GAP_DEG;
     if (coderStart <= lastTable + EPS || readyTable <= moveStart + EPS) {
+      setBlockedPlan("insufficient-table-window", {
+        ...geometry,
+        moveStartTableAngle: moveStart,
+        readyTableAngle: readyTable,
+        preCoderMarginDeg: PRE_CODER_MARGIN_DEG
+      });
       appendIssue({
         level: "bad",
         code: "apl-coder-window-capacity",
@@ -204,28 +284,29 @@
       storedDirection: machineMap?.machineSettings?.direction || current.direction,
       currentPlateAngle: currentPlate
     });
-    if (!targetInfo || !Number.isFinite(targetInfo.target)) return rows;
+    if (!targetInfo || !Number.isFinite(targetInfo.target)) {
+      setBlockedPlan("invalid-codebox-target", geometry);
+      return rows;
+    }
 
     const rotation = targetInfo.target - currentPlate;
     if (Math.abs(rotation) <= EPS) {
-      if (current.motionPlan) {
-        current.motionPlan.rows = rows;
-        current.motionPlan.finalPlateAngle = rows.at(-1)?.plateAngle;
-        current.motionPlan.coderPlan = {
-          objectId: coder.id,
-          section,
-          codeBoxCenterMm,
-          codeBoxOffsetDeg: finish(codeBoxOffsetDeg),
-          targetPlateAngle: finish(targetInfo.target),
-          currentPlateAngle: finish(currentPlate),
-          rotation: 0,
-          readyTableAngle: finish(readyTable),
-          physicalStart: finish(coderStart),
-          physicalEnd: finish(coderEnd),
-          preCoderMarginDeg: PRE_CODER_MARGIN_DEG,
-          alreadyAligned: true
-        };
-      }
+      current.motionPlan = current.motionPlan && typeof current.motionPlan === "object" ? current.motionPlan : {};
+      current.motionPlan.rows = rows;
+      current.motionPlan.finalPlateAngle = rows.at(-1)?.plateAngle;
+      current.motionPlan.coderPlan = {
+        status: "ready",
+        objectId: coder.id,
+        ...geometry,
+        targetPlateAngle: finish(targetInfo.target),
+        currentPlateAngle: finish(currentPlate),
+        rotation: 0,
+        readyTableAngle: finish(readyTable),
+        physicalStart: finish(coderStart),
+        physicalEnd: finish(coderEnd),
+        preCoderMarginDeg: PRE_CODER_MARGIN_DEG,
+        alreadyAligned: true
+      };
       return rows;
     }
 
@@ -299,12 +380,9 @@
     current.motionPlan.rows = rows;
     current.motionPlan.finalPlateAngle = rows.at(-1)?.plateAngle;
     current.motionPlan.coderPlan = {
+      status: ratio >= maxRatio ? "capacity-fault" : "ready",
       objectId: coder.id,
-      section,
-      codeBoxCenterMm,
-      codeBoxOffsetDeg: finish(codeBoxOffsetDeg),
-      applicationTarget: finish(targetApplication),
-      labelWidthDeg: finish(labelWidthDeg),
+      ...geometry,
       targetPlateAngle: finish(targetInfo.target),
       currentPlateAngle: finish(currentPlate),
       rotation: finish(rotation),
@@ -330,7 +408,7 @@
   function install() {
     const original = global.generatedServoProfile;
     if (typeof original !== "function") return false;
-    if (original.aplCoderCodeBoxOrientationV2) return true;
+    if (original.aplCoderCodeBoxOrientationV3) return true;
 
     const wrapped = function generatedServoProfileWithCoderCodeBox(...args) {
       const rows = original.apply(this, args);
@@ -339,7 +417,7 @@
       const machineMap = activeMap();
       return machineMap ? appendCoderOrientation(machineMap, rows) : rows;
     };
-    wrapped.aplCoderCodeBoxOrientationV2 = true;
+    wrapped.aplCoderCodeBoxOrientationV3 = true;
     wrapped.previousGenerator = original;
 
     global.generatedServoProfile = wrapped;
@@ -349,7 +427,7 @@
     });
     global.LabelerAplCoderCodeBoxOrientation = Object.freeze({
       installed: true,
-      version: 2,
+      version: 3,
       preCoderMarginDeg: PRE_CODER_MARGIN_DEG,
       activeCodingSection,
       finalAggregateNumber,
@@ -365,10 +443,6 @@
     if (!install()) global.setTimeout(wait, RETRY_MS);
   }
 
-  // This file loads inside the profile-generation chain before profile-routing.
-  // Install only after that complete chain settles so this wrapper owns the
-  // final generatedServoProfile entrypoint and cannot be overwritten later in
-  // the same loader.
   Promise.resolve(global.ServoForgeProfileGenerationReady)
     .catch(() => null)
     .finally(wait);
