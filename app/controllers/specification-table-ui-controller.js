@@ -13,6 +13,8 @@
       #specs .spec-section table {
         border-collapse: separate;
         border-spacing: 0;
+        width: 100%;
+        max-width: 100%;
       }
 
       #specs .spec-section table thead th {
@@ -26,6 +28,80 @@
 
       #specs .spec-section table thead th:first-child {
         box-shadow: inset 1px 0 0 var(--line), inset 0 -1px 0 var(--line), 0 7px 14px rgba(0, 0, 0, 0.24);
+      }
+
+      /* Specs stay inside the normal workspace width. Compact the table
+         itself instead of widening the entire right workspace and squeezing
+         the mechanical map. */
+      #specs .spec-section th,
+      #specs .spec-section td,
+      #specs .spec-section .num {
+        text-align: center !important;
+        vertical-align: middle;
+      }
+
+      #specs .spec-section input,
+      #specs .spec-section select {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 4px 5px;
+        text-align: center;
+      }
+
+      #specs .spec-section select {
+        text-align-last: center;
+      }
+
+      #specs #bottleSpecs > table {
+        min-width: 0;
+        table-layout: fixed;
+      }
+
+      #specs #bottleSpecs th:nth-child(1),
+      #specs #bottleSpecs td:nth-child(1) { width: 30px; }
+      #specs #bottleSpecs th:nth-child(2),
+      #specs #bottleSpecs td:nth-child(2) { width: 150px; }
+      #specs #bottleSpecs th:nth-child(3),
+      #specs #bottleSpecs td:nth-child(3),
+      #specs #bottleSpecs th:nth-child(4),
+      #specs #bottleSpecs td:nth-child(4),
+      #specs #bottleSpecs th:nth-child(5),
+      #specs #bottleSpecs td:nth-child(5),
+      #specs #bottleSpecs th:nth-child(6),
+      #specs #bottleSpecs td:nth-child(6) { width: 104px; }
+      #specs #bottleSpecs th:last-child,
+      #specs #bottleSpecs td:last-child { width: 74px; }
+
+      #specs #labelSpecs > .label-specs-table {
+        width: 100%;
+        min-width: 0 !important;
+        max-width: 100%;
+        table-layout: fixed;
+      }
+
+      #specs .label-specs-table .label-col-id { width: 28px; }
+      #specs .label-specs-table .label-col-brand { width: 110px; }
+      #specs .label-specs-table .label-col-spec { width: 60px; }
+      #specs .label-specs-table .label-col-application { width: 64px; }
+      #specs .label-specs-table .label-col-short { width: 58px; }
+      #specs .label-specs-table .label-col-neck-height { width: 62px; }
+      #specs .label-specs-table .label-col-neck-length { width: 62px; }
+      #specs .label-specs-table .label-col-curve { width: 72px; }
+      #specs .label-specs-table .label-col-circ { width: 72px; }
+      #specs .label-specs-table .label-col-code { width: 105px; }
+      #specs .label-specs-table .label-col-action { width: 76px; }
+
+      #specs .label-specs-table th {
+        padding-inline: 3px;
+        font-size: 11px;
+        line-height: 1.1;
+        white-space: normal;
+      }
+
+      #specs .label-specs-table td {
+        padding-inline: 3px;
       }
 
       #specs tr.selected-brand-spec > td {
@@ -68,7 +144,7 @@
         display: flex !important;
         flex-wrap: nowrap !important;
         align-items: center;
-        justify-content: flex-start;
+        justify-content: center;
         gap: 5px;
         width: auto;
         max-width: 100%;
@@ -124,6 +200,7 @@
         #specs #bottleSpecs > table,
         #specs #labelSpecs > table {
           width: max-content;
+          min-width: max-content !important;
           max-width: none;
         }
 
