@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "coder-terminal-source-policy-v52-20260809-1940",
+  "buildId": "animation-frame-coordinator-v53-20260809-2015",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "STAGING 0.9.10 build v52 makes the physical TopModul coder start the authoritative terminal CMD 3 destination before grammar derives movement commands. It removes the synthetic post-coder 359-degree destination from the generated program path and removes the temporary five-degree pre-coder deadline."
+  "notes": "STAGING 0.9.10 build v53 restores the public renderAnimationFrame coordinator used by Play and the requestAnimationFrame runtime after the map renderer refactor. Mechanical-map animation, simulation animation, table-angle controls, active servo rows, and open wipe telemetry now repaint from the same animation frame without restoring the removed 359-degree TopModul terminal move."
 }
