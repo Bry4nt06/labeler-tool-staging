@@ -9,6 +9,8 @@
     "app/cold-glue-profile-generation.js",
     "app/apl-map-profile-generation.js",
     "app/apl-overlapping-pad-handoff-integration.js",
+    "drivers/profile/coder-orientation-driver.js",
+    "app/apl-coder-codebox-orientation-integration.js",
     "app/profile-routing.js",
     "app/machine-profile-framing.js",
     "app/servo-overrides.js",
