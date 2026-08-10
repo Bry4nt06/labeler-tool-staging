@@ -16,7 +16,7 @@ const simulation = read("app/simulation-map-scene-renderer.js");
 const animation = read("app/map-animation-renderer.js");
 const manifest = read("app/simulation-collapsible-integration.js");
 
-assert.doesNotMatch(marker, /function\s+(renderMap|renderSimulationMap|applyMapView|updateAnimatedSvg|drawBottleLabelIndicators|drawMapQuadrantReferences|applicationMapPointRows)\b/,
+assert.doesNotMatch(marker, /function\s+(renderMap|renderSimulationMap|applyMapView|updateAnimatedSvg|renderAnimationFrame|drawBottleLabelIndicators|drawMapQuadrantReferences|applicationMapPointRows)\b/,
   "The retired map-rendering source must not contain active implementations.");
 assert.doesNotMatch(marker, /addEventListener\(|saveCurrentSettings\(|localStorage\./,
   "The compatibility marker must not own events or persistence.");
@@ -32,6 +32,9 @@ assert.match(simulation, /function renderSimulationMap\(/, "Simulation scene mus
 assert.match(animation, /function updateAnimatedSvg\(/, "Animation renderer must own incremental SVG updates.");
 assert.match(animation, /function updateMapAnimationFrame\(/, "Animation renderer must own mechanical animation updates.");
 assert.match(animation, /function updateSimulationAnimationFrame\(/, "Animation renderer must own simulation animation updates.");
+assert.match(animation, /function renderAnimationFrame\(/, "Animation renderer must own the public animation-frame coordinator used by Play.");
+assert.match(animation, /global\.renderAnimationFrame\s*=\s*renderAnimationFrame/,
+  "Animation renderer must publish renderAnimationFrame for the runtime and workspace controllers.");
 
 [mechanical, simulation, animation, bottle, overlays, reference].forEach((source) => {
   assert.doesNotMatch(source, /addEventListener\(/, "Map presentation modules must not attach browser events.");
