@@ -27,30 +27,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Patch final coder export cleanup and apply sweep
+      - name: Patch final coder exports and apply sweep
         run: |
           python3 - <<'PY'
           from pathlib import Path
           path = Path('tools/remove_coding_runtime.py')
           text = path.read_text(encoding='utf-8')
-
           row_anchor = 'row_builder = row_builder.replace("    coderHandoffPlan,\\n", "")'
-          row_replacement = 'row_builder = row_builder.replace("    coderHandoffPlan,\\n", "").replace("    coderHandoffPlan\\n", "")'
+          row_fixed = 'row_builder = row_builder.replace("    coderHandoffPlan,\\n", "").replace("    coderHandoffPlan\\n", "")'
           if row_anchor in text:
-              text = text.replace(row_anchor, row_replacement, 1)
-
-          issue_anchor = '''issue_factory = issue_factory.replace(
-    'dependencies: ["profile.mapObjectOrientation", "profile.coderHandoff"],',
-    'dependencies: ["profile.mapObjectOrientation"],',
-)'''
-          issue_replacement = '''issue_factory = issue_factory.replace("    coderHandoffStatus\\n", "")
-issue_factory = issue_factory.replace(
-    'dependencies: ["profile.mapObjectOrientation", "profile.coderHandoff"],',
-    'dependencies: ["profile.mapObjectOrientation"],',
-)'''
+              text = text.replace(row_anchor, row_fixed, 1)
+          issue_anchor = 'if re.search(r"coder|coding", issue_factory, re.I):'
+          issue_fixed = 'issue_factory = issue_factory.replace("    coderHandoffStatus\\n", "")\n' + issue_anchor
           if issue_anchor not in text:
               raise SystemExit('issue-factory cleanup patch anchor missing')
-          text = text.replace(issue_anchor, issue_replacement, 1)
+          text = text.replace(issue_anchor, issue_fixed, 1)
           path.write_text(text, encoding='utf-8')
           PY
           python3 tools/remove_coding_runtime.py
