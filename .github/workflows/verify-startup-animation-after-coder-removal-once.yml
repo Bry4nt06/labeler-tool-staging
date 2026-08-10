@@ -1,0 +1,88 @@
+name: Verify startup and animation after coder removal
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/verify-startup-animation-after-coder-removal-once.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Static startup check
+        run: |
+          node --check app/startup-runtime.js
+          ! grep -n "LabelerCodingCycleNormalizationController\|Coding station cycle normalization controller" app/startup-runtime.js
+      - name: Install browser harness
+        run: npm install --no-save puppeteer-core@24.16.0
+      - name: Verify startup and animation loop
+        run: |
+          python3 -m http.server 8000 >/tmp/servoforge-http.log 2>&1 &
+          cat > /tmp/verify-startup-animation.cjs <<'NODE'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const puppeteer = require(process.cwd() + '/node_modules/puppeteer-core');
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+          (async () => {
+            const executablePath = ['/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'].find((candidate) => fs.existsSync(candidate));
+            assert.ok(executablePath, 'Chrome/Chromium executable not found.');
+            const browser = await puppeteer.launch({ executablePath, headless: true, args: ['--no-sandbox','--disable-dev-shm-usage'] });
+            try {
+              const page = await browser.newPage();
+              const pageErrors = [];
+              page.on('pageerror', (error) => pageErrors.push(error.stack || error.message || String(error)));
+              await page.goto('http://127.0.0.1:8000/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+              await page.waitForFunction(() => typeof state !== 'undefined' && typeof startAnimationLoop === 'function' && window.LabelerStartupRuntime, { timeout: 20000 });
+              await sleep(7000);
+
+              const before = await page.evaluate(() => {
+                const startupError = document.querySelector('.startup-error')?.textContent || '';
+                const validationText = document.querySelector('#validationList')?.textContent || '';
+                state.isPlaying = true;
+                state.animationSpeed = 20;
+                state.previewAngle = 10;
+                return {
+                  startupError,
+                  validationText,
+                  angle: state.previewAngle,
+                  codingControllerPresent: Boolean(window.LabelerCodingCycleNormalizationController),
+                  animationRuntimePresent: Boolean(window.LabelerAnimationRuntime?.start)
+                };
+              });
+
+              await sleep(800);
+
+              const after = await page.evaluate(() => ({
+                angle: state.previewAngle,
+                isPlaying: state.isPlaying,
+                startupError: document.querySelector('.startup-error')?.textContent || '',
+                validationText: document.querySelector('#validationList')?.textContent || ''
+              }));
+
+              const knownErrors = pageErrors.filter((message) => /normalizeAssembly is not defined/i.test(message));
+              const unexpectedErrors = pageErrors.filter((message) => !/normalizeAssembly is not defined/i.test(message));
+              console.log('STARTUP ANIMATION RESULT', JSON.stringify({ before, after, knownErrors: knownErrors.length, unexpectedErrors }, null, 2));
+
+              assert.equal(before.codingControllerPresent, false, 'Retired coding controller unexpectedly exists.');
+              assert.equal(before.animationRuntimePresent, true, 'Animation runtime is unavailable.');
+              assert.doesNotMatch(`${before.startupError} ${before.validationText} ${after.startupError} ${after.validationText}`, /Coding station cycle normalization controller is not loaded/i);
+              assert.equal(after.isPlaying, true);
+              assert.ok(after.angle > before.angle + 1, `Animation loop did not advance: ${before.angle} -> ${after.angle}`);
+              assert.deepEqual(unexpectedErrors, [], `Unexpected browser errors: ${unexpectedErrors.join('\n\n')}`);
+            } finally {
+              await browser.close();
+            }
+          })().catch((error) => { console.error(error.stack || error); process.exitCode = 1; });
+          NODE
+          node /tmp/verify-startup-animation.cjs
