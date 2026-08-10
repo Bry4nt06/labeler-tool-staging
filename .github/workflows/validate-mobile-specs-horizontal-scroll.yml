@@ -4,9 +4,11 @@ on:
   push:
     branches: [main]
     paths:
+      - "app/specification-table-renderer.js"
       - "app/controllers/specification-table-ui-controller.js"
       - "app/bootstrap.js"
       - "tests/mobile-specs-horizontal-scroll.test.js"
+      - "tests/specification-header-info.test.js"
       - ".github/workflows/validate-mobile-specs-horizontal-scroll.yml"
   workflow_dispatch:
 
@@ -24,8 +26,13 @@ jobs:
         with:
           node-version: 22
       - name: Check Specs UI syntax
-        run: node --check app/controllers/specification-table-ui-controller.js
-      - name: Run mobile Specs scroll regression
-        run: node tests/mobile-specs-horizontal-scroll.test.js
-      - name: Verify mobile build marker
-        run: grep -q 'mobile-specs-horizontal-scroll-v45-20260809-0214' app/bootstrap.js
+        run: |
+          node --check app/specification-table-renderer.js
+          node --check app/controllers/specification-table-ui-controller.js
+          node --check tests/specification-header-info.test.js
+      - name: Run Specs regressions
+        run: |
+          node tests/mobile-specs-horizontal-scroll.test.js
+          node tests/specification-header-info.test.js
+      - name: Verify current Specs build marker
+        run: grep -q 'specs-info-handoff-continuity-v56-20260810-1035' app/bootstrap.js
