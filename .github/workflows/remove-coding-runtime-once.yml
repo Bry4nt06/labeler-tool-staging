@@ -27,8 +27,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Apply coding runtime sweep
-        run: python3 tools/remove_coding_runtime.py
+      - name: Patch final row-builder cleanup and apply sweep
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('tools/remove_coding_runtime.py')
+          text = path.read_text(encoding='utf-8')
+          needle = 'row_builder = row_builder.replace("    coderHandoffPlan,\\n", "")'
+          replacement = 'row_builder = row_builder.replace("    coderHandoffPlan,\\n", "").replace("    coderHandoffPlan\\n", "")'
+          if needle not in text:
+              raise SystemExit('row-builder cleanup patch anchor missing')
+          path.write_text(text.replace(needle, replacement, 1), encoding='utf-8')
+          PY
+          python3 tools/remove_coding_runtime.py
       - name: Validate transformed staging runtime
         run: |
           node --check app.js
