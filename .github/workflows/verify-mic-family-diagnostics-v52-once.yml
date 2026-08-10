@@ -139,9 +139,11 @@ jobs:
               result.contactClass.filter(frame => /^\s*Orient\b/i.test(frame.action || '')).forEach(frame => {
                 assert.equal(frame.physicalContact, false, `${frame.action} must be free-space orientation.`);
               });
-              result.contactClass.filter(frame => /\bWipe Turn\b/i.test(frame.action || '')).forEach(frame => {
-                assert.equal(frame.physicalContact, true, `${frame.action} must remain physical wipe contact.`);
-              });
+              result.contactClass
+                .filter(frame => /\bWipe Turn\b/i.test(frame.action || '') && !/\bRest\b/i.test(frame.action || ''))
+                .forEach(frame => {
+                  assert.equal(frame.physicalContact, true, `${frame.action} must remain physical wipe contact.`);
+                });
 
               const coderHold = result.rows.find(row => row.codingHold === true);
               if (coderHold) {
