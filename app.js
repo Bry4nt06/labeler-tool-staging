@@ -47,14 +47,14 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "first-application-zero-datum-v30-physical-sensor-visibility-label-application-reference-v32-finished-centerline-completion-v39-label-datum-servo-flow-v40-first-tack-datum-flow-v41-common-apl-active-sections-v42-canonical-station-reset-v43-canonical-section-handoff-v44-20260809-0203";
+  const build = "first-application-zero-datum-v30-physical-sensor-visibility-label-application-reference-v32-finished-centerline-completion-v39-label-datum-servo-flow-v40-first-tack-datum-flow-v41-common-apl-active-sections-v42-canonical-station-reset-v43-canonical-section-handoff-v44-20260809-0203-mic-sensor-continuity-v52-20260810-0811";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
       const expected = new URL(`./${path}`, window.location.href).pathname;
       const existing = [...document.scripts].find((script) => {
-        try { return new URL(script.src, window.location.href).pathname === expected; }
-        catch { return false; }
+        try { return new URL(script.src, window.location.href).pathname === expected;
+        } catch { return false; }
       });
       if (existing) {
         if (existing.dataset.loaded === "true") resolve();
