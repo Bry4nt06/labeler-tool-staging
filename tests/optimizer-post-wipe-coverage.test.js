@@ -14,14 +14,15 @@ const labelSpecs = JSON.parse(fs.readFileSync(path.join(root, "config", "default
 assert.doesNotThrow(() => new vm.Script(contactSource));
 assert.doesNotThrow(() => new vm.Script(fallbackSource));
 assert.match(contactSource, /function physicalContactFrame/);
-assert.match(contactSource, /wipe\\s\+hold/);
+assert.match(contactSource, /wipe\\s\+turn/);
+assert.match(contactSource, /\^\\s\*orient/);
 assert.match(contactSource, /\.filter\(physicalContactFrame\)/);
-assert.match(contactSource, /mapAwareCoverageV2/);
-assert.match(fallbackSource, /version:\s*3/);
+assert.match(contactSource, /mapAwareCoverageV3/);
+assert.match(fallbackSource, /version:\s*4/);
 assert.match(fallbackSource, /function isWipeHoldCoverageDiagnostic/);
+assert.match(fallbackSource, /function isNonContactOrientationCoverageDiagnostic/);
 assert.doesNotMatch(fallbackSource, /analyzeWithMapAwareCoverage/);
-assert.doesNotMatch(fallbackSource, /Number\(row\.cmd\) !== 7/);
-assert.match(startup, /coder-window-wipe-hold-v22/);
+assert.match(startup, /mic-sensor-continuity-v52/);
 
 const landshark = labelSpecs.find((spec) => /LandShark/i.test(spec.brand));
 const micFamily = labelSpecs.find((spec) => /Mic Family/i.test(spec.brand));
@@ -70,11 +71,19 @@ const contactContext = {
 contactContext.window = contactContext;
 vm.runInNewContext(contactSource, contactContext);
 
-assert.equal(contactContext.LabelerProgramOptimizerDriver.mapAwareCoverageV2, true);
+assert.equal(contactContext.LabelerProgramOptimizerDriver.mapAwareCoverageV3, true);
 assert.equal(contactContext.LabelerProgramOptimizerDriver.physicalContactFrame({
   command: 7,
   action: "Wipe Hold Back - Agg 6"
 }), false, "Wipe Hold must never be classified as an active physical wipe.");
+assert.equal(contactContext.LabelerProgramOptimizerDriver.physicalContactFrame({
+  command: 7,
+  action: "Orient Body for Re-Wipe - Agg 4"
+}), false, "Re-wipe positioning is free-space orientation, not pad-contact motion.");
+assert.equal(contactContext.LabelerProgramOptimizerDriver.physicalContactFrame({
+  command: 7,
+  action: "Orient Back for Re-Wipe - Agg 6"
+}), false, "A later re-wipe orientation must not inherit wipe-contact validation from its name.");
 assert.equal(contactContext.LabelerProgramOptimizerDriver.physicalContactFrame({
   command: 7,
   action: "Wipe Turn 2 Back - Agg 6"
@@ -123,6 +132,33 @@ assert.equal(
 );
 assert.equal(landsharkResult.status, "HEALTHY");
 
+const reWipeRows = [
+  {
+    hmi: 29,
+    cmd: 7,
+    tableAngle: 250.5,
+    plateAngle: 93,
+    action: "Orient Back for Re-Wipe - Agg 6",
+    station: 6,
+    section: "back"
+  },
+  {
+    hmi: 30,
+    cmd: 3,
+    tableAngle: 268.5,
+    plateAngle: -164,
+    action: "Orient Back for Re-Wipe - Agg 6 - Reference",
+    station: 6,
+    section: "back"
+  }
+];
+const reWipeResult = contactContext.LabelerProgramOptimizerDriver.analyze(reWipeRows, { map });
+assert.equal(
+  reWipeResult.diagnostics.some((item) => item.code === "optimizer-wipe-contact"),
+  false,
+  "An Orient-for-Re-Wipe command outside the pad must not produce a physical-contact coverage fault."
+);
+
 const genuineFailureRows = [
   {
     ...landsharkRows[0],
@@ -140,6 +176,12 @@ assert.equal(
 );
 assert.equal(genuineFailure.status, "ACTION");
 
+const fallbackRows = [
+  { hmi: 17, cmd: 7, tableAngle: 169.5, plateAngle: 120, action: "Orient Body for Re-Wipe - Agg 4", station: 4, section: "body" },
+  { hmi: 23, cmd: 3, tableAngle: 209, plateAngle: 63.5, action: "Wipe Hold Body - Agg 4", station: 4, section: "body" },
+  { hmi: 29, cmd: 7, tableAngle: 250.5, plateAngle: 93, action: "Orient Back for Re-Wipe - Agg 6", station: 6, section: "back" },
+  { hmi: 30, cmd: 7, tableAngle: 270, plateAngle: -164, action: "Wipe Turn 1 Back - Agg 6", station: 6, section: "back" }
+];
 const fallbackContext = {
   console,
   document: { readyState: "complete", addEventListener() {} },
@@ -151,13 +193,12 @@ const fallbackContext = {
     analyze: function analyzeWithOtherOptimizerLayer(rows) {
       return {
         sourceRows: rows,
-        diagnostics: [{
-          level: "bad",
-          code: "optimizer-wipe-contact",
-          category: "coverage",
-          hmi: 23,
-          message: "Wipe Hold Back - Agg 6 overlaps its mapped wipe-down surface for only 0% of the command window."
-        }],
+        diagnostics: [
+          { level: "bad", code: "optimizer-wipe-contact", hmi: 17, message: "Orient Body for Re-Wipe - Agg 4 overlaps its mapped wipe-down surface for only 0% of the command window." },
+          { level: "bad", code: "optimizer-wipe-contact", hmi: 23, message: "Wipe Hold Body - Agg 4 overlaps its mapped wipe-down surface for only 0% of the command window." },
+          { level: "bad", code: "optimizer-wipe-contact", hmi: 29, message: "Orient Back for Re-Wipe - Agg 6 overlaps its mapped wipe-down surface for only 0% of the command window." },
+          { level: "bad", code: "optimizer-wipe-contact", hmi: 30, message: "Wipe Turn 1 Back - Agg 6 overlaps its mapped wipe-down surface for only 0% of the command window." }
+        ],
         status: "ACTION"
       };
     },
@@ -168,17 +209,20 @@ const fallbackContext = {
 };
 fallbackContext.window = fallbackContext;
 vm.runInNewContext(fallbackSource, fallbackContext);
-assert.equal(fallbackContext.LabelerPostWipeCoveragePolicy.version, 3);
-assert.equal(fallbackContext.LabelerProgramOptimizerDriver.postWipeCoveragePolicyV3, true);
-const fallbackResult = fallbackContext.LabelerProgramOptimizerDriver.analyze(landsharkRows, { map });
+assert.equal(fallbackContext.LabelerPostWipeCoveragePolicy.version, 4);
+assert.equal(fallbackContext.LabelerProgramOptimizerDriver.postWipeCoveragePolicyV4, true);
+const fallbackResult = fallbackContext.LabelerProgramOptimizerDriver.analyze(fallbackRows, { map });
+assert.equal(fallbackResult.diagnostics.some((item) => item.hmi === 17), false);
+assert.equal(fallbackResult.diagnostics.some((item) => item.hmi === 23), false);
+assert.equal(fallbackResult.diagnostics.some((item) => item.hmi === 29), false);
 assert.equal(
-  fallbackResult.diagnostics.some((item) => item.code === "optimizer-wipe-contact"),
-  false,
-  "The final fallback must remove the exact Wipe Hold coverage message even when another optimizer wrapper hides the map-aware function name."
+  fallbackResult.diagnostics.some((item) => item.hmi === 30),
+  true,
+  "The defensive filter must retain genuine Wipe Turn coverage faults."
 );
-assert.equal(fallbackResult.status, "HEALTHY");
-assert.equal(fallbackResult.currentMetrics.diagnosticCount, 0);
+assert.equal(fallbackResult.status, "ACTION");
+assert.equal(fallbackResult.currentMetrics.diagnosticCount, 1);
 assert.equal(fallbackContext.state.programOptimization.lastSignature, "");
 assert.equal(fallbackContext.state.programOptimization.result, null);
 
-console.log("Wipe-hold coverage classification regression passed.");
+console.log("Post-wipe coverage classification regression passed for holds, re-wipe positioning, and true contact turns.");
