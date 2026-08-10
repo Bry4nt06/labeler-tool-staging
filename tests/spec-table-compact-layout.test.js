@@ -29,6 +29,9 @@ assert.ok(rendererSource.includes('aria-label="Delete ${description}"'));
 assert.ok(rendererSource.includes('title="Delete ${description}"'));
 assert.ok(rendererSource.includes('specificationActionIcon("delete")'));
 assert.ok(!rendererSource.includes(">Delete</button>"), "Delete actions must remain icon-only.");
+assert.ok(!rendererSource.includes("<th>Spec #</th>"), "Label Specs must not render the Spec # column.");
+assert.ok(!rendererSource.includes('data-spec-field="specNumber"'), "Label Specs must not render the Spec # input.");
+assert.ok(!rendererSource.includes('class="label-col-spec"'), "The removed Spec # column must not reserve layout width.");
 
 assert.ok(duplicateSource.includes("button.innerHTML = duplicateIcon()"));
 assert.ok(duplicateSource.includes("spec-icon-button spec-duplicate-button"));
@@ -52,9 +55,12 @@ assert.ok(uiSource.includes("flex-wrap: nowrap !important"));
 assert.ok(uiSource.includes("#specs .spec-row-actions > .spec-icon-button"));
 assert.ok(uiSource.includes("flex: 0 0 32px"));
 assert.ok(uiSource.includes("#specs tr.selected-brand-spec > td"));
+assert.ok(uiSource.includes(".label-col-action { width: 80px; }"));
+assert.ok(uiSource.includes("min-width: 80px"));
+assert.ok(!uiSource.includes(".label-col-spec"), "Removed Spec # layout width must stay removed.");
 assert.ok(!uiSource.includes('content: "Selected"'), "The selected row highlight must stand on its own.");
 assert.ok(!uiSource.includes("padding-top: 31px"), "Selected actions must remain on one compact line.");
 assert.ok(!uiSource.includes("position: absolute"), "Specs actions must not use an overlay marker.");
 assert.ok(!uiSource.includes("flex: 1 1 70px"), "Icon buttons must not expand the action column.");
 
-console.log("Compact Specs actions and dimension-driven label presence regression passed.");
+console.log("Compact Specs actions, hidden Spec # field, and dimension-driven label presence regression passed.");
