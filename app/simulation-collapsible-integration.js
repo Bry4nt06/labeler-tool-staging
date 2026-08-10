@@ -37,7 +37,7 @@
       "app/map-reference-presenter.js?v=0.9.7-map-rendering-split-v1",
       "app/mechanical-map-scene-renderer.js?v=0.9.7-map-rendering-retired-v1",
       "app/simulation-map-scene-renderer.js?v=0.9.7-map-rendering-retired-v1",
-      "app/map-animation-renderer.js?v=0.9.7-map-rendering-split-v1",
+      "app/map-animation-renderer.js?v=0.9.10-animation-frame-v53",
       "app/progressive-label-fill-integration.js?v=0.9.10-progressive-fill-v47"
     ]),
 
