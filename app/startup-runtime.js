@@ -72,9 +72,6 @@ async function initializeLabelerApp() {
     if (!window.LabelerSensorActivationController?.installed) {
       throw new Error("Recipe-aware sensor activation controller is not loaded.");
     }
-    if (!window.LabelerCodingCycleNormalizationController?.installed) {
-      throw new Error("Coding station cycle normalization controller is not loaded.");
-    }
     if (!window.LabelerServoProgramEventController?.installed) {
       throw new Error("Servo Program event controller is not loaded.");
     }
@@ -119,7 +116,6 @@ async function initializeLabelerApp() {
     render();
     window.LabelerHealthStatusUiController.refresh();
     window.LabelerSensorActivationController.refresh();
-    window.LabelerCodingCycleNormalizationController.refresh();
     window.LabelerLocalPersistenceController.initialize();
     startAnimationLoop();
 
