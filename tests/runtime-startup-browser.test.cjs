@@ -31,10 +31,19 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     });
 
     await page.goto("http://127.0.0.1:8000/index.html", {
-      waitUntil: "networkidle0",
+      waitUntil: "domcontentloaded",
       timeout: 30000
     });
-    await sleep(5000);
+
+    // ServoForge intentionally loads several ordered integration groups after
+    // DOMContentLoaded. Do not use networkidle0 here: the app owns background
+    // work that can keep the network lifecycle active after the DOM is ready.
+    await page.waitForFunction(() => {
+      const startupFailed = document.querySelector("#validationList")?.textContent?.includes("Startup failed:");
+      const animationStarted = window.LabelerAnimationRuntime?.isRunning?.() === true;
+      return startupFailed || animationStarted;
+    }, { timeout: 20000 });
+    await sleep(1200);
 
     const status = await page.evaluate(() => ({
       runtimeBridge: Boolean(window.LabelerRuntimeContextBridge?.installed),
@@ -51,6 +60,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       activeMoveInsideBuilder: Boolean(document.querySelector("#mapOverlaySettingsSection #showMoveDistanceOverlay")),
       allMovesInsideBuilder: Boolean(document.querySelector("#mapOverlaySettingsSection #showAllProgramMovesOverlay")),
       startupFailure: document.querySelector("#validationList")?.textContent?.includes("Startup failed:") || false,
+      startupText: document.querySelector("#validationList")?.textContent?.trim() || "",
       playing: state.isPlaying,
       angle: state.previewAngle,
       center: document.querySelector("[data-animation-center]")?.textContent || "",
@@ -63,14 +73,14 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     assert.equal(status.assemblyAdapter, true, "Assembly adapter must be available before Map Builder migration.");
     assert.equal(status.coderPolicy, true, "Mandatory TopModul coder terminal policy must install before app startup.");
     assert.equal(status.animationRuntime, true, "Animation runtime must load.");
-    assert.equal(status.animationRunning, true, "Animation runtime must be started by initializeLabelerApp().");
+    assert.equal(status.animationRunning, true, `Animation runtime must be started by initializeLabelerApp(). ${status.startupText}`);
     assert.equal(status.explicitRenderer, true, "Animation runtime must use the explicit map animation renderer owner.");
     assert.equal(status.overlayPlacement, true, "Map Overlay controls must be relocated into Map Builder.");
     assert.match(status.overlaySectionParent, /wipe-builder-body/, "Map Overlay settings must live in the Map Builder body.");
     assert.equal(status.oldOverlayPanelExists, false, "Standalone Map Overlays panel must be removed from the right rail.");
     assert.equal(status.activeMoveInsideBuilder, true, "Active-move overlay switch must be preserved inside Map Builder.");
     assert.equal(status.allMovesInsideBuilder, true, "All-program-moves switch must be preserved inside Map Builder.");
-    assert.equal(status.startupFailure, false, "Workspace must not report a startup failure.");
+    assert.equal(status.startupFailure, false, `Workspace must not report a startup failure. ${status.startupText}`);
     assert.equal(status.playing, true, "Default animation state should be playing after successful startup.");
     assert.equal(status.playLabel, "Pause", "Play control must reflect the running animation state.");
 
