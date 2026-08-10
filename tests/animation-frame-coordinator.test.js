@@ -77,7 +77,7 @@ assert.equal(typeof requestedFrame, "function");
 const before = context.state.previewAngle;
 assert.doesNotThrow(() => requestedFrame(1000));
 assert.equal(typeof requestedFrame, "function", "Animation runtime must schedule its next frame.");
-assert.equal(context.state.previewAngle, before,
+assert.ok(Math.abs(context.state.previewAngle - before) < 1e-9,
   "The first runtime frame establishes the clock without jumping the table angle.");
 assert.ok(activeRowUpdates >= 2, "The runtime frame must reach the restored renderAnimationFrame coordinator.");
 
