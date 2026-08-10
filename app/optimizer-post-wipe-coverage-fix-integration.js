@@ -1,7 +1,7 @@
 "use strict";
 
 (function installPostWipeCoveragePolicy(global) {
-  if (global.LabelerPostWipeCoveragePolicy?.version >= 3) return;
+  if (global.LabelerPostWipeCoveragePolicy?.version >= 4) return;
 
   const RETRY_MS = 50;
   const text = (value) => String(value ?? "").trim();
@@ -22,10 +22,24 @@
       || /^wipe\s+hold\b/i.test(message);
   }
 
+  function isNonContactOrientationCoverageDiagnostic(diagnostic, rows) {
+    if (diagnostic?.code !== "optimizer-wipe-contact") return false;
+    const row = rowForDiagnostic(rows, diagnostic);
+    const action = text(row?.action);
+    const message = text(diagnostic?.message);
+    return /^\s*orient\b/i.test(action)
+      || /^\s*orient\b/i.test(message)
+      || row?.orientationOnly === true
+      || row?.mapObjectOrientation === true
+      || row?.sensorSetupAfterHold === true
+      || row?.codingMotion === true;
+  }
+
   function filterDiagnostics(result, rows, options, driver) {
     const sourceRows = Array.isArray(result?.sourceRows) ? result.sourceRows : rows;
     const diagnostics = (Array.isArray(result?.diagnostics) ? result.diagnostics : [])
-      .filter((diagnostic) => !isWipeHoldCoverageDiagnostic(diagnostic, sourceRows));
+      .filter((diagnostic) => !isWipeHoldCoverageDiagnostic(diagnostic, sourceRows))
+      .filter((diagnostic) => !isNonContactOrientationCoverageDiagnostic(diagnostic, sourceRows));
     result.diagnostics = diagnostics;
     if (typeof driver?.calculateMetrics === "function") {
       result.currentMetrics = driver.calculateMetrics(sourceRows || [], options, diagnostics);
@@ -41,7 +55,7 @@
   function install() {
     const driver = global.LabelerProgramOptimizerDriver;
     if (!driver?.analyze) return false;
-    if (driver.postWipeCoveragePolicyV3) return true;
+    if (driver.postWipeCoveragePolicyV4) return true;
 
     const baseAnalyze = driver.analyze.bind(driver);
     global.LabelerProgramOptimizerDriver = Object.freeze({
@@ -49,13 +63,14 @@
       analyze(rows, options = {}) {
         return filterDiagnostics(baseAnalyze(rows, options), rows, options, driver);
       },
-      postWipeCoveragePolicyV3: true
+      postWipeCoveragePolicyV4: true
     });
     global.LabelerPostWipeCoveragePolicy = Object.freeze({
       installed: true,
-      version: 3,
+      version: 4,
       rowForDiagnostic,
       isWipeHoldCoverageDiagnostic,
+      isNonContactOrientationCoverageDiagnostic,
       filterDiagnostics
     });
 
