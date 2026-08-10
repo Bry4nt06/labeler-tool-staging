@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-animation-frame-coordinator-v53";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-runtime-startup-animation-v54";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -40,7 +40,7 @@ const CORE_ASSETS = Object.freeze([
   "./drivers/servo/servo-command-driver.js",
   "./drivers/servo/rest-correction-grammar-driver.js",
   "./drivers/planning/motion-planner-driver.js",
-  "./drivers/planning/mechanical-event-planner-driver.js",
+  "./drivers/planning/mechanical-event-planner.js",
   "./drivers/planning/incremental-rotation-driver.js",
   "./drivers/translation/profile-translator-driver.js",
   "./drivers/validation/motion-validation-driver.js",
@@ -75,6 +75,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/profile-translator-validation.js",
   "./app/simulation-engine.js",
   "./app/assemblies.js",
+  "./app/runtime-context-bridge.js",
   "./app/assembly-driver-adapter.js",
   "./app/assembly-editor-controller.js",
   "./app/assembly-map-renderer.js",
@@ -89,6 +90,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/map-builder-history-service.js",
   "./app/map-builder-renderer.js",
   "./app/map-builder-controller.js",
+  "./app/map-overlay-builder-placement-integration.js",
   "./app/validation.js",
   "./app/setup-bindings.js",
   "./app/map-rendering.js",
