@@ -1,0 +1,25 @@
+name: Audit coding runtime
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/audit-coding-runtime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find active coding references
+        run: |
+          echo '=== runtime filenames ==='
+          find app drivers -type f | grep -Ei 'coder|coding|code-box|code_box' || true
+          echo '=== loader references ==='
+          grep -R -n -E 'coder-|coding-cycle|coderWindow|CoderOrientation|profile\.coder|kind === "coding"|kind === '\''coding'\''' app.js index.html app drivers --exclude='*.test.js' || true
+          echo '=== coding actions / terminal behavior ==='
+          grep -R -n -E 'Hold for Coding|Direct Turn for Coding|codingHold|codingWindow|code box|codingObject|terminal-coding' app drivers --exclude='*.test.js' || true
