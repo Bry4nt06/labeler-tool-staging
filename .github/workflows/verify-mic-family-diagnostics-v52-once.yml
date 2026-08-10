@@ -81,11 +81,10 @@ jobs:
                   brand:mic.brand, bottle:state.selectedBottle, rowCount:rows.length,
                   focusRows:rows.filter(r => r.hmi >= 14 && r.hmi <= 32),
                   pipelineIssues:(pipeline.issues||[]).filter(i=>i.level!=='ok'),
-                  optimizerIssues:(optimizer.diagnostics||[]).filter(i=>i.level==='bad' || i.level==='warn'),
-                  pageErrors
+                  optimizerIssues:(optimizer.diagnostics||[]).filter(i=>i.level==='bad' || i.level==='warn')
                 };
               });
-              console.log('MIC FAMILY DIAGNOSTICS', JSON.stringify(result,null,2));
+              console.log('MIC FAMILY DIAGNOSTICS', JSON.stringify({...result, pageErrors},null,2));
             } finally { await browser.close(); }
           })().catch(e => { console.error(e.stack || e); process.exitCode=1; });
           NODE
