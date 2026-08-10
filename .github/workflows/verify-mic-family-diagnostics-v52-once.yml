@@ -19,23 +19,32 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-save puppeteer-core@24.16.0
-      - name: Inspect Mic Family program and diagnostics
+      - name: Verify Mic Family applied program and diagnostics
         run: |
           python3 -m http.server 8000 >/tmp/servoforge-http.log 2>&1 &
-          cat > /tmp/inspect-mic.cjs <<'NODE'
+          cat > /tmp/verify-mic.cjs <<'NODE'
           const assert = require('node:assert/strict');
           const fs = require('node:fs');
           const puppeteer = require(process.cwd() + '/node_modules/puppeteer-core');
           const sleep = ms => new Promise(r => setTimeout(r, ms));
+
           (async () => {
             const executablePath = ['/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'].find(fs.existsSync);
             assert.ok(executablePath, 'Chrome/Chromium executable not found');
             const browser = await puppeteer.launch({ executablePath, headless: true, args:['--no-sandbox','--disable-dev-shm-usage'] });
             try {
               const page = await browser.newPage();
+              const pageErrors = [];
+              page.on('pageerror', error => pageErrors.push(error.stack || error.message || String(error)));
               await page.goto('http://127.0.0.1:8000/index.html', { waitUntil:'domcontentloaded', timeout:30000 });
-              await page.waitForFunction(() => typeof state !== 'undefined' && typeof applyGeneratedServoProfile === 'function' && window.LabelerProgramOptimizerDriver?.analyze && window.LabelerServoPipelineValidator?.analyze && window.LabelerOrientationConstraintTargetService?.targetFor, { timeout:20000 });
-              await sleep(4000);
+              await page.waitForFunction(() => typeof state !== 'undefined'
+                && typeof applyGeneratedServoProfile === 'function'
+                && window.LabelerAplPostWipeSensorHold?.version >= 3
+                && window.LabelerPostWipeCoveragePolicy?.version >= 4
+                && window.LabelerProgramOptimizerDriver?.analyze
+                && window.LabelerServoPipelineValidator?.analyze, { timeout:20000 });
+              await sleep(3500);
+
               const result = await page.evaluate(async () => {
                 const [labelSpecs, bottleSpecs, map] = await Promise.all([
                   fetch('./config/default-programs/label-specs.json', {cache:'no-store'}).then(r=>r.json()),
@@ -49,29 +58,105 @@ jobs:
                 state.applicationMode = 'apl';
                 loadMachineMapIntoRuntime(map, false);
                 const mic = labelSpecs.find(entry => /Mic Family/i.test(entry.brand));
+                if (!mic) throw new Error('Mic Family recipe not found');
                 state.selectedBrand = mic.brand;
                 state.selectedBottle = mic.bottleType;
                 applyLabelLengthStationRules();
                 applyGeneratedServoProfile();
+
                 const rows = state.program;
-                const bodyHold = rows.find(row => row.hmi === 21);
-                const sensor = map.objects.find(item => item.id === 'default-neck-body-inspection');
-                const svc = window.LabelerOrientationConstraintTargetService;
-                const target = svc.targetFor(sensor, 'body', rows, Number(bodyHold.plateAngle), Number(sensor.angle ?? sensor.start));
-                const optimizer = window.LabelerProgramOptimizerDriver.analyze(rows, { map, maxMoveRatio:state.maxMoveRatio, plan:state.motionTranslation?.plan || state.motionPlan?.planner || null });
-                const pipeline = window.LabelerServoPipelineValidator.analyze({ rows, map, machineType:map.machineType, applicationMode:'apl', machineProfile:'TOPMODUL', maxMoveRatio:state.maxMoveRatio, tolerance:0.001 });
+                const plan = state.motionTranslation?.plan || state.motionPlan?.planner || state.plannerPreview || null;
+                const pipeline = window.LabelerServoPipelineValidator.analyze({
+                  rows,
+                  map,
+                  machineType: map.machineType || map.name,
+                  applicationMode:'apl',
+                  plan,
+                  translation: state.motionTranslation || state.motionPlan?.translation || null,
+                  machineProfile: state.motionTranslation?.machineProfile || state.motionPlan?.translation?.machineProfile || 'TOPMODUL',
+                  profileId: state.motionTranslation?.profileId || state.motionPlan?.translation?.profileId || state.selectedMotionProfileId || state.defaultMotionProfileId || 'rest-correction',
+                  maxMoveRatio: state.maxMoveRatio,
+                  tolerance:0.001
+                });
+                const optimizer = window.LabelerProgramOptimizerDriver.analyze(rows, { map, maxMoveRatio:state.maxMoveRatio, plan });
+                const frames = window.LabelerProgramOptimizerDriver.buildFrames(rows, { map, plan });
+                const contactClass = typeof window.LabelerProgramOptimizerDriver.physicalContactFrame === 'function'
+                  ? frames.filter(frame => /Wipe Turn|Orient .*Re-Wipe/i.test(frame.action || '')).map(frame => ({
+                      hmi:frame.hmi,
+                      action:frame.action,
+                      physicalContact:window.LabelerProgramOptimizerDriver.physicalContactFrame(frame)
+                    }))
+                  : [];
                 return {
-                  currentPlate:Number(bodyHold.plateAngle),
-                  sensorTarget:target,
-                  targetRotation:Number(target.target) - Number(bodyHold.plateAngle),
-                  targetRatio:Math.abs(Number(target.target) - Number(bodyHold.plateAngle)) / (214.5 - 209.5),
-                  focusRows:rows.filter(r=>r.hmi>=20&&r.hmi<=24).map(r=>({hmi:r.hmi,cmd:r.cmd,tableAngle:r.tableAngle,plateAngle:r.plateAngle,action:r.action,sensorId:r.sensorId,plannedRotation:r.plannedRotation,plannedRatio:r.plannedRatio})),
-                  pipelineIssues:(pipeline.issues||[]).filter(i=>i.level!=='ok'),
-                  optimizerIssues:(optimizer.diagnostics||[]).filter(i=>i.level==='bad'||i.level==='warn')
+                  brand:mic.brand,
+                  bottle:state.selectedBottle,
+                  rowCount:rows.length,
+                  rows:rows.map(row => ({
+                    hmi:row.hmi, cmd:row.cmd, tableAngle:row.tableAngle, plateAngle:row.plateAngle,
+                    action:row.action, sensorId:row.sensorId, postWipeSensorSatisfied:row.postWipeSensorSatisfied,
+                    plannedLabelVisibilityPercent:row.plannedLabelVisibilityPercent,
+                    codingHold:row.codingHold, codingWindowStart:row.codingWindowStart,
+                    codingReadyTableAngle:row.codingReadyTableAngle, preCoderMarginDeg:row.preCoderMarginDeg
+                  })),
+                  pipelineIssues:(pipeline.issues||[]).filter(issue=>issue.level!=='ok'),
+                  pipelineBad:(pipeline.issues||[]).filter(issue=>issue.level==='bad'),
+                  optimizerIssues:(optimizer.diagnostics||[]).filter(issue=>issue.level==='bad'||issue.level==='warn'),
+                  optimizerStatus:optimizer.status,
+                  contactClass,
+                  postWipePolicy:state.motionPlan?.aplPostWipeSensorHold || null
                 };
               });
-              console.log('MIC SENSOR TARGET', JSON.stringify(result,null,2));
-            } finally { await browser.close(); }
-          })().catch(e => { console.error(e.stack || e); process.exitCode=1; });
+
+              console.log('MIC FAMILY V52 RESULT', JSON.stringify({...result, pageErrors}, null, 2));
+
+              const staleSensorRows = result.rows.filter(row => row.sensorId === 'default-neck-body-inspection'
+                && /Orient Body Label for Sensor/i.test(row.action || ''));
+              assert.equal(staleSensorRows.length, 0, 'The stale Body sensor correction must be removed after the final wipe already satisfies visibility.');
+
+              const bodyHold = result.rows.find(row => /Wipe Hold Body - Agg 4/i.test(row.action || ''));
+              assert.ok(bodyHold, 'Body wipe hold was not generated.');
+              assert.equal(bodyHold.postWipeSensorSatisfied, true, 'Final Body wipe angle should be recognized as satisfying the sensor.');
+              assert.ok(Number(bodyHold.plannedLabelVisibilityPercent) >= 50, 'Final Body wipe angle must meet the 50% sensor visibility requirement.');
+
+              for (let index = 0; index < result.rows.length - 1; index += 1) {
+                const row = result.rows[index];
+                const next = result.rows[index + 1];
+                if (Number(row.cmd) !== 3 || Number(next.cmd) !== 7) continue;
+                assert.ok(Math.abs(Number(next.plateAngle) - Number(row.plateAngle)) <= 0.001,
+                  `CMD 7 HMI ${next.hmi} must begin at the preceding CMD 3 bottle angle; got ${row.plateAngle} -> ${next.plateAngle}.`);
+              }
+
+              assert.equal(result.pipelineBad.some(issue => issue.code === 'machine-grammar-rest-motion'), false,
+                'Pipeline still reports bottle motion from a CMD 3 Rest.');
+              assert.equal(result.pipelineBad.length, 0, `Unexpected pipeline BAD issues: ${JSON.stringify(result.pipelineBad)}`);
+
+              const falseCoverage = result.optimizerIssues.filter(issue => issue.code === 'optimizer-wipe-contact'
+                && /^\s*Orient\b/i.test(issue.message || ''));
+              assert.deepEqual(falseCoverage, [], `Free-space re-wipe orientation was still classified as wipe contact: ${JSON.stringify(falseCoverage)}`);
+
+              if (result.contactClass.length) {
+                result.contactClass.filter(frame => /^\s*Orient\b/i.test(frame.action || '')).forEach(frame => {
+                  assert.equal(frame.physicalContact, false, `${frame.action} must be classified as free-space orientation.`);
+                });
+                result.contactClass.filter(frame => /\bWipe Turn\b/i.test(frame.action || '')).forEach(frame => {
+                  assert.equal(frame.physicalContact, true, `${frame.action} must remain subject to physical wipe coverage validation.`);
+                });
+              }
+
+              const coderHold = result.rows.find(row => row.codingHold === true);
+              if (coderHold) {
+                assert.equal(Number(coderHold.preCoderMarginDeg), 5);
+                assert.equal(Number(coderHold.tableAngle), Number(coderHold.codingReadyTableAngle));
+                assert.equal(Number(coderHold.codingWindowStart) - Number(coderHold.tableAngle), 5,
+                  'Coder orientation must still finish exactly 5 degrees before the physical coder.');
+                assert.equal(result.rows.at(-1).hmi, coderHold.hmi, 'Coder hold must remain terminal.');
+              }
+
+              const unexpectedPageErrors = pageErrors.filter(message => !/normalizeAssembly is not defined/i.test(message));
+              assert.deepEqual(unexpectedPageErrors, [], `Unexpected browser errors: ${unexpectedPageErrors.join('\n\n')}`);
+            } finally {
+              await browser.close();
+            }
+          })().catch(error => { console.error(error.stack || error); process.exitCode = 1; });
           NODE
-          node /tmp/inspect-mic.cjs
+          node /tmp/verify-mic.cjs
