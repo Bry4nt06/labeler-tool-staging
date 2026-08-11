@@ -28,6 +28,7 @@ jobs:
         run: |
           python3 scripts/apply-v81-pseudo-3d.py
           python3 scripts/fix-v81-pseudo-3d-markers.py
+          python3 scripts/fix-v81-pseudo-3d-test.py
 
       - name: Validate syntax
         run: |
