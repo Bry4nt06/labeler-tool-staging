@@ -39,15 +39,39 @@ jobs:
               const errors = [];
               page.on('pageerror', (error) => errors.push(error.stack || error.message || String(error)));
               await page.goto('http://127.0.0.1:8000/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
-              await sleep(7000);
-              const result = await page.evaluate(() => {
+              await sleep(6500);
+              const result = await page.evaluate(async () => {
+                const [labelSpecs, bottleSpecs, machineMap] = await Promise.all([
+                  fetch('./config/default-programs/label-specs.json').then((r) => r.json()),
+                  fetch('./config/default-programs/bottle-specs.json').then((r) => r.json()),
+                  fetch('./config/default-programs/map-apl-6-aggregate.json').then((r) => r.json())
+                ]);
+
+                // The local browser harness starts without the user's persisted
+                // map state. Force the exact repository-backed setup requested
+                // for diagnosis without changing production/staging data.
+                window.ensurePersistentApplicationMaps = () => state.mapLibrary;
+                state.labelSpecs = labelSpecs;
+                state.bottleSpecs = bottleSpecs;
+                state.mapLibrary = [machineMap];
                 state.applicationMode = 'apl';
-                state.activeMapId = 'map-apl-default';
+                state.activeMapId = machineMap.id;
                 state.selectedBrand = '12oz Mic Family (T6,41,FO,79,BT,87)';
                 state.selectedBottle = 'SSNR - 12 Oz';
-                if (typeof applyLabelLengthStationRules === 'function') applyLabelLengthStationRules();
-                const output = typeof applyGeneratedServoProfile === 'function' ? applyGeneratedServoProfile() : state.program;
-                const rows = (Array.isArray(state.program) && state.program.length ? state.program : output || []).map((row) => ({
+
+                const labelState = typeof selectedLabelApplicationState === 'function'
+                  ? selectedLabelApplicationState()
+                  : null;
+                const generatorOutput = typeof generatedAplMapDrivenProfile === 'function'
+                  ? generatedAplMapDrivenProfile(machineMap)
+                  : null;
+                const appliedOutput = typeof applyGeneratedServoProfile === 'function'
+                  ? applyGeneratedServoProfile()
+                  : generatorOutput;
+                const sourceRows = Array.isArray(state.program) && state.program.length
+                  ? state.program
+                  : appliedOutput || generatorOutput || [];
+                const rows = sourceRows.map((row) => ({
                   hmi: row.hmi,
                   plc: row.plc,
                   cmd: row.cmd,
@@ -64,13 +88,22 @@ jobs:
                   plannedRatio: row.plannedRatio
                 }));
                 return {
-                  map: typeof activeMachineMap === 'function' ? activeMachineMap()?.name : null,
+                  map: machineMap.name,
                   brand: state.selectedBrand,
                   bottle: state.selectedBottle,
-                  labelState: typeof selectedLabelApplicationState === 'function' ? selectedLabelApplicationState() : null,
+                  labelState,
                   rows,
                   commandSequence: rows.map((row) => Number(row.cmd)),
-                  consecutiveRests: rows.flatMap((row, index) => Number(row.cmd) === 3 && Number(rows[index + 1]?.cmd) === 3 ? [{ first: row.hmi, second: rows[index + 1].hmi, firstAction: row.action, secondAction: rows[index + 1].action }] : [])
+                  consecutiveRests: rows.flatMap((row, index) => Number(row.cmd) === 3 && Number(rows[index + 1]?.cmd) === 3 ? [{
+                    first: row.hmi,
+                    second: rows[index + 1].hmi,
+                    firstAction: row.action,
+                    secondAction: rows[index + 1].action,
+                    firstTable: row.tableAngle,
+                    secondTable: rows[index + 1].tableAngle,
+                    firstPlate: row.plateAngle,
+                    secondPlate: rows[index + 1].plateAngle
+                  }] : [])
                 };
               });
               console.log('RESULT_BEGIN');
