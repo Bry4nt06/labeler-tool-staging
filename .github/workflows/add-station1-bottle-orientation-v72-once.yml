@@ -1,0 +1,933 @@
+name: Add Station 1 bottle orientation visual once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/add-station1-bottle-orientation-v72-once.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "station1-bottle-orientation-v72"
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out staging main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Add shared Bottle Orientation and Wipe Visual
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > app/bottle-orientation-panel-integration.js <<'EOF'
+          "use strict";
+
+          (function installBottleOrientationPanel(global) {
+            if (global.LabelerBottleOrientationPanel?.installed) return;
+
+            const VERSION = 1;
+            const STYLE_ID = "servoforge-bottle-orientation-panel-style";
+            const PANEL_ATTR = "data-bottle-orientation-panel";
+            const BASE_DEG_PER_SECOND = 9;
+            const SECTION_COLORS = Object.freeze({
+              neck: "#ff8a32",
+              body: "#4ca8ff",
+              back: "#71d34f"
+            });
+            const playback = {
+              source: "program",
+              playing: false,
+              speed: 1,
+              raf: null,
+              lastTime: null
+            };
+
+            function runtimeState() {
+              try {
+                if (typeof state !== "undefined" && state) return state;
+              } catch {
+                // Fall through to a Window property only if the lexical binding is unavailable.
+              }
+              return global.state || null;
+            }
+
+            function finite(value, fallback = NaN) {
+              if (value === null || value === undefined || value === "") return fallback;
+              const parsed = Number(value);
+              return Number.isFinite(parsed) ? parsed : fallback;
+            }
+
+            function clamp(value, minimum, maximum) {
+              return Math.min(maximum, Math.max(minimum, value));
+            }
+
+            function normalizeAngle(value) {
+              const angle = finite(value, 0) % 360;
+              return angle < 0 ? angle + 360 : angle;
+            }
+
+            function format(value, digits = 1) {
+              const numeric = Number(value);
+              return Number.isFinite(numeric) ? numeric.toFixed(digits).replace(/\.0$/, "") : "--";
+            }
+
+            function escapeHtml(value) {
+              return String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+            }
+
+            function activeMap() {
+              try {
+                return typeof activeMachineMap === "function" ? activeMachineMap() : null;
+              } catch {
+                return null;
+              }
+            }
+
+            function generatedProgram() {
+              const current = runtimeState();
+              return Array.isArray(current?.program) ? current.program : [];
+            }
+
+            function programForSource(source) {
+              const current = runtimeState();
+              if (source === "simulation" && current?.simulation?.useCustom) {
+                try {
+                  const custom = typeof simulationProgram === "function" ? simulationProgram() : null;
+                  if (Array.isArray(custom) && custom.length) return custom;
+                } catch {
+                  // Fall back to the generated program.
+                }
+              }
+              return generatedProgram();
+            }
+
+            function programSegmentsFor(program) {
+              try {
+                return typeof programSegments === "function" ? programSegments(program) : [];
+              } catch {
+                return [];
+              }
+            }
+
+            function stationOneSection() {
+              try {
+                const resolved = typeof labelSectionForStation === "function" ? labelSectionForStation(1) : null;
+                if (["neck", "body", "back"].includes(resolved)) return resolved;
+              } catch {
+                // Use the explicit map assignment when the runtime resolver is unavailable.
+              }
+              const explicit = String(activeMap()?.stationSections?.["1"] || "").toLowerCase();
+              return ["neck", "body", "back"].includes(explicit) ? explicit : "neck";
+            }
+
+            function stationOneObjects() {
+              return (Array.isArray(activeMap()?.objects) ? activeMap().objects : []).filter((item) => {
+                const kind = String(item?.kind || "");
+                return Number(item?.station) === 1
+                  && ["roller", "pad", "brush", "brush-channel", "wipe", "sensor"].includes(kind);
+              });
+            }
+
+            function objectStart(item) {
+              if (item?.kind === "brush-channel") return Math.min(
+                finite(item?.outerStart, Infinity),
+                finite(item?.innerStart, Infinity)
+              );
+              return finite(item?.angle, finite(item?.start, NaN));
+            }
+
+            function objectEnd(item) {
+              const point = finite(item?.angle, NaN);
+              if (Number.isFinite(point)) return point + 2;
+              const start = finite(item?.start, NaN);
+              if (item?.kind === "roller" && Number.isFinite(start)) {
+                return start + Math.max(0.1, finite(item?.wipeSpanDeg, 5));
+              }
+              if (item?.kind === "brush-channel") return Math.max(
+                finite(item?.outerEnd, -Infinity),
+                finite(item?.innerEnd, -Infinity)
+              );
+              return finite(item?.end, start);
+            }
+
+            function unwrapAtOrAfter(value, reference) {
+              let resolved = finite(value, NaN);
+              if (!Number.isFinite(resolved)) return NaN;
+              while (resolved < reference - 0.001) resolved += 360;
+              while (resolved >= reference + 360) resolved -= 360;
+              if (resolved < reference - 0.001) resolved += 360;
+              return resolved;
+            }
+
+            function stationOnePath(program) {
+              const map = activeMap();
+              const aggregateStart = finite(
+                map?.aggregateAngles?.["1"],
+                finite(map?.stationAngles?.["1"], NaN)
+              );
+              const objects = stationOneObjects();
+              const objectStarts = objects.map(objectStart).filter(Number.isFinite);
+              const rowSegments = programSegmentsFor(program).filter((row) => {
+                if (Number(row?.station) === 1) return true;
+                if (/\bAgg\s*1\b/i.test(String(row?.action || ""))) return true;
+                try {
+                  return global.LabelerWipeTelemetryService?.wipeContextForSegment?.(row)?.station === 1;
+                } catch {
+                  return false;
+                }
+              });
+
+              const rowStarts = rowSegments.map((row) => finite(row?.tableAngle, NaN)).filter(Number.isFinite);
+              let start = Number.isFinite(aggregateStart)
+                ? aggregateStart
+                : objectStarts.length
+                  ? Math.min(...objectStarts)
+                  : rowStarts.length
+                    ? Math.min(...rowStarts)
+                    : 0;
+              start = normalizeAngle(start);
+
+              const endCandidates = [];
+              objects.forEach((item) => {
+                const end = unwrapAtOrAfter(objectEnd(item), start);
+                if (Number.isFinite(end)) endCandidates.push(end);
+              });
+              rowSegments.forEach((row) => {
+                const rowStart = unwrapAtOrAfter(row?.tableAngle, start);
+                if (!Number.isFinite(rowStart) || rowStart > start + 150) return;
+                const travel = Math.max(0, finite(row?.tableTravel, 0));
+                endCandidates.push(rowStart + travel);
+              });
+
+              let end = endCandidates.length ? Math.max(...endCandidates) : start + 35;
+              end = clamp(end, start + 5, start + 150);
+              return { start, end, objects, rowSegments };
+            }
+
+            function currentUnwrappedAngle(path) {
+              const current = runtimeState();
+              const normalized = normalizeAngle(current?.previewAngle);
+              const midpoint = (path.start + path.end) / 2;
+              const candidates = [normalized - 360, normalized, normalized + 360, normalized + 720];
+              const closest = candidates.reduce((best, candidate) => (
+                Math.abs(candidate - midpoint) < Math.abs(best - midpoint) ? candidate : best
+              ), candidates[0]);
+              return clamp(closest, path.start, path.end);
+            }
+
+            function selectedLabel() {
+              try {
+                return typeof selectedLabelSpec === "function" ? selectedLabelSpec() : null;
+              } catch {
+                return null;
+              }
+            }
+
+            function selectedBottle() {
+              try {
+                return typeof selectedBottleSpec === "function" ? selectedBottleSpec() : null;
+              } catch {
+                return null;
+              }
+            }
+
+            function labelLengthMm(section, label) {
+              const service = global.LabelerWipeTelemetryService;
+              if (typeof service?.wipeLabelLengthMm === "function") {
+                const measured = finite(service.wipeLabelLengthMm(section, label), NaN);
+                if (Number.isFinite(measured) && measured > 0) return measured;
+              }
+              if (section === "neck") return Math.max(finite(label?.neckBottomCurveMm, 0), finite(label?.neckLengthMm, 0));
+              if (section === "body") return finite(label?.bodyLengthMm, 0);
+              if (section === "back") return finite(label?.backLengthMm, 0);
+              return 0;
+            }
+
+            function bodyCircumferenceMm(bottle) {
+              try {
+                const measured = typeof bodyCircumference === "function" ? finite(bodyCircumference(bottle), NaN) : NaN;
+                if (Number.isFinite(measured) && measured > 0) return measured;
+              } catch {
+                // Calculate from the selected bottle diameter below.
+              }
+              const diameter = Math.max(1, finite(bottle?.diameterTargetMm, finite(bottle?.bodyBackDiameterMm, 60)));
+              return Math.PI * diameter;
+            }
+
+            function labelGeometry(section) {
+              const label = selectedLabel();
+              const bottle = selectedBottle();
+              const bodyCirc = bodyCircumferenceMm(bottle);
+              const neckCirc = Math.max(1, finite(label?.neckBottomCircumferenceMm, bodyCirc * 0.56));
+              const circumference = section === "neck" ? neckCirc : bodyCirc;
+              const lengthMm = labelLengthMm(section, label);
+              let labelDeg = NaN;
+              try {
+                labelDeg = typeof degFromMm === "function" ? finite(degFromMm(lengthMm, circumference), NaN) : NaN;
+              } catch {
+                // Use the shared bottle renderer fallback below.
+              }
+              if (!Number.isFinite(labelDeg) || labelDeg <= 0) {
+                labelDeg = finite(global.LabelerBottleVisualRenderer?.bottleLabelArcWidthDeg?.(section), 90);
+              }
+              return {
+                label,
+                bottle,
+                bodyCirc,
+                neckCirc,
+                circumference,
+                lengthMm,
+                labelDeg: clamp(labelDeg, 1, 350),
+                bottleDiameterMm: Math.max(1, finite(bottle?.diameterTargetMm, bodyCirc / Math.PI))
+              };
+            }
+
+            function bottleAngleAtTable(tableAngle, program) {
+              try {
+                return typeof plateAngleAt === "function" ? finite(plateAngleAt(normalizeAngle(tableAngle), program), 0) : 0;
+              } catch {
+                return 0;
+              }
+            }
+
+            function activeRowAt(tableAngle, program) {
+              try {
+                return typeof activeSegmentForProgram === "function"
+                  ? activeSegmentForProgram(program, normalizeAngle(tableAngle))
+                  : null;
+              } catch {
+                return null;
+              }
+            }
+
+            function stationOneCoverage(program, section, tableAngle, geometry) {
+              const service = global.LabelerWipeTelemetryService;
+              if (!service?.contactedLabelCoverage || !service?.wipeVisualApplication) {
+                return { percentage: 0, leftPercent: 0, rightPercent: 0, tackMode: "center", direction: "ltr" };
+              }
+              try {
+                const visual = service.wipeVisualApplication(section, geometry.lengthMm);
+                const coverage = service.contactedLabelCoverage(
+                  program,
+                  section,
+                  1,
+                  normalizeAngle(tableAngle),
+                  visual
+                );
+                return { ...visual, ...coverage };
+              } catch {
+                return { percentage: 0, leftPercent: 0, rightPercent: 0, tackMode: "center", direction: "ltr" };
+              }
+            }
+
+            function currentHardware(tableAngle) {
+              try {
+                const context = global.LabelerWipeTelemetryService?.wipeStationContextAtAngle?.(normalizeAngle(tableAngle));
+                return context?.station === 1 ? context.object || null : null;
+              } catch {
+                return null;
+              }
+            }
+
+            function contextFor(source) {
+              const program = programForSource(source);
+              const path = stationOnePath(program);
+              const tableAngle = currentUnwrappedAngle(path);
+              const section = stationOneSection();
+              const geometry = labelGeometry(section);
+              const plateAngle = bottleAngleAtTable(tableAngle, program);
+              const active = activeRowAt(tableAngle, program);
+              const coverage = stationOneCoverage(program, section, tableAngle, geometry);
+              const hardware = currentHardware(tableAngle);
+              return {
+                source,
+                program,
+                path,
+                tableAngle,
+                section,
+                geometry,
+                plateAngle,
+                active,
+                coverage,
+                hardware,
+                applicationStarted: tableAngle >= path.start - 0.001
+              };
+            }
+
+            function polarPoint(angleDeg, radius, cx = 0, cy = 0) {
+              const radians = angleDeg * Math.PI / 180;
+              return {
+                x: cx + Math.sin(radians) * radius,
+                y: cy + Math.cos(radians) * radius
+              };
+            }
+
+            function arcPath(centerX, centerY, radius, startDeg, endDeg) {
+              let span = endDeg - startDeg;
+              while (span < 0) span += 360;
+              span = Math.min(359.9, span);
+              const start = polarPoint(startDeg, radius, centerX, centerY);
+              const end = polarPoint(startDeg + span, radius, centerX, centerY);
+              return `M ${start.x.toFixed(3)} ${start.y.toFixed(3)} A ${radius} ${radius} 0 ${span > 180 ? 1 : 0} 0 ${end.x.toFixed(3)} ${end.y.toFixed(3)}`;
+            }
+
+            function topViewSvg(context) {
+              const { section, plateAngle, geometry, coverage } = context;
+              const bodyRadius = 66;
+              const neckRadius = clamp(bodyRadius * geometry.neckCirc / geometry.bodyCirc, 25, 49);
+              const labelRadius = section === "neck" ? neckRadius : bodyRadius;
+              const labelColor = SECTION_COLORS[section] || "#4ca8ff";
+              const baseCenter = section === "back" ? 180 : 0;
+              const labelCenter = baseCenter + plateAngle;
+              const half = geometry.labelDeg / 2;
+              const leftWipe = half * clamp(finite(coverage.leftPercent, 0), 0, 100) / 100;
+              const rightWipe = half * clamp(finite(coverage.rightPercent, 0), 0, 100) / 100;
+              const front = polarPoint(plateAngle, bodyRadius - 5);
+              const labelCenterPoint = polarPoint(labelCenter, labelRadius - 5);
+              const hardwareActive = Boolean(context.hardware) || finite(coverage.percentage, 0) > 0;
+              const fullArc = arcPath(0, 4, labelRadius, labelCenter - half, labelCenter + half);
+              const leftArc = leftWipe > 0.05 ? arcPath(0, 4, labelRadius, labelCenter - leftWipe, labelCenter) : "";
+              const rightArc = rightWipe > 0.05 ? arcPath(0, 4, labelRadius, labelCenter, labelCenter + rightWipe) : "";
+
+              return `<svg class="bottle-orientation-svg" viewBox="-145 -126 290 252" role="img" aria-label="Top-down bottle orientation at ${format(plateAngle, 1)} degrees">
+                <defs>
+                  <radialGradient id="bottleTopGlass-${context.source}" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#5b3828"/><stop offset="0.55" stop-color="#271b17"/><stop offset="1" stop-color="#0b0f13"/></radialGradient>
+                </defs>
+                <circle cx="0" cy="4" r="84" fill="#070c11" stroke="#6e7780" stroke-width="2"/>
+                <circle cx="0" cy="4" r="77" fill="none" stroke="#b4bcc4" stroke-opacity=".35" stroke-width="1"/>
+                ${[0,90,180,270].map((degree) => {
+                  const inner = polarPoint(degree, 83, 0, 4);
+                  const outer = polarPoint(degree, 94, 0, 4);
+                  const text = polarPoint(degree, 108, 0, 4);
+                  return `<line x1="${inner.x}" y1="${inner.y}" x2="${outer.x}" y2="${outer.y}" stroke="#ff5b3d" stroke-width="2"/><text x="${text.x}" y="${text.y + 4}" text-anchor="middle" class="degree-label">${degree}°</text>`;
+                }).join("")}
+                <circle cx="0" cy="4" r="${bodyRadius}" fill="url(#bottleTopGlass-${context.source})" stroke="#a07155" stroke-width="2"/>
+                <circle cx="0" cy="4" r="${neckRadius}" fill="#171313" stroke="#76503d" stroke-width="1.2"/>
+                <circle cx="0" cy="4" r="11" fill="#2188d8" stroke="#a8ddff" stroke-width="1.2"/>
+                <path d="${fullArc}" fill="none" stroke="#397ea9" stroke-opacity="${context.applicationStarted ? .46 : .18}" stroke-width="${section === "neck" ? 10 : 13}" stroke-linecap="round"/>
+                ${leftArc ? `<path d="${leftArc}" fill="none" stroke="${labelColor}" stroke-width="${section === "neck" ? 10 : 13}" stroke-linecap="round"/>` : ""}
+                ${rightArc ? `<path d="${rightArc}" fill="none" stroke="${labelColor}" stroke-width="${section === "neck" ? 10 : 13}" stroke-linecap="round"/>` : ""}
+                <line x1="0" y1="4" x2="${front.x}" y2="${front.y + 4}" stroke="#ff4d3a" stroke-width="2.3" stroke-dasharray="5 4"/>
+                <circle cx="${labelCenterPoint.x}" cy="${labelCenterPoint.y + 4}" r="2.8" fill="#fff" stroke="${labelColor}" stroke-width="1.2"/>
+                <g transform="translate(86 4)" opacity="${hardwareActive ? 1 : .42}">
+                  <rect x="-5" y="-17" width="14" height="34" rx="5" fill="${hardwareActive ? "#ff6a3d" : "#4f5962"}" stroke="#f5a07f" stroke-width="1"/>
+                  <text x="2" y="28" text-anchor="middle" class="hardware-label">WIPE</text>
+                </g>
+                <text x="0" y="-106" text-anchor="middle" class="view-title">TOP VIEW</text>
+                <text x="0" y="116" text-anchor="middle" class="view-readout">Bottle ${format(plateAngle, 1)}° • Label ${format(geometry.labelDeg, 1)}°</text>
+              </svg>`;
+            }
+
+            function sideViewSvg(context) {
+              const { section, plateAngle, geometry, coverage } = context;
+              const cx = 145;
+              const bodyHalf = clamp(48 * geometry.bottleDiameterMm / 60.68, 39, 58);
+              const neckHalf = clamp(bodyHalf * geometry.neckCirc / geometry.bodyCirc, 17, bodyHalf * .68);
+              const bodyTop = 74;
+              const bodyBottom = 225;
+              const shoulderY = 70;
+              const neckTop = 20;
+              const labelRadius = section === "neck" ? neckHalf : bodyHalf;
+              const chordWidth = clamp(2 * labelRadius * Math.abs(Math.sin(Math.min(179, geometry.labelDeg) * Math.PI / 360)), 16, bodyHalf * 2);
+              const baseCenter = section === "back" ? 180 : 0;
+              const labelFacingAngle = normalizeAngle(baseCenter + plateAngle);
+              const projectedOffset = Math.sin(labelFacingAngle * Math.PI / 180) * labelRadius * .48;
+              const labelX = cx + projectedOffset - chordWidth / 2;
+              const labelY = section === "neck" ? 48 : 126;
+              const labelHeight = section === "neck"
+                ? clamp(finite(geometry.label?.neckHeightMm, 30) / geometry.bottleDiameterMm * 47, 22, 45)
+                : 52;
+              const leftWidth = chordWidth / 2 * clamp(finite(coverage.leftPercent, 0), 0, 100) / 100;
+              const rightWidth = chordWidth / 2 * clamp(finite(coverage.rightPercent, 0), 0, 100) / 100;
+              const labelColor = SECTION_COLORS[section] || "#4ca8ff";
+              const centerlineX = cx + Math.sin(plateAngle * Math.PI / 180) * bodyHalf * .76;
+              const hardwareActive = Boolean(context.hardware) || finite(coverage.percentage, 0) > 0;
+              const hardwareY = labelY + labelHeight / 2;
+
+              return `<svg class="bottle-orientation-svg" viewBox="0 0 290 252" role="img" aria-label="Side bottle view with ${section} label wipe progress">
+                <defs>
+                  <linearGradient id="bottleSideGlass-${context.source}" x1="0" x2="1"><stop offset="0" stop-color="#11171c"/><stop offset=".22" stop-color="#3c302a"/><stop offset=".48" stop-color="#17191a"/><stop offset=".78" stop-color="#47362d"/><stop offset="1" stop-color="#0c1115"/></linearGradient>
+                  <clipPath id="bottleClip-${context.source}"><path d="M ${cx-neckHalf} ${neckTop+20} L ${cx-neckHalf} ${shoulderY-12} Q ${cx-bodyHalf} ${shoulderY} ${cx-bodyHalf} ${bodyTop+18} L ${cx-bodyHalf} ${bodyBottom-18} Q ${cx-bodyHalf} ${bodyBottom} ${cx-bodyHalf+18} ${bodyBottom} L ${cx+bodyHalf-18} ${bodyBottom} Q ${cx+bodyHalf} ${bodyBottom} ${cx+bodyHalf} ${bodyBottom-18} L ${cx+bodyHalf} ${bodyTop+18} Q ${cx+bodyHalf} ${shoulderY} ${cx+neckHalf} ${shoulderY-12} L ${cx+neckHalf} ${neckTop+20} Z"/></clipPath>
+                </defs>
+                <text x="145" y="14" text-anchor="middle" class="view-title">SIDE VIEW</text>
+                <path d="M ${cx-neckHalf} ${neckTop+20} L ${cx-neckHalf} ${shoulderY-12} Q ${cx-bodyHalf} ${shoulderY} ${cx-bodyHalf} ${bodyTop+18} L ${cx-bodyHalf} ${bodyBottom-18} Q ${cx-bodyHalf} ${bodyBottom} ${cx-bodyHalf+18} ${bodyBottom} L ${cx+bodyHalf-18} ${bodyBottom} Q ${cx+bodyHalf} ${bodyBottom} ${cx+bodyHalf} ${bodyBottom-18} L ${cx+bodyHalf} ${bodyTop+18} Q ${cx+bodyHalf} ${shoulderY} ${cx+neckHalf} ${shoulderY-12} L ${cx+neckHalf} ${neckTop+20} Z" fill="url(#bottleSideGlass-${context.source})" stroke="#8c7566" stroke-width="2"/>
+                <rect x="${cx-neckHalf-3}" y="${neckTop+4}" width="${neckHalf*2+6}" height="19" rx="5" fill="#17191a" stroke="#8c7566" stroke-width="1.6"/>
+                <line x1="${centerlineX}" y1="24" x2="${centerlineX}" y2="224" stroke="#ff4d3a" stroke-width="2.2" stroke-dasharray="6 5" clip-path="url(#bottleClip-${context.source})"/>
+                <rect x="${labelX}" y="${labelY}" width="${chordWidth}" height="${labelHeight}" rx="3" fill="#397ea9" fill-opacity="${context.applicationStarted ? .42 : .16}" stroke="#78bfe9" stroke-opacity=".75" stroke-width="1"/>
+                ${leftWidth > .2 ? `<rect x="${labelX + chordWidth/2 - leftWidth}" y="${labelY}" width="${leftWidth}" height="${labelHeight}" rx="2" fill="${labelColor}" fill-opacity=".88"/>` : ""}
+                ${rightWidth > .2 ? `<rect x="${labelX + chordWidth/2}" y="${labelY}" width="${rightWidth}" height="${labelHeight}" rx="2" fill="${labelColor}" fill-opacity=".88"/>` : ""}
+                <line x1="${labelX+chordWidth/2}" y1="${labelY-5}" x2="${labelX+chordWidth/2}" y2="${labelY+labelHeight+5}" stroke="#fff" stroke-width="1" stroke-dasharray="3 3" opacity=".72"/>
+                <g transform="translate(${cx+bodyHalf+10} ${hardwareY})" opacity="${hardwareActive ? 1 : .38}">
+                  <circle cx="0" cy="0" r="11" fill="${hardwareActive ? "#ff6a3d" : "#4f5962"}" stroke="#f7aa8a" stroke-width="1.5"/>
+                  <circle cx="0" cy="0" r="4" fill="#11171c"/>
+                  <text x="0" y="24" text-anchor="middle" class="hardware-label">${hardwareActive ? "WIPING" : "WIPE"}</text>
+                </g>
+                <text x="145" y="245" text-anchor="middle" class="view-readout">${escapeHtml(section.toUpperCase())} • ${format(geometry.lengthMm, 1)} mm • ${format(coverage.percentage, 0)}% wiped</text>
+              </svg>`;
+            }
+
+            function panelMarkup(source) {
+              return `<details class="bottle-orientation-panel" ${PANEL_ATTR}="${source}" open>
+                <summary>
+                  <span><strong>Bottle Orientation &amp; Wipe Visual</strong><small>Station 1 live geometry • synchronized side + top views</small></span>
+                  <span class="bottle-orientation-live-badge">LIVE</span>
+                </summary>
+                <div class="bottle-orientation-content">
+                  <div class="bottle-orientation-metrics">
+                    <div><span>Table</span><strong data-orientation-table>--</strong></div>
+                    <div><span>Bottle</span><strong data-orientation-bottle>--</strong></div>
+                    <div><span>HMI / CMD</span><strong data-orientation-command>--</strong></div>
+                    <div><span>Station 1 label</span><strong data-orientation-section>--</strong></div>
+                    <div><span>Wipe</span><strong data-orientation-wipe>0%</strong></div>
+                    <div><span>Contact</span><strong data-orientation-contact>Waiting</strong></div>
+                  </div>
+                  <div class="bottle-orientation-visual-grid">
+                    <div class="bottle-orientation-view" data-orientation-side></div>
+                    <div class="bottle-orientation-view" data-orientation-top></div>
+                  </div>
+                  <div class="bottle-orientation-action" data-orientation-action>Waiting for Station 1 program data.</div>
+                  <div class="bottle-orientation-controls">
+                    <button type="button" class="secondary-button" data-orientation-action-button="reset">Start</button>
+                    <button type="button" class="secondary-button" data-orientation-action-button="step-back" aria-label="Step back one table degree">−1°</button>
+                    <button type="button" data-orientation-action-button="play" aria-pressed="false">Play Station 1</button>
+                    <button type="button" class="secondary-button" data-orientation-action-button="step-forward" aria-label="Step forward one table degree">+1°</button>
+                    <label class="bottle-orientation-speed">Speed<select data-orientation-speed><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
+                  </div>
+                  <label class="bottle-orientation-scrubber"><span>Station 1 path</span><input data-orientation-scrubber type="range" min="0" max="100" step="0.1" value="0"><output data-orientation-path-readout>0° → 0°</output></label>
+                  <p class="bottle-orientation-note">The circumferential label scale and wipe coverage come from the selected bottle/label geometry and the same Station 1 servo/map data used by ServoForge. The side-view band height is presentation-only where the label specification does not provide a physical height.</p>
+                </div>
+              </details>`;
+            }
+
+            function ensureStyles() {
+              if (document.getElementById(STYLE_ID)) return;
+              const style = document.createElement("style");
+              style.id = STYLE_ID;
+              style.textContent = `
+                .bottle-orientation-panel{margin:0 0 10px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,rgba(20,28,35,.96),rgba(10,16,21,.98));overflow:hidden;}
+                .bottle-orientation-panel>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;cursor:pointer;list-style:none;border-bottom:1px solid transparent;}
+                .bottle-orientation-panel[open]>summary{border-bottom-color:var(--line);}
+                .bottle-orientation-panel>summary::-webkit-details-marker{display:none;}
+                .bottle-orientation-panel>summary span:first-child{display:grid;gap:2px;}
+                .bottle-orientation-panel>summary strong{font-size:12px;}
+                .bottle-orientation-panel>summary small{color:var(--muted);font-size:8px;}
+                .bottle-orientation-live-badge{display:inline-flex;align-items:center;justify-content:center;min-width:38px;padding:3px 7px;border:1px solid #ff6a3d;border-radius:999px;color:#ff9a77;font-size:8px;font-weight:900;letter-spacing:.08em;}
+                .bottle-orientation-content{padding:9px;}
+                .bottle-orientation-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin-bottom:7px;}
+                .bottle-orientation-metrics>div{min-width:0;padding:5px 6px;border:1px solid var(--line);border-radius:6px;background:var(--input);}
+                .bottle-orientation-metrics span,.bottle-orientation-metrics strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+                .bottle-orientation-metrics span{color:var(--muted);font-size:7px;text-transform:uppercase;letter-spacing:.04em;}
+                .bottle-orientation-metrics strong{margin-top:2px;font-size:9px;}
+                .bottle-orientation-visual-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;}
+                .bottle-orientation-view{min-width:0;min-height:228px;border:1px solid var(--line);border-radius:8px;background:radial-gradient(circle at 50% 35%,rgba(37,49,59,.72),rgba(6,10,14,.98) 72%);overflow:hidden;}
+                .bottle-orientation-svg{display:block;width:100%;height:235px;}
+                .bottle-orientation-svg text{fill:#dbe6ed;font-family:inherit;}
+                .bottle-orientation-svg .view-title{font-size:10px;font-weight:800;letter-spacing:.12em;fill:#f2f6f8;}
+                .bottle-orientation-svg .degree-label{font-size:8px;font-weight:800;fill:#ff8866;}
+                .bottle-orientation-svg .view-readout{font-size:8px;font-weight:700;fill:#c6d3da;}
+                .bottle-orientation-svg .hardware-label{font-size:6px;font-weight:900;fill:#ffd8ca;letter-spacing:.06em;}
+                .bottle-orientation-action{margin:7px 0 6px;padding:5px 7px;border-left:3px solid #ff6a3d;border-radius:4px;background:rgba(255,106,61,.08);color:#dfe8ed;font-size:9px;line-height:1.25;}
+                .bottle-orientation-controls{display:grid;grid-template-columns:auto auto minmax(120px,1fr) auto auto;align-items:center;gap:5px;}
+                .bottle-orientation-controls button{min-height:29px;padding:4px 8px;font-size:9px;}
+                .bottle-orientation-speed{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:8px;}
+                .bottle-orientation-speed select{min-height:29px;padding:3px 23px 3px 7px;font-size:9px;}
+                .bottle-orientation-scrubber{display:grid;grid-template-columns:auto minmax(120px,1fr) auto;align-items:center;gap:8px;margin-top:7px;color:var(--muted);font-size:8px;}
+                .bottle-orientation-scrubber input{width:100%;accent-color:#ff6a3d;}
+                .bottle-orientation-scrubber output{min-width:76px;text-align:right;color:#d7e1e7;font-weight:700;}
+                .bottle-orientation-note{margin:6px 1px 0;color:var(--muted);font-size:7.5px;line-height:1.3;}
+                @media(max-width:900px){.bottle-orientation-metrics{grid-template-columns:repeat(3,minmax(0,1fr));}.bottle-orientation-visual-grid{grid-template-columns:1fr;}.bottle-orientation-view{min-height:210px;}.bottle-orientation-svg{height:220px;}}
+                @media(max-width:620px){.bottle-orientation-metrics{grid-template-columns:repeat(2,minmax(0,1fr));}.bottle-orientation-controls{grid-template-columns:repeat(4,1fr);}.bottle-orientation-speed{grid-column:1/-1;}.bottle-orientation-scrubber{grid-template-columns:1fr;}.bottle-orientation-scrubber output{text-align:left;}}
+              `;
+              document.head.appendChild(style);
+            }
+
+            function panelHost(source) {
+              return document.getElementById(source === "simulation" ? "simulation" : "program");
+            }
+
+            function ensurePanel(source) {
+              const host = panelHost(source);
+              if (!host) return null;
+              let panel = host.querySelector(`[${PANEL_ATTR}="${source}"]`);
+              if (panel) return panel;
+              host.insertAdjacentHTML("afterbegin", panelMarkup(source));
+              panel = host.querySelector(`[${PANEL_ATTR}="${source}"]`);
+              if (!panel) return null;
+              panel.addEventListener("click", onPanelClick);
+              panel.addEventListener("input", onPanelInput);
+              panel.addEventListener("change", onPanelChange);
+              return panel;
+            }
+
+            function setText(panel, selector, value) {
+              const node = panel?.querySelector(selector);
+              if (node) node.textContent = value;
+            }
+
+            function renderSource(source) {
+              ensureStyles();
+              const panel = ensurePanel(source);
+              if (!panel) return false;
+              const context = contextFor(source);
+              const side = panel.querySelector("[data-orientation-side]");
+              const top = panel.querySelector("[data-orientation-top]");
+              if (side) side.innerHTML = sideViewSvg(context);
+              if (top) top.innerHTML = topViewSvg(context);
+
+              const command = context.active
+                ? `HMI ${context.active.hmi ?? "--"} / CMD ${context.active.cmd ?? "--"}`
+                : "--";
+              setText(panel, "[data-orientation-table]", `${format(context.tableAngle, 1)}°`);
+              setText(panel, "[data-orientation-bottle]", `${format(context.plateAngle, 1)}°`);
+              setText(panel, "[data-orientation-command]", command);
+              setText(panel, "[data-orientation-section]", `${context.section[0].toUpperCase()}${context.section.slice(1)} • ${format(context.geometry.labelDeg, 1)}°`);
+              setText(panel, "[data-orientation-wipe]", `${format(context.coverage.percentage, 0)}%`);
+              setText(panel, "[data-orientation-contact]", context.hardware?.name || (context.hardware?.kind ? context.hardware.kind : "Waiting"));
+              setText(panel, "[data-orientation-action]", context.active?.action || "Waiting for Station 1 program data.");
+              setText(panel, "[data-orientation-path-readout]", `${format(context.path.start, 1)}° → ${format(context.path.end, 1)}°`);
+
+              const scrubber = panel.querySelector("[data-orientation-scrubber]");
+              if (scrubber) {
+                scrubber.min = String(context.path.start);
+                scrubber.max = String(context.path.end);
+                scrubber.value = String(context.tableAngle);
+              }
+              const speed = panel.querySelector("[data-orientation-speed]");
+              if (speed && Number(speed.value) !== playback.speed) speed.value = String(playback.speed);
+              const playButton = panel.querySelector('[data-orientation-action-button="play"]');
+              const thisPlaying = playback.playing && playback.source === source;
+              if (playButton) {
+                playButton.textContent = thisPlaying ? "Pause Station 1" : "Play Station 1";
+                playButton.setAttribute("aria-pressed", thisPlaying ? "true" : "false");
+              }
+              return true;
+            }
+
+            function renderAll() {
+              ["program", "simulation"].forEach((source) => {
+                if (panelHost(source)) renderSource(source);
+              });
+            }
+
+            function stopPlayback() {
+              playback.playing = false;
+              playback.lastTime = null;
+              if (playback.raf !== null) global.cancelAnimationFrame(playback.raf);
+              playback.raf = null;
+              renderAll();
+            }
+
+            function pauseGlobalAnimation() {
+              const current = runtimeState();
+              if (!current) return;
+              current.isPlaying = false;
+              if (typeof els !== "undefined" && els?.playPause) {
+                els.playPause.textContent = "Play";
+                els.playPause.setAttribute("aria-pressed", "false");
+              }
+            }
+
+            function syncAnimationFrame() {
+              if (typeof global.renderAnimationFrame === "function") {
+                global.renderAnimationFrame();
+                return;
+              }
+              global.updateMapAnimationFrame?.();
+              global.updateSimulationAnimationFrame?.();
+              renderAll();
+            }
+
+            function setPreview(source, value, { stop = true } = {}) {
+              if (stop) stopPlayback();
+              pauseGlobalAnimation();
+              const current = runtimeState();
+              if (!current) return;
+              const context = contextFor(source);
+              const next = clamp(finite(value, context.path.start), context.path.start, context.path.end);
+              current.previewAngle = normalizeAngle(next);
+              syncAnimationFrame();
+            }
+
+            function playbackTick(now) {
+              if (!playback.playing) return;
+              const host = panelHost(playback.source);
+              if (!host?.classList.contains("active")) {
+                stopPlayback();
+                return;
+              }
+              const context = contextFor(playback.source);
+              const elapsed = playback.lastTime === null ? 0 : Math.min(.05, Math.max(0, now - playback.lastTime) / 1000);
+              playback.lastTime = now;
+              let next = context.tableAngle + BASE_DEG_PER_SECOND * playback.speed * elapsed;
+              if (next > context.path.end - .001) next = context.path.start;
+              const current = runtimeState();
+              if (current) current.previewAngle = normalizeAngle(next);
+              syncAnimationFrame();
+              playback.raf = global.requestAnimationFrame(playbackTick);
+            }
+
+            function startPlayback(source) {
+              pauseGlobalAnimation();
+              if (playback.raf !== null) global.cancelAnimationFrame(playback.raf);
+              playback.source = source;
+              playback.playing = true;
+              playback.lastTime = null;
+              const context = contextFor(source);
+              const current = runtimeState();
+              if (current && (context.tableAngle <= context.path.start + .001 || context.tableAngle >= context.path.end - .001)) {
+                current.previewAngle = normalizeAngle(context.path.start);
+              }
+              renderAll();
+              playback.raf = global.requestAnimationFrame(playbackTick);
+            }
+
+            function sourceFromPanel(panel) {
+              return panel?.getAttribute(PANEL_ATTR) === "simulation" ? "simulation" : "program";
+            }
+
+            function onPanelClick(event) {
+              const button = event.target.closest?.("[data-orientation-action-button]");
+              if (!button) return;
+              event.preventDefault();
+              const panel = button.closest(`[${PANEL_ATTR}]`);
+              const source = sourceFromPanel(panel);
+              const action = button.dataset.orientationActionButton;
+              const context = contextFor(source);
+              if (action === "play") {
+                if (playback.playing && playback.source === source) stopPlayback();
+                else startPlayback(source);
+                return;
+              }
+              if (action === "reset") setPreview(source, context.path.start);
+              if (action === "step-back") setPreview(source, context.tableAngle - 1);
+              if (action === "step-forward") setPreview(source, context.tableAngle + 1);
+            }
+
+            function onPanelInput(event) {
+              const slider = event.target.closest?.("[data-orientation-scrubber]");
+              if (!slider) return;
+              const source = sourceFromPanel(slider.closest(`[${PANEL_ATTR}]`));
+              setPreview(source, slider.value);
+            }
+
+            function onPanelChange(event) {
+              const speed = event.target.closest?.("[data-orientation-speed]");
+              if (!speed) return;
+              playback.speed = clamp(finite(speed.value, 1), .25, 4);
+              renderAll();
+            }
+
+            function wrapRenderer(name, source) {
+              const base = global[name];
+              if (typeof base !== "function" || base.stationOneBottleOrientationV72) return false;
+              const wrapped = function renderWithStationOneBottleOrientation(...args) {
+                const result = base.apply(this, args);
+                renderSource(source);
+                return result;
+              };
+              wrapped.stationOneBottleOrientationV72 = true;
+              wrapped.previousRenderer = base;
+              global[name] = wrapped;
+              return true;
+            }
+
+            function wrapAnimationFrame() {
+              const base = global.renderAnimationFrame;
+              if (typeof base !== "function" || base.stationOneBottleOrientationV72) return false;
+              const wrapped = function renderAnimationFrameWithBottleOrientation(...args) {
+                const result = base.apply(this, args);
+                renderAll();
+                return result;
+              };
+              wrapped.stationOneBottleOrientationV72 = true;
+              wrapped.previousRenderAnimationFrame = base;
+              global.renderAnimationFrame = wrapped;
+              return true;
+            }
+
+            ensureStyles();
+            wrapRenderer("renderProgram", "program");
+            wrapRenderer("renderSimulation", "simulation");
+            wrapAnimationFrame();
+
+            global.LabelerBottleOrientationPanel = Object.freeze({
+              installed: true,
+              version: VERSION,
+              programForSource,
+              stationOnePath,
+              contextFor,
+              topViewSvg,
+              sideViewSvg,
+              ensurePanel,
+              renderSource,
+              renderAll,
+              startPlayback,
+              stopPlayback,
+              setPreview,
+              station1SharedVisualV72: true,
+              programAccessibleWithoutSimulationV72: true,
+              geometryDrivenLabelScaleV72: true,
+              wipeTelemetryDrivenV72: true
+            });
+          })(typeof window !== "undefined" ? window : globalThis);
+          EOF
+
+          cat > tests/bottle-orientation-panel.test.js <<'EOF'
+          "use strict";
+
+          const assert = require("assert");
+          const fs = require("fs");
+          const path = require("path");
+
+          const root = path.resolve(__dirname, "..");
+          const source = fs.readFileSync(path.join(root, "app/bottle-orientation-panel-integration.js"), "utf8");
+          const bootstrap = fs.readFileSync(path.join(root, "app/bootstrap.js"), "utf8");
+          const serviceWorker = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
+
+          assert.match(source, /Bottle Orientation &amp; Wipe Visual/);
+          assert.match(source, /Station 1 live geometry/);
+          assert.match(source, /programForSource\(source\)/);
+          assert.match(source, /source === "simulation"/);
+          assert.match(source, /return generatedProgram\(\)/);
+          assert.match(source, /LabelerWipeTelemetryService\?\.contactedLabelCoverage/);
+          assert.match(source, /wipeVisualApplication/);
+          assert.match(source, /selectedLabelSpec/);
+          assert.match(source, /selectedBottleSpec/);
+          assert.match(source, /bodyCircumference/);
+          assert.match(source, /degFromMm/);
+          assert.match(source, /wipeSpanDeg, 5/);
+          assert.match(source, /\[0,90,180,270\]/);
+          assert.match(source, /TOP VIEW/);
+          assert.match(source, /SIDE VIEW/);
+          assert.match(source, /Play Station 1/);
+          assert.match(source, /data-orientation-scrubber/);
+          assert.match(source, /wrapRenderer\("renderProgram", "program"\)/);
+          assert.match(source, /wrapRenderer\("renderSimulation", "simulation"\)/);
+          assert.match(source, /programAccessibleWithoutSimulationV72/);
+          assert.match(source, /geometryDrivenLabelScaleV72/);
+          assert.match(source, /wipeTelemetryDrivenV72/);
+          assert.match(bootstrap, /app\/bottle-orientation-panel-integration\.js/);
+          assert.match(serviceWorker, /app\/bottle-orientation-panel-integration\.js/);
+
+          console.log("Bottle orientation panel v72 regression passed.");
+          EOF
+
+          node <<'NODE'
+          const fs = require('fs');
+
+          function replaceOrThrow(source, pattern, replacement, label) {
+            const updated = source.replace(pattern, replacement);
+            if (updated === source) throw new Error(`Unable to update ${label}`);
+            return updated;
+          }
+
+          let bootstrap = fs.readFileSync('app/bootstrap.js', 'utf8');
+          bootstrap = replaceOrThrow(
+            bootstrap,
+            /const build = "[^"]+";/,
+            'const build = "station1-bottle-orientation-v72-20260811-1600";',
+            'bootstrap build'
+          );
+          bootstrap = replaceOrThrow(
+            bootstrap,
+            /const buildUpdatedAt = "[^"]+";/,
+            'const buildUpdatedAt = "Aug 11, 2026 4:00 PM ET";',
+            'bootstrap timestamp'
+          );
+          bootstrap = replaceOrThrow(
+            bootstrap,
+            '// Regression lineage:',
+            '// Regression lineage: station1-bottle-orientation-v72-20260811-1600 •',
+            'bootstrap lineage'
+          );
+          bootstrap = replaceOrThrow(
+            bootstrap,
+            '    "app/servo-program-eight-row-grouping-integration.js",\n',
+            '    "app/servo-program-eight-row-grouping-integration.js",\n    "app/bottle-orientation-panel-integration.js",\n',
+            'bootstrap module manifest'
+          );
+          fs.writeFileSync('app/bootstrap.js', bootstrap);
+
+          let index = fs.readFileSync('index.html', 'utf8');
+          index = replaceOrThrow(
+            index,
+            /<script src="app\/bootstrap\.js\?v=[^"]+"><\/script>/,
+            '<script src="app/bootstrap.js?v=0.9.10-station1-bottle-orientation-v72-20260811-1600"></script>',
+            'bootstrap script cache key'
+          );
+          fs.writeFileSync('index.html', index);
+
+          let sw = fs.readFileSync('service-worker.js', 'utf8');
+          sw = replaceOrThrow(
+            sw,
+            /const CACHE_NAME = "[^"]+";/,
+            'const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-station1-bottle-orientation-v72";',
+            'service worker cache name'
+          );
+          if (!sw.includes('"./app/bottle-orientation-panel-integration.js"')) {
+            sw = replaceOrThrow(
+              sw,
+              '  "./app/compact-build-parameters-integration.js",\n',
+              '  "./app/compact-build-parameters-integration.js",\n  "./app/bottle-orientation-panel-integration.js",\n',
+              'service worker bottle orientation asset'
+            );
+          }
+          fs.writeFileSync('service-worker.js', sw);
+
+          const manifest = JSON.parse(fs.readFileSync('update-manifest.json', 'utf8'));
+          manifest.version = '0.9.10';
+          manifest.buildId = 'station1-bottle-orientation-v72-20260811-1600';
+          manifest.notes = 'Staging v72 adds a shared live Bottle Orientation & Wipe Visual inside both Servo Program and Servo Simulation. The Servo Program visual works independently when Servo Simulation is hidden. It follows Station 1 table/plate motion, uses selected bottle circumference and label length to scale the top-view label arc, and uses ServoForge wipe telemetry to animate actual Station 1 wipe coverage.';
+          fs.writeFileSync('update-manifest.json', JSON.stringify(manifest, null, 2) + '\n');
+          NODE
+
+      - name: Validate visual integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app/bottle-orientation-panel-integration.js
+          node --check app/bootstrap.js
+          node tests/bottle-orientation-panel.test.js
+          node tests/top-view-bottle-renderer.test.js
+          node tests/wipe-component-visuals.test.js
+          node tests/apl-roller-coverage-default.test.js
+          node tests/bootstrap-module-boundaries.test.js
+          node tests/top-navigation-recovery.test.js
+
+      - name: Commit verified staging v72
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Bry4nt06"
+          git config user.email "139938543+Bry4nt06@users.noreply.github.com"
+          git add app/bottle-orientation-panel-integration.js app/bootstrap.js index.html service-worker.js update-manifest.json tests/bottle-orientation-panel.test.js
+          git commit -m "Add Station 1 bottle orientation visual"
+          git push origin main
+
+      - name: Remove one-time visual workflow
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin main
+          rm -f .github/workflows/add-station1-bottle-orientation-v72-once.yml
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Remove one-time bottle orientation workflow"
+            git push origin main
+          fi
