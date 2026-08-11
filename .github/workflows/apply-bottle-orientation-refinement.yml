@@ -20,6 +20,11 @@ jobs:
       - name: Apply bottle orientation refinement
         run: node scripts/apply-bottle-orientation-v78-direction.js
 
+      - name: Check generated JavaScript syntax
+        run: |
+          node --check app/bottle-orientation-panel-integration.js
+          node --check app/animation-runtime.js
+
       - name: Validate orientation regression
         run: node tests/bottle-orientation-panel.test.js
 
