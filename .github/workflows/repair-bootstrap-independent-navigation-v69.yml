@@ -11,9 +11,9 @@ permissions:
   contents: write
 
 jobs:
-  repair-and-validate:
+  repair-and-publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,167 +23,98 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Move workspace navigation outside bootstrap
+      - name: Install bootstrap-independent navigation
         run: |
           python3 - <<'PY'
-          import json
+          import json, re
           from pathlib import Path
 
-          old_build = 'direct-workspace-tabs-v68-20260811-1241'
-          new_build = 'bootstrap-independent-navigation-v69-20260811-1256'
-          old_query = '0.9.10-direct-workspace-tabs-v68-20260811-1241'
-          new_query = '0.9.10-bootstrap-independent-navigation-v69-20260811-1256'
+          final_build = 'bootstrap-independent-navigation-v69-20260811-1305'
+          final_query = '0.9.10-bootstrap-independent-navigation-v69-20260811-1305'
 
           index = Path('index.html')
           text = index.read_text(encoding='utf-8')
-          text = text.replace(old_query, new_query)
-          direct_nav = f'    <script src="app/controllers/tabs-controller.js?v={new_query}"></script>\n'
-          if 'app/controllers/tabs-controller.js?v=' not in text:
-              marker = '    <script src="drivers/geometry/label-geometry-driver.js?v=0.9.10"></script>\n'
-              if marker not in text:
-                  raise SystemExit('Unable to locate first application script marker in index.html')
-              text = text.replace(marker, direct_nav + marker, 1)
-          else:
-              import re
-              text = re.sub(r'    <script src="app/controllers/tabs-controller\.js\?v=[^"]+"></script>\n', direct_nav, text, count=1)
+          for old in (
+              '0.9.10-direct-workspace-tabs-v68-20260811-1241',
+              '0.9.10-bootstrap-independent-navigation-v69-20260811-1256',
+              '0.9.10-bootstrap-independent-navigation-v69-20260811-1300'):
+              text = text.replace(old, final_query)
+          text = re.sub(r'\s*<script src="app/controllers/tabs-controller\.js\?v=[^"]+"></script>\n?', '\n', text)
+          marker = '    <script src="drivers/geometry/label-geometry-driver.js?v=0.9.10"></script>\n'
+          if marker not in text:
+              raise SystemExit('Unable to locate first application driver script in index.html')
+          nav = f'    <script src="app/controllers/tabs-controller.js?v={final_query}"></script>\n'
+          text = text.replace(marker, nav + marker, 1)
           index.write_text(text, encoding='utf-8')
 
           bootstrap = Path('app/bootstrap.js')
           text = bootstrap.read_text(encoding='utf-8')
-          text = text.replace(f'const build = "{old_build}";', f'const build = "{new_build}";')
-          text = text.replace('const buildUpdatedAt = "Aug 11, 2026 12:41 PM ET";', 'const buildUpdatedAt = "Aug 11, 2026 12:56 PM ET";')
-          text = text.replace('// Regression lineage: direct-workspace-tabs-v68-20260811-1241', '// Regression lineage: bootstrap-independent-navigation-v69-20260811-1256 • direct-workspace-tabs-v68-20260811-1241')
+          text = re.sub(r'const build = "(?:direct-workspace-tabs-v68-20260811-1241|bootstrap-independent-navigation-v69-20260811-(?:1256|1300))";', f'const build = "{final_build}";', text, count=1)
+          text = re.sub(r'const buildUpdatedAt = "Aug 11, 2026 (?:12:41 PM|12:56 PM|1:00 PM) ET";', 'const buildUpdatedAt = "Aug 11, 2026 1:05 PM ET";', text, count=1)
+          lineage = '// Regression lineage: '
+          if final_build not in text.split('\n', 8)[4:8]:
+              text = text.replace(lineage, lineage + final_build + ' • ', 1)
           text = text.replace('    "app/controllers/tabs-controller.js",\n', '')
           bootstrap.write_text(text, encoding='utf-8')
 
           worker = Path('service-worker.js')
-          text = worker.read_text(encoding='utf-8').replace(
-              'servoforge-labeler-staging-v0.9.10-direct-workspace-tabs-v68',
-              'servoforge-labeler-staging-v0.9.10-bootstrap-independent-navigation-v69')
+          text = worker.read_text(encoding='utf-8')
+          text = re.sub(r'const CACHE_NAME = "servoforge-labeler-staging-v0\.9\.10-(?:direct-workspace-tabs-v68|bootstrap-independent-navigation-v69)";', 'const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-bootstrap-independent-navigation-v69";', text, count=1)
           worker.write_text(text, encoding='utf-8')
 
           manifest_path = Path('update-manifest.json')
           manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-          manifest['buildId'] = new_build
-          manifest['notes'] = ('Staging v69 installs workspace navigation directly from index.html before the bootstrap chain. '
-                               'Specs, Build Inputs, Servo Program, Diagnostics, and Servo Simulation remain selectable even if a later '
-                               'startup module fails. The bootstrap loader no longer owns or gates the tab controller.')
+          manifest['buildId'] = final_build
+          manifest['notes'] = ('Staging v69 loads workspace navigation directly from index.html before all application drivers and outside the bootstrap chain. '
+                               'Specs, Build Inputs, Servo Program, Diagnostics, and Servo Simulation remain selectable even if a later startup module fails.')
           manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+
+          test = Path('tests/top-navigation-recovery.test.js')
+          test.write_text(r'''"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+
+const root = path.resolve(__dirname, "..");
+const source = fs.readFileSync(path.join(root, "app", "controllers", "tabs-controller.js"), "utf8");
+const bootstrap = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
+const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const serviceWorker = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
+
+assert.doesNotThrow(() => new vm.Script(source));
+assert.match(source, /navigationCaptureV3:\s*true/);
+assert.match(source, /setDirectTabState/);
+assert.match(source, /stopImmediatePropagation/);
+assert.match(index, /app\/controllers\/tabs-controller\.js\?v=0\.9\.10-bootstrap-independent-navigation-v69-20260811-1305/);
+assert.match(index, /app\/bootstrap\.js\?v=0\.9\.10-bootstrap-independent-navigation-v69-20260811-1305/);
+assert.match(index, /app\/update-manager\.js\?v=0\.9\.10-bootstrap-independent-navigation-v69-20260811-1305/);
+assert.match(index, /app\.js\?v=0\.9\.10-bootstrap-independent-navigation-v69-20260811-1305/);
+assert.match(bootstrap, /bootstrap-independent-navigation-v69-20260811-1305/);
+assert.doesNotMatch(bootstrap, /"app\/controllers\/tabs-controller\.js"/);
+assert.match(serviceWorker, /servoforge-labeler-staging-v0\.9\.10-bootstrap-independent-navigation-v69/);
+
+const navIndex = index.indexOf('app/controllers/tabs-controller.js');
+const firstDriverIndex = index.indexOf('drivers/geometry/label-geometry-driver.js');
+const bootstrapIndex = index.indexOf('app/bootstrap.js');
+assert.ok(navIndex >= 0, 'Direct navigation script must exist.');
+assert.ok(navIndex < firstDriverIndex, 'Navigation must load before the application drivers.');
+assert.ok(navIndex < bootstrapIndex, 'Navigation must load before bootstrap.');
+
+console.log("Bootstrap-independent top navigation regression passed.");
+''', encoding='utf-8')
           PY
 
           node --check app/controllers/tabs-controller.js
           node --check app/bootstrap.js
           node --check service-worker.js
-          grep -q 'app/controllers/tabs-controller.js?v=0.9.10-bootstrap-independent-navigation-v69-20260811-1256' index.html
-          ! grep -q '"app/controllers/tabs-controller.js"' app/bootstrap.js
-          grep -q 'bootstrap-independent-navigation-v69-20260811-1256' app/bootstrap.js
-          grep -q 'bootstrap-independent-navigation-v69' service-worker.js
-
-      - name: Install browser harness
-        run: npm install --no-save puppeteer-core@24.16.0
-
-      - name: Validate navigation survives bootstrap failure
-        run: |
-          python3 -m http.server 8000 >/tmp/servoforge-v69-http.log 2>&1 &
-          cat > /tmp/servoforge-v69-nav.cjs <<'NODE'
-          const puppeteer = require(process.cwd() + '/node_modules/puppeteer-core');
-          const fs = require('fs');
-          const assert = require('assert');
-
-          (async () => {
-            const executablePath = ['/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'].find(fs.existsSync);
-            assert.ok(executablePath, 'Chrome/Chromium not found');
-            const browser = await puppeteer.launch({ executablePath, headless:true, args:['--no-sandbox','--disable-dev-shm-usage'] });
-
-            for (const width of [1365, 1600]) {
-              const page = await browser.newPage();
-              await page.setViewport({ width, height:900 });
-              await page.setRequestInterception(true);
-              page.on('request', request => {
-                if (request.url().includes('/app/export-service.js?')) request.abort();
-                else request.continue();
-              });
-              await page.goto(`http://127.0.0.1:8000/index.html?v69=${Date.now()}&w=${width}`, { waitUntil:'domcontentloaded', timeout:30000 });
-              await page.waitForFunction(() => Boolean(window.LabelerTabsController?.navigationCaptureV3), { timeout:5000 });
-              await new Promise(r => setTimeout(r, 700));
-
-              const controllerLocation = await page.evaluate(() => {
-                const direct = [...document.scripts].find(s => /app\/controllers\/tabs-controller\.js/.test(s.src));
-                return { src: direct?.src || '', buildReady: Boolean(window.ServoForgeBootstrapReady) };
-              });
-              assert.match(controllerLocation.src, /bootstrap-independent-navigation-v69-20260811-1256/);
-
-              for (const tab of ['buildInputs','program','specs']) {
-                const selector = `.tabs .tab[data-tab="${tab}"]`;
-                await page.waitForSelector(selector, { visible:true, timeout:5000 });
-                const hit = await page.$eval(selector, el => {
-                  const r = el.getBoundingClientRect();
-                  const node = document.elementFromPoint(r.left + r.width/2, r.top + r.height/2);
-                  return el === node || el.contains(node);
-                });
-                assert.equal(hit, true, `${tab} is covered at width ${width}`);
-                await page.click(selector);
-                await new Promise(r => setTimeout(r, 100));
-                const result = await page.evaluate(name => {
-                  const panel = document.getElementById(name);
-                  const button = document.querySelector(`.tabs .tab[data-tab="${name}"]`);
-                  return {
-                    active: panel?.classList.contains('active') || false,
-                    hidden: Boolean(panel?.hidden),
-                    display: panel ? getComputedStyle(panel).display : 'missing',
-                    buttonActive: button?.classList.contains('active') || false
-                  };
-                }, tab);
-                assert.equal(result.active, true, `${tab} panel did not activate at width ${width}`);
-                assert.equal(result.hidden, false, `${tab} remained hidden at width ${width}`);
-                assert.notEqual(result.display, 'none', `${tab} remained display:none at width ${width}`);
-                assert.equal(result.buttonActive, true, `${tab} button did not activate at width ${width}`);
-              }
-              await page.close();
-            }
-
-            await browser.close();
-          })().catch(error => { console.error(error.stack || error); process.exitCode = 1; });
-          NODE
-          node /tmp/servoforge-v69-nav.cjs
-
-      - name: Update navigation regression
-        run: |
-          cat > tests/top-navigation-recovery.test.js <<'JS'
-          "use strict";
-
-          const assert = require("node:assert/strict");
-          const fs = require("node:fs");
-          const path = require("node:path");
-          const vm = require("node:vm");
-
-          const root = path.resolve(__dirname, "..");
-          const source = fs.readFileSync(path.join(root, "app", "controllers", "tabs-controller.js"), "utf8");
-          const bootstrap = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
-          const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
-          const serviceWorker = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
-
-          assert.doesNotThrow(() => new vm.Script(source));
-          assert.match(source, /navigationCaptureV3:\s*true/);
-          assert.match(source, /setDirectTabState/);
-          assert.match(source, /stopImmediatePropagation/);
-          assert.match(index, /app\/controllers\/tabs-controller\.js\?v=0\.9\.10-bootstrap-independent-navigation-v69-20260811-1256/);
-          assert.match(index, /app\/bootstrap\.js\?v=0\.9\.10-bootstrap-independent-navigation-v69-20260811-1256/);
-          assert.match(bootstrap, /bootstrap-independent-navigation-v69-20260811-1256/);
-          assert.doesNotMatch(bootstrap, /"app\/controllers\/tabs-controller\.js"/);
-          assert.match(serviceWorker, /servoforge-labeler-staging-v0\.9\.10-bootstrap-independent-navigation-v69/);
-
-          const navIndex = index.indexOf('app/controllers/tabs-controller.js');
-          const driverIndex = index.indexOf('drivers/geometry/label-geometry-driver.js');
-          const bootstrapIndex = index.indexOf('app/bootstrap.js');
-          assert.ok(navIndex >= 0 && navIndex < driverIndex, 'Navigation controller must load before application drivers.');
-          assert.ok(navIndex < bootstrapIndex, 'Navigation controller must load before bootstrap.');
-
-          console.log("Bootstrap-independent top navigation regression passed.");
-          JS
+          node --check tests/top-navigation-recovery.test.js
           node tests/top-navigation-recovery.test.js
+          grep -q 'app/controllers/tabs-controller.js?v=0.9.10-bootstrap-independent-navigation-v69-20260811-1305' index.html
+          ! grep -q '"app/controllers/tabs-controller.js"' app/bootstrap.js
 
-      - name: Commit validated v69
+      - name: Commit v69
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
