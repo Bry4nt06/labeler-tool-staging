@@ -1,0 +1,35 @@
+name: Validate APL section handoff continuity
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/apl-section-handoff-continuity-integration.js"
+      - "app/profile-translation-service.js"
+      - "tests/apl-section-handoff-continuity.test.js"
+      - "tests/apl-collapsed-plan-alignment.test.js"
+      - ".github/workflows/validate-apl-section-handoff-continuity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check syntax
+        run: |
+          node --check app/apl-section-handoff-continuity-integration.js
+          node --check app/profile-translation-service.js
+          node --check tests/apl-section-handoff-continuity.test.js
+          node --check tests/apl-collapsed-plan-alignment.test.js
+      - name: Run section handoff regression
+        run: node tests/apl-section-handoff-continuity.test.js
+      - name: Run collapsed planner alignment regression
+        run: node tests/apl-collapsed-plan-alignment.test.js
