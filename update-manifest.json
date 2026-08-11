@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "full-cycle-bottle-orientation-v76-20260811-1713",
+  "buildId": "machine-direction-bottle-orientation-v78-20260811-1752",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v76 redesigns the Bottle Orientation side view as a slimmer clear-glass long-neck bottle and changes the orientation player from the old Station/Aggregate 1 preview to the complete generated servo cycle. Playback now follows every servo row through all label/wipe stations, dynamically switches Neck/Body/Back geometry and active station telemetry, and keeps the Servo Program and Servo Simulation visuals synchronized."
+  "notes": "Staging v78 refines Bottle Orientation to the requested clear long-neck bottle profile, keeps labels cylindrically wrapped to the bottle while it rotates, synchronizes the orientation panel with the main labeler animation, shows Body/Back wipe-down from the leading edge, and makes both bottle rotation and degree markers follow the configured machine direction (CW or CCW)."
 }

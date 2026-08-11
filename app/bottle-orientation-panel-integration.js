@@ -3,7 +3,7 @@
 (function installBottleOrientationPanel(global) {
   if (global.LabelerBottleOrientationPanel?.installed) return;
 
-  const VERSION = 2;
+  const VERSION = 3;
   const STYLE_ID = "servoforge-bottle-orientation-panel-style";
   const PANEL_ATTR = "data-bottle-orientation-panel";
   const BASE_DEG_PER_SECOND = 18;
@@ -311,9 +311,18 @@
     const plateAngle = Number.isFinite(finite(telemetry?.plateAngle, NaN))
       ? finite(telemetry.plateAngle, 0)
       : bottleAngleAtTable(tableAngle, program);
-    const coverage = telemetry?.section === section
+    const rawCoverage = telemetry?.section === section
       ? telemetry
       : stationOneCoverage(program, section, tableAngle, geometry);
+    let applicationVisual = null;
+    try { applicationVisual = service?.wipeVisualApplication?.(section, geometry.lengthMm) || null; } catch { applicationVisual = null; }
+    const coverage = { ...(applicationVisual || {}), ...(rawCoverage || {}) };
+    // Body and Back are physically leading-edge applications in ServoForge.
+    // Preserve Neck center-tack behavior unless the Neck application itself is
+    // configured as Leading Edge. This is a presentation correction only; the
+    // generated servo program and wipe telemetry remain authoritative.
+    if (section === "body" || section === "back") coverage.tackMode = "leading";
+    if (!coverage.direction) coverage.direction = runtimeState()?.direction === "cw" ? "ltr" : "rtl";
     const hardware = currentHardware(tableAngle);
     const station = Number.isFinite(Number(telemetry?.station))
       ? Number(telemetry.station)
@@ -354,23 +363,94 @@
     return `M ${start.x.toFixed(3)} ${start.y.toFixed(3)} A ${radius} ${radius} 0 ${span > 180 ? 1 : 0} 0 ${end.x.toFixed(3)} ${end.y.toFixed(3)}`;
   }
 
+  function machineVisualAngle(angleDeg) {
+    const angle = finite(angleDeg, 0);
+    return String(runtimeState()?.direction || "cw").toLowerCase() === "cw" ? -angle : angle;
+  }
+
+  function labelArcModel(context) {
+    const { section, plateAngle, geometry, coverage } = context;
+    const visualPlateAngle = machineVisualAngle(plateAngle);
+    const baseCenter = section === "back" ? machineVisualAngle(180) : 0;
+    const center = baseCenter + visualPlateAngle;
+    const half = geometry.labelDeg / 2;
+    const tackMode = (section === "body" || section === "back")
+      ? "leading"
+      : String(coverage?.tackMode || "center").toLowerCase();
+    const direction = String(coverage?.direction || (runtimeState()?.direction === "cw" ? "ltr" : "rtl")).toLowerCase() === "rtl"
+      ? "rtl"
+      : "ltr";
+    const start = center - half;
+    const end = center + half;
+    const leftDegrees = half * clamp(finite(coverage?.leftPercent, 0), 0, 100) / 100;
+    const rightDegrees = half * clamp(finite(coverage?.rightPercent, 0), 0, 100) / 100;
+    const contacted = Math.min(geometry.labelDeg, leftDegrees + rightDegrees);
+    const leadingEdge = direction === "rtl" ? end : start;
+    const wipeRanges = [];
+    if (tackMode === "leading") {
+      if (contacted > 0.05) {
+        if (direction === "rtl") wipeRanges.push([end - contacted, end]);
+        else wipeRanges.push([start, start + contacted]);
+      }
+    } else {
+      if (leftDegrees > 0.05) wipeRanges.push([center - leftDegrees, center]);
+      if (rightDegrees > 0.05) wipeRanges.push([center, center + rightDegrees]);
+    }
+    return { center, half, start, end, tackMode, direction, leadingEdge, wipeRanges };
+  }
+
+  function frontFacingAngle(angleDeg) {
+    return Math.cos(Number(angleDeg) * Math.PI / 180) >= -0.0001;
+  }
+
+  function projectLabelArcSegments(startDeg, endDeg, radius, centerX) {
+    let start = Number(startDeg);
+    let end = Number(endDeg);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || !Number.isFinite(radius)) return [];
+    while (end < start) end += 360;
+    const span = Math.min(359.5, Math.max(0, end - start));
+    const steps = Math.max(18, Math.ceil(span / 2));
+    const groups = [];
+    let current = null;
+    for (let index = 0; index <= steps; index += 1) {
+      const angle = start + span * index / steps;
+      if (!frontFacingAngle(angle)) {
+        if (current) { groups.push(current); current = null; }
+        continue;
+      }
+      const x = centerX + Math.sin(angle * Math.PI / 180) * radius;
+      if (!current) current = { minX: x, maxX: x };
+      else {
+        current.minX = Math.min(current.minX, x);
+        current.maxX = Math.max(current.maxX, x);
+      }
+    }
+    if (current) groups.push(current);
+    return groups
+      .map((group) => ({ x: group.minX, width: Math.max(0.8, group.maxX - group.minX) }))
+      .filter((group) => group.width > 0.75);
+  }
+
+  function projectedTackX(angleDeg, radius, centerX) {
+    return frontFacingAngle(angleDeg)
+      ? centerX + Math.sin(Number(angleDeg) * Math.PI / 180) * radius
+      : null;
+  }
+
   function topViewSvg(context) {
     const { section, plateAngle, geometry, coverage } = context;
     const bodyRadius = 66;
     const neckRadius = clamp(bodyRadius * geometry.neckCirc / geometry.bodyCirc, 25, 49);
     const labelRadius = section === "neck" ? neckRadius : bodyRadius;
     const labelColor = SECTION_COLORS[section] || "#4ca8ff";
-    const baseCenter = section === "back" ? 180 : 0;
-    const labelCenter = baseCenter + plateAngle;
-    const half = geometry.labelDeg / 2;
-    const leftWipe = half * clamp(finite(coverage.leftPercent, 0), 0, 100) / 100;
-    const rightWipe = half * clamp(finite(coverage.rightPercent, 0), 0, 100) / 100;
-    const front = polarPoint(plateAngle, bodyRadius - 5);
-    const labelCenterPoint = polarPoint(labelCenter, labelRadius - 5);
+    const model = labelArcModel(context);
+    const visualPlateAngle = machineVisualAngle(plateAngle);
+    const front = polarPoint(visualPlateAngle, bodyRadius - 5);
+    const labelCenterPoint = polarPoint(model.center, labelRadius - 5);
     const hardwareActive = Boolean(context.hardware) || finite(coverage.percentage, 0) > 0;
-    const fullArc = arcPath(0, 4, labelRadius, labelCenter - half, labelCenter + half);
-    const leftArc = leftWipe > 0.05 ? arcPath(0, 4, labelRadius, labelCenter - leftWipe, labelCenter) : "";
-    const rightArc = rightWipe > 0.05 ? arcPath(0, 4, labelRadius, labelCenter, labelCenter + rightWipe) : "";
+    const fullArc = arcPath(0, 4, labelRadius, model.start, model.end);
+    const wipedArcs = model.wipeRanges.map(([start, end]) => arcPath(0, 4, labelRadius, start, end));
+    const tackPoint = polarPoint(model.tackMode === "leading" ? model.leadingEdge : model.center, labelRadius, 0, 4);
 
     return `<svg class="bottle-orientation-svg" viewBox="-145 -126 290 252" role="img" aria-label="Top-down bottle orientation at ${format(plateAngle, 1)} degrees">
       <defs>
@@ -379,103 +459,107 @@
       <circle cx="0" cy="4" r="84" fill="#070c11" stroke="#6e7780" stroke-width="2"/>
       <circle cx="0" cy="4" r="77" fill="none" stroke="#b4bcc4" stroke-opacity=".35" stroke-width="1"/>
       ${[0,90,180,270].map((degree) => {
-        const inner = polarPoint(degree, 83, 0, 4);
-        const outer = polarPoint(degree, 94, 0, 4);
-        const text = polarPoint(degree, 108, 0, 4);
+        const markerAngle = machineVisualAngle(degree);
+        const inner = polarPoint(markerAngle, 83, 0, 4);
+        const outer = polarPoint(markerAngle, 94, 0, 4);
+        const text = polarPoint(markerAngle, 108, 0, 4);
         return `<line x1="${inner.x}" y1="${inner.y}" x2="${outer.x}" y2="${outer.y}" stroke="#ff5b3d" stroke-width="2"/><text x="${text.x}" y="${text.y + 4}" text-anchor="middle" class="degree-label">${degree}°</text>`;
       }).join("")}
       <circle cx="0" cy="4" r="${bodyRadius}" fill="url(#bottleTopGlass-${context.source})" stroke="#a07155" stroke-width="2"/>
       <circle cx="0" cy="4" r="${neckRadius}" fill="#171313" stroke="#76503d" stroke-width="1.2"/>
       <circle cx="0" cy="4" r="11" fill="#2188d8" stroke="#a8ddff" stroke-width="1.2"/>
       <path d="${fullArc}" fill="none" stroke="#397ea9" stroke-opacity="${context.applicationStarted ? .46 : .18}" stroke-width="${section === "neck" ? 10 : 13}" stroke-linecap="round"/>
-      ${leftArc ? `<path d="${leftArc}" fill="none" stroke="${labelColor}" stroke-width="${section === "neck" ? 10 : 13}" stroke-linecap="round"/>` : ""}
-      ${rightArc ? `<path d="${rightArc}" fill="none" stroke="${labelColor}" stroke-width="${section === "neck" ? 10 : 13}" stroke-linecap="round"/>` : ""}
+      ${wipedArcs.map((path) => `<path d="${path}" fill="none" stroke="${labelColor}" stroke-width="${section === "neck" ? 10 : 13}" stroke-linecap="round"/>`).join("")}
       <line x1="0" y1="4" x2="${front.x}" y2="${front.y + 4}" stroke="#ff4d3a" stroke-width="2.3" stroke-dasharray="5 4"/>
       <circle cx="${labelCenterPoint.x}" cy="${labelCenterPoint.y + 4}" r="2.8" fill="#fff" stroke="${labelColor}" stroke-width="1.2"/>
+      <circle cx="${tackPoint.x}" cy="${tackPoint.y}" r="3.2" fill="${model.tackMode === "leading" ? "#ffd05f" : "#ffffff"}" stroke="#091017" stroke-width="1"/>
       <g transform="translate(86 4)" opacity="${hardwareActive ? 1 : .42}">
         <rect x="-5" y="-17" width="14" height="34" rx="5" fill="${hardwareActive ? "#ff6a3d" : "#4f5962"}" stroke="#f5a07f" stroke-width="1"/>
         <text x="2" y="28" text-anchor="middle" class="hardware-label">WIPE</text>
       </g>
       <text x="0" y="-106" text-anchor="middle" class="view-title">TOP VIEW</text>
-      <text x="0" y="116" text-anchor="middle" class="view-readout">Bottle ${format(plateAngle, 1)}° • Label ${format(geometry.labelDeg, 1)}°</text>
+      <text x="0" y="116" text-anchor="middle" class="view-readout">Bottle ${format(plateAngle, 1)}° • ${model.tackMode === "leading" ? "Leading edge" : "Center tack"}</text>
     </svg>`;
   }
 
   function sideViewSvg(context) {
     const { section, plateAngle, geometry, coverage } = context;
     const cx = 145;
-    const bodyHalf = clamp(39 * geometry.bottleDiameterMm / 60.68, 32, 47);
-    const neckRatio = clamp(geometry.neckCirc / geometry.bodyCirc, 0.30, 0.46);
-    const neckHalf = clamp(bodyHalf * neckRatio, 10.5, 17);
+    // Reference-style 12 oz long-neck profile: narrow cylindrical body,
+    // rounded base, short shoulders, long straight neck, and three lip rings.
+    const bodyHalf = clamp(36 * geometry.bottleDiameterMm / 60.68, 31, 43);
+    const neckRatio = clamp(geometry.neckCirc / geometry.bodyCirc, 0.30, 0.43);
+    const neckHalf = clamp(bodyHalf * neckRatio, 10, 14.5);
     const neckTop = 27;
-    const neckBase = 68;
-    const shoulderBottom = 91;
+    const neckBase = 72;
+    const shoulderBottom = 101;
     const bodyBottom = 226;
     const bodyPath = [
       `M ${cx-neckHalf} ${neckTop}`,
-      `L ${cx-neckHalf} ${neckBase-10}`,
-      `C ${cx-neckHalf} ${neckBase+1} ${cx-bodyHalf*0.78} ${shoulderBottom-13} ${cx-bodyHalf} ${shoulderBottom}`,
-      `C ${cx-bodyHalf-3} ${shoulderBottom+8} ${cx-bodyHalf} ${shoulderBottom+17} ${cx-bodyHalf} ${shoulderBottom+25}`,
+      `L ${cx-neckHalf} ${neckBase-7}`,
+      `C ${cx-neckHalf} ${neckBase+3} ${cx-bodyHalf*0.55} ${shoulderBottom-19} ${cx-bodyHalf*0.86} ${shoulderBottom-8}`,
+      `C ${cx-bodyHalf*0.96} ${shoulderBottom-4} ${cx-bodyHalf} ${shoulderBottom+1} ${cx-bodyHalf} ${shoulderBottom+9}`,
       `L ${cx-bodyHalf} ${bodyBottom-15}`,
-      `C ${cx-bodyHalf} ${bodyBottom-4} ${cx-bodyHalf-9} ${bodyBottom} ${cx-bodyHalf-20} ${bodyBottom}`,
-      `L ${cx+bodyHalf-20} ${bodyBottom}`,
-      `C ${cx+bodyHalf-9} ${bodyBottom} ${cx+bodyHalf} ${bodyBottom-4} ${cx+bodyHalf} ${bodyBottom-15}`,
-      `L ${cx+bodyHalf} ${shoulderBottom+25}`,
-      `C ${cx+bodyHalf} ${shoulderBottom+17} ${cx+bodyHalf-3} ${shoulderBottom+8} ${cx+bodyHalf} ${shoulderBottom}`,
-      `C ${cx+bodyHalf*0.78} ${shoulderBottom-13} ${cx+neckHalf} ${neckBase+1} ${cx+neckHalf} ${neckBase-10}`,
+      `C ${cx-bodyHalf} ${bodyBottom-5} ${cx-bodyHalf-8} ${bodyBottom} ${cx-bodyHalf-19} ${bodyBottom}`,
+      `L ${cx+bodyHalf-19} ${bodyBottom}`,
+      `C ${cx+bodyHalf-8} ${bodyBottom} ${cx+bodyHalf} ${bodyBottom-5} ${cx+bodyHalf} ${bodyBottom-15}`,
+      `L ${cx+bodyHalf} ${shoulderBottom+9}`,
+      `C ${cx+bodyHalf} ${shoulderBottom+1} ${cx+bodyHalf*0.96} ${shoulderBottom-4} ${cx+bodyHalf*0.86} ${shoulderBottom-8}`,
+      `C ${cx+bodyHalf*0.55} ${shoulderBottom-19} ${cx+neckHalf} ${neckBase+3} ${cx+neckHalf} ${neckBase-7}`,
       `L ${cx+neckHalf} ${neckTop}`,
       "Z"
     ].join(" ");
 
     const labelRadius = section === "neck" ? neckHalf : bodyHalf;
-    const chordWidth = clamp(2 * labelRadius * Math.abs(Math.sin(Math.min(179, geometry.labelDeg) * Math.PI / 360)), 15, bodyHalf * 2);
-    const baseCenter = section === "back" ? 180 : 0;
-    const labelFacingAngle = normalizeAngle(baseCenter + plateAngle);
-    const projectedOffset = Math.sin(labelFacingAngle * Math.PI / 180) * labelRadius * .48;
-    const labelX = cx + projectedOffset - chordWidth / 2;
-    const labelY = section === "neck" ? 55 : 128;
+    const model = labelArcModel(context);
+    const visualPlateAngle = machineVisualAngle(plateAngle);
+    const labelY = section === "neck" ? 70 : 128;
     const labelHeight = section === "neck"
-      ? clamp(finite(geometry.label?.neckHeightMm, 30) / geometry.bottleDiameterMm * 42, 20, 38)
-      : 48;
-    const leftWidth = chordWidth / 2 * clamp(finite(coverage.leftPercent, 0), 0, 100) / 100;
-    const rightWidth = chordWidth / 2 * clamp(finite(coverage.rightPercent, 0), 0, 100) / 100;
+      ? clamp(finite(geometry.label?.neckHeightMm, 30) / geometry.bottleDiameterMm * 40, 19, 34)
+      : 43;
     const labelColor = SECTION_COLORS[section] || "#4ca8ff";
-    const centerlineX = cx + Math.sin(plateAngle * Math.PI / 180) * bodyHalf * .74;
+    const labelSegments = projectLabelArcSegments(model.start, model.end, labelRadius, cx);
+    const wipedSegments = model.wipeRanges.flatMap(([start, end]) => projectLabelArcSegments(start, end, labelRadius, cx));
+    const tackX = projectedTackX(model.tackMode === "leading" ? model.leadingEdge : model.center, labelRadius, cx);
+    const centerlineX = cx + Math.sin(visualPlateAngle * Math.PI / 180) * bodyHalf * .74;
     const hardwareActive = Boolean(context.hardware) || finite(coverage.percentage, 0) > 0;
     const hardwareY = labelY + labelHeight / 2;
     const stationText = context.station ? `S${context.station}` : "--";
+    const labelOpacity = context.applicationStarted ? .34 : .10;
 
-    return `<svg class="bottle-orientation-svg" viewBox="0 0 290 252" role="img" aria-label="Clear glass bottle side view with ${section} label wipe progress">
+    return `<svg class="bottle-orientation-svg" viewBox="0 0 290 252" role="img" aria-label="Reference-style clear glass bottle side view with ${section} label wrapped to bottle rotation">
       <defs>
         <linearGradient id="bottleSideGlass-${context.source}" x1="0" x2="1">
-          <stop offset="0" stop-color="#dbe8ef" stop-opacity=".18"/>
-          <stop offset=".16" stop-color="#9fb1bc" stop-opacity=".08"/>
-          <stop offset=".42" stop-color="#eff8fc" stop-opacity=".05"/>
-          <stop offset=".68" stop-color="#70818d" stop-opacity=".10"/>
-          <stop offset=".88" stop-color="#e4eff5" stop-opacity=".16"/>
-          <stop offset="1" stop-color="#8ea1ad" stop-opacity=".08"/>
+          <stop offset="0" stop-color="#dce9ef" stop-opacity=".25"/>
+          <stop offset=".12" stop-color="#f2f8fb" stop-opacity=".12"/>
+          <stop offset=".30" stop-color="#81939e" stop-opacity=".07"/>
+          <stop offset=".50" stop-color="#eef7fb" stop-opacity=".045"/>
+          <stop offset=".72" stop-color="#738591" stop-opacity=".08"/>
+          <stop offset=".90" stop-color="#f0f7fa" stop-opacity=".15"/>
+          <stop offset="1" stop-color="#99aab4" stop-opacity=".12"/>
         </linearGradient>
+        <linearGradient id="labelGlass-${context.source}" x1="0" x2="1"><stop offset="0" stop-color="#4eaee0" stop-opacity=".42"/><stop offset=".5" stop-color="#3d9bc8" stop-opacity=".30"/><stop offset="1" stop-color="#4eaee0" stop-opacity=".42"/></linearGradient>
         <clipPath id="bottleClip-${context.source}"><path d="${bodyPath}"/></clipPath>
       </defs>
       <text x="145" y="14" text-anchor="middle" class="view-title">SIDE VIEW</text>
-      <path d="${bodyPath}" fill="url(#bottleSideGlass-${context.source})" stroke="#9eafb9" stroke-opacity=".78" stroke-width="2"/>
-      <path d="M ${cx-bodyHalf+8} ${shoulderBottom+7} C ${cx-bodyHalf+14} ${shoulderBottom+17} ${cx-bodyHalf+14} ${bodyBottom-32} ${cx-bodyHalf+13} ${bodyBottom-18}" fill="none" stroke="#f0f7fa" stroke-opacity=".30" stroke-width="3.2" stroke-linecap="round"/>
-      <path d="M ${cx+bodyHalf-8} ${shoulderBottom+7} C ${cx+bodyHalf-14} ${shoulderBottom+17} ${cx+bodyHalf-14} ${bodyBottom-42} ${cx+bodyHalf-13} ${bodyBottom-22}" fill="none" stroke="#82949f" stroke-opacity=".25" stroke-width="2.2" stroke-linecap="round"/>
-      <rect x="${cx-neckHalf-1.5}" y="${neckTop-7}" width="${neckHalf*2+3}" height="7" rx="2.5" fill="#c6d4dc" fill-opacity=".08" stroke="#aabac3" stroke-opacity=".75" stroke-width="1.2"/>
-      <line x1="${cx-neckHalf-3}" y1="${neckTop-3}" x2="${cx+neckHalf+3}" y2="${neckTop-3}" stroke="#d7e3e9" stroke-opacity=".62" stroke-width="1.2"/>
-      <line x1="${cx-neckHalf-2}" y1="${neckTop+5}" x2="${cx+neckHalf+2}" y2="${neckTop+5}" stroke="#b7c6ce" stroke-opacity=".48" stroke-width="1"/>
-      <line x1="${cx-neckHalf-1}" y1="${neckTop+11}" x2="${cx+neckHalf+1}" y2="${neckTop+11}" stroke="#aebec7" stroke-opacity=".40" stroke-width="1"/>
-      <line x1="${centerlineX}" y1="20" x2="${centerlineX}" y2="224" stroke="#ff4d3a" stroke-width="2.2" stroke-dasharray="6 5" clip-path="url(#bottleClip-${context.source})"/>
-      <rect x="${labelX}" y="${labelY}" width="${chordWidth}" height="${labelHeight}" rx="3" fill="#4aa6d8" fill-opacity="${context.applicationStarted ? .32 : .10}" stroke="#8fd3f1" stroke-opacity=".72" stroke-width="1"/>
-      ${leftWidth > .2 ? `<rect x="${labelX + chordWidth/2 - leftWidth}" y="${labelY}" width="${leftWidth}" height="${labelHeight}" rx="2" fill="${labelColor}" fill-opacity=".72"/>` : ""}
-      ${rightWidth > .2 ? `<rect x="${labelX + chordWidth/2}" y="${labelY}" width="${rightWidth}" height="${labelHeight}" rx="2" fill="${labelColor}" fill-opacity=".72"/>` : ""}
-      <line x1="${labelX+chordWidth/2}" y1="${labelY-5}" x2="${labelX+chordWidth/2}" y2="${labelY+labelHeight+5}" stroke="#fff" stroke-width="1" stroke-dasharray="3 3" opacity=".72"/>
-      <g transform="translate(${cx+bodyHalf+12} ${hardwareY})" opacity="${hardwareActive ? 1 : .32}">
+      <path d="${bodyPath}" fill="url(#bottleSideGlass-${context.source})" stroke="#b7c4ca" stroke-opacity=".82" stroke-width="2"/>
+      <path d="M ${cx-bodyHalf+7} ${shoulderBottom+4} C ${cx-bodyHalf+12} ${shoulderBottom+14} ${cx-bodyHalf+12} ${bodyBottom-34} ${cx-bodyHalf+11} ${bodyBottom-17}" fill="none" stroke="#f7fbfd" stroke-opacity=".39" stroke-width="3" stroke-linecap="round"/>
+      <path d="M ${cx+bodyHalf-7} ${shoulderBottom+4} C ${cx+bodyHalf-12} ${shoulderBottom+14} ${cx+bodyHalf-12} ${bodyBottom-40} ${cx+bodyHalf-11} ${bodyBottom-20}" fill="none" stroke="#94a5ae" stroke-opacity=".22" stroke-width="2" stroke-linecap="round"/>
+      <rect x="${cx-neckHalf-2}" y="20" width="${neckHalf*2+4}" height="7" rx="2.5" fill="#d8e3e8" fill-opacity=".10" stroke="#c1cdd3" stroke-opacity=".78" stroke-width="1.2"/>
+      <rect x="${cx-neckHalf-3}" y="27" width="${neckHalf*2+6}" height="6" rx="2" fill="#cbd8de" fill-opacity=".08" stroke="#b3c2ca" stroke-opacity=".68" stroke-width="1"/>
+      <rect x="${cx-neckHalf-2}" y="33" width="${neckHalf*2+4}" height="6" rx="2" fill="#c2d0d7" fill-opacity=".07" stroke="#aabac3" stroke-opacity=".60" stroke-width="1"/>
+      <line x1="${centerlineX}" y1="18" x2="${centerlineX}" y2="228" stroke="#ff4d3a" stroke-width="2.2" stroke-dasharray="6 5" clip-path="url(#bottleClip-${context.source})"/>
+      <g clip-path="url(#bottleClip-${context.source})" data-wrapped-label="true">
+        ${labelSegments.map((segment) => `<rect x="${segment.x}" y="${labelY}" width="${segment.width}" height="${labelHeight}" rx="2.5" fill="url(#labelGlass-${context.source})" fill-opacity="${labelOpacity}" stroke="#8fd3f1" stroke-opacity=".68" stroke-width=".8"/>`).join("")}
+        ${wipedSegments.map((segment) => `<rect x="${segment.x}" y="${labelY}" width="${segment.width}" height="${labelHeight}" rx="2" fill="${labelColor}" fill-opacity=".72"/>`).join("")}
+      </g>
+      ${Number.isFinite(tackX) ? `<line x1="${tackX}" y1="${labelY-4}" x2="${tackX}" y2="${labelY+labelHeight+4}" stroke="${model.tackMode === "leading" ? "#ffd05f" : "#fff"}" stroke-width="1.2" stroke-dasharray="3 3" opacity=".85" clip-path="url(#bottleClip-${context.source})"/>` : ""}
+      <g transform="translate(${cx+bodyHalf+13} ${hardwareY})" opacity="${hardwareActive ? 1 : .32}">
         <circle cx="0" cy="0" r="13" fill="#1d252b" stroke="#788996" stroke-width="1.6"/>
         <circle cx="0" cy="0" r="4.5" fill="${hardwareActive ? labelColor : "#52606a"}"/>
         <text x="0" y="24" text-anchor="middle" class="view-mini">${escapeHtml(stationText)}</text>
       </g>
-      <text x="145" y="245" text-anchor="middle" class="view-readout">${escapeHtml(section.toUpperCase())} • ${format(geometry.lengthMm, 1)} mm • ${format(coverage.percentage, 0)}% wiped</text>
+      <text x="145" y="245" text-anchor="middle" class="view-readout">${escapeHtml(section.toUpperCase())} • ${model.tackMode === "leading" ? "LEADING EDGE" : "CENTER TACK"} • ${format(coverage.percentage, 0)}% wiped</text>
     </svg>`;
   }
 
@@ -770,6 +854,7 @@
     stationOnePath,
     fullProgramPath: stationOnePath,
     contextFor,
+    machineVisualAngle,
     topViewSvg,
     sideViewSvg,
     ensurePanel,
@@ -783,6 +868,12 @@
     geometryDrivenLabelScaleV72: true,
     wipeTelemetryDrivenV72: true,
     fullCycleVisualV76: true,
-    clearLongNeckBottleV76: true
+    clearLongNeckBottleV76: true,
+    referenceBottleProfileV77: true,
+    cylindricalLabelProjectionV77: true,
+    leadingEdgeBodyBackVisualV77: true,
+    mainAnimationSyncV77: true,
+    machineDirectionVisualV78: true,
+    directionAwareDegreeMarkersV78: true
   });
 })(typeof window !== "undefined" ? window : globalThis);

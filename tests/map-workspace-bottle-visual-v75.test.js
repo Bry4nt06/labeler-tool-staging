@@ -17,6 +17,6 @@ assert.match(recovery, /MutationObserver/);
 assert.match(recovery, /recoverSource/);
 assert.match(bootstrap, /map-workspace-compact-support-integration\.js/);
 assert.match(bootstrap, /bottle-orientation-panel-recovery-integration\.js/);
-assert.match(bootstrap, /full-cycle-bottle-orientation-v76-20260811-1713/);
-assert.match(index, /build=full-cycle-bottle-orientation-v76-20260811-1713/);
+assert.match(bootstrap, /machine-direction-bottle-orientation-v78-20260811-1752/);
+assert.match(index, /build=machine-direction-bottle-orientation-v78-20260811-1752/);
 console.log("Map workspace and Bottle Orientation v75 regression passed.");

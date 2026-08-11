@@ -16,6 +16,10 @@ function animationFrame(now) {
     state.previewAngle = norm(state.previewAngle + degreesPerSecond * elapsedSeconds);
     try {
       renderAnimationFrame();
+      // Keep the Servo Program Bottle Orientation panel on the same clock as
+      // the primary labeler animation, even when the panel integration loaded
+      // before renderAnimationFrame was available to wrap.
+      window.LabelerBottleOrientationPanel?.renderAll?.();
     } catch (error) {
       console.error("Animation frame render failed", error);
     }
