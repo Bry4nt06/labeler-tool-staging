@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "top-view-only-orientation-v84-20260811-1918",
+  "buildId": "top-view-mount-recovery-v85-20260811-1928",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "v84 keeps only the live Top View in Bottle Orientation. Side View/3D perspective, standalone controls, scrubber, speed selector, and the incorrect Top View wipe graphic are removed. The Top View stays synchronized to the main labeler animation."
+  "notes": "v85 repairs Bottle Orientation Top View mounting. The panel remains Top View only, with no side view, no standalone controls, and no wipe graphic. Recovery now reacquires rebuilt Servo Program/Simulation hosts and remounts the live Top View after workspace rerenders."
 }

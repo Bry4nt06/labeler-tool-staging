@@ -3,7 +3,7 @@
 (function installBottleOrientationPanelRecovery(global) {
   if (global.ServoForgeBottleOrientationPanelRecovery?.installed) return;
 
-  const VERSION = 3;
+  const VERSION = 4;
   const sources = ["program", "simulation"];
   const observers = new Map();
   const TOP_CORRECTION_ATTR = "data-machine-direction-bottle-datum-v79";
@@ -14,6 +14,7 @@
   const BOTTLE_CENTER_Y = 4;
   const DATUM_TRANSFORM = `matrix(0 1 1 0 ${-BOTTLE_CENTER_Y} ${BOTTLE_CENTER_Y})`;
   let recoveryQueued = false;
+  let documentObserver = null;
 
   function api() { return global.LabelerBottleOrientationPanel || null; }
 
@@ -128,7 +129,13 @@
 
   function recoverAll() {
     recoveryQueued = false;
-    sources.forEach(recoverSource);
+    // Reacquire the workspace hosts every recovery pass. The Servo Program
+    // workspace can be rebuilt after this integration first loads, so a one-time
+    // observer install is not sufficient to keep the live Top View mounted.
+    sources.forEach((source) => {
+      observeHost(source);
+      recoverSource(source);
+    });
   }
 
   function queueRecovery() {
@@ -139,17 +146,31 @@
 
   function observeHost(source) {
     const host = typeof document !== "undefined" ? document.getElementById(source) : null;
-    if (!host || observers.has(source) || typeof MutationObserver !== "function") return false;
+    const existing = observers.get(source);
+    if (existing?.host === host && host?.isConnected) return true;
+    if (existing?.observer) {
+      try { existing.observer.disconnect(); } catch { /* ignore stale observer */ }
+      observers.delete(source);
+    }
+    if (!host || typeof MutationObserver !== "function") return false;
     // The orientation renderer replaces the SVG contents as the program player
     // advances. Child-list observation reapplies the datum correction to each new
     // SVG. Attribute-only corrections below do not retrigger this observer.
     const observer = new MutationObserver(() => queueRecovery());
     observer.observe(host, { childList: true, subtree: true });
-    observers.set(source, observer);
+    observers.set(source, { host, observer });
+    return true;
+  }
+
+  function observeDocument() {
+    if (documentObserver || typeof document === "undefined" || typeof MutationObserver !== "function" || !document.body) return false;
+    documentObserver = new MutationObserver(() => queueRecovery());
+    documentObserver.observe(document.body, { childList: true, subtree: true });
     return true;
   }
 
   function install() {
+    observeDocument();
     sources.forEach(observeHost);
     recoverAll();
     global.setTimeout(recoverAll, 150);
@@ -173,7 +194,11 @@
     correctTopView,
     recoverSource,
     recoverAll,
+    observeHost,
+    observeDocument,
     servoProgramPanelGuaranteedV75: true,
+    persistentTopViewMountV85: true,
+    workspaceHostReacquireV85: true,
     machineBottleDatumAlignedV79: true,
     oppositeCarouselBottleSpinV79: true,
     rightFrontZeroDatumV79: true,
