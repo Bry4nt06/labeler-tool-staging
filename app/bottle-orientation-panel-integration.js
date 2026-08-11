@@ -3,7 +3,7 @@
 (function installBottleOrientationPanel(global) {
   if (global.LabelerBottleOrientationPanel?.installed) return;
 
-  const VERSION = 8;
+  const VERSION = 9;
   const STYLE_ID = "servoforge-bottle-orientation-panel-style";
   const PANEL_ATTR = "data-bottle-orientation-panel";
   const BASE_DEG_PER_SECOND = 18;
@@ -513,220 +513,15 @@
       <line x1="0" y1="4" x2="${front.x}" y2="${front.y + 4}" stroke="#ff4d3a" stroke-width="2.3" stroke-dasharray="5 4"/>
       <circle cx="${labelCenterPoint.x}" cy="${labelCenterPoint.y + 4}" r="2.8" fill="#fff" stroke="${labelColor}" stroke-width="1.2"/>
       <circle cx="${tackPoint.x}" cy="${tackPoint.y}" r="3.2" fill="${model.tackMode === "leading" ? "#ffd05f" : "#ffffff"}" stroke="#091017" stroke-width="1"/>
-      <g transform="translate(86 4)" opacity="${hardwareActive ? 1 : .42}">
-        <rect x="-5" y="-17" width="14" height="34" rx="5" fill="${hardwareActive ? "#ff6a3d" : "#4f5962"}" stroke="#f5a07f" stroke-width="1"/>
-        <text x="2" y="28" text-anchor="middle" class="hardware-label">WIPE</text>
-      </g>
       <text x="0" y="-106" text-anchor="middle" class="view-title">TOP VIEW</text>
       <text x="0" y="116" text-anchor="middle" class="view-readout">Bottle ${format(plateAngle, 1)}° • ${model.tackMode === "leading" ? "Leading edge" : "Center tack"}</text>
-    </svg>`;
-  }
-
-  function sideViewSvg(context) {
-    const { section, plateAngle, geometry, coverage } = context;
-    const cx = 145;
-    // Pseudo-3D clear-glass long-neck bottle. The silhouette remains driven by
-    // the selected bottle geometry while light, depth, centerline visibility,
-    // and the label band react to the live servo orientation.
-    const bodyHalf = clamp(36 * geometry.bottleDiameterMm / 60.68, 31, 43);
-    const neckRatio = clamp(geometry.neckCirc / geometry.bodyCirc, 0.30, 0.43);
-    const neckHalf = clamp(bodyHalf * neckRatio, 10, 14.5);
-    const neckTop = 28;
-    const neckBase = 70;
-    const shoulderBottom = 96;
-    const bodyBottom = 207;
-    const perspectiveSkew = 5.5;
-    const nearBodyHalf = bodyHalf * 1.02;
-    const farBodyHalf = bodyHalf * .91;
-    const bodyPath = [
-      `M ${cx-neckHalf-perspectiveSkew*.28} ${neckTop}`,
-      `L ${cx-neckHalf-perspectiveSkew*.20} ${neckBase-7}`,
-      `C ${cx-neckHalf-perspectiveSkew*.12} ${neckBase+3} ${cx-nearBodyHalf*0.55-perspectiveSkew*.30} ${shoulderBottom-18} ${cx-nearBodyHalf*0.86-perspectiveSkew*.45} ${shoulderBottom-7}`,
-      `C ${cx-nearBodyHalf*0.97-perspectiveSkew*.55} ${shoulderBottom-3} ${cx-nearBodyHalf-perspectiveSkew*.60} ${shoulderBottom+2} ${cx-nearBodyHalf-perspectiveSkew*.60} ${shoulderBottom+10}`,
-      `L ${cx-nearBodyHalf-perspectiveSkew*.60} ${bodyBottom-14}`,
-      `C ${cx-nearBodyHalf-perspectiveSkew*.60} ${bodyBottom-4} ${cx-nearBodyHalf+5-perspectiveSkew*.35} ${bodyBottom+1} ${cx-18-perspectiveSkew*.12} ${bodyBottom+2}`,
-      `Q ${cx+4} ${bodyBottom+7} ${cx+farBodyHalf-14+perspectiveSkew*.45} ${bodyBottom-1}`,
-      `C ${cx+farBodyHalf-5+perspectiveSkew*.52} ${bodyBottom-4} ${cx+farBodyHalf+perspectiveSkew*.55} ${bodyBottom-8} ${cx+farBodyHalf+perspectiveSkew*.55} ${bodyBottom-16}`,
-      `L ${cx+farBodyHalf+perspectiveSkew*.55} ${shoulderBottom+10}`,
-      `C ${cx+farBodyHalf+perspectiveSkew*.55} ${shoulderBottom+2} ${cx+farBodyHalf*.96+perspectiveSkew*.48} ${shoulderBottom-3} ${cx+farBodyHalf*.84+perspectiveSkew*.38} ${shoulderBottom-7}`,
-      `C ${cx+farBodyHalf*.53+perspectiveSkew*.22} ${shoulderBottom-18} ${cx+neckHalf+perspectiveSkew*.18} ${neckBase+3} ${cx+neckHalf+perspectiveSkew*.18} ${neckBase-7}`,
-      `L ${cx+neckHalf+perspectiveSkew*.20} ${neckTop}`,
-      "Z"
-    ].join(" ");
-
-    const labelRadius = section === "neck" ? neckHalf : bodyHalf;
-    const model = labelArcModel(context);
-    const visualPlateAngle = machineVisualAngle(plateAngle);
-    const orientationRad = visualPlateAngle * Math.PI / 180;
-    const centerlineFront = Math.cos(orientationRad) >= 0;
-    const centerlineX = cx + Math.sin(orientationRad) * bodyHalf * .78;
-    const labelY = section === "neck" ? 67 : 117;
-    const labelHeight = section === "neck"
-      ? clamp(finite(geometry.label?.neckHeightMm, 30) / geometry.bottleDiameterMm * 40, 19, 34)
-      : 43;
-    const labelColor = SECTION_COLORS[section] || "#4ca8ff";
-    const labelSegments = projectLabelArcSegments(model.start, model.end, labelRadius, cx);
-    const wipedSegments = model.wipeRanges.flatMap(([start, end]) => projectLabelArcSegments(start, end, labelRadius, cx));
-    const tackX = projectedTackX(model.tackMode === "leading" ? model.leadingEdge : model.center, labelRadius, cx);
-    const hardwareActive = Boolean(context.hardware) || finite(coverage.percentage, 0) > 0;
-    const hardwareY = labelY + labelHeight / 2;
-    const stationText = context.station ? `S${context.station}` : "--";
-    const labelOpacity = context.applicationStarted ? .42 : .12;
-
-    // Perspective floor/orientation reference selected for the v82 Side View.
-    // The ring uses the same bottle-local visual sign as the animated bottle:
-    // 0° begins at the right, and degree placement follows machine direction.
-    const orientationRingY = 226;
-    const orientationRingRx = 62;
-    const orientationRingRy = 14;
-    function orientationRingPoint(angleDeg, scale = 1) {
-      const radians = Number(angleDeg) * Math.PI / 180;
-      return {
-        x: cx + Math.cos(radians) * orientationRingRx * scale,
-        y: orientationRingY + Math.sin(radians) * orientationRingRy * scale
-      };
-    }
-    const orientationMarker = orientationRingPoint(visualPlateAngle, 1);
-    const orientationNeedle = orientationRingPoint(visualPlateAngle, .82);
-    const currentBottleDegrees = normalizeAngle(plateAngle);
-
-    // 3/4 elevated camera cue. A longitudinal reflection stripe travels around
-    // the cylindrical body with the servo angle. The top-neck pointer uses the
-    // same angle so users can see rotation even when no label is visible.
-    const perspectiveRad = visualPlateAngle * Math.PI / 180;
-    const perspectiveDatumX = cx + Math.sin(perspectiveRad) * bodyHalf * .72;
-    const perspectiveDatumDepth = Math.cos(perspectiveRad);
-    const perspectiveDatumOpacity = perspectiveDatumDepth >= 0 ? .92 : .20;
-    const neckDiscCx = cx + 1.8;
-    const neckDiscCy = 27;
-    const neckDiscRx = neckHalf + 3.2;
-    const neckDiscRy = 4.2;
-    const neckPointerX = neckDiscCx + Math.cos(perspectiveRad) * neckDiscRx * .78;
-    const neckPointerY = neckDiscCy + Math.sin(perspectiveRad) * neckDiscRy * .78;
-
-    function wrappedBandSegmentPath(segment, y, height, radius) {
-      const x0 = finite(segment?.x, cx);
-      const x1 = x0 + Math.max(.8, finite(segment?.width, 0));
-      const mid = (x0 + x1) / 2;
-      const normalized = clamp((mid - cx) / Math.max(1, radius), -1, 1);
-      const faceDepth = Math.sqrt(Math.max(0, 1 - normalized * normalized));
-      const edgeBow = (1 - faceDepth) * 5.5;
-      const crown = faceDepth * 2.2;
-      return [
-        `M ${x0.toFixed(2)} ${(y + edgeBow).toFixed(2)}`,
-        `Q ${mid.toFixed(2)} ${(y - crown).toFixed(2)} ${x1.toFixed(2)} ${(y + edgeBow).toFixed(2)}`,
-        `L ${x1.toFixed(2)} ${(y + height - edgeBow).toFixed(2)}`,
-        `Q ${mid.toFixed(2)} ${(y + height + crown).toFixed(2)} ${x0.toFixed(2)} ${(y + height - edgeBow).toFixed(2)}`,
-        "Z"
-      ].join(" ");
-    }
-
-    function wrappedBandOpacity(segment, baseOpacity) {
-      const mid = finite(segment?.x, cx) + Math.max(.8, finite(segment?.width, 0)) / 2;
-      const normalized = clamp(Math.abs(mid - cx) / Math.max(1, labelRadius), 0, 1);
-      return clamp(baseOpacity * (1 - normalized * .48), .10, .92);
-    }
-
-    return `<svg class="bottle-orientation-svg" data-pseudo-3d-bottle="true" viewBox="0 0 290 252" role="img" aria-label="Elevated three-quarter clear glass bottle perspective with ${section} label wrapped to live bottle rotation">
-      <defs>
-        <linearGradient id="bottleSideGlass-${context.source}" x1="0" x2="1">
-          <stop offset="0" stop-color="#13202a" stop-opacity=".42"/>
-          <stop offset=".08" stop-color="#e8f4f8" stop-opacity=".46"/>
-          <stop offset=".22" stop-color="#4c6070" stop-opacity=".18"/>
-          <stop offset=".50" stop-color="#07121a" stop-opacity=".32"/>
-          <stop offset=".78" stop-color="#455968" stop-opacity=".16"/>
-          <stop offset=".92" stop-color="#e8f4f8" stop-opacity=".38"/>
-          <stop offset="1" stop-color="#111b24" stop-opacity=".40"/>
-        </linearGradient>
-        <radialGradient id="bottleDepth-${context.source}" cx="48%" cy="34%" r="68%">
-          <stop offset="0" stop-color="#f5fbfd" stop-opacity=".09"/>
-          <stop offset=".58" stop-color="#9bb0ba" stop-opacity=".035"/>
-          <stop offset="1" stop-color="#020608" stop-opacity=".20"/>
-        </radialGradient>
-        <linearGradient id="labelGlass-${context.source}" x1="0" x2="1">
-          <stop offset="0" stop-color="#29759d" stop-opacity=".44"/>
-          <stop offset=".18" stop-color="#66c4f0" stop-opacity=".58"/>
-          <stop offset=".5" stop-color="#4aaee0" stop-opacity=".42"/>
-          <stop offset=".82" stop-color="#66c4f0" stop-opacity=".56"/>
-          <stop offset="1" stop-color="#235f82" stop-opacity=".42"/>
-        </linearGradient>
-        <clipPath id="bottleClip-${context.source}"><path d="${bodyPath}"/></clipPath>
-      </defs>
-      <text x="145" y="14" text-anchor="middle" class="view-title">3D PERSPECTIVE</text>
-      <text x="277" y="14" text-anchor="end" class="view-readout" opacity=".72">${centerlineFront ? "DATUM FRONT" : "DATUM REAR"} • 3/4 CAMERA</text>
-
-      <g data-side-orientation-floor="true" aria-label="Bottle orientation floor grid and degree reference" opacity=".92">
-        <g stroke="#2e5d78" stroke-opacity=".28" stroke-width=".7">
-          <line x1="28" y1="244" x2="108" y2="204"/><line x1="54" y1="244" x2="119" y2="204"/>
-          <line x1="82" y1="244" x2="129" y2="204"/><line x1="112" y1="244" x2="138" y2="204"/>
-          <line x1="145" y1="244" x2="145" y2="204"/>
-          <line x1="178" y1="244" x2="152" y2="204"/><line x1="208" y1="244" x2="161" y2="204"/>
-          <line x1="236" y1="244" x2="171" y2="204"/><line x1="262" y1="244" x2="182" y2="204"/>
-          <line x1="38" y1="241" x2="252" y2="241"/><line x1="55" y1="234" x2="235" y2="234"/>
-          <line x1="72" y1="228" x2="218" y2="228"/><line x1="88" y1="222" x2="202" y2="222"/>
-          <line x1="101" y1="216" x2="189" y2="216"/><line x1="112" y1="210" x2="178" y2="210"/>
-        </g>
-        <ellipse cx="${cx}" cy="${orientationRingY}" rx="${orientationRingRx}" ry="${orientationRingRy}" fill="#0c3150" fill-opacity=".08" stroke="#4c9bd0" stroke-opacity=".78" stroke-width="1.2"/>
-        <ellipse cx="${cx}" cy="${orientationRingY}" rx="${orientationRingRx-5}" ry="${orientationRingRy-2}" fill="none" stroke="#8bc9ef" stroke-opacity=".15" stroke-width=".8"/>
-        ${[0,90,180,270].map((degree) => {
-          const angle = machineVisualAngle(degree);
-          const tick0 = orientationRingPoint(angle, .94);
-          const tick1 = orientationRingPoint(angle, 1.08);
-          const label = orientationRingPoint(angle, 1.28);
-          return `<line x1="${tick0.x.toFixed(2)}" y1="${tick0.y.toFixed(2)}" x2="${tick1.x.toFixed(2)}" y2="${tick1.y.toFixed(2)}" stroke="#78bde8" stroke-width="1.1"/><text x="${label.x.toFixed(2)}" y="${(label.y + 3).toFixed(2)}" text-anchor="middle" class="degree-label" fill="#8ec9ed">${degree}°</text>`;
-        }).join("")}
-        <line x1="${cx}" y1="${orientationRingY}" x2="${orientationNeedle.x.toFixed(2)}" y2="${orientationNeedle.y.toFixed(2)}" stroke="#4ca8ff" stroke-opacity=".78" stroke-width="1.2"/>
-        <circle cx="${orientationMarker.x.toFixed(2)}" cy="${orientationMarker.y.toFixed(2)}" r="3.2" fill="#4ca8ff" stroke="#d9f2ff" stroke-width="1"/>
-        <text x="${orientationMarker.x.toFixed(2)}" y="${(orientationMarker.y - 7).toFixed(2)}" text-anchor="middle" class="view-mini" fill="#9ed8ff">${format(currentBottleDegrees, 0)}°</text>
-      </g>
-
-      <g data-pseudo-3d-glass="true" data-three-quarter-camera="true">
-        <ellipse cx="${neckDiscCx}" cy="${neckDiscCy}" rx="${neckDiscRx}" ry="${neckDiscRy}" fill="#071017" fill-opacity=".58" stroke="#dcebf1" stroke-opacity=".82" stroke-width="1.25"/>
-        <ellipse cx="${neckDiscCx}" cy="${neckDiscCy+.3}" rx="${Math.max(4, neckDiscRx-3.2)}" ry="${Math.max(1.8, neckDiscRy-1.7)}" fill="#02070b" fill-opacity=".76" stroke="#8ca2ae" stroke-opacity=".35" stroke-width=".8"/>
-        <line x1="${neckDiscCx}" y1="${neckDiscCy}" x2="${neckPointerX.toFixed(2)}" y2="${neckPointerY.toFixed(2)}" stroke="#ff5b42" stroke-width="1.4" stroke-linecap="round"/>
-        <circle cx="${neckPointerX.toFixed(2)}" cy="${neckPointerY.toFixed(2)}" r="1.7" fill="#ff6a48"/>
-        <path d="${bodyPath}" fill="url(#bottleSideGlass-${context.source})" stroke="#b9c8cf" stroke-opacity=".88" stroke-width="2"/>
-        <path d="${bodyPath}" fill="url(#bottleDepth-${context.source})" opacity=".92"/>
-        <ellipse cx="${cx+1.5}" cy="${bodyBottom}" rx="${Math.max(16, bodyHalf-5)}" ry="8.2" fill="#071018" fill-opacity=".28" stroke="#d5e4e9" stroke-opacity=".32" stroke-width="1.15"/>
-        <ellipse cx="${cx+1.5}" cy="${bodyBottom-1.4}" rx="${Math.max(11, bodyHalf-12)}" ry="5.2" fill="#d9e6eb" fill-opacity=".035" stroke="#d5e4e9" stroke-opacity=".14" stroke-width=".8"/>
-        <ellipse cx="${cx}" cy="${shoulderBottom+12}" rx="${Math.max(12, bodyHalf-4)}" ry="7.5" fill="none" stroke="#dce8ed" stroke-opacity=".07" stroke-width="1"/>
-        <path d="M ${cx-bodyHalf+7} ${shoulderBottom+4} C ${cx-bodyHalf+12} ${shoulderBottom+14} ${cx-bodyHalf+12} ${bodyBottom-34} ${cx-bodyHalf+11} ${bodyBottom-17}" fill="none" stroke="#f7fbfd" stroke-opacity=".52" stroke-width="3.2" stroke-linecap="round"/>
-        <path d="M ${cx-bodyHalf+13} ${shoulderBottom+1} C ${cx-bodyHalf+18} ${shoulderBottom-6} ${cx-neckHalf+3} ${neckBase+5} ${cx-neckHalf+3} ${neckBase-4}" fill="none" stroke="#f7fbfd" stroke-opacity=".30" stroke-width="2.2" stroke-linecap="round"/>
-        <path d="M ${cx+bodyHalf-7} ${shoulderBottom+4} C ${cx+bodyHalf-12} ${shoulderBottom+14} ${cx+bodyHalf-12} ${bodyBottom-40} ${cx+bodyHalf-11} ${bodyBottom-20}" fill="none" stroke="#6d7f89" stroke-opacity=".34" stroke-width="3" stroke-linecap="round"/>
-        <path d="M ${cx+bodyHalf-13} ${shoulderBottom+1} C ${cx+bodyHalf-18} ${shoulderBottom-6} ${cx+neckHalf-3} ${neckBase+5} ${cx+neckHalf-3} ${neckBase-4}" fill="none" stroke="#6a7a84" stroke-opacity=".24" stroke-width="2" stroke-linecap="round"/>
-        <line x1="${cx-2}" y1="${neckTop+12}" x2="${cx-2}" y2="${neckBase-10}" stroke="#edf7fa" stroke-opacity=".14" stroke-width="2"/>
-        <line x1="${perspectiveDatumX.toFixed(2)}" y1="${shoulderBottom+5}" x2="${perspectiveDatumX.toFixed(2)}" y2="${bodyBottom-12}" stroke="#ff5b42" stroke-width="2.1" stroke-dasharray="5 5" stroke-opacity="${perspectiveDatumOpacity}" clip-path="url(#bottleClip-${context.source})"/>
-        <path d="M ${cx-bodyHalf*.52} ${shoulderBottom-3} Q ${cx+2} ${shoulderBottom-12} ${cx+bodyHalf*.48} ${shoulderBottom-2}" fill="none" stroke="#d8e8ef" stroke-opacity=".16" stroke-width="1.2"/>
-      </g>
-
-      <g data-bottle-lip-depth="true">
-        <ellipse cx="${cx+1.8}" cy="22.5" rx="${neckHalf+3.2}" ry="4.4" fill="#dce7eb" fill-opacity=".055" stroke="#d8e5ea" stroke-opacity=".54" stroke-width="1"/>
-        <path d="M ${cx-neckHalf-2} 22.5 L ${cx-neckHalf-1.2} 31 Q ${cx+1.8} 35 ${cx+neckHalf+2.8} 30.6 L ${cx+neckHalf+3.2} 22.5" fill="#cbd8de" fill-opacity=".065" stroke="#c1cdd3" stroke-opacity=".46" stroke-width=".8"/>
-      </g>
-
-      <line x1="${centerlineX}" y1="18" x2="${centerlineX}" y2="228" stroke="#ff4d3a" stroke-width="2.2" stroke-dasharray="${centerlineFront ? "6 5" : "2 7"}" stroke-opacity="${centerlineFront ? .94 : .28}" clip-path="url(#bottleClip-${context.source})"/>
-
-      <g clip-path="url(#bottleClip-${context.source})" data-wrapped-label="true" data-pseudo-3d-label="true">
-        ${labelSegments.map((segment) => `<path d="${wrappedBandSegmentPath(segment, labelY, labelHeight, labelRadius)}" fill="url(#labelGlass-${context.source})" fill-opacity="${wrappedBandOpacity(segment, labelOpacity).toFixed(3)}" stroke="#9bdaf4" stroke-opacity=".52" stroke-width=".7"/>`).join("")}
-        ${wipedSegments.map((segment) => `<path d="${wrappedBandSegmentPath(segment, labelY, labelHeight, labelRadius)}" fill="${labelColor}" fill-opacity="${wrappedBandOpacity(segment, .82).toFixed(3)}" stroke="#d8f1fb" stroke-opacity=".18" stroke-width=".45"/>`).join("")}
-        <path d="M ${cx-bodyHalf+3} ${labelY+3} Q ${cx} ${labelY-4} ${cx+bodyHalf-3} ${labelY+3}" fill="none" stroke="#e7f7ff" stroke-opacity=".10" stroke-width="1"/>
-        <path d="M ${cx-bodyHalf+3} ${labelY+labelHeight-3} Q ${cx} ${labelY+labelHeight+4} ${cx+bodyHalf-3} ${labelY+labelHeight-3}" fill="none" stroke="#0b2b3c" stroke-opacity=".30" stroke-width="1"/>
-      </g>
-
-      ${Number.isFinite(tackX) ? `<line x1="${tackX}" y1="${labelY-4}" x2="${tackX}" y2="${labelY+labelHeight+4}" stroke="${model.tackMode === "leading" ? "#ffd05f" : "#fff"}" stroke-width="1.2" stroke-dasharray="3 3" opacity=".85" clip-path="url(#bottleClip-${context.source})"/>` : ""}
-      <g transform="translate(${cx+bodyHalf+13} ${hardwareY})" opacity="${hardwareActive ? 1 : .32}">
-        <circle cx="0" cy="0" r="13" fill="#1d252b" stroke="#788996" stroke-width="1.6"/>
-        <circle cx="0" cy="0" r="4.5" fill="${hardwareActive ? labelColor : "#52606a"}"/>
-        <text x="0" y="24" text-anchor="middle" class="view-mini">${escapeHtml(stationText)}</text>
-      </g>
-      <text x="145" y="245" text-anchor="middle" class="view-readout">${escapeHtml(section.toUpperCase())} • ${model.tackMode === "leading" ? "LEADING EDGE" : "CENTER TACK"} • ${format(coverage.percentage, 0)}% wiped</text>
     </svg>`;
   }
 
   function panelMarkup(source) {
     return `<details class="bottle-orientation-panel" ${PANEL_ATTR}="${source}" open>
       <summary>
-        <span><strong>Bottle Orientation &amp; Wipe Visual</strong><small>Full servo cycle • synchronized side + top views</small></span>
+        <span><strong>Bottle Orientation</strong><small>Full servo cycle • synchronized to labeler animation</small></span>
         <span class="bottle-orientation-live-badge">LIVE</span>
       </summary>
       <div class="bottle-orientation-content">
@@ -739,19 +534,10 @@
           <div><span>Contact</span><strong data-orientation-contact>Waiting</strong></div>
         </div>
         <div class="bottle-orientation-visual-grid">
-          <div class="bottle-orientation-view" data-orientation-side></div>
           <div class="bottle-orientation-view" data-orientation-top></div>
         </div>
         <div class="bottle-orientation-action" data-orientation-action>Waiting for servo program data.</div>
-        <div class="bottle-orientation-controls">
-          <button type="button" class="secondary-button" data-orientation-action-button="reset">Start</button>
-          <button type="button" class="secondary-button" data-orientation-action-button="step-back" aria-label="Step back one table degree">−1°</button>
-          <button type="button" data-orientation-action-button="play" aria-pressed="false">Play Full Cycle</button>
-          <button type="button" class="secondary-button" data-orientation-action-button="step-forward" aria-label="Step forward one table degree">+1°</button>
-          <label class="bottle-orientation-speed">Speed<select data-orientation-speed><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
-        </div>
-        <label class="bottle-orientation-scrubber"><span>Full program path</span><input data-orientation-scrubber type="range" min="0" max="100" step="0.1" value="0"><output data-orientation-path-readout>0° → 0°</output></label>
-        <p class="bottle-orientation-note">The circumferential label scale and wipe coverage come from the selected bottle/label geometry and the full generated servo program and active map geometry used by ServoForge. The side-view band height is presentation-only where the label specification does not provide a physical height.</p>
+        <p class="bottle-orientation-note">Top View follows the same table-frame and servo-angle transforms as the live Mechanical Map and stays synchronized to the main labeler animation.</p>
       </div>
     </details>`;
   }
@@ -775,22 +561,15 @@
       .bottle-orientation-metrics span,.bottle-orientation-metrics strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
       .bottle-orientation-metrics span{color:var(--muted);font-size:7px;text-transform:uppercase;letter-spacing:.04em;}
       .bottle-orientation-metrics strong{margin-top:2px;font-size:9px;}
-      .bottle-orientation-visual-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;}
-      .bottle-orientation-view{min-width:0;min-height:228px;border:1px solid var(--line);border-radius:8px;background:radial-gradient(circle at 50% 35%,rgba(37,49,59,.72),rgba(6,10,14,.98) 72%);overflow:hidden;}
-      .bottle-orientation-svg{display:block;width:100%;height:235px;}
+      .bottle-orientation-visual-grid{display:grid;grid-template-columns:minmax(0,560px);justify-content:center;gap:7px;}
+      .bottle-orientation-view{min-width:0;min-height:310px;border:1px solid var(--line);border-radius:8px;background:radial-gradient(circle at 50% 35%,rgba(37,49,59,.72),rgba(6,10,14,.98) 72%);overflow:hidden;}
+      .bottle-orientation-svg{display:block;width:100%;height:315px;}
       .bottle-orientation-svg text{fill:#dbe6ed;font-family:inherit;}
       .bottle-orientation-svg .view-title{font-size:10px;font-weight:800;letter-spacing:.12em;fill:#f2f6f8;}
       .bottle-orientation-svg .degree-label{font-size:8px;font-weight:800;fill:#ff8866;}
       .bottle-orientation-svg .view-readout{font-size:8px;font-weight:700;fill:#c6d3da;}
       .bottle-orientation-svg .hardware-label{font-size:6px;font-weight:900;fill:#ffd8ca;letter-spacing:.06em;}
       .bottle-orientation-action{margin:7px 0 6px;padding:5px 7px;border-left:3px solid #ff6a3d;border-radius:4px;background:rgba(255,106,61,.08);color:#dfe8ed;font-size:9px;line-height:1.25;}
-      .bottle-orientation-controls{display:grid;grid-template-columns:auto auto minmax(120px,1fr) auto auto;align-items:center;gap:5px;}
-      .bottle-orientation-controls button{min-height:29px;padding:4px 8px;font-size:9px;}
-      .bottle-orientation-speed{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:8px;}
-      .bottle-orientation-speed select{min-height:29px;padding:3px 23px 3px 7px;font-size:9px;}
-      .bottle-orientation-scrubber{display:grid;grid-template-columns:auto minmax(120px,1fr) auto;align-items:center;gap:8px;margin-top:7px;color:var(--muted);font-size:8px;}
-      .bottle-orientation-scrubber input{width:100%;accent-color:#ff6a3d;}
-      .bottle-orientation-scrubber output{min-width:76px;text-align:right;color:#d7e1e7;font-weight:700;}
       .bottle-orientation-note{margin:6px 1px 0;color:var(--muted);font-size:7.5px;line-height:1.3;}
       @media(max-width:900px){.bottle-orientation-metrics{grid-template-columns:repeat(3,minmax(0,1fr));}.bottle-orientation-visual-grid{grid-template-columns:1fr;}.bottle-orientation-view{min-height:210px;}.bottle-orientation-svg{height:220px;}}
       @media(max-width:620px){.bottle-orientation-metrics{grid-template-columns:repeat(2,minmax(0,1fr));}.bottle-orientation-controls{grid-template-columns:repeat(4,1fr);}.bottle-orientation-speed{grid-column:1/-1;}.bottle-orientation-scrubber{grid-template-columns:1fr;}.bottle-orientation-scrubber output{text-align:left;}}
@@ -810,9 +589,6 @@
     host.insertAdjacentHTML("afterbegin", panelMarkup(source));
     panel = host.querySelector(`[${PANEL_ATTR}="${source}"]`);
     if (!panel) return null;
-    panel.addEventListener("click", onPanelClick);
-    panel.addEventListener("input", onPanelInput);
-    panel.addEventListener("change", onPanelChange);
     return panel;
   }
 
@@ -826,9 +602,7 @@
     const panel = ensurePanel(source);
     if (!panel) return false;
     const context = contextFor(source);
-    const side = panel.querySelector("[data-orientation-side]");
     const top = panel.querySelector("[data-orientation-top]");
-    if (side) side.innerHTML = sideViewSvg(context);
     if (top) top.innerHTML = topViewSvg(context);
 
     const command = context.active
@@ -1041,16 +815,9 @@
     oppositeCarouselBottleSpinV79: true,
     headOneWorldFrameTopViewV80: true,
     mechanicalMapTransformParityV80: true,
-    pseudo3dBottleSideViewV81: true,
-    curvedWrappedLabelBandV81: true,
-    orientationDepthCueV81: true,
-    selectedMockupBottleV82: true,
-    sideViewOrientationFloorV82: true,
-    sideViewDegreeRingV82: true,
-    liveBaseAngleMarkerV82: true,
-    elevatedThreeQuarterBottleV83: true,
-    liveLongitudinalDatumCueV83: true,
-    visibleTopNeckDiscV83: true,
-    perspectiveBaseEllipseV83: true
+    topViewOnlyV84: true,
+    standaloneOrientationControlsRemovedV84: true,
+    topViewWipeGraphicRemovedV84: true,
+    mainAnimationOnlyV84: true,
   });
 })(typeof window !== "undefined" ? window : globalThis);

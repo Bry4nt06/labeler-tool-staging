@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "three-quarter-perspective-bottle-v83-20260811-1908",
+  "buildId": "top-view-only-orientation-v84-20260811-1918",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v83 changes the Bottle Orientation left visual to an elevated three-quarter bottle perspective. The bottle now exposes its neck opening and base ellipse, keeps the v82 grid/degree ring, and adds a live longitudinal datum/reflection cue that moves around the cylinder with servo rotation for clearer motion depth."
+  "notes": "v84 keeps only the live Top View in Bottle Orientation. Side View/3D perspective, standalone controls, scrubber, speed selector, and the incorrect Top View wipe graphic are removed. The Top View stays synchronized to the main labeler animation."
 }
