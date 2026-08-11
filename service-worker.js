@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-side-view-grid-degree-reference-v82-20260811-1852";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-three-quarter-perspective-bottle-v83-20260811-1908";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 

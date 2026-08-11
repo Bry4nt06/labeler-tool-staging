@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "side-view-grid-degree-reference-v82-20260811-1852";
+  const BUILD_ID = "three-quarter-perspective-bottle-v83-20260811-1908";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "side-view-grid-degree-reference-v82-20260811-1852",
+  "buildId": "three-quarter-perspective-bottle-v83-20260811-1908",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v82 adopts the selected 3D Side View bottle direction and adds a perspective floor grid, elliptical orientation ring, machine-direction-aware 0/90/180/270 degree references, and a live bottle-angle marker while preserving v80 Top View world-frame behavior and all servo/wipe geometry."
+  "notes": "Staging v83 changes the Bottle Orientation left visual to an elevated three-quarter bottle perspective. The bottle now exposes its neck opening and base ellipse, keeps the v82 grid/degree ring, and adds a live longitudinal datum/reflection cue that moves around the cylinder with servo rotation for clearer motion depth."
 }
