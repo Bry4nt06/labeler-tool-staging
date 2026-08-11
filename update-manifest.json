@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "pseudo-3d-bottle-side-view-v81-20260811-1838",
+  "buildId": "side-view-grid-degree-reference-v82-20260811-1852",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v81 upgrades the Bottle Orientation Side View to a pseudo-3D clear-glass bottle. Glass highlights, cylindrical depth cues, front/rear datum visibility, and curved clipped label-band projection now make bottle orientation easier to read while preserving the exact v80 world-frame Top View and generated servo/HMI geometry."
+  "notes": "Staging v82 adopts the selected 3D Side View bottle direction and adds a perspective floor grid, elliptical orientation ring, machine-direction-aware 0/90/180/270 degree references, and a live bottle-angle marker while preserving v80 Top View world-frame behavior and all servo/wipe geometry."
 }

@@ -3,7 +3,7 @@
 (function installBottleOrientationPanel(global) {
   if (global.LabelerBottleOrientationPanel?.installed) return;
 
-  const VERSION = 6;
+  const VERSION = 7;
   const STYLE_ID = "servoforge-bottle-orientation-panel-style";
   const PANEL_ATTR = "data-bottle-orientation-panel";
   const BASE_DEG_PER_SECOND = 18;
@@ -570,6 +570,23 @@
     const stationText = context.station ? `S${context.station}` : "--";
     const labelOpacity = context.applicationStarted ? .42 : .12;
 
+    // Perspective floor/orientation reference selected for the v82 Side View.
+    // The ring uses the same bottle-local visual sign as the animated bottle:
+    // 0° begins at the right, and degree placement follows machine direction.
+    const orientationRingY = 226;
+    const orientationRingRx = 62;
+    const orientationRingRy = 14;
+    function orientationRingPoint(angleDeg, scale = 1) {
+      const radians = Number(angleDeg) * Math.PI / 180;
+      return {
+        x: cx + Math.cos(radians) * orientationRingRx * scale,
+        y: orientationRingY + Math.sin(radians) * orientationRingRy * scale
+      };
+    }
+    const orientationMarker = orientationRingPoint(visualPlateAngle, 1);
+    const orientationNeedle = orientationRingPoint(visualPlateAngle, .82);
+    const currentBottleDegrees = normalizeAngle(plateAngle);
+
     function wrappedBandSegmentPath(segment, y, height, radius) {
       const x0 = finite(segment?.x, cx);
       const x1 = x0 + Math.max(.8, finite(segment?.width, 0));
@@ -596,13 +613,13 @@
     return `<svg class="bottle-orientation-svg" data-pseudo-3d-bottle="true" viewBox="0 0 290 252" role="img" aria-label="Pseudo-3D clear glass bottle side view with ${section} label wrapped to live bottle rotation">
       <defs>
         <linearGradient id="bottleSideGlass-${context.source}" x1="0" x2="1">
-          <stop offset="0" stop-color="#61717b" stop-opacity=".24"/>
-          <stop offset=".08" stop-color="#dbe7ec" stop-opacity=".34"/>
-          <stop offset=".22" stop-color="#80919b" stop-opacity=".10"/>
-          <stop offset=".47" stop-color="#eef7fb" stop-opacity=".055"/>
-          <stop offset=".66" stop-color="#768791" stop-opacity=".09"/>
-          <stop offset=".88" stop-color="#e5f0f4" stop-opacity=".26"/>
-          <stop offset="1" stop-color="#54636d" stop-opacity=".26"/>
+          <stop offset="0" stop-color="#13202a" stop-opacity=".42"/>
+          <stop offset=".08" stop-color="#e8f4f8" stop-opacity=".46"/>
+          <stop offset=".22" stop-color="#4c6070" stop-opacity=".18"/>
+          <stop offset=".50" stop-color="#07121a" stop-opacity=".32"/>
+          <stop offset=".78" stop-color="#455968" stop-opacity=".16"/>
+          <stop offset=".92" stop-color="#e8f4f8" stop-opacity=".38"/>
+          <stop offset="1" stop-color="#111b24" stop-opacity=".40"/>
         </linearGradient>
         <radialGradient id="bottleDepth-${context.source}" cx="48%" cy="34%" r="68%">
           <stop offset="0" stop-color="#f5fbfd" stop-opacity=".09"/>
@@ -620,6 +637,31 @@
       </defs>
       <text x="145" y="14" text-anchor="middle" class="view-title">SIDE VIEW</text>
       <text x="277" y="14" text-anchor="end" class="view-readout" opacity=".72">${centerlineFront ? "DATUM FRONT" : "DATUM REAR"}</text>
+
+      <g data-side-orientation-floor="true" aria-label="Bottle orientation floor grid and degree reference" opacity=".92">
+        <g stroke="#2e5d78" stroke-opacity=".28" stroke-width=".7">
+          <line x1="28" y1="244" x2="108" y2="204"/><line x1="54" y1="244" x2="119" y2="204"/>
+          <line x1="82" y1="244" x2="129" y2="204"/><line x1="112" y1="244" x2="138" y2="204"/>
+          <line x1="145" y1="244" x2="145" y2="204"/>
+          <line x1="178" y1="244" x2="152" y2="204"/><line x1="208" y1="244" x2="161" y2="204"/>
+          <line x1="236" y1="244" x2="171" y2="204"/><line x1="262" y1="244" x2="182" y2="204"/>
+          <line x1="38" y1="241" x2="252" y2="241"/><line x1="55" y1="234" x2="235" y2="234"/>
+          <line x1="72" y1="228" x2="218" y2="228"/><line x1="88" y1="222" x2="202" y2="222"/>
+          <line x1="101" y1="216" x2="189" y2="216"/><line x1="112" y1="210" x2="178" y2="210"/>
+        </g>
+        <ellipse cx="${cx}" cy="${orientationRingY}" rx="${orientationRingRx}" ry="${orientationRingRy}" fill="#0c3150" fill-opacity=".08" stroke="#4c9bd0" stroke-opacity=".78" stroke-width="1.2"/>
+        <ellipse cx="${cx}" cy="${orientationRingY}" rx="${orientationRingRx-5}" ry="${orientationRingRy-2}" fill="none" stroke="#8bc9ef" stroke-opacity=".15" stroke-width=".8"/>
+        ${[0,90,180,270].map((degree) => {
+          const angle = machineVisualAngle(degree);
+          const tick0 = orientationRingPoint(angle, .94);
+          const tick1 = orientationRingPoint(angle, 1.08);
+          const label = orientationRingPoint(angle, 1.28);
+          return `<line x1="${tick0.x.toFixed(2)}" y1="${tick0.y.toFixed(2)}" x2="${tick1.x.toFixed(2)}" y2="${tick1.y.toFixed(2)}" stroke="#78bde8" stroke-width="1.1"/><text x="${label.x.toFixed(2)}" y="${(label.y + 3).toFixed(2)}" text-anchor="middle" class="degree-label" fill="#8ec9ed">${degree}°</text>`;
+        }).join("")}
+        <line x1="${cx}" y1="${orientationRingY}" x2="${orientationNeedle.x.toFixed(2)}" y2="${orientationNeedle.y.toFixed(2)}" stroke="#4ca8ff" stroke-opacity=".78" stroke-width="1.2"/>
+        <circle cx="${orientationMarker.x.toFixed(2)}" cy="${orientationMarker.y.toFixed(2)}" r="3.2" fill="#4ca8ff" stroke="#d9f2ff" stroke-width="1"/>
+        <text x="${orientationMarker.x.toFixed(2)}" y="${(orientationMarker.y - 7).toFixed(2)}" text-anchor="middle" class="view-mini" fill="#9ed8ff">${format(currentBottleDegrees, 0)}°</text>
+      </g>
 
       <g data-pseudo-3d-glass="true">
         <path d="${bodyPath}" fill="url(#bottleSideGlass-${context.source})" stroke="#b9c8cf" stroke-opacity=".88" stroke-width="2"/>
@@ -979,6 +1021,10 @@
     mechanicalMapTransformParityV80: true,
     pseudo3dBottleSideViewV81: true,
     curvedWrappedLabelBandV81: true,
-    orientationDepthCueV81: true
+    orientationDepthCueV81: true,
+    selectedMockupBottleV82: true,
+    sideViewOrientationFloorV82: true,
+    sideViewDegreeRingV82: true,
+    liveBaseAngleMarkerV82: true
   });
 })(typeof window !== "undefined" ? window : globalThis);
