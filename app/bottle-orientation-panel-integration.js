@@ -3,7 +3,7 @@
 (function installBottleOrientationPanel(global) {
   if (global.LabelerBottleOrientationPanel?.installed) return;
 
-  const VERSION = 4;
+  const VERSION = 5;
   const STYLE_ID = "servoforge-bottle-orientation-panel-style";
   const PANEL_ATTR = "data-bottle-orientation-panel";
   const BASE_DEG_PER_SECOND = 18;
@@ -371,6 +371,31 @@
     return String(runtimeState()?.direction || "cw").toLowerCase() === "cw" ? -angle : angle;
   }
 
+  function tableFrameVisualAngle(tableAngle) {
+    // Use the exact table/head transform used by the live Mechanical Map.
+    // This makes the Top View a magnified world-frame view of servo/head 1,
+    // rather than a bottle-only compass that ignores where the head is on the table.
+    try {
+      if (typeof angleToSvgRotation === "function") {
+        const mapped = finite(angleToSvgRotation(normalizeAngle(tableAngle)), NaN);
+        if (Number.isFinite(mapped)) return mapped;
+      }
+    } catch {
+      // Mirror geometry-primitives.js below if the shared helper is unavailable.
+    }
+    const current = runtimeState();
+    const direction = String(current?.direction || "cw").toLowerCase();
+    const signed = direction === "cw" ? -1 : 1;
+    const zeroBase = direction === "cw" ? 180 : 0;
+    return normalizeAngle(zeroBase + finite(current?.zeroAngle, 0) + signed * finite(tableAngle, 0));
+  }
+
+  function headOneWorldVisualAngle(tableAngle, plateAngle) {
+    // Mechanical Map parity:
+    // angleToSvgRotation(head.tableAngle) + servoSign * bottlePreviewAngle(head)
+    return tableFrameVisualAngle(tableAngle) + machineVisualAngle(plateAngle);
+  }
+
   function labelArcModel(context) {
     const { section, plateAngle, geometry, coverage } = context;
     const visualPlateAngle = machineVisualAngle(plateAngle);
@@ -446,8 +471,20 @@
     const neckRadius = clamp(bodyRadius * geometry.neckCirc / geometry.bodyCirc, 25, 49);
     const labelRadius = section === "neck" ? neckRadius : bodyRadius;
     const labelColor = SECTION_COLORS[section] || "#4ca8ff";
-    const model = labelArcModel(context);
-    const visualPlateAngle = machineVisualAngle(plateAngle);
+    const localModel = labelArcModel(context);
+    const tableFrameAngle = tableFrameVisualAngle(context.tableAngle);
+    // Rotate the complete bottle-local label model into the same world frame as
+    // servo/head 1 on the Mechanical Map. Local servo rotation remains layered
+    // on top through labelArcModel(), exactly like the live bottle-table group.
+    const model = {
+      ...localModel,
+      center: localModel.center + tableFrameAngle,
+      start: localModel.start + tableFrameAngle,
+      end: localModel.end + tableFrameAngle,
+      leadingEdge: localModel.leadingEdge + tableFrameAngle,
+      wipeRanges: localModel.wipeRanges.map(([start, end]) => [start + tableFrameAngle, end + tableFrameAngle])
+    };
+    const visualPlateAngle = headOneWorldVisualAngle(context.tableAngle, plateAngle);
     const front = polarPoint(visualPlateAngle, bodyRadius - 5);
     const labelCenterPoint = polarPoint(model.center, labelRadius - 5);
     const hardwareActive = Boolean(context.hardware) || finite(coverage.percentage, 0) > 0;
@@ -455,14 +492,14 @@
     const wipedArcs = model.wipeRanges.map(([start, end]) => arcPath(0, 4, labelRadius, start, end));
     const tackPoint = polarPoint(model.tackMode === "leading" ? model.leadingEdge : model.center, labelRadius, 0, 4);
 
-    return `<svg class="bottle-orientation-svg" viewBox="-145 -126 290 252" role="img" aria-label="Top-down bottle orientation at ${format(plateAngle, 1)} degrees">
+    return `<svg class="bottle-orientation-svg" data-top-view-frame="head-1-world" viewBox="-145 -126 290 252" role="img" aria-label="Top-down head 1 bottle orientation at table ${format(context.tableAngle, 1)} degrees and bottle ${format(plateAngle, 1)} degrees">
       <defs>
         <radialGradient id="bottleTopGlass-${context.source}" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#5b3828"/><stop offset="0.55" stop-color="#271b17"/><stop offset="1" stop-color="#0b0f13"/></radialGradient>
       </defs>
       <circle cx="0" cy="4" r="84" fill="#070c11" stroke="#6e7780" stroke-width="2"/>
       <circle cx="0" cy="4" r="77" fill="none" stroke="#b4bcc4" stroke-opacity=".35" stroke-width="1"/>
       ${[0,90,180,270].map((degree) => {
-        const markerAngle = machineVisualAngle(degree);
+        const markerAngle = tableFrameAngle + machineVisualAngle(degree);
         const inner = polarPoint(markerAngle, 83, 0, 4);
         const outer = polarPoint(markerAngle, 94, 0, 4);
         const text = polarPoint(markerAngle, 108, 0, 4);
@@ -858,6 +895,8 @@
     fullProgramPath: stationOnePath,
     contextFor,
     machineVisualAngle,
+    tableFrameVisualAngle,
+    headOneWorldVisualAngle,
     topViewSvg,
     sideViewSvg,
     ensurePanel,
@@ -879,6 +918,8 @@
     machineDirectionVisualV78: true,
     directionAwareDegreeMarkersV78: true,
     rightFrontZeroDatumV79: true,
-    oppositeCarouselBottleSpinV79: true
+    oppositeCarouselBottleSpinV79: true,
+    headOneWorldFrameTopViewV80: true,
+    mechanicalMapTransformParityV80: true
   });
 })(typeof window !== "undefined" ? window : globalThis);

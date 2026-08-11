@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "machine-bottle-datum-alignment-v79-20260811-1756",
+  "buildId": "head1-world-frame-top-view-v80-20260811-1830",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v79 aligns Bottle Orientation with the Mechanical Map bottle datum: 0° is the right-hand/front reference, a CW carousel displays positive bottle servo rotation counterclockwise, and a CCW carousel displays it clockwise. Generated servo/HMI angles are unchanged."
+  "notes": "Staging v80 makes the Bottle Orientation Top View a magnified world-frame view of servo/head 1. Its 0/90/180/270 references rotate with the same table-frame transform used by the live Mechanical Map, while the bottle servo angle remains superimposed as the local plate rotation. Generated servo/HMI values are unchanged."
 }
