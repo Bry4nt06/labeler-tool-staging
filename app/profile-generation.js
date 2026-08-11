@@ -2,7 +2,7 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.2";
-  const moduleBuild = "neck-body-coder-window-v53-20260810-0923";
+  const moduleBuild = "servo-validator-plan-sync-v59-20260811";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",
