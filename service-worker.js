@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-compact-build-parameters-v70";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-station1-bottle-orientation-v72";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -93,6 +93,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/table-rendering.js",
   "./app/bootstrap.js",
   "./app/compact-build-parameters-integration.js",
+  "./app/bottle-orientation-panel-integration.js",
   "./app/export-service.js",
   "./app/global-actions.js",
   "./app/animation-runtime.js",

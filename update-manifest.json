@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "compact-build-parameters-v70-20260811-1350",
+  "buildId": "station1-bottle-orientation-v72-20260811-1600",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v70 compacts Build Program Inputs into a denser two-column desktop layout with smaller controls and tighter spacing while preserving all build parameters. It also advances the bootstrap and service-worker cache references so installed and browser-cached staging clients load the current build."
+  "notes": "Staging v72 adds a shared live Bottle Orientation & Wipe Visual inside both Servo Program and Servo Simulation. The Servo Program visual works independently when Servo Simulation is hidden. It follows Station 1 table/plate motion, uses selected bottle circumference and label length to scale the top-view label arc, and uses ServoForge wipe telemetry to animate actual Station 1 wipe coverage."
 }
