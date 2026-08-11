@@ -43,6 +43,10 @@
     return normalized === "leading-edge" || normalized === "leading" ? "leading-edge" : fallback;
   }
 
+  function persistContactParameter(section, value) {
+    global.LabelerBrandContactParameterDefaults?.setContactDeg?.(state, section, value);
+  }
+
   function selectZone(value) {
     commit(() => {
       state.selectedZone = value;
@@ -133,12 +137,15 @@
           if (label) label.backLengthMm = Math.max(0, value) / 360 * Math.max(0.001, bodyCirc);
           break;
         case "programNeckContactDeg":
+          persistContactParameter("neck", value);
           state.buildInputs.neckContactMm = Math.max(0, value) / 360 * Math.max(0.001, neckCirc);
           break;
         case "programBodyContactDeg":
+          persistContactParameter("body", value);
           state.buildInputs.bodyContactMm = Math.max(0, value) / 360 * Math.max(0.001, bodyCirc);
           break;
         case "programBackContactDeg":
+          persistContactParameter("back", value);
           state.buildInputs.backContactMm = Math.max(0, value) / 360 * Math.max(0.001, bodyCirc);
           break;
         case "programCenterLineFrontDeg":
