@@ -3,20 +3,117 @@
 (function installBottleOrientationPanelRecovery(global) {
   if (global.ServoForgeBottleOrientationPanelRecovery?.installed) return;
 
+  const VERSION = 2;
   const sources = ["program", "simulation"];
   const observers = new Map();
+  const TOP_CORRECTION_ATTR = "data-machine-direction-bottle-datum-v79";
+  // The v78 top-view polar basis used 0 degrees at 6 o'clock. The shared
+  // Mechanical Map bottle datum is 0 degrees at 3 o'clock (+X). Reflecting the
+  // angular graphics across y=x about the bottle center converts that old basis
+  // to the same +X datum without changing any generated servo/HMI angle.
+  const BOTTLE_CENTER_Y = 4;
+  const DATUM_TRANSFORM = `matrix(0 1 1 0 ${-BOTTLE_CENTER_Y} ${BOTTLE_CENTER_Y})`;
   let recoveryQueued = false;
 
   function api() { return global.LabelerBottleOrientationPanel || null; }
 
+  function runtimeState() {
+    try {
+      if (typeof state !== "undefined" && state) return state;
+    } catch {
+      // Fall through to the Window property when the lexical binding is absent.
+    }
+    return global.state || null;
+  }
+
+  function machineDirection() {
+    const current = String(runtimeState()?.direction || "").toLowerCase();
+    if (current === "cw" || current === "ccw") return current;
+    try {
+      const mapped = String(global.activeMachineMap?.()?.machineSettings?.direction || "").toLowerCase();
+      if (mapped === "cw" || mapped === "ccw") return mapped;
+    } catch {
+      // Use the established clockwise fallback below.
+    }
+    return "cw";
+  }
+
+  function visualAngle(angleDeg, direction = machineDirection()) {
+    const angle = Number(angleDeg);
+    const resolved = Number.isFinite(angle) ? angle : 0;
+    // Servo bottle rotation is opposite carousel travel. SVG positive rotation
+    // is clockwise, so a clockwise carousel uses a negative local bottle angle.
+    return String(direction).toLowerCase() === "cw" ? -resolved : resolved;
+  }
+
+  function markerPoint(angleDeg, radius, cx = 0, cy = BOTTLE_CENTER_Y, direction = machineDirection()) {
+    const radians = visualAngle(angleDeg, direction) * Math.PI / 180;
+    return {
+      x: cx + Math.cos(radians) * radius,
+      y: cy + Math.sin(radians) * radius
+    };
+  }
+
+  function sourcePanel(source) {
+    const host = typeof document !== "undefined" ? document.getElementById(source) : null;
+    return host?.querySelector?.(`[data-bottle-orientation-panel="${source}"]`) || null;
+  }
+
+  function correctTopView(source) {
+    const panel = sourcePanel(source);
+    const top = panel?.querySelector?.("[data-orientation-top]");
+    const svg = top?.querySelector?.(".bottle-orientation-svg");
+    if (!svg) return false;
+
+    const direction = machineDirection();
+    if (svg.getAttribute(TOP_CORRECTION_ATTR) === direction) return true;
+
+    // Convert all circumferential paths from the legacy 6-o'clock basis to the
+    // shared bottle +X datum. Bottle body circles are rotationally symmetric and
+    // the fixed wipe hardware remains physically fixed at the right-hand side.
+    svg.querySelectorAll("path").forEach((path) => {
+      path.setAttribute("transform", DATUM_TRANSFORM);
+    });
+
+    const orientationLine = svg.querySelector('line[stroke="#ff4d3a"][stroke-dasharray="5 4"]');
+    if (orientationLine) orientationLine.setAttribute("transform", DATUM_TRANSFORM);
+
+    ["2.8", "3.2"].forEach((radius) => {
+      svg.querySelectorAll(`circle[r="${radius}"]`).forEach((circle) => {
+        circle.setAttribute("transform", DATUM_TRANSFORM);
+      });
+    });
+
+    // Degree marker lines can use the same geometric basis conversion, while
+    // marker text is positioned numerically so the glyphs are never mirrored.
+    svg.querySelectorAll("text.degree-label").forEach((text) => {
+      const degree = Number.parseFloat(String(text.textContent || "").replace("°", ""));
+      if (!Number.isFinite(degree)) return;
+      const markerLine = text.previousElementSibling;
+      if (markerLine?.tagName?.toLowerCase?.() === "line") {
+        markerLine.setAttribute("transform", DATUM_TRANSFORM);
+      }
+      const point = markerPoint(degree, 108, 0, BOTTLE_CENTER_Y, direction);
+      text.setAttribute("x", String(point.x));
+      text.setAttribute("y", String(point.y + 4));
+    });
+
+    svg.setAttribute(TOP_CORRECTION_ATTR, direction);
+    svg.setAttribute("data-bottle-zero-datum", "right-front-reference");
+    svg.setAttribute("data-bottle-spin-relative-to-carousel", "opposite");
+    return true;
+  }
+
   function recoverSource(source) {
     const visual = api();
-    const host = document.getElementById(source);
+    const host = typeof document !== "undefined" ? document.getElementById(source) : null;
     if (!visual?.renderSource || !host) return false;
     if (!host.querySelector(`[data-bottle-orientation-panel="${source}"]`)) {
       visual.renderSource(source);
     }
-    return Boolean(host.querySelector(`[data-bottle-orientation-panel="${source}"]`));
+    const present = Boolean(host.querySelector(`[data-bottle-orientation-panel="${source}"]`));
+    if (present) correctTopView(source);
+    return present;
   }
 
   function recoverAll() {
@@ -31,12 +128,13 @@
   }
 
   function observeHost(source) {
-    const host = document.getElementById(source);
+    const host = typeof document !== "undefined" ? document.getElementById(source) : null;
     if (!host || observers.has(source) || typeof MutationObserver !== "function") return false;
-    const observer = new MutationObserver(() => {
-      if (!host.querySelector(`[data-bottle-orientation-panel="${source}"]`)) queueRecovery();
-    });
-    observer.observe(host, { childList: true });
+    // The orientation renderer replaces the SVG contents as the program player
+    // advances. Child-list observation reapplies the datum correction to each new
+    // SVG. Attribute-only corrections below do not retrigger this observer.
+    const observer = new MutationObserver(() => queueRecovery());
+    observer.observe(host, { childList: true, subtree: true });
     observers.set(source, observer);
     return true;
   }
@@ -49,15 +147,25 @@
     global.setTimeout(recoverAll, 1800);
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
-  else install();
-  global.addEventListener("load", recoverAll, { once: true });
+  if (typeof document !== "undefined") {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
+    else install();
+    global.addEventListener?.("load", recoverAll, { once: true });
+  }
 
   global.ServoForgeBottleOrientationPanelRecovery = Object.freeze({
     installed: true,
-    version: 1,
+    version: VERSION,
+    machineDirection,
+    visualAngle,
+    markerPoint,
+    datumTransform: DATUM_TRANSFORM,
+    correctTopView,
     recoverSource,
     recoverAll,
-    servoProgramPanelGuaranteedV75: true
+    servoProgramPanelGuaranteedV75: true,
+    machineBottleDatumAlignedV79: true,
+    oppositeCarouselBottleSpinV79: true,
+    rightFrontZeroDatumV79: true
   });
 })(typeof window !== "undefined" ? window : globalThis);
