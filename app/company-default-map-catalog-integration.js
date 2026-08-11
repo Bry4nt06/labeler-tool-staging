@@ -49,13 +49,23 @@
     }
 
     const catalog = await service.loadCatalog();
-    const official = approvedMaps(catalog);
+    const currentBeforeEnforcement = Array.isArray(global.state.mapLibrary) ? global.state.mapLibrary : [];
+    const localById = new Map(currentBeforeEnforcement.map((map) => [key(map?.id), map]));
+    const official = approvedMaps(catalog).map((packaged) => {
+      const local = localById.get(key(packaged?.id));
+      if (!local?.localMachineSettingsOverride) return packaged;
+      return {
+        ...packaged,
+        machineSettings: clone(local.machineSettings || packaged.machineSettings),
+        localMachineSettingsOverride: true
+      };
+    });
     if (official.length !== DEFAULT_MAP_IDS.length) {
       throw new Error(`The packaged map catalog must contain exactly ${DEFAULT_MAP_IDS.length} approved maps.`);
     }
 
     const reserved = new Set(DEFAULT_MAP_IDS.map(key));
-    const current = Array.isArray(global.state.mapLibrary) ? global.state.mapLibrary : [];
+    const current = currentBeforeEnforcement;
     const custom = current.filter((map) =>
       !reserved.has(key(map?.id)) && !isRetiredPackagedMap(map)
     );
@@ -119,7 +129,8 @@
       LEGACY_PACKAGED_MAP_IDS,
       approvedMaps,
       isRetiredPackagedMap,
-      enforce
+      enforce,
+      localMachineSettingsOverrideV87: true
     });
     return true;
   }

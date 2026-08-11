@@ -1,5 +1,14 @@
 "use strict";
 
+function machineSettingNumber(control, currentValue, minimum = null) {
+  const raw = String(control?.value ?? "").trim();
+  const current = Number(currentValue);
+  if (!raw) return Number.isFinite(current) ? current : 0;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return Number.isFinite(current) ? current : 0;
+  return minimum == null ? parsed : Math.max(minimum, parsed);
+}
+
 function saveMapDefinitionFromControls(event) {
   const liveInput = event?.type === "input";
   const explicitSave = event?.type === "click";
@@ -32,14 +41,17 @@ function saveMapDefinitionFromControls(event) {
   map.headCount = Math.max(1, Math.min(120, Math.round(num(els.mapHeadCount?.value, map.headCount))));
   map.machineSettings = {
     direction: els.mapDirection?.value === "cw" ? "cw" : "ccw",
-    radius: Math.max(1, num(els.mapRadius?.value, map.machineSettings?.radius)),
-    referencePitchRadiusMm: Math.max(1, num(els.mapReferencePitchRadiusMm?.value, map.machineSettings?.referencePitchRadiusMm)),
-    encoderCountsPerRev: Math.max(1, num(els.mapEncoderCountsPerRev?.value, map.machineSettings?.encoderCountsPerRev)),
-    servoGearRatio: Math.max(0.001, num(els.mapServoGearRatio?.value, map.machineSettings?.servoGearRatio)),
+    radius: machineSettingNumber(els.mapRadius, map.machineSettings?.radius, 1),
+    referencePitchRadiusMm: machineSettingNumber(els.mapReferencePitchRadiusMm, map.machineSettings?.referencePitchRadiusMm, 1),
+    encoderCountsPerRev: machineSettingNumber(els.mapEncoderCountsPerRev, map.machineSettings?.encoderCountsPerRev, 1),
+    servoGearRatio: machineSettingNumber(els.mapServoGearRatio, map.machineSettings?.servoGearRatio, 0.001),
     autoScaleTableMap: Boolean(els.mapAutoScaleTableMap?.checked),
-    zeroAngle: norm(num(els.mapZeroAngle?.value, map.machineSettings?.zeroAngle)),
-    maxMoveRatio: Math.max(0.1, num(els.mapMaxMoveRatio?.value, map.machineSettings?.maxMoveRatio))
+    zeroAngle: norm(machineSettingNumber(els.mapZeroAngle, map.machineSettings?.zeroAngle)),
+    maxMoveRatio: machineSettingNumber(els.mapMaxMoveRatio, map.machineSettings?.maxMoveRatio, 0.1)
   };
+  // Protected/company maps stay protected, but a user's local machine setup is
+  // allowed to differ from the packaged template until they perform a reset.
+  map.localMachineSettingsOverride = true;
   map.enabledAggregates = normalizeEnabledSlots(map.enabledAggregates, map.aggregateCount);
   map.enabledStations = normalizeEnabledSlots(map.enabledStations, map.stationCount);
   map.aggregateCount = map.enabledAggregates.filter(Boolean).length;

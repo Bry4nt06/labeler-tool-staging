@@ -6,9 +6,11 @@
   const builder = global.LabelerMapBuilderActionController;
   if (!builder?.installed) throw new Error("Map Builder action controller is not loaded.");
 
-  const definitionFields = new Set([
+  const liveDefinitionFields = new Set([
     "mapName",
-    "mapHeadCount",
+    "mapHeadCount"
+  ]);
+  const machineSettingFields = new Set([
     "mapRadius",
     "mapReferencePitchRadiusMm",
     "mapEncoderCountsPerRev",
@@ -16,6 +18,16 @@
     "mapZeroAngle",
     "mapMaxMoveRatio"
   ]);
+  const definitionFields = new Set([...liveDefinitionFields, ...machineSettingFields]);
+
+  function saveDefinition(eventType = "change") {
+    // Machine settings are core map data. Prefer the authoritative global domain
+    // mutation so a stale/frozen controller wrapper cannot swallow the edit.
+    if (typeof global.saveMapDefinitionFromControls === "function") {
+      return global.saveMapDefinitionFromControls({ type: eventType });
+    }
+    return builder.saveDefinition(eventType);
+  }
 
   function consume(event, preventDefault = false) {
     if (preventDefault) event.preventDefault();
@@ -25,7 +37,11 @@
   document.addEventListener("input", (event) => {
     const target = event.target;
     if (!(target instanceof Element) || !definitionFields.has(target.id)) return;
-    builder.saveDefinition("input");
+    // Numeric machine settings must remain freely editable while the user is
+    // typing. Committing an incomplete value (for example the empty state while
+    // replacing 250) caused the control to snap back immediately.
+    if (machineSettingFields.has(target.id)) return;
+    saveDefinition("input");
     consume(event);
   }, true);
 
@@ -33,11 +49,11 @@
     const target = event.target;
     if (!(target instanceof Element)) return;
 
-    if (definitionFields.has(target.id)) builder.saveDefinition("change");
+    if (definitionFields.has(target.id)) saveDefinition("change");
     else if (target.id === "builderObjectType") builder.updateObjectType();
-    else if (target.id === "mapMachineType") builder.saveDefinition("change");
-    else if (target.id === "mapDirection") builder.saveDefinition("change");
-    else if (target.id === "mapAutoScaleTableMap") builder.saveDefinition("change");
+    else if (target.id === "mapMachineType") saveDefinition("change");
+    else if (target.id === "mapDirection") saveDefinition("change");
+    else if (target.id === "mapAutoScaleTableMap") saveDefinition("change");
     else if (target.id === "mapZone") builder.selectZone(target.value);
     else if (target.id === "mapSite") builder.selectSite(target.value);
     else return;
@@ -66,6 +82,10 @@
 
   global.LabelerMapBuilderEventController = Object.freeze({
     installed: true,
-    definitionFields
+    definitionFields,
+    liveDefinitionFields,
+    machineSettingFields,
+    directMachineSettingsCommitV87: true,
+    machineSettingsCommitOnChangeV87: true
   });
 })(window);

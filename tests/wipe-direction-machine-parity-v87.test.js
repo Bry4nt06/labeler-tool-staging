@@ -1,0 +1,13 @@
+"use strict";
+const assert=require("assert");
+const fs=require("fs");
+const path=require("path");
+const source=fs.readFileSync(path.resolve(__dirname,"../app/wipe-telemetry-service.js"),"utf8");
+const renderer=fs.readFileSync(path.resolve(__dirname,"../app/wipe-telemetry-renderer.js"),"utf8");
+assert.match(source,/function liveWipeMachineDirection/);
+assert.match(source,/activeMachineMap\?\.\(\)\?\.machineSettings\?\.direction/);
+assert.match(source,/liveWipeMachineDirection\(\) === "cw" \? "ltr" : "rtl"/);
+assert.match(renderer,/data\.direction === "rtl"/);
+assert.match(renderer,/"Right → left"/);
+assert.match(renderer,/"Left → right"/);
+console.log("Wipe direction machine parity v87 regression passed: CW=L->R, CCW=R->L.");

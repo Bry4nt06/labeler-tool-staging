@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "top-view-runtime-load-fix-v86-20260811-1932";
+  const BUILD_ID = "map-machine-settings-wipe-direction-v87-20260811-1940";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 

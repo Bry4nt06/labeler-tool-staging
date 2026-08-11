@@ -1,7 +1,7 @@
 "use strict";
 
 (function loadServoForgeMapBuilderModules() {
-  const releaseVersion = "0.9.10-roller-coverage-5deg-v71";
+  const releaseVersion = "0.9.10-map-machine-settings-v87";
   const modulePaths = Object.freeze([
     "drivers/assembly/assembly-model-driver.js",
     "drivers/assembly/assembly-geometry-driver.js",

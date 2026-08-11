@@ -112,7 +112,7 @@ function wipeObjectSideForRow(row) {
   return null;
 }
 
-function wipeVisualSideForPlateTravel(plateTravel, machineDirection = state.direction) {
+function wipeVisualSideForPlateTravel(plateTravel, machineDirection = liveWipeMachineDirection()) {
   const travel = Number(plateTravel);
   if (!Number.isFinite(travel) || Math.abs(travel) <= 0.000001) return null;
   const renderedBottleRotation = (String(machineDirection).toLowerCase() === "cw" ? -1 : 1) * travel;
@@ -193,10 +193,20 @@ function contactedLabelCoverage(program, section, station, throughTableAngle, vi
   return { percentage, leftPercent, rightPercent, backspinFillPercent, mainWipePercent };
 }
 
+function liveWipeMachineDirection() {
+  try {
+    const configured = String(activeMachineMap?.()?.machineSettings?.direction || "").toLowerCase();
+    if (configured === "cw" || configured === "ccw") return configured;
+  } catch {
+    // Fall back to the synchronized runtime direction below.
+  }
+  return String(state.direction || "").toLowerCase() === "cw" ? "cw" : "ccw";
+}
+
 function wipeVisualApplication(section, labelLengthMm) {
   const neckLeading = section === "neck" && state.buildInputs.neckApplication === "Leading Edge";
   const tackMode = section === "neck" && !neckLeading ? "center" : "leading";
-  const direction = state.direction === "cw" ? "ltr" : "rtl";
+  const direction = liveWipeMachineDirection() === "cw" ? "ltr" : "rtl";
   const backspinMm = section === "neck"
     ? num(state.buildInputs.neckContactMm, 0)
     : section === "body"
@@ -260,6 +270,7 @@ window.LabelerWipeTelemetryService = Object.freeze({
   wipeObjectSideForRow,
   wipeVisualSideForPlateTravel,
   contactedLabelCoverage,
+  liveWipeMachineDirection,
   wipeVisualApplication,
   wipeDownTelemetry,
   centerTackServoDirectionV2: true

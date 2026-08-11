@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "top-view-runtime-load-fix-v86-20260811-1932",
+  "buildId": "map-machine-settings-wipe-direction-v87-20260811-1940",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "v86 fixes Bottle Orientation module startup. v84 removed the Side View renderer but left a stale sideViewSvg export, causing a runtime ReferenceError before the Top View API could install. The stale export is removed; Top View-only layout and v85 mount recovery remain unchanged."
+  "notes": "v87 keeps the confirmed Top View-only Bottle Orientation baseline unchanged, restores editable Map Builder machine settings, preserves local machine-setting overrides on protected default maps, and locks Label Wipe-Down direction to the active map: clockwise is left-to-right; counter-clockwise is right-to-left."
 }
