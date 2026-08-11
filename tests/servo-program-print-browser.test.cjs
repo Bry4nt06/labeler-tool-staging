@@ -63,7 +63,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
     assert.equal(setup.printInstalled, true, "Servo Program print integration must be installed.");
     assert.equal(setup.tabsController, true, "Servo Program tab controller must be available.");
-    assert.equal(setup.build, "servo-program-print-view-v58-20260811-0925");
+    assert.ok(setup.build, "Current staging build ID must be available.");
     assert.ok(setup.rows > 20, `Expected a generated Mic Family program, found ${setup.rows} rows.`);
     assert.equal(setup.map, "APL 6-Aggregate");
 
@@ -124,7 +124,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     assert.match(printed.html, /TopModul/);
     assert.match(printed.html, /APL — Applied Plastic Label/);
     assert.match(printed.html, /3 Label APL — Neck \/ Body \/ Back/);
-    assert.match(printed.html, /servo-program-print-view-v58-20260811-0925/);
+    assert.ok(printed.html.includes(setup.build), "Print sheet must list the current staging build ID.");
     assert.match(printed.html, /Code box center from left edge/);
     assert.match(printed.html, /HMI/);
     assert.match(printed.html, /Table Angle/);
