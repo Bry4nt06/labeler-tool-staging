@@ -25,6 +25,7 @@ assert.match(policySource, /body:\s*LEADING_EDGE/);
 assert.match(policySource, /back:\s*LEADING_EDGE/);
 assert.match(policySource, /finishedCenterlineFromApplication/);
 assert.match(policySource, /applicationTargetFromCenterline/);
+assert.match(policySource, /logicalApplicationRows/);
 assert.match(buildRendererSource, /Neck Application Reference/);
 assert.match(buildRendererSource, /Body Application Reference/);
 assert.match(buildRendererSource, /Back Application Reference/);
@@ -96,7 +97,7 @@ vm.runInContext(policySource, context, { filename: "label-centerline-policy-inte
 
 const policy = context.LabelerLabelCenterlinePolicy;
 assert.equal(policy.installed, true);
-assert.equal(policy.VERSION, 2);
+assert.equal(policy.VERSION, 3);
 assert.equal(context.state.buildInputs.neckApplicationReference, "center-tack");
 assert.equal(context.state.buildInputs.bodyApplicationReference, "leading-edge");
 assert.equal(context.state.buildInputs.backApplicationReference, "leading-edge");
@@ -165,6 +166,90 @@ const misalignedImported = alignedImported.map((row) => ({ ...row }));
 misalignedImported[1].plateAngle = -40;
 const importedNotes = policy.validationNotes(misalignedImported);
 assert.ok(importedNotes.some((note) => note[2]?.code === "front-label-centerline-mismatch"));
+
+// v57+ collapses passive application Rest rows onto the previous physical CMD 3.
+// The physical carrier may still belong to another label section (for example,
+// the Body application marker is stored on the preceding Neck wipe hold). The
+// centerline reader must use the preserved logical event's section and angle,
+// not the carrier row's section.
+const collapsedLogicalImported = [
+  {
+    cmd: 3,
+    hmi: 1,
+    tableAngle: 8,
+    plateAngle: 12,
+    action: "Zero Line",
+    applicationReference: true,
+    applicationSection: "neck",
+    applicationReferenceMode: "center-tack",
+    applicationReferenceEvents: [
+      {
+        tableAngle: 10,
+        plateAngle: 12,
+        action: "Hold for Neck Application - Agg 1",
+        section: "neck",
+        applicationReference: true,
+        applicationReferenceMode: "center-tack"
+      }
+    ]
+  },
+  {
+    cmd: 3,
+    hmi: 10,
+    tableAngle: 148,
+    plateAngle: -48,
+    action: "Wipe Hold Neck - Agg 2",
+    section: "neck",
+    applicationReference: true,
+    applicationSection: "body",
+    applicationReferenceMode: "leading-edge",
+    applicationReferenceEvents: [
+      {
+        tableAngle: 150,
+        plateAngle: -48,
+        action: "Hold for Body Application - Agg 3",
+        section: "body",
+        applicationReference: true,
+        applicationReferenceMode: "leading-edge"
+      }
+    ]
+  },
+  {
+    cmd: 3,
+    hmi: 20,
+    tableAngle: 228,
+    plateAngle: 152,
+    action: "Back Reference - Agg 5",
+    section: "back",
+    applicationReference: true,
+    applicationSection: "back",
+    applicationReferenceMode: "leading-edge",
+    applicationReferenceEvents: [
+      {
+        tableAngle: 230,
+        plateAngle: 152,
+        action: "Hold for Back Application - Agg 5",
+        section: "back",
+        applicationReference: true,
+        applicationReferenceMode: "leading-edge"
+      }
+    ]
+  }
+];
+const collapsedRefs = policy.applicationReferences(collapsedLogicalImported);
+assert.equal(collapsedRefs.neck.length, 1);
+assert.equal(collapsedRefs.body.length, 1);
+assert.equal(collapsedRefs.back.length, 1);
+assert.equal(collapsedRefs.body[0].row.section, "body");
+assert.equal(collapsedRefs.body[0].logicalApplicationReference, true);
+assert.equal(policy.centerlineForSection("neck", collapsedLogicalImported), 12);
+assert.equal(policy.centerlineForSection("body", collapsedLogicalImported), 12);
+assert.equal(policy.centerlineForSection("back", collapsedLogicalImported), 192);
+assert.equal(
+  policy.validationNotes(collapsedLogicalImported).length,
+  0,
+  "Collapsed logical application references must preserve the same finished centerlines as physical application rows."
+);
 
 // The sensor target service consumes the finished label centerline, not the
 // leading-edge tack position. Motion-plan application targets remain free to
