@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "startup-overlay-release-v67-20260811-1234",
+  "buildId": "direct-workspace-tabs-v68-20260811-1241",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v67 fixes the workspace navigation lock by correcting Map Builder startup dependency order. Assembly model and geometry drivers plus the assembly adapter now load before map defaults and migration, so normalizeAssembly is available before persistent maps initialize. The startup overlay can complete and Build Inputs, Servo Program, Diagnostics, and Servo Simulation remain clickable. Spec # retirement remains active."
+  "notes": "Staging v68 makes workspace tab navigation render-independent. Specs, Build Inputs, Servo Program, Diagnostics, and Servo Simulation now activate their panels directly before any persistence work, and the selected panel is explicitly unhidden. Map Builder, Print, and Settings behavior is unchanged."
 }

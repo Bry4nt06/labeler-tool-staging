@@ -1,32 +1,63 @@
 "use strict";
 
 (function installTabsController(global) {
-  const actions = global.LabelerWorkspaceActionService;
-  const NAVIGATION_CAPTURE_KEY = "servoforgeTopNavigationCaptureV2";
+  const NAVIGATION_CAPTURE_KEY = "servoforgeTopNavigationCaptureV3";
+  const WORKSPACE_TABS = Object.freeze(["specs", "buildInputs", "program", "diagnostics", "simulation"]);
 
   function stateRef() {
     try { return typeof state !== "undefined" ? state : global.state; }
     catch { return global.state; }
   }
 
+  function workspacePanels() {
+    return WORKSPACE_TABS
+      .map((name) => document.getElementById(name))
+      .filter(Boolean);
+  }
+
   function setDirectTabState(tabName, tabElement = null) {
+    if (!WORKSPACE_TABS.includes(String(tabName || ""))) return false;
+
     const source = stateRef();
     if (source) source.activeTab = tabName;
-    document.querySelectorAll(".tabs .tab[data-tab]").forEach((item) => item.classList.remove("active"));
-    document.querySelectorAll(".table-wrap").forEach((panel) => panel.classList.remove("active"));
-    tabElement?.classList.add("active");
-    document.querySelector(`#${tabName}`)?.classList.add("active");
+
+    document.querySelectorAll(".tabs .tab[data-tab]").forEach((item) => {
+      const active = item === tabElement || item.dataset.tab === tabName;
+      item.classList.toggle("active", active);
+      item.setAttribute("aria-selected", String(active));
+    });
+
+    workspacePanels().forEach((panel) => {
+      const active = panel.id === tabName;
+      panel.classList.toggle("active", active);
+      if (active) {
+        panel.hidden = false;
+        panel.removeAttribute("hidden");
+        panel.style.removeProperty("display");
+        if (panel.dataset?.developerHidden === "true") panel.dataset.developerHidden = "false";
+        panel.setAttribute("aria-hidden", "false");
+      } else {
+        panel.setAttribute("aria-hidden", "true");
+      }
+    });
+
+    const selected = document.getElementById(tabName);
+    return Boolean(selected?.classList.contains("active"));
+  }
+
+  function persistActiveTab() {
+    try {
+      if (typeof global.saveCurrentSettings === "function") global.saveCurrentSettings();
+    } catch (error) {
+      console.warn("Workspace tab state could not be persisted.", error);
+    }
   }
 
   function activate(tabName, tabElement = null) {
     if (!tabName) return false;
-    actions.execute({
-      mutate() {
-        setDirectTabState(tabName, tabElement);
-      },
-      persist: true,
-      render: "all"
-    });
+    const opened = setDirectTabState(tabName, tabElement);
+    if (!opened) return false;
+    persistActiveTab();
     return true;
   }
 
@@ -37,8 +68,7 @@
     } else {
       const source = stateRef();
       const activeTab = String(source?.activeTab || "specs");
-      document.querySelector(`.tabs .tab[data-tab="${activeTab}"]`)?.classList.add("active");
-      document.querySelector(`#${activeTab}`)?.classList.add("active");
+      setDirectTabState(activeTab, document.querySelector(`.tabs .tab[data-tab="${activeTab}"]`));
     }
   }
 
@@ -124,9 +154,11 @@
 
   global.LabelerTabsController = Object.freeze({
     activate,
+    setDirectTabState,
     toggleMapBuilder,
     closeMapBuilder,
     installNavigationCapture,
-    navigationCaptureV2: true
+    workspaceTabs: WORKSPACE_TABS,
+    navigationCaptureV3: true
   });
 })(window);
