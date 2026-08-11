@@ -156,7 +156,7 @@ function contactedLabelCoverage(program, section, station, throughTableAngle, vi
           leadingIntervals.push(bottleInterval);
           return;
         }
-        const visualSide = wipeVisualSideForPlateTravel(plateTravel, state.direction);
+        const visualSide = wipeVisualSideForPlateTravel(plateTravel);
         if (!visualSide) return;
         intervalsByVisualSide[visualSide].push(bottleInterval);
       });
@@ -194,13 +194,18 @@ function contactedLabelCoverage(program, section, station, throughTableAngle, vi
 }
 
 function liveWipeMachineDirection() {
+  // The Mechanical Map is rendered from the synchronized runtime state, so the
+  // wipe panel must use that exact same direction source. A persisted map copy
+  // can briefly lag behind the live runtime after a direction edit.
+  const runtime = String(state.direction || "").toLowerCase();
+  if (runtime === "cw" || runtime === "ccw") return runtime;
   try {
     const configured = String(activeMachineMap?.()?.machineSettings?.direction || "").toLowerCase();
     if (configured === "cw" || configured === "ccw") return configured;
   } catch {
-    // Fall back to the synchronized runtime direction below.
+    // Default below only when neither live runtime nor map configuration exists.
   }
-  return String(state.direction || "").toLowerCase() === "cw" ? "cw" : "ccw";
+  return "ccw";
 }
 
 function wipeVisualApplication(section, labelLengthMm) {
@@ -273,5 +278,6 @@ window.LabelerWipeTelemetryService = Object.freeze({
   liveWipeMachineDirection,
   wipeVisualApplication,
   wipeDownTelemetry,
-  centerTackServoDirectionV2: true
+  centerTackServoDirectionV2: true,
+  runtimeDirectionParityV88: true
 });
