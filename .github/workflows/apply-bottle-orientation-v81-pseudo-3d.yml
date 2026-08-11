@@ -25,7 +25,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply v81 patch
-        run: python3 scripts/apply-v81-pseudo-3d.py
+        run: |
+          python3 scripts/apply-v81-pseudo-3d.py
+          python3 scripts/fix-v81-pseudo-3d-markers.py
 
       - name: Validate syntax
         run: |
