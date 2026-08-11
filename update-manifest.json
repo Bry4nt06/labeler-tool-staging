@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "specs-unrestricted-editing-v63-20260811-1030",
+  "buildId": "spec-number-retired-v64-20260811-1038",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v63 removes the blocking required-specification safeguard from the Specs editor. Users can freely type, clear, and update bottle and label specification values without the Complete Required Specifications modal preventing tab changes or brand selection. Legacy Spec # is no longer treated as a required field because it is not exposed in the editable Specs table; completeness checks remain advisory only."
+  "notes": "Staging v64 retires the legacy Spec # field from ServoForge label recipes. New labels no longer create a Spec number property, the default label library no longer stores it, persisted recipes have the field removed at runtime, legacy Spec # required-field dialogs are suppressed, and the Print Program build sheet omits Spec # entirely. Specs editing remains unrestricted."
 }
