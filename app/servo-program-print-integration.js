@@ -85,19 +85,6 @@
     });
   }
 
-  function encoderTravel(row) {
-    try {
-      const value = global.LabelerGeometryDriver?.encoderCountsFromPlateDegrees(
-        row?.plateTravel,
-        state?.encoderCountsPerRev,
-        state?.servoGearRatio
-      );
-      return Number.isFinite(Number(value)) ? formatted(value, 1) : "—";
-    } catch {
-      return "—";
-    }
-  }
-
   function printModel() {
     const map = activeMapSnapshot();
     const label = selectedLabelSnapshot();
@@ -108,17 +95,14 @@
     const speedFaults = rows.filter((row) => row?.moveFault === true).length;
     const buildInputs = state?.buildInputs || {};
     const application = state?.applicationMode || map?.applicationMode || label?.applicationMode || "";
-    const machineType = map?.machineType || "—";
-    const mapName = map?.name || els?.activeMapName?.textContent || "—";
-    const rowCount = rows.length;
 
     return {
       version: global.SERVOFORGE_RELEASE_VERSION || document.querySelector('meta[name="application-version"]')?.content || "—",
       build: global.ServoForgeBootstrapBuild || "—",
       buildUpdatedAt: global.SERVOFORGE_BUILD_UPDATED_AT || "—",
       generatedAt: new Date().toLocaleString(),
-      mapName,
-      machineType,
+      mapName: map?.name || els?.activeMapName?.textContent || "—",
+      machineType: map?.machineType || "—",
       headCount: number(map?.headCount, number(state?.headCount, 0)),
       application: applicationLabel(application),
       programType: `${sections.length || 1} Label ${String(application || "Program").toUpperCase()}${sections.length ? ` — ${sections.join(" / ")}` : ""}`,
@@ -126,7 +110,7 @@
       bottleDiameter: Number.isFinite(Number(bottle?.diameterTargetMm)) ? `${formatted(bottle.diameterTargetMm, 2)} mm` : "—",
       brand: label?.brand || state?.selectedBrand || "—",
       specNumber: label?.specNumber || "—",
-      rowCount,
+      rowCount: rows.length,
       maxSpeed,
       speedFaults,
       maxMoveRatio: number(state?.maxMoveRatio, number(map?.machineSettings?.maxMoveRatio, 0)),
@@ -149,29 +133,30 @@
     return `<div class="summary-item${wide ? " wide" : ""}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
   }
 
-  function printHtml(model) {
-    const tableRows = model.rows.map((row) => {
+  function printRowsHtml(rows) {
+    return rows.map((row, index) => {
       const speed = number(row?.absSpeed, 0);
       const status = row?.moveFault ? "FAULT" : "OK";
-      return `<tr>
+      const dataRow = `<tr>
         <td>${escapeHtml(row?.hmi ?? "")}</td>
-        <td>${escapeHtml(row?.plc ?? "")}</td>
         <td class="cmd">${escapeHtml(row?.cmd ?? "")}</td>
         <td class="num">${escapeHtml(formatted(row?.tableAngle ?? row?.generatedTableAngle, 1))}</td>
         <td class="num">${escapeHtml(formatted(row?.plateAngle ?? row?.generatedPlateAngle, 1))}</td>
         <td class="num">${escapeHtml(formatted(row?.tableTravel, 1))}</td>
         <td class="num">${escapeHtml(formatted(row?.plateTravel, 1))}</td>
-        <td class="num">${escapeHtml(encoderTravel(row))}</td>
         <td class="num">${escapeHtml(formatted(speed, 1))}</td>
         <td class="status ${row?.moveFault ? "bad" : "ok"}">${status}</td>
         <td class="action">${escapeHtml(row?.action || "")}</td>
       </tr>`;
+      const divider = (index + 1) % 8 === 0 && index < rows.length - 1
+        ? `<tr class="program-eight-row-divider" aria-hidden="true"><td colspan="9"></td></tr>`
+        : "";
+      return dataRow + divider;
     }).join("");
+  }
 
-    const parameters = model.parameters
-      .map(([label, value]) => summaryItem(label, value))
-      .join("");
-
+  function printHtml(model) {
+    const parameters = model.parameters.map(([label, value]) => summaryItem(label, value)).join("");
     const summary = [
       summaryItem("Bottle Type", model.bottleType),
       summaryItem("Brand / Label", model.brand, true),
@@ -194,9 +179,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>ServoForge Servo Program — ${escapeHtml(model.brand)}</title>
 <style>
-  :root { color-scheme: light; --ink:#14201d; --muted:#61706b; --line:#cfd9d5; --soft:#f3f7f5; --brand:#173f35; --brand2:#245e4f; --accent:#ef5b37; --ok:#138a57; --bad:#c63d45; }
+  :root { color-scheme:light; --ink:#14201d; --muted:#61706b; --line:#cfd9d5; --soft:#f3f7f5; --brand:#173f35; --brand2:#245e4f; --accent:#ef5b37; --ok:#138a57; --bad:#c63d45; }
   * { box-sizing:border-box; }
-  body { margin:0; background:#e8efec; color:var(--ink); font:13px/1.35 Arial, Helvetica, sans-serif; }
+  body { margin:0; background:#e8efec; color:var(--ink); font:13px/1.35 Arial,Helvetica,sans-serif; }
   .screen-actions { position:sticky; top:0; z-index:2; display:flex; justify-content:flex-end; gap:8px; padding:10px 16px; background:#102720; box-shadow:0 2px 12px rgba(0,0,0,.18); }
   .screen-actions button { border:0; border-radius:7px; padding:9px 15px; font-weight:700; cursor:pointer; }
   .print-now { background:var(--accent); color:#fff; }
@@ -220,15 +205,16 @@
   table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:9px; }
   thead { display:table-header-group; }
   th { padding:6px 5px; color:#fff; background:var(--brand); border:1px solid #0e3027; font-size:8px; text-transform:uppercase; letter-spacing:.03em; }
-  td { padding:5px 5px; border:1px solid var(--line); text-align:center; vertical-align:middle; }
-  tbody tr:nth-child(even) { background:var(--soft); }
+  td { padding:5px; border:1px solid var(--line); text-align:center; vertical-align:middle; }
+  tbody tr:nth-child(even):not(.program-eight-row-divider) { background:var(--soft); }
   td.action { text-align:left; font-weight:600; }
   td.status.ok { color:var(--ok); font-weight:800; }
   td.status.bad { color:var(--bad); font-weight:800; }
-  th:nth-child(1), th:nth-child(2), th:nth-child(3) { width:4.5%; }
-  th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), th:nth-child(8), th:nth-child(9) { width:7%; }
-  th:nth-child(10) { width:5.5%; }
-  th:nth-child(11) { width:28%; }
+  th:nth-child(1), th:nth-child(2) { width:5%; }
+  th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) { width:8%; }
+  th:nth-child(8) { width:6%; }
+  th:nth-child(9) { width:39%; }
+  .program-eight-row-divider td { height:5px; padding:0; border:0; background:transparent !important; }
   .parameters { padding:0 18px 20px; }
   .parameters h2 { margin:8px 0; color:var(--brand); font-size:15px; }
   .parameter-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; }
@@ -240,8 +226,7 @@
     body { background:#fff; }
     .screen-actions { display:none !important; }
     .sheet { max-width:none; margin:0; border:0; box-shadow:none; }
-    .hero { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    th, tbody tr:nth-child(even), .summary { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .hero, th, tbody tr:nth-child(even):not(.program-eight-row-divider), .summary { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .program-section { padding:12px 0 8px; }
     .summary { padding:10px 0; }
     .parameters { padding:0 0 10px; }
@@ -258,10 +243,10 @@
     </header>
     <section class="summary">${summary}</section>
     <section class="program-section">
-      <div class="section-head"><h2>Servo Program</h2><small>Generated program • bottle angle = plate angle</small></div>
+      <div class="section-head"><h2>Servo Program</h2><small>Generated program • HMI grouped in blocks of 8</small></div>
       <table>
-        <thead><tr><th>HMI</th><th>PLC</th><th>CMD</th><th>Table Angle</th><th>Bottle Angle</th><th>Table Travel</th><th>Bottle Travel</th><th>Encoder</th><th>Turn Speed</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody>${tableRows}</tbody>
+        <thead><tr><th>HMI</th><th>CMD</th><th>Table Angle</th><th>Bottle Angle</th><th>Table Travel</th><th>Bottle Travel</th><th>Turn Speed</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>${printRowsHtml(model.rows)}</tbody>
       </table>
     </section>
     <section class="parameters"><h2>Build Parameters</h2><div class="parameter-grid">${parameters}</div></section>
@@ -294,20 +279,31 @@
     return true;
   }
 
+  function printerIcon() {
+    return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 9V3h12v6h1a3 3 0 0 1 3 3v5h-4v4H6v-4H2v-5a3 3 0 0 1 3-3h1Zm2-4v4h8V5H8Zm8 10H8v4h8v-4Zm3-4H5a1 1 0 0 0-1 1v3h2v-2h12v2h2v-3a1 1 0 0 0-1-1Zm0 1.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/></svg>`;
+  }
+
   function ensureActionStyle() {
     if (document.getElementById(STYLE_ID)) return;
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
       #${BUTTON_ID}.servo-program-print-action {
-        margin-left: 4px;
-        border-color: rgba(239,91,55,.72);
-        background: linear-gradient(180deg, rgba(239,91,55,.96), rgba(201,64,39,.96));
-        color: #fff;
-        font-weight: 800;
+        width:34px;
+        height:34px;
+        min-width:34px;
+        padding:0;
+        margin-left:4px;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        border-color:rgba(239,91,55,.72);
+        background:linear-gradient(180deg,rgba(239,91,55,.96),rgba(201,64,39,.96));
+        color:#fff;
       }
-      #${BUTTON_ID}.servo-program-print-action:hover:not(:disabled) { filter: brightness(1.06); }
-      #${BUTTON_ID}.servo-program-print-action:disabled { opacity: .48; cursor: not-allowed; }
+      #${BUTTON_ID}.servo-program-print-action svg { width:17px; height:17px; display:block; }
+      #${BUTTON_ID}.servo-program-print-action:hover:not(:disabled) { filter:brightness(1.06); }
+      #${BUTTON_ID}.servo-program-print-action:disabled { opacity:.48; cursor:not-allowed; }
     `;
     document.head.appendChild(style);
   }
@@ -325,7 +321,7 @@
     tabObserver?.disconnect?.();
     if (typeof MutationObserver !== "function" || !programTab) return;
     tabObserver = new MutationObserver(syncButton);
-    tabObserver.observe(programTab, { attributes: true, attributeFilter: ["class"] });
+    tabObserver.observe(programTab, { attributes:true, attributeFilter:["class"] });
   }
 
   function installButton() {
@@ -337,8 +333,9 @@
     button.id = BUTTON_ID;
     button.type = "button";
     button.className = "simulation-action servo-program-print-action";
-    button.textContent = "Print Program";
-    button.title = "Open a print-friendly Servo Program build sheet";
+    button.setAttribute("aria-label", "Print Program");
+    button.title = "Print Program";
+    button.innerHTML = printerIcon();
     button.addEventListener("click", openPrintView);
     programTab.insertAdjacentElement("afterend", button);
 
@@ -349,16 +346,17 @@
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", installButton, { once: true });
+    document.addEventListener("DOMContentLoaded", installButton, { once:true });
   } else {
     installButton();
   }
 
   global.LabelerServoProgramPrint = Object.freeze({
-    installed: true,
-    version: 2,
+    installed:true,
+    version:4,
     printModel,
     printHtml,
+    printRowsHtml,
     openPrintView,
     syncButton
   });
