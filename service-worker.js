@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-bootstrap-independent-navigation-v69";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-compact-build-parameters-v70";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -92,6 +92,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/map-rendering.js",
   "./app/table-rendering.js",
   "./app/bootstrap.js",
+  "./app/compact-build-parameters-integration.js",
   "./app/export-service.js",
   "./app/global-actions.js",
   "./app/animation-runtime.js",
