@@ -1,0 +1,247 @@
+name: Apply 5 degree APL roller coverage default once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/update-apl-roller-coverage-v71-once.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "apl-roller-coverage-v71"
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out staging main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply roller coverage default and migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+
+          function read(path) { return fs.readFileSync(path, 'utf8'); }
+          function write(path, content) { fs.writeFileSync(path, content); }
+          function replaceOnce(content, from, to, label) {
+            if (!content.includes(from)) throw new Error(`Missing ${label}`);
+            return content.replace(from, to);
+          }
+
+          let defaults = read('app/map-defaults-service.js');
+          defaults = replaceOnce(defaults, 'wipeSpanDeg: 10,', 'wipeSpanDeg: 5,', 'default APL roller wipeSpanDeg');
+          write('app/map-defaults-service.js', defaults);
+
+          let schema = read('drivers/map/map-schema-driver.js');
+          schema = replaceOnce(
+            schema,
+            '  const DEFAULT_SPENDER_PLATE_ANGLE_DEG = 75;\n',
+            '  const DEFAULT_SPENDER_PLATE_ANGLE_DEG = 75;\n  const APL_ROLLER_COVERAGE_DEFAULT_DEG = 5;\n  const APL_ROLLER_COVERAGE_DEFAULT_VERSION = 1;\n',
+            'map schema constants'
+          );
+          schema = replaceOnce(
+            schema,
+            '    const originalEnd = finite(singlePoint ? item?.angle : item?.end, start + 10);\n    const wipeSpanDeg = aplRoller\n      ? Math.max(0.1, finite(item?.wipeSpanDeg, Math.abs(originalEnd - start) || 10))\n',
+            '    const originalEnd = finite(singlePoint ? item?.angle : item?.end, start + APL_ROLLER_COVERAGE_DEFAULT_DEG);\n    const wipeSpanDeg = aplRoller\n      ? Math.max(0.1, finite(item?.wipeSpanDeg, Math.abs(originalEnd - start) || APL_ROLLER_COVERAGE_DEFAULT_DEG))\n',
+            'roller normalization fallback'
+          );
+          schema = replaceOnce(
+            schema,
+            '      schemaVersion: MACHINE_MAP_SCHEMA_VERSION,\n      blankSeedVersion:',
+            '      schemaVersion: MACHINE_MAP_SCHEMA_VERSION,\n      aplRollerCoverageDefaultVersion: Math.max(0, Math.round(finite(\n        input.aplRollerCoverageDefaultVersion,\n        APL_ROLLER_COVERAGE_DEFAULT_VERSION\n      ))),\n      blankSeedVersion:',
+            'machine map roller coverage version'
+          );
+          schema = replaceOnce(
+            schema,
+            '    DEFAULT_SPENDER_PLATE_ANGLE_DEG,\n    VALID_OBJECT_KINDS,',
+            '    DEFAULT_SPENDER_PLATE_ANGLE_DEG,\n    APL_ROLLER_COVERAGE_DEFAULT_DEG,\n    APL_ROLLER_COVERAGE_DEFAULT_VERSION,\n    VALID_OBJECT_KINDS,',
+            'schema API roller constants'
+          );
+          write('drivers/map/map-schema-driver.js', schema);
+
+          let migration = read('drivers/map/map-migration-driver.js');
+          migration = replaceOnce(
+            migration,
+            '  function normalizeMapRecord(map, {\n',
+            `  function migrateAplRollerCoverageDefault(map) {\n    if (!map || schema.inferredMachineMapApplicationMode(map) !== "apl") return false;\n    const currentVersion = Math.max(0, Math.round(finite(map.aplRollerCoverageDefaultVersion, 0)));\n    if (currentVersion >= schema.APL_ROLLER_COVERAGE_DEFAULT_VERSION) return false;\n\n    let changed = false;\n    map.objects = (Array.isArray(map.objects) ? map.objects : []).map((item) => {\n      if (item?.kind !== "roller" || schema.itemApplicationMode(item) !== "apl") return item;\n      const coverage = finite(item?.wipeSpanDeg, NaN);\n      if (!Number.isFinite(coverage) || Math.abs(coverage - 10) > 0.001) return item;\n      changed = true;\n      return { ...item, wipeSpanDeg: schema.APL_ROLLER_COVERAGE_DEFAULT_DEG };\n    });\n    map.aplRollerCoverageDefaultVersion = schema.APL_ROLLER_COVERAGE_DEFAULT_VERSION;\n    return changed;\n  }\n\n  function normalizeMapRecord(map, {\n`,
+            'roller migration function'
+          );
+          migration = replaceOnce(
+            migration,
+            '      map.applicationMode = applicationMode;\n      map.isTemplate = false;\n',
+            '      map.applicationMode = applicationMode;\n      migrateAplRollerCoverageDefault(map);\n      map.isTemplate = false;\n',
+            'same-schema roller migration'
+          );
+          migration = replaceOnce(
+            migration,
+            '    return {\n      map: createMap({ ...(map || {}), applicationMode }),\n      replaced: true\n    };',
+            '    const created = createMap({\n      ...(map || {}),\n      applicationMode,\n      aplRollerCoverageDefaultVersion: finite(map?.aplRollerCoverageDefaultVersion, 0)\n    });\n    migrateAplRollerCoverageDefault(created);\n    return {\n      map: created,\n      replaced: true\n    };',
+            'recreated map roller migration'
+          );
+          migration = replaceOnce(
+            migration,
+            '    isRetiredColdGlueMap,\n    normalizeMapRecord,',
+            '    isRetiredColdGlueMap,\n    migrateAplRollerCoverageDefault,\n    normalizeMapRecord,',
+            'migration API export'
+          );
+          write('drivers/map/map-migration-driver.js', migration);
+
+          let controller = read('app/map-builder-controller.js');
+          controller = replaceOnce(
+            controller,
+            '  const start = num(document.querySelector("#builderObjectStart")?.value, 0);\n  const end = num(document.querySelector("#builderObjectEnd")?.value, start + 10);\n',
+            '  const start = num(document.querySelector("#builderObjectStart")?.value, 0);\n  const endControl = document.querySelector("#builderObjectEnd");\n  const isAplRoller = state.applicationMode === "apl" && type === "roller";\n  const rollerCoverageDeg = isAplRoller ? Math.max(0.1, num(endControl?.value, 5)) : undefined;\n  const end = isAplRoller ? start + rollerCoverageDeg : num(endControl?.value, start + 10);\n',
+            'builder roller coverage input'
+          );
+          controller = replaceOnce(
+            controller,
+            '    wipeSpanDeg: state.applicationMode === "apl" && type === "roller" ? Math.max(0.1, Math.abs(end - start)) : undefined,',
+            '    wipeSpanDeg: rollerCoverageDeg,',
+            'builder roller wipeSpanDeg assignment'
+          );
+          write('app/map-builder-controller.js', controller);
+
+          let controls = read('app/map-builder-controls.js');
+          controls = replaceOnce(
+            controls,
+            '  if (endLabel) {\n    endLabel.hidden = isSinglePlacement;\n    endLabel.firstChild.textContent = isAplRoller ? "Roller surface coverage (table deg) " : "Stop / point 2 (deg) ";\n  }\n}',
+            `  if (endLabel) {\n    endLabel.hidden = isSinglePlacement;\n    endLabel.firstChild.textContent = isAplRoller ? "Roller surface coverage (table deg) " : "Stop / point 2 (deg) ";\n  }\n  const startInput = document.querySelector("#builderObjectStart");\n  const endInput = document.querySelector("#builderObjectEnd");\n  const previousType = String(select.dataset.builderPreviousType || "");\n  if (endInput && isAplRoller && previousType !== "roller") {\n    endInput.dataset.nonRollerEnd = endInput.value;\n    endInput.value = "5";\n  } else if (endInput && !isAplRoller && previousType === "roller") {\n    endInput.value = endInput.dataset.nonRollerEnd || String(num(startInput?.value, 0) + 10);\n    delete endInput.dataset.nonRollerEnd;\n  }\n  select.dataset.builderPreviousType = select.value;\n}`,
+            'builder type roller default UI'
+          );
+          write('app/map-builder-controls.js', controls);
+
+          let loader = read('app/wipe-down-builder.js');
+          loader = replaceOnce(
+            loader,
+            '  const releaseVersion = "0.9.10-navigation-startup-v67";',
+            '  const releaseVersion = "0.9.10-roller-coverage-5deg-v71";',
+            'Map Builder cache build'
+          );
+          write('app/wipe-down-builder.js', loader);
+
+          let bootstrap = read('app/bootstrap.js');
+          bootstrap = bootstrap.replace(/const build = "[^"]+";/, 'const build = "roller-coverage-5deg-v71-20260811-1456";');
+          bootstrap = bootstrap.replace(/const buildUpdatedAt = "[^"]+";/, 'const buildUpdatedAt = "Aug 11, 2026 2:56 PM ET";');
+          bootstrap = bootstrap.replace('// Regression lineage:', '// Regression lineage: roller-coverage-5deg-v71-20260811-1456 •');
+          write('app/bootstrap.js', bootstrap);
+          NODE
+
+          cat > tests/apl-roller-coverage-default.test.js <<'EOF'
+          "use strict";
+
+          const assert = require("assert");
+          const fs = require("fs");
+          const path = require("path");
+
+          const root = path.resolve(__dirname, "..");
+          const schemaPath = path.join(root, "drivers/map/map-schema-driver.js");
+          const migrationPath = path.join(root, "drivers/map/map-migration-driver.js");
+
+          delete global.LabelerMapSchemaDriver;
+          delete global.LabelerMapMigrationDriver;
+          delete require.cache[require.resolve(schemaPath)];
+          delete require.cache[require.resolve(migrationPath)];
+
+          const schema = require(schemaPath);
+          const migration = require(migrationPath);
+
+          assert.equal(schema.APL_ROLLER_COVERAGE_DEFAULT_DEG, 5);
+          assert.equal(schema.APL_ROLLER_COVERAGE_DEFAULT_VERSION, 1);
+
+          const defaultRoller = schema.normalizeBuilderObject({
+            id: "roller-default",
+            kind: "roller",
+            application: "apl",
+            side: "outer",
+            start: 72,
+            station: 1
+          }, "apl", 6, { idFactory: () => "roller-default" });
+          assert.equal(defaultRoller.wipeSpanDeg, 5);
+          assert.equal(defaultRoller.end, 77);
+
+          const customRoller = schema.normalizeBuilderObject({
+            id: "roller-custom",
+            kind: "roller",
+            application: "apl",
+            side: "outer",
+            start: 72,
+            wipeSpanDeg: 8,
+            station: 1
+          }, "apl", 6, { idFactory: () => "roller-custom" });
+          assert.equal(customRoller.wipeSpanDeg, 8);
+          assert.equal(customRoller.end, 80);
+
+          const legacyMap = {
+            applicationMode: "apl",
+            objects: [
+              { id: "legacy-default", kind: "roller", application: "apl", start: 72, wipeSpanDeg: 10 },
+              { id: "legacy-custom", kind: "roller", application: "apl", start: 90, wipeSpanDeg: 8 }
+            ]
+          };
+          assert.equal(migration.migrateAplRollerCoverageDefault(legacyMap), true);
+          assert.equal(legacyMap.objects[0].wipeSpanDeg, 5);
+          assert.equal(legacyMap.objects[1].wipeSpanDeg, 8);
+          assert.equal(legacyMap.aplRollerCoverageDefaultVersion, 1);
+
+          legacyMap.objects[0].wipeSpanDeg = 10;
+          assert.equal(migration.migrateAplRollerCoverageDefault(legacyMap), false);
+          assert.equal(legacyMap.objects[0].wipeSpanDeg, 10, "post-migration user edits remain editable");
+
+          const defaultsSource = fs.readFileSync(path.join(root, "app/map-defaults-service.js"), "utf8");
+          assert.match(defaultsSource, /wipeSpanDeg:\s*5/);
+          assert.doesNotMatch(defaultsSource, /wipeSpanDeg:\s*10/);
+
+          const controllerSource = fs.readFileSync(path.join(root, "app/map-builder-controller.js"), "utf8");
+          assert.match(controllerSource, /rollerCoverageDeg[\s\S]*num\(endControl\?\.value, 5\)/);
+          assert.match(controllerSource, /wipeSpanDeg:\s*rollerCoverageDeg/);
+
+          console.log("APL roller coverage default regression passed.");
+          EOF
+
+      - name: Validate syntax and roller coverage behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check drivers/map/map-schema-driver.js
+          node --check drivers/map/map-migration-driver.js
+          node --check app/map-defaults-service.js
+          node --check app/map-builder-controls.js
+          node --check app/map-builder-controller.js
+          node --check app/wipe-down-builder.js
+          node --check app/bootstrap.js
+          node tests/apl-roller-coverage-default.test.js
+          node tests/apl-6-aggregate-default.test.js
+          node tests/assembly-drivers.test.js
+
+      - name: Commit verified staging v71
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Bry4nt06"
+          git config user.email "139938543+Bry4nt06@users.noreply.github.com"
+          git add app/map-defaults-service.js drivers/map/map-schema-driver.js drivers/map/map-migration-driver.js app/map-builder-controls.js app/map-builder-controller.js app/wipe-down-builder.js app/bootstrap.js tests/apl-roller-coverage-default.test.js
+          git commit -m "Default APL roller coverage to 5 degrees"
+          git push origin main
+
+      - name: Remove one-time staging workflow
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin main
+          rm -f .github/workflows/update-apl-roller-coverage-v71-once.yml
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Remove one-time APL roller coverage workflow"
+            git push origin main
+          fi
