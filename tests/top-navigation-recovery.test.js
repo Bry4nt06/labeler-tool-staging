@@ -8,6 +8,8 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const source = fs.readFileSync(path.join(root, "app", "controllers", "tabs-controller.js"), "utf8");
 const bootstrap = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
+const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const serviceWorker = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 
 assert.doesNotThrow(() => new vm.Script(source));
 assert.match(source, /navigationCaptureV2:\s*true/);
@@ -15,6 +17,12 @@ assert.match(source, /#wipeDownBuilderButton/);
 assert.match(source, /\.tabs \.tab\[data-tab\]/);
 assert.match(source, /stopImmediatePropagation/);
 assert.match(bootstrap, /top-navigation-recovery-v66-20260811-1105/);
+assert.match(index, /app\/bootstrap\.js\?v=0\.9\.10-top-navigation-recovery-v66-20260811-1105/);
+assert.match(index, /app\/update-manager\.js\?v=0\.9\.10-top-navigation-recovery-v66-20260811-1105/);
+assert.match(index, /app\.js\?v=0\.9\.10-top-navigation-recovery-v66-20260811-1105/);
+assert.match(serviceWorker, /servoforge-labeler-staging-v0\.9\.10-top-navigation-recovery-v66/);
+assert.doesNotMatch(index, /app\/bootstrap\.js\?v=0\.9\.10-spender-v35/);
+assert.doesNotMatch(serviceWorker, /coder-window-wipe-hold-v22/);
 
 class FakeElement {
   constructor(id = "", tabName = "") {
@@ -146,4 +154,4 @@ assert.equal(programPanel.classes.has("active"), true);
 assert.ok(saveCount >= 2);
 assert.ok(renderCount >= 2);
 
-console.log("Top navigation recovery regression passed.");
+console.log("Top navigation recovery and cache coherence regression passed.");
