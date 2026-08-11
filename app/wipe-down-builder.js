@@ -1,8 +1,11 @@
 "use strict";
 
 (function loadServoForgeMapBuilderModules() {
-  const releaseVersion = "0.9.10-spender-v35";
+  const releaseVersion = "0.9.10-navigation-startup-v67";
   const modulePaths = Object.freeze([
+    "drivers/assembly/assembly-model-driver.js",
+    "drivers/assembly/assembly-geometry-driver.js",
+    "app/assembly-driver-adapter.js",
     "drivers/map/map-schema-driver.js",
     "drivers/map/map-migration-driver.js",
     "app/map-defaults-service.js",
@@ -40,7 +43,7 @@
       }
 
       const script = document.createElement("script");
-      script.src = `./${path}?v=${encodeURIComponent(releaseVersion)}-map-builder-v2`;
+      script.src = `./${path}?v=${encodeURIComponent(releaseVersion)}-map-builder-v3`;
       script.async = false;
       script.dataset.servoforgeMapBuilderModule = path;
       script.addEventListener("load", () => {
