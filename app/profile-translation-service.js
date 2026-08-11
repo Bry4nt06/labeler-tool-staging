@@ -21,28 +21,47 @@
   }
 
   function syncTranslatedRows(result, normalizedRows) {
-    result.rows = normalizedRows;
+    const rows = Array.isArray(normalizedRows) ? normalizedRows : [];
+    const previousSteps = Array.isArray(result?.plan?.steps) ? result.plan.steps : [];
+    const stepsByEventId = new Map(
+      previousSteps
+        .filter((step) => step?.eventId)
+        .map((step) => [String(step.eventId), step])
+    );
+
+    result.rows = rows;
     result.plan = {
       ...(result.plan || {}),
-      steps: normalizedRows.map((row, index) => ({
-        ...(result.plan?.steps?.[index] || {}),
-        index,
-        eventId: row.motionEventId || `EV${String(index + 1).padStart(3, "0")}`,
-        eventType: row.motionEventType || "GENERAL",
-        hmi: row.hmi ?? index + 1,
-        tableAngle: Number(row.tableAngle),
-        plateAngle: Number(row.plateAngle),
-        action: String(row.action || ""),
-        baseCommand: Number(row.baseCmd ?? row.cmd),
-        requestedCommand: Number(row.plannerRequestedCommand ?? row.cmd),
-        recommendedCommand: Number(row.cmd),
-        recommendedCommandName: row.translatedCommandName || `CMD ${row.cmd}`,
-        intent: row.plannerIntent || (Number(row.cmd) === 7 ? "ROTATE" : "HOLD"),
-        reason: row.plannerReason || "",
-        fallbackUsed: Boolean(row.plannerFallbackUsed),
-        fallbackReason: String(row.plannerFallbackReason || "")
-      }))
+      steps: rows.map((row, index) => {
+        const rowEventId = String(row?.motionEventId || "");
+        const previousStep = (rowEventId && stepsByEventId.get(rowEventId))
+          || previousSteps[index]
+          || {};
+        return {
+          ...previousStep,
+          index,
+          eventId: row.motionEventId || `EV${String(index + 1).padStart(3, "0")}`,
+          eventType: row.motionEventType || "GENERAL",
+          hmi: row.hmi ?? index + 1,
+          tableAngle: Number(row.tableAngle),
+          plateAngle: Number(row.plateAngle),
+          action: String(row.action || ""),
+          baseCommand: Number(row.baseCmd ?? row.cmd),
+          requestedCommand: Number(row.plannerRequestedCommand ?? row.cmd),
+          recommendedCommand: Number(row.cmd),
+          recommendedCommandName: row.translatedCommandName || `CMD ${row.cmd}`,
+          intent: row.plannerIntent || (Number(row.cmd) === 7 ? "ROTATE" : "HOLD"),
+          reason: row.plannerReason || "",
+          fallbackUsed: Boolean(row.plannerFallbackUsed),
+          fallbackReason: String(row.plannerFallbackReason || "")
+        };
+      })
     };
+    result.commandSummary = rows.reduce((summary, row) => {
+      const command = String(row?.cmd);
+      summary[command] = (summary[command] || 0) + 1;
+      return summary;
+    }, {});
     return result;
   }
 
