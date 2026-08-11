@@ -6,6 +6,7 @@
   const BUTTON_ID = "printServoProgram";
   const STYLE_ID = "servo-program-eight-row-grouping-style";
   const GROUP_SIZE = 8;
+  const PRINT_COLUMN_COUNT = 9;
   let buttonObserver = null;
 
   function printApi() {
@@ -23,7 +24,10 @@
     const body = documentModel.querySelector(".program-section tbody");
     if (!body) return sourceHtml;
 
-    body.querySelectorAll("tr.hmi-group-divider").forEach((row) => row.remove());
+    // The base print renderer may already contain presentation-only dividers.
+    // Strip every existing divider before rebuilding the authoritative 8-HMI
+    // grouping so dividers never count as program rows or duplicate themselves.
+    body.querySelectorAll("tr.hmi-group-divider, tr.program-eight-row-divider").forEach((row) => row.remove());
     const rows = [...body.querySelectorAll(":scope > tr")];
     rows.forEach((row, index) => {
       if ((index + 1) % GROUP_SIZE !== 0 || index >= rows.length - 1) return;
@@ -31,7 +35,7 @@
       divider.className = "hmi-group-divider";
       divider.setAttribute("aria-hidden", "true");
       const cell = documentModel.createElement("td");
-      cell.colSpan = 11;
+      cell.colSpan = PRINT_COLUMN_COUNT;
       divider.appendChild(cell);
       row.insertAdjacentElement("afterend", divider);
     });
@@ -167,8 +171,9 @@
 
   global.LabelerServoProgramEightRowGrouping = Object.freeze({
     installed: true,
-    version: 1,
+    version: 2,
     groupSize: GROUP_SIZE,
+    printColumnCount: PRINT_COLUMN_COUNT,
     expectedDividerCount,
     groupedPrintHtml,
     openGroupedPrintView,
