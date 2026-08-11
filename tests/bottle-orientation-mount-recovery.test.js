@@ -17,6 +17,6 @@ assert.match(recovery,/existing\?\.host === host/);
 assert.match(recovery,/observers\.set\(source, \{ host, observer \}\)/);
 assert.match(recovery,/persistentTopViewMountV85: true/);
 assert.match(recovery,/workspaceHostReacquireV85: true/);
-assert.match(bootstrap,/top-view-mount-recovery-v85-20260811-1928/);
-assert.equal(manifest.buildId,"top-view-mount-recovery-v85-20260811-1928");
+assert.match(bootstrap,/top-view-runtime-load-fix-v86-20260811-1932/);
+assert.equal(manifest.buildId,"top-view-runtime-load-fix-v86-20260811-1932");
 console.log("Bottle Orientation top-view mount recovery v85 regression passed.");

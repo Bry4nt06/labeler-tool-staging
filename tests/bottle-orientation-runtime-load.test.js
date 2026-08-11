@@ -1,0 +1,12 @@
+"use strict";
+const assert=require("assert");
+const fs=require("fs");
+const path=require("path");
+const source=fs.readFileSync(path.resolve(__dirname,"../app/bottle-orientation-panel-integration.js"),"utf8");
+assert.doesNotMatch(source,/function sideViewSvg/);
+assert.doesNotMatch(source,/\n\s*sideViewSvg,/);
+const exported=(source.match(/global\.LabelerBottleOrientationPanel = Object\.freeze\(\{([\s\S]*?)\n  \}\);/)||[])[1]||"";
+assert.ok(exported.includes("topViewSvg"),"Top View renderer must remain exported");
+assert.ok(!exported.includes("sideViewSvg"),"Removed Side View renderer must not remain in the API export");
+assert.match(source,/staleSideViewExportRemovedV86: true/);
+console.log("Bottle Orientation runtime export v86 regression passed.");

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "top-view-mount-recovery-v85-20260811-1928",
+  "buildId": "top-view-runtime-load-fix-v86-20260811-1932",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "v85 repairs Bottle Orientation Top View mounting. The panel remains Top View only, with no side view, no standalone controls, and no wipe graphic. Recovery now reacquires rebuilt Servo Program/Simulation hosts and remounts the live Top View after workspace rerenders."
+  "notes": "v86 fixes Bottle Orientation module startup. v84 removed the Side View renderer but left a stale sideViewSvg export, causing a runtime ReferenceError before the Top View API could install. The stale export is removed; Top View-only layout and v85 mount recovery remain unchanged."
 }

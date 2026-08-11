@@ -3,7 +3,7 @@
 (function installBottleOrientationPanel(global) {
   if (global.LabelerBottleOrientationPanel?.installed) return;
 
-  const VERSION = 9;
+  const VERSION = 10;
   const STYLE_ID = "servoforge-bottle-orientation-panel-style";
   const PANEL_ATTR = "data-bottle-orientation-panel";
   const BASE_DEG_PER_SECOND = 18;
@@ -792,7 +792,6 @@
     tableFrameVisualAngle,
     headOneWorldVisualAngle,
     topViewSvg,
-    sideViewSvg,
     ensurePanel,
     renderSource,
     renderAll,
@@ -819,5 +818,6 @@
     standaloneOrientationControlsRemovedV84: true,
     topViewWipeGraphicRemovedV84: true,
     mainAnimationOnlyV84: true,
+    staleSideViewExportRemovedV86: true,
   });
 })(typeof window !== "undefined" ? window : globalThis);

@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-top-view-mount-recovery-v85-20260811-1928";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-top-view-runtime-load-fix-v86-20260811-1932";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
