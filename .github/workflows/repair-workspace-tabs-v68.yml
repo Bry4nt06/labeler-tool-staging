@@ -1,0 +1,311 @@
+name: Repair workspace tab activation v68
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/repair-workspace-tabs-v68.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install direct workspace tab controller
+        run: |
+          cat > app/controllers/tabs-controller.js <<'JS'
+          "use strict";
+
+          (function installTabsController(global) {
+            const NAVIGATION_CAPTURE_KEY = "servoforgeTopNavigationCaptureV3";
+            const WORKSPACE_TABS = Object.freeze(["specs", "buildInputs", "program", "diagnostics", "simulation"]);
+
+            function stateRef() {
+              try { return typeof state !== "undefined" ? state : global.state; }
+              catch { return global.state; }
+            }
+
+            function workspacePanels() {
+              return WORKSPACE_TABS
+                .map((name) => document.getElementById(name))
+                .filter(Boolean);
+            }
+
+            function setDirectTabState(tabName, tabElement = null) {
+              if (!WORKSPACE_TABS.includes(String(tabName || ""))) return false;
+
+              const source = stateRef();
+              if (source) source.activeTab = tabName;
+
+              document.querySelectorAll(".tabs .tab[data-tab]").forEach((item) => {
+                const active = item === tabElement || item.dataset.tab === tabName;
+                item.classList.toggle("active", active);
+                item.setAttribute("aria-selected", String(active));
+              });
+
+              workspacePanels().forEach((panel) => {
+                const active = panel.id === tabName;
+                panel.classList.toggle("active", active);
+                if (active) {
+                  panel.hidden = false;
+                  panel.removeAttribute("hidden");
+                  panel.style.removeProperty("display");
+                  if (panel.dataset?.developerHidden === "true") panel.dataset.developerHidden = "false";
+                  panel.setAttribute("aria-hidden", "false");
+                } else {
+                  panel.setAttribute("aria-hidden", "true");
+                }
+              });
+
+              const selected = document.getElementById(tabName);
+              return Boolean(selected?.classList.contains("active"));
+            }
+
+            function persistActiveTab() {
+              try {
+                if (typeof global.saveCurrentSettings === "function") global.saveCurrentSettings();
+              } catch (error) {
+                console.warn("Workspace tab state could not be persisted.", error);
+              }
+            }
+
+            function activate(tabName, tabElement = null) {
+              if (!tabName) return false;
+              const opened = setDirectTabState(tabName, tabElement);
+              if (!opened) return false;
+              persistActiveTab();
+              return true;
+            }
+
+            function setBuilderVisualState(open, button = document.querySelector("#wipeDownBuilderButton")) {
+              button?.classList.toggle("active", Boolean(open));
+              if (open) {
+                document.querySelectorAll(".tabs .tab[data-tab]").forEach((tab) => tab.classList.remove("active"));
+              } else {
+                const source = stateRef();
+                const activeTab = String(source?.activeTab || "specs");
+                setDirectTabState(activeTab, document.querySelector(`.tabs .tab[data-tab="${activeTab}"]`));
+              }
+            }
+
+            function toggleMapBuilder(button = document.querySelector("#wipeDownBuilderButton")) {
+              const source = stateRef();
+              const nextOpen = !Boolean(source?.wipeBuilderOpen);
+              const map = global.LabelerMapController;
+
+              if (typeof map?.setBuilderOpen === "function") {
+                map.setBuilderOpen(nextOpen);
+              } else {
+                if (source) source.wipeBuilderOpen = nextOpen;
+                const drawer = document.querySelector("#applicationSetupDialog");
+                if (drawer) drawer.hidden = !nextOpen;
+                document.querySelector("#mapRightRail")?.classList.toggle("builder-open", nextOpen);
+              }
+
+              setBuilderVisualState(nextOpen, button);
+              return nextOpen;
+            }
+
+            function closeMapBuilder() {
+              const source = stateRef();
+              if (!source?.wipeBuilderOpen && document.querySelector("#applicationSetupDialog")?.hidden !== false) return false;
+              const map = global.LabelerMapController;
+              if (typeof map?.setBuilderOpen === "function") map.setBuilderOpen(false);
+              else {
+                if (source) source.wipeBuilderOpen = false;
+                const drawer = document.querySelector("#applicationSetupDialog");
+                if (drawer) drawer.hidden = true;
+                document.querySelector("#mapRightRail")?.classList.remove("builder-open");
+              }
+              setBuilderVisualState(false);
+              return true;
+            }
+
+            function installNavigationCapture() {
+              const root = document.documentElement;
+              if (!root || root.dataset[NAVIGATION_CAPTURE_KEY] === "true") return false;
+              root.dataset[NAVIGATION_CAPTURE_KEY] = "true";
+
+              document.addEventListener("click", (event) => {
+                const target = event.target;
+                if (!(target instanceof Element)) return;
+
+                const builder = target.closest?.("#wipeDownBuilderButton");
+                if (builder) {
+                  event.preventDefault();
+                  event.stopImmediatePropagation();
+                  toggleMapBuilder(builder);
+                  return;
+                }
+
+                const closeBuilder = target.closest?.("#closeApplicationSetup");
+                if (closeBuilder) {
+                  event.preventDefault();
+                  event.stopImmediatePropagation();
+                  closeMapBuilder();
+                  return;
+                }
+
+                const applyBuilder = target.closest?.("#applyApplicationSetup");
+                if (applyBuilder) {
+                  event.preventDefault();
+                  event.stopImmediatePropagation();
+                  if (typeof global.LabelerMapController?.applyBuilder === "function") global.LabelerMapController.applyBuilder();
+                  else closeMapBuilder();
+                  return;
+                }
+
+                const tab = target.closest?.(".tabs .tab[data-tab]");
+                if (!tab) return;
+
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                closeMapBuilder();
+                activate(tab.dataset.tab, tab);
+              }, true);
+              return true;
+            }
+
+            installNavigationCapture();
+
+            global.LabelerTabsController = Object.freeze({
+              activate,
+              setDirectTabState,
+              toggleMapBuilder,
+              closeMapBuilder,
+              installNavigationCapture,
+              workspaceTabs: WORKSPACE_TABS,
+              navigationCaptureV3: true
+            });
+          })(window);
+          JS
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          old_build = 'startup-overlay-release-v67-20260811-1234'
+          new_build = 'direct-workspace-tabs-v68-20260811-1241'
+          old_query = '0.9.10-startup-overlay-release-v67-20260811-1234'
+          new_query = '0.9.10-direct-workspace-tabs-v68-20260811-1241'
+
+          index = Path('index.html')
+          text = index.read_text(encoding='utf-8').replace(old_query, new_query)
+          index.write_text(text, encoding='utf-8')
+
+          bootstrap = Path('app/bootstrap.js')
+          text = bootstrap.read_text(encoding='utf-8')
+          text = text.replace(f'const build = "{old_build}";', f'const build = "{new_build}";')
+          text = text.replace('const buildUpdatedAt = "Aug 11, 2026 12:34 PM ET";', 'const buildUpdatedAt = "Aug 11, 2026 12:41 PM ET";')
+          text = text.replace('// Regression lineage: startup-overlay-release-v67-20260811-1234', '// Regression lineage: direct-workspace-tabs-v68-20260811-1241 • startup-overlay-release-v67-20260811-1234')
+          bootstrap.write_text(text, encoding='utf-8')
+
+          worker = Path('service-worker.js')
+          text = worker.read_text(encoding='utf-8').replace(
+              'servoforge-labeler-staging-v0.9.10-startup-overlay-release-v67',
+              'servoforge-labeler-staging-v0.9.10-direct-workspace-tabs-v68')
+          worker.write_text(text, encoding='utf-8')
+
+          manifest_path = Path('update-manifest.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          manifest['buildId'] = new_build
+          manifest['notes'] = ('Staging v68 makes workspace tab navigation render-independent. Specs, Build Inputs, Servo Program, '
+                               'Diagnostics, and Servo Simulation now activate their panels directly before any persistence work, '
+                               'and the selected panel is explicitly unhidden. Map Builder, Print, and Settings behavior is unchanged.')
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+          PY
+
+          node --check app/controllers/tabs-controller.js
+          node --check app/bootstrap.js
+          node --check service-worker.js
+          grep -q 'navigationCaptureV3: true' app/controllers/tabs-controller.js
+          grep -q 'direct-workspace-tabs-v68-20260811-1241' app/bootstrap.js
+          grep -q '0.9.10-direct-workspace-tabs-v68-20260811-1241' index.html
+
+      - name: Install browser harness
+        run: npm install --no-save puppeteer-core@24.16.0
+
+      - name: Validate real workspace clicks without render dependency
+        run: |
+          python3 -m http.server 8000 >/tmp/servoforge-v68-http.log 2>&1 &
+          cat > /tmp/servoforge-v68-nav.cjs <<'NODE'
+          const puppeteer = require(process.cwd() + '/node_modules/puppeteer-core');
+          const fs = require('fs');
+          const assert = require('assert');
+
+          (async () => {
+            const executablePath = ['/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'].find(fs.existsSync);
+            assert.ok(executablePath, 'Chrome/Chromium not found');
+            const browser = await puppeteer.launch({ executablePath, headless:true, args:['--no-sandbox','--disable-dev-shm-usage'] });
+            const page = await browser.newPage();
+            await page.setViewport({ width:1600, height:1000 });
+            const errors = [];
+            page.on('pageerror', error => errors.push(error.stack || error.message || String(error)));
+            await page.evaluateOnNewDocument(() => {
+              localStorage.setItem('servoforge-developer-preferences-v1', JSON.stringify({ lockedMapIds: [], hiddenPanels: [] }));
+              localStorage.setItem('servoforge-default-hidden-panels-v2-applied', 'true');
+            });
+            await page.goto('http://127.0.0.1:8000/index.html?v68=' + Date.now(), { waitUntil:'domcontentloaded', timeout:30000 });
+            await page.waitForFunction(() => {
+              const overlay = document.querySelector('#servoforgeStartupOverlay');
+              return (!overlay || overlay.hidden || getComputedStyle(overlay).display === 'none') && Boolean(window.LabelerTabsController?.navigationCaptureV3);
+            }, { timeout:25000 });
+            await new Promise(r => setTimeout(r, 600));
+
+            await page.evaluate(() => {
+              window.render = () => { throw new Error('intentional render failure for navigation regression'); };
+            });
+
+            const targets = ['specs','buildInputs','program','diagnostics','simulation'];
+            for (const tab of targets) {
+              const selector = `.tabs .tab[data-tab="${tab}"]`;
+              await page.waitForSelector(selector, { visible:true, timeout:5000 });
+              await page.click(selector);
+              await new Promise(r => setTimeout(r, 150));
+              const stateAfter = await page.evaluate(name => {
+                const panel = document.getElementById(name);
+                const button = document.querySelector(`.tabs .tab[data-tab="${name}"]`);
+                return {
+                  activeTab: typeof state !== 'undefined' ? state.activeTab : null,
+                  panelActive: Boolean(panel?.classList.contains('active')),
+                  panelHidden: Boolean(panel?.hidden),
+                  panelDisplay: panel ? getComputedStyle(panel).display : 'missing',
+                  buttonActive: Boolean(button?.classList.contains('active')),
+                  ariaHidden: panel?.getAttribute('aria-hidden') || null
+                };
+              }, tab);
+              console.log(tab, stateAfter);
+              assert.equal(stateAfter.activeTab, tab);
+              assert.equal(stateAfter.panelActive, true);
+              assert.equal(stateAfter.panelHidden, false);
+              assert.notEqual(stateAfter.panelDisplay, 'none');
+              assert.equal(stateAfter.buttonActive, true);
+              assert.equal(stateAfter.ariaHidden, 'false');
+            }
+
+            const unexpected = errors.filter(message => !/intentional render failure/.test(message));
+            assert.deepEqual(unexpected, [], 'Unexpected page errors: ' + unexpected.join('\n'));
+            await browser.close();
+          })().catch(error => { console.error(error.stack || error); process.exitCode = 1; });
+          NODE
+          node /tmp/servoforge-v68-nav.cjs
+
+      - name: Commit validated v68
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/controllers/tabs-controller.js app/bootstrap.js index.html service-worker.js update-manifest.json
+          git commit -m "Publish render-independent workspace tabs v68"
+          git push origin HEAD:main
