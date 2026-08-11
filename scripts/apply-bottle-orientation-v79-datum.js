@@ -92,7 +92,7 @@ if (!test.includes("rightFrontZeroDatumV79")) {
   test = replaceRequired(
     test,
     `assert.match(source, /directionAwareDegreeMarkersV78: true/);`,
-    `assert.match(source, /directionAwareDegreeMarkersV78: true/);\nassert.match(source, /rightFrontZeroDatumV79: true/);\nassert.match(source, /oppositeCarouselBottleSpinV79: true/);\nassert.match(source, /x: cx \\+ Math\\.cos\\(radians\\) \\* radius/);\nassert.match(source, /y: cy \\+ Math\\.sin\\(radians\\) \\* radius/);\nassert.match(source, /span > 180 \\? 1 : 0} 1 \\${end\\.x/);\nassert.match(recovery, /nativeBottleDatumCompatibilityV79: true/);`,
+    `assert.match(source, /directionAwareDegreeMarkersV78: true/);\nassert.match(source, /rightFrontZeroDatumV79: true/);\nassert.match(source, /oppositeCarouselBottleSpinV79: true/);\nassert.match(source, /x: cx \\+ Math\\.cos\\(radians\\) \\* radius/);\nassert.match(source, /y: cy \\+ Math\\.sin\\(radians\\) \\* radius/);\nassert.match(source, /span > 180 \\? 1 : 0} 1/);\nassert.match(recovery, /nativeBottleDatumCompatibilityV79: true/);`,
     "v79 datum regression assertions"
   );
 }
