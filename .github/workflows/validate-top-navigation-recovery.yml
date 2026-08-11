@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
     paths:
+      - index.html
+      - service-worker.js
       - app/bootstrap.js
       - app/controllers/tabs-controller.js
       - tests/top-navigation-recovery.test.js
@@ -22,6 +24,7 @@ jobs:
           node-version: 22
       - name: Check JavaScript syntax
         run: |
+          node --check service-worker.js
           node --check app/controllers/tabs-controller.js
           node --check tests/top-navigation-recovery.test.js
       - name: Run top navigation recovery regression
