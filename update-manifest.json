@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "servo-program-compact-columns-v62-20260811-0949",
+  "buildId": "specs-unrestricted-editing-v63-20260811-1030",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v62 simplifies the operator-facing Servo Program and print build sheet by hiding PLC and Encoder columns while retaining those values in the underlying program data. Eight-HMI visual grouping and the compact printer icon remain unchanged."
+  "notes": "Staging v63 removes the blocking required-specification safeguard from the Specs editor. Users can freely type, clear, and update bottle and label specification values without the Complete Required Specifications modal preventing tab changes or brand selection. Legacy Spec # is no longer treated as a required field because it is not exposed in the editable Specs table; completeness checks remain advisory only."
 }
