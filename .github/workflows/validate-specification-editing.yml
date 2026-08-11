@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - "app/controllers/specification-required-fields-controller.js"
+      - "app/controllers/specs-controller.js"
+      - "app/spec-number-retirement-integration.js"
+      - "config/default-programs/label-specs.json"
       - "app/bootstrap.js"
       - "tests/specification-required-fields.test.js"
       - ".github/workflows/validate-specification-editing.yml"
@@ -22,7 +25,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Check specification controller syntax
-        run: node --check app/controllers/specification-required-fields-controller.js
-      - name: Verify Specs editing stays non-blocking
+      - name: Check specification runtime syntax
+        run: |
+          node --check app/controllers/specification-required-fields-controller.js
+          node --check app/controllers/specs-controller.js
+          node --check app/spec-number-retirement-integration.js
+          node -e "JSON.parse(require('fs').readFileSync('config/default-programs/label-specs.json','utf8'))"
+      - name: Verify Spec number is retired and Specs editing stays non-blocking
         run: node tests/specification-required-fields.test.js
