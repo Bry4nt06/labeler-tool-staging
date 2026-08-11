@@ -1,0 +1,85 @@
+name: Diagnose Mic Family three-label rest sequence
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/diagnose-mic-three-label-rest-sequence.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install browser harness
+        run: npm install --no-save puppeteer-core@24.16.0
+      - name: Serve staging
+        run: python3 -m http.server 8000 >/tmp/servoforge-http.log 2>&1 &
+      - name: Dump Mic Family APL 6-Aggregate rows
+        shell: bash
+        run: |
+          cat > /tmp/mic-three-label.cjs <<'NODE'
+          const fs = require('fs');
+          const puppeteer = require(process.cwd() + '/node_modules/puppeteer-core');
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          (async () => {
+            const executablePath = ['/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'].find((p) => fs.existsSync(p));
+            if (!executablePath) throw new Error('Chrome/Chromium unavailable');
+            const browser = await puppeteer.launch({ executablePath, headless: true, args: ['--no-sandbox','--disable-dev-shm-usage'] });
+            try {
+              const page = await browser.newPage();
+              const errors = [];
+              page.on('pageerror', (error) => errors.push(error.stack || error.message || String(error)));
+              await page.goto('http://127.0.0.1:8000/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+              await sleep(7000);
+              const result = await page.evaluate(() => {
+                state.applicationMode = 'apl';
+                state.activeMapId = 'map-apl-default';
+                state.selectedBrand = '12oz Mic Family (T6,41,FO,79,BT,87)';
+                state.selectedBottle = 'SSNR - 12 Oz';
+                if (typeof applyLabelLengthStationRules === 'function') applyLabelLengthStationRules();
+                const output = typeof applyGeneratedServoProfile === 'function' ? applyGeneratedServoProfile() : state.program;
+                const rows = (Array.isArray(state.program) && state.program.length ? state.program : output || []).map((row) => ({
+                  hmi: row.hmi,
+                  plc: row.plc,
+                  cmd: row.cmd,
+                  tableAngle: row.tableAngle,
+                  plateAngle: row.plateAngle,
+                  action: row.action,
+                  station: row.station,
+                  section: row.section,
+                  stage: row.stage,
+                  applicationReference: row.applicationReference,
+                  terminalRest: row.terminalRest,
+                  motionSource: row.motionSource,
+                  plannedRotation: row.plannedRotation,
+                  plannedRatio: row.plannedRatio
+                }));
+                return {
+                  map: typeof activeMachineMap === 'function' ? activeMachineMap()?.name : null,
+                  brand: state.selectedBrand,
+                  bottle: state.selectedBottle,
+                  labelState: typeof selectedLabelApplicationState === 'function' ? selectedLabelApplicationState() : null,
+                  rows,
+                  commandSequence: rows.map((row) => Number(row.cmd)),
+                  consecutiveRests: rows.flatMap((row, index) => Number(row.cmd) === 3 && Number(rows[index + 1]?.cmd) === 3 ? [{ first: row.hmi, second: rows[index + 1].hmi, firstAction: row.action, secondAction: rows[index + 1].action }] : [])
+                };
+              });
+              console.log('RESULT_BEGIN');
+              console.log(JSON.stringify(result, null, 2));
+              console.log('RESULT_END');
+              console.log('PAGE_ERRORS', JSON.stringify(errors));
+            } finally {
+              await browser.close();
+            }
+          })().catch((error) => { console.error(error.stack || error); process.exitCode = 1; });
+          NODE
+          node /tmp/mic-three-label.cjs
