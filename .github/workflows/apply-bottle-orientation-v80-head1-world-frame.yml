@@ -1,0 +1,51 @@
+name: Apply Bottle Orientation Head 1 World Frame v80
+
+on:
+  push:
+    paths:
+      - "scripts/apply-bottle-orientation-v80-head1-world-frame.js"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply head 1 world-frame top-view correction
+        run: node scripts/apply-bottle-orientation-v80-head1-world-frame.js
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check app/bottle-orientation-panel-integration.js
+          node --check app/bottle-orientation-panel-recovery-integration.js
+
+      - name: Validate bottle orientation regression
+        run: node tests/bottle-orientation-panel.test.js
+
+      - name: Validate compact workspace regression
+        run: node tests/map-workspace-bottle-visual-v75.test.js
+
+      - name: Validate dead-zone overlay regression
+        run: node tests/entry-exit-dead-zone-overlay.test.js
+
+      - name: Check patch formatting
+        run: git diff --check
+
+      - name: Commit generated head 1 world-frame correction
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/bottle-orientation-panel-integration.js app/bootstrap.js app/update-manager.js service-worker.js index.html update-manifest.json tests/bottle-orientation-panel.test.js tests/map-workspace-bottle-visual-v75.test.js tests/entry-exit-dead-zone-overlay.test.js
+          git commit -m "Match bottle top view to head 1 world frame"
+          git push origin HEAD:main
