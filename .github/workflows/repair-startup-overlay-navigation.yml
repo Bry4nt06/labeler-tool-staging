@@ -1,0 +1,168 @@
+name: Repair startup overlay navigation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/repair-startup-overlay-navigation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Publish startup dependency repair as v67
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          old_build = 'top-navigation-recovery-v66-20260811-1105'
+          new_build = 'startup-overlay-release-v67-20260811-1234'
+          old_query = '0.9.10-top-navigation-recovery-v66-20260811-1105'
+          new_query = '0.9.10-startup-overlay-release-v67-20260811-1234'
+
+          index = Path('index.html')
+          text = index.read_text(encoding='utf-8')
+          text = text.replace('app/wipe-down-builder.js?v=0.9.10-spender-v35', 'app/wipe-down-builder.js?v=0.9.10-navigation-startup-v67')
+          text = text.replace(old_query, new_query)
+          index.write_text(text, encoding='utf-8')
+
+          bootstrap = Path('app/bootstrap.js')
+          text = bootstrap.read_text(encoding='utf-8')
+          text = text.replace(f'const build = "{old_build}";', f'const build = "{new_build}";')
+          text = text.replace('const buildUpdatedAt = "Aug 11, 2026 11:05 AM ET";', 'const buildUpdatedAt = "Aug 11, 2026 12:34 PM ET";')
+          text = text.replace('// Regression lineage: top-navigation-recovery-v66-20260811-1105', '// Regression lineage: startup-overlay-release-v67-20260811-1234 • top-navigation-recovery-v66-20260811-1105')
+          bootstrap.write_text(text, encoding='utf-8')
+
+          worker = Path('service-worker.js')
+          text = worker.read_text(encoding='utf-8')
+          text = text.replace('servoforge-labeler-staging-v0.9.10-top-navigation-recovery-v66', 'servoforge-labeler-staging-v0.9.10-startup-overlay-release-v67')
+          worker.write_text(text, encoding='utf-8')
+
+          manifest_path = Path('update-manifest.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          manifest['buildId'] = new_build
+          manifest['notes'] = ('Staging v67 fixes the workspace navigation lock by correcting Map Builder startup dependency order. '
+                               'Assembly model and geometry drivers plus the assembly adapter now load before map defaults and migration, '
+                               'so normalizeAssembly is available before persistent maps initialize. The startup overlay can complete and '
+                               'Build Inputs, Servo Program, Diagnostics, and Servo Simulation remain clickable. Spec # retirement remains active.')
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+          PY
+
+          grep -q 'drivers/assembly/assembly-model-driver.js' app/wipe-down-builder.js
+          grep -q 'drivers/assembly/assembly-geometry-driver.js' app/wipe-down-builder.js
+          grep -q 'app/assembly-driver-adapter.js' app/wipe-down-builder.js
+          grep -q 'app/wipe-down-builder.js?v=0.9.10-navigation-startup-v67' index.html
+          grep -q 'startup-overlay-release-v67-20260811-1234' app/bootstrap.js
+          grep -q 'startup-overlay-release-v67' service-worker.js
+          node --check app/wipe-down-builder.js
+          node --check app/assembly-driver-adapter.js
+          node --check app/bootstrap.js
+          node --check service-worker.js
+
+      - name: Install browser harness
+        run: npm install --no-save puppeteer-core@24.16.0
+
+      - name: Validate full startup and real tab clicks
+        run: |
+          python3 -m http.server 8000 >/tmp/servoforge-v67-http.log 2>&1 &
+          cat > /tmp/servoforge-v67-nav.cjs <<'NODE'
+          const puppeteer = require(process.cwd() + '/node_modules/puppeteer-core');
+          const fs = require('fs');
+          const assert = require('assert');
+
+          (async () => {
+            const executablePath = ['/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'].find(fs.existsSync);
+            assert.ok(executablePath, 'Chrome/Chromium not found');
+            const browser = await puppeteer.launch({ executablePath, headless:true, args:['--no-sandbox','--disable-dev-shm-usage'] });
+            const page = await browser.newPage();
+            await page.setViewport({ width:1600, height:1000 });
+            const pageErrors = [];
+            page.on('pageerror', error => pageErrors.push(error.stack || error.message || String(error)));
+            await page.evaluateOnNewDocument(() => {
+              localStorage.setItem('servoforge-developer-preferences-v1', JSON.stringify({ hiddenPanels: [] }));
+              localStorage.setItem('servoforge-default-hidden-panels-v2-applied', 'true');
+            });
+            await page.goto('http://127.0.0.1:8000/index.html?v67=' + Date.now(), { waitUntil:'domcontentloaded', timeout:30000 });
+            await page.waitForFunction(() => {
+              const overlay = document.querySelector('#servoforgeStartupOverlay');
+              const gone = !overlay || overlay.hidden || getComputedStyle(overlay).display === 'none';
+              const failed = Boolean(document.querySelector('.startup-error'));
+              return gone || failed;
+            }, { timeout:25000 });
+            await new Promise(r => setTimeout(r, 800));
+
+            const startup = await page.evaluate(() => ({
+              overlayPresent: (() => {
+                const overlay = document.querySelector('#servoforgeStartupOverlay');
+                return Boolean(overlay && !overlay.hidden && getComputedStyle(overlay).display !== 'none');
+              })(),
+              startupError: document.querySelector('.startup-error')?.textContent?.trim() || '',
+              normalizeAssembly: typeof window.normalizeAssembly,
+              assemblyAdapter: Boolean(window.LabelerAssemblyDriverAdapter),
+              tabsController: Boolean(window.LabelerTabsController?.navigationCaptureV2),
+              banner: document.querySelector('.staging-environment-banner')?.textContent?.trim() || ''
+            }));
+            console.log('STARTUP', JSON.stringify(startup, null, 2));
+            assert.equal(startup.overlayPresent, false, 'Startup overlay must be removed after initialization.');
+            assert.equal(startup.startupError, '', `Startup failed: ${startup.startupError}`);
+            assert.equal(startup.normalizeAssembly, 'function', 'normalizeAssembly must be installed before map migration.');
+            assert.equal(startup.assemblyAdapter, true, 'Assembly driver adapter must be installed.');
+            assert.equal(startup.tabsController, true, 'Top navigation capture controller must be installed.');
+            assert.match(startup.banner, /startup-overlay-release-v67-20260811-1234/);
+
+            const targets = ['specs','buildInputs','program','diagnostics','simulation'];
+            const results = [];
+            for (const tab of targets) {
+              const selector = `.tabs .tab[data-tab="${tab}"]`;
+              await page.waitForSelector(selector, { visible:true, timeout:5000 });
+              const topElement = await page.$eval(selector, el => {
+                const r = el.getBoundingClientRect();
+                const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                return { id:hit?.id || '', cls:String(hit?.className || ''), self:hit === el || el.contains(hit) };
+              });
+              assert.equal(topElement.self, true, `${tab} tab is covered by ${topElement.id || topElement.cls || 'another element'}.`);
+              await page.click(selector);
+              await new Promise(r => setTimeout(r, 250));
+              const stateAfter = await page.evaluate(name => ({
+                stateTab: typeof state !== 'undefined' ? state.activeTab : null,
+                panelActive: document.querySelector(`#${name}`)?.classList.contains('active') || false,
+                tabActive: document.querySelector(`.tabs .tab[data-tab="${name}"]`)?.classList.contains('active') || false
+              }), tab);
+              results.push({ tab, stateAfter });
+              assert.equal(stateAfter.stateTab, tab, `${tab} click did not update activeTab.`);
+              assert.equal(stateAfter.panelActive, true, `${tab} panel did not activate.`);
+              assert.equal(stateAfter.tabActive, true, `${tab} button did not activate.`);
+            }
+            console.log('TAB_RESULTS', JSON.stringify(results, null, 2));
+            const normalizeErrors = pageErrors.filter(message => /normalizeAssembly is not defined/i.test(message));
+            assert.deepEqual(normalizeErrors, [], `normalizeAssembly runtime errors remain: ${normalizeErrors.join('\n')}`);
+            await browser.close();
+          })().catch(error => { console.error(error.stack || error); process.exitCode = 1; });
+          NODE
+          node /tmp/servoforge-v67-nav.cjs
+
+      - name: Commit validated v67 runtime metadata
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html app/bootstrap.js service-worker.js update-manifest.json
+          if git diff --cached --quiet; then
+            echo 'No release metadata changes to commit.'
+            exit 0
+          fi
+          git commit -m "Publish startup overlay navigation repair v67"
+          git push origin HEAD:main
