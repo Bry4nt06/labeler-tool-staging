@@ -49,3 +49,5 @@ jobs:
           git add app/bottle-orientation-panel-integration.js app/bootstrap.js app/update-manager.js service-worker.js update-manifest.json tests/bottle-orientation-panel.test.js
           git commit -m "Add side-view orientation grid and degree reference v82"
           git push origin main
+
+# rerun after updating v81 glass assertions
