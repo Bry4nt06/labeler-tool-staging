@@ -1,0 +1,28 @@
+name: Validate unrestricted Specs editing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/controllers/specification-required-fields-controller.js"
+      - "app/bootstrap.js"
+      - "tests/specification-required-fields.test.js"
+      - ".github/workflows/validate-specification-editing.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  specification-editing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check specification controller syntax
+        run: node --check app/controllers/specification-required-fields-controller.js
+      - name: Verify Specs editing stays non-blocking
+        run: node tests/specification-required-fields.test.js
