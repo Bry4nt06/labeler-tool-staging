@@ -1,0 +1,248 @@
+name: Apply Bottle Orientation Pseudo 3D v81
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/apply-bottle-orientation-v81-pseudo-3d.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bottle-orientation-v81
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply pseudo-3D bottle side-view
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import json, re
+
+          build = "pseudo-3d-bottle-side-view-v81-20260811-1838"
+          updated = "Aug 11, 2026 6:38 PM ET"
+
+          panel_path = Path("app/bottle-orientation-panel-integration.js")
+          source = panel_path.read_text()
+          source = source.replace("const VERSION = 5;", "const VERSION = 6;", 1)
+
+          new_side = r'''  function sideViewSvg(context) {
+    const { section, plateAngle, geometry, coverage } = context;
+    const cx = 145;
+    // Pseudo-3D clear-glass long-neck bottle. The silhouette remains driven by
+    // the selected bottle geometry while light, depth, centerline visibility,
+    // and the label band react to the live servo orientation.
+    const bodyHalf = clamp(36 * geometry.bottleDiameterMm / 60.68, 31, 43);
+    const neckRatio = clamp(geometry.neckCirc / geometry.bodyCirc, 0.30, 0.43);
+    const neckHalf = clamp(bodyHalf * neckRatio, 10, 14.5);
+    const neckTop = 27;
+    const neckBase = 72;
+    const shoulderBottom = 101;
+    const bodyBottom = 226;
+    const bodyPath = [
+      `M ${cx-neckHalf} ${neckTop}`,
+      `L ${cx-neckHalf} ${neckBase-7}`,
+      `C ${cx-neckHalf} ${neckBase+3} ${cx-bodyHalf*0.55} ${shoulderBottom-19} ${cx-bodyHalf*0.86} ${shoulderBottom-8}`,
+      `C ${cx-bodyHalf*0.96} ${shoulderBottom-4} ${cx-bodyHalf} ${shoulderBottom+1} ${cx-bodyHalf} ${shoulderBottom+9}`,
+      `L ${cx-bodyHalf} ${bodyBottom-15}`,
+      `C ${cx-bodyHalf} ${bodyBottom-5} ${cx-bodyHalf-8} ${bodyBottom} ${cx-bodyHalf-19} ${bodyBottom}`,
+      `L ${cx+bodyHalf-19} ${bodyBottom}`,
+      `C ${cx+bodyHalf-8} ${bodyBottom} ${cx+bodyHalf} ${bodyBottom-5} ${cx+bodyHalf} ${bodyBottom-15}`,
+      `L ${cx+bodyHalf} ${shoulderBottom+9}`,
+      `C ${cx+bodyHalf} ${shoulderBottom+1} ${cx+bodyHalf*0.96} ${shoulderBottom-4} ${cx+bodyHalf*0.86} ${shoulderBottom-8}`,
+      `C ${cx+bodyHalf*0.55} ${shoulderBottom-19} ${cx+neckHalf} ${neckBase+3} ${cx+neckHalf} ${neckBase-7}`,
+      `L ${cx+neckHalf} ${neckTop}`,
+      "Z"
+    ].join(" ");
+
+    const labelRadius = section === "neck" ? neckHalf : bodyHalf;
+    const model = labelArcModel(context);
+    const visualPlateAngle = machineVisualAngle(plateAngle);
+    const orientationRad = visualPlateAngle * Math.PI / 180;
+    const centerlineFront = Math.cos(orientationRad) >= 0;
+    const centerlineX = cx + Math.sin(orientationRad) * bodyHalf * .78;
+    const labelY = section === "neck" ? 70 : 128;
+    const labelHeight = section === "neck"
+      ? clamp(finite(geometry.label?.neckHeightMm, 30) / geometry.bottleDiameterMm * 40, 19, 34)
+      : 43;
+    const labelColor = SECTION_COLORS[section] || "#4ca8ff";
+    const labelSegments = projectLabelArcSegments(model.start, model.end, labelRadius, cx);
+    const wipedSegments = model.wipeRanges.flatMap(([start, end]) => projectLabelArcSegments(start, end, labelRadius, cx));
+    const tackX = projectedTackX(model.tackMode === "leading" ? model.leadingEdge : model.center, labelRadius, cx);
+    const hardwareActive = Boolean(context.hardware) || finite(coverage.percentage, 0) > 0;
+    const hardwareY = labelY + labelHeight / 2;
+    const stationText = context.station ? `S${context.station}` : "--";
+    const labelOpacity = context.applicationStarted ? .42 : .12;
+
+    function wrappedBandSegmentPath(segment, y, height, radius) {
+      const x0 = finite(segment?.x, cx);
+      const x1 = x0 + Math.max(.8, finite(segment?.width, 0));
+      const mid = (x0 + x1) / 2;
+      const normalized = clamp((mid - cx) / Math.max(1, radius), -1, 1);
+      const faceDepth = Math.sqrt(Math.max(0, 1 - normalized * normalized));
+      const edgeBow = (1 - faceDepth) * 5.5;
+      const crown = faceDepth * 2.2;
+      return [
+        `M ${x0.toFixed(2)} ${(y + edgeBow).toFixed(2)}`,
+        `Q ${mid.toFixed(2)} ${(y - crown).toFixed(2)} ${x1.toFixed(2)} ${(y + edgeBow).toFixed(2)}`,
+        `L ${x1.toFixed(2)} ${(y + height - edgeBow).toFixed(2)}`,
+        `Q ${mid.toFixed(2)} ${(y + height + crown).toFixed(2)} ${x0.toFixed(2)} ${(y + height - edgeBow).toFixed(2)}`,
+        "Z"
+      ].join(" ");
+    }
+
+    function wrappedBandOpacity(segment, baseOpacity) {
+      const mid = finite(segment?.x, cx) + Math.max(.8, finite(segment?.width, 0)) / 2;
+      const normalized = clamp(Math.abs(mid - cx) / Math.max(1, labelRadius), 0, 1);
+      return clamp(baseOpacity * (1 - normalized * .48), .10, .92);
+    }
+
+    return `<svg class="bottle-orientation-svg" data-pseudo-3d-bottle="true" viewBox="0 0 290 252" role="img" aria-label="Pseudo-3D clear glass bottle side view with ${section} label wrapped to live bottle rotation">
+      <defs>
+        <linearGradient id="bottleSideGlass-${context.source}" x1="0" x2="1">
+          <stop offset="0" stop-color="#61717b" stop-opacity=".24"/>
+          <stop offset=".08" stop-color="#dbe7ec" stop-opacity=".34"/>
+          <stop offset=".22" stop-color="#80919b" stop-opacity=".10"/>
+          <stop offset=".47" stop-color="#eef7fb" stop-opacity=".055"/>
+          <stop offset=".66" stop-color="#768791" stop-opacity=".09"/>
+          <stop offset=".88" stop-color="#e5f0f4" stop-opacity=".26"/>
+          <stop offset="1" stop-color="#54636d" stop-opacity=".26"/>
+        </linearGradient>
+        <radialGradient id="bottleDepth-${context.source}" cx="48%" cy="34%" r="68%">
+          <stop offset="0" stop-color="#f5fbfd" stop-opacity=".09"/>
+          <stop offset=".58" stop-color="#9bb0ba" stop-opacity=".035"/>
+          <stop offset="1" stop-color="#020608" stop-opacity=".20"/>
+        </radialGradient>
+        <linearGradient id="labelGlass-${context.source}" x1="0" x2="1">
+          <stop offset="0" stop-color="#29759d" stop-opacity=".44"/>
+          <stop offset=".18" stop-color="#66c4f0" stop-opacity=".58"/>
+          <stop offset=".5" stop-color="#4aaee0" stop-opacity=".42"/>
+          <stop offset=".82" stop-color="#66c4f0" stop-opacity=".56"/>
+          <stop offset="1" stop-color="#235f82" stop-opacity=".42"/>
+        </linearGradient>
+        <clipPath id="bottleClip-${context.source}"><path d="${bodyPath}"/></clipPath>
+      </defs>
+      <text x="145" y="14" text-anchor="middle" class="view-title">SIDE VIEW</text>
+      <text x="277" y="14" text-anchor="end" class="view-readout" opacity=".72">${centerlineFront ? "DATUM FRONT" : "DATUM REAR"}</text>
+
+      <g data-pseudo-3d-glass="true">
+        <path d="${bodyPath}" fill="url(#bottleSideGlass-${context.source})" stroke="#b9c8cf" stroke-opacity=".88" stroke-width="2"/>
+        <path d="${bodyPath}" fill="url(#bottleDepth-${context.source})" opacity=".92"/>
+        <ellipse cx="${cx}" cy="${bodyBottom-3}" rx="${Math.max(10, bodyHalf-18)}" ry="5.6" fill="#d9e6eb" fill-opacity=".045" stroke="#d5e4e9" stroke-opacity=".18" stroke-width="1"/>
+        <ellipse cx="${cx}" cy="${shoulderBottom+12}" rx="${Math.max(12, bodyHalf-4)}" ry="7.5" fill="none" stroke="#dce8ed" stroke-opacity=".07" stroke-width="1"/>
+        <path d="M ${cx-bodyHalf+7} ${shoulderBottom+4} C ${cx-bodyHalf+12} ${shoulderBottom+14} ${cx-bodyHalf+12} ${bodyBottom-34} ${cx-bodyHalf+11} ${bodyBottom-17}" fill="none" stroke="#f7fbfd" stroke-opacity=".52" stroke-width="3.2" stroke-linecap="round"/>
+        <path d="M ${cx-bodyHalf+13} ${shoulderBottom+1} C ${cx-bodyHalf+18} ${shoulderBottom-6} ${cx-neckHalf+3} ${neckBase+5} ${cx-neckHalf+3} ${neckBase-4}" fill="none" stroke="#f7fbfd" stroke-opacity=".30" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M ${cx+bodyHalf-7} ${shoulderBottom+4} C ${cx+bodyHalf-12} ${shoulderBottom+14} ${cx+bodyHalf-12} ${bodyBottom-40} ${cx+bodyHalf-11} ${bodyBottom-20}" fill="none" stroke="#6d7f89" stroke-opacity=".34" stroke-width="3" stroke-linecap="round"/>
+        <path d="M ${cx+bodyHalf-13} ${shoulderBottom+1} C ${cx+bodyHalf-18} ${shoulderBottom-6} ${cx+neckHalf-3} ${neckBase+5} ${cx+neckHalf-3} ${neckBase-4}" fill="none" stroke="#6a7a84" stroke-opacity=".24" stroke-width="2" stroke-linecap="round"/>
+        <line x1="${cx-2}" y1="${neckTop+12}" x2="${cx-2}" y2="${neckBase-10}" stroke="#edf7fa" stroke-opacity=".14" stroke-width="2"/>
+      </g>
+
+      <g data-bottle-lip-depth="true">
+        <ellipse cx="${cx}" cy="22.8" rx="${neckHalf+2}" ry="2.5" fill="#dce7eb" fill-opacity=".07" stroke="#d8e5ea" stroke-opacity=".45" stroke-width="1"/>
+        <rect x="${cx-neckHalf-2}" y="20" width="${neckHalf*2+4}" height="7" rx="2.5" fill="#d8e3e8" fill-opacity=".10" stroke="#c1cdd3" stroke-opacity=".78" stroke-width="1.2"/>
+        <rect x="${cx-neckHalf-3}" y="27" width="${neckHalf*2+6}" height="6" rx="2" fill="#cbd8de" fill-opacity=".08" stroke="#b3c2ca" stroke-opacity=".68" stroke-width="1"/>
+        <rect x="${cx-neckHalf-2}" y="33" width="${neckHalf*2+4}" height="6" rx="2" fill="#c2d0d7" fill-opacity=".07" stroke="#aabac3" stroke-opacity=".60" stroke-width="1"/>
+      </g>
+
+      <line x1="${centerlineX}" y1="18" x2="${centerlineX}" y2="228" stroke="#ff4d3a" stroke-width="2.2" stroke-dasharray="${centerlineFront ? "6 5" : "2 7"}" stroke-opacity="${centerlineFront ? .94 : .28}" clip-path="url(#bottleClip-${context.source})"/>
+
+      <g clip-path="url(#bottleClip-${context.source})" data-wrapped-label="true" data-pseudo-3d-label="true">
+        ${labelSegments.map((segment) => `<path d="${wrappedBandSegmentPath(segment, labelY, labelHeight, labelRadius)}" fill="url(#labelGlass-${context.source})" fill-opacity="${wrappedBandOpacity(segment, labelOpacity).toFixed(3)}" stroke="#9bdaf4" stroke-opacity=".52" stroke-width=".7"/>`).join("")}
+        ${wipedSegments.map((segment) => `<path d="${wrappedBandSegmentPath(segment, labelY, labelHeight, labelRadius)}" fill="${labelColor}" fill-opacity="${wrappedBandOpacity(segment, .82).toFixed(3)}" stroke="#d8f1fb" stroke-opacity=".18" stroke-width=".45"/>`).join("")}
+        <path d="M ${cx-bodyHalf+3} ${labelY+3} Q ${cx} ${labelY-4} ${cx+bodyHalf-3} ${labelY+3}" fill="none" stroke="#e7f7ff" stroke-opacity=".10" stroke-width="1"/>
+        <path d="M ${cx-bodyHalf+3} ${labelY+labelHeight-3} Q ${cx} ${labelY+labelHeight+4} ${cx+bodyHalf-3} ${labelY+labelHeight-3}" fill="none" stroke="#0b2b3c" stroke-opacity=".30" stroke-width="1"/>
+      </g>
+
+      ${Number.isFinite(tackX) ? `<line x1="${tackX}" y1="${labelY-4}" x2="${tackX}" y2="${labelY+labelHeight+4}" stroke="${model.tackMode === "leading" ? "#ffd05f" : "#fff"}" stroke-width="1.2" stroke-dasharray="3 3" opacity=".85" clip-path="url(#bottleClip-${context.source})"/>` : ""}
+      <g transform="translate(${cx+bodyHalf+13} ${hardwareY})" opacity="${hardwareActive ? 1 : .32}">
+        <circle cx="0" cy="0" r="13" fill="#1d252b" stroke="#788996" stroke-width="1.6"/>
+        <circle cx="0" cy="0" r="4.5" fill="${hardwareActive ? labelColor : "#52606a"}"/>
+        <text x="0" y="24" text-anchor="middle" class="view-mini">${escapeHtml(stationText)}</text>
+      </g>
+      <text x="145" y="245" text-anchor="middle" class="view-readout">${escapeHtml(section.toUpperCase())} • ${model.tackMode === "leading" ? "LEADING EDGE" : "CENTER TACK"} • ${format(coverage.percentage, 0)}% wiped</text>
+    </svg>`;
+  }
+
+'''
+
+          pattern = re.compile(r"  function sideViewSvg\(context\) \{.*?\n  function panelMarkup\(source\) \{", re.S)
+          if not pattern.search(source):
+              raise SystemExit("Could not locate sideViewSvg block")
+          source = pattern.sub(new_side + "  function panelMarkup(source) {", source, count=1)
+
+          source = source.replace(
+              "    oppositeCarouselBottleSpinV79: true\n",
+              "    oppositeCarouselBottleSpinV79: true,\n    pseudo3dBottleSideViewV81: true,\n    curvedWrappedLabelBandV81: true,\n    orientationDepthCueV81: true\n",
+              1
+          )
+          panel_path.write_text(source)
+
+          bootstrap = Path("app/bootstrap.js")
+          text = bootstrap.read_text()
+          text = re.sub(r'const build = "[^"]+";', f'const build = "{build}";', text, count=1)
+          text = re.sub(r'const buildUpdatedAt = "[^"]+";', f'const buildUpdatedAt = "{updated}";', text, count=1)
+          text = text.replace("// Regression lineage:", f"// Regression lineage: {build} •", 1)
+          bootstrap.write_text(text)
+
+          sw = Path("service-worker.js")
+          text = sw.read_text()
+          text = re.sub(r'const CACHE_NAME = "[^"]+";', f'const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-{build}";', text, count=1)
+          sw.write_text(text)
+
+          update = Path("app/update-manager.js")
+          text = update.read_text()
+          text = re.sub(r'const BUILD_ID = "[^"]+";', f'const BUILD_ID = "{build}";', text, count=1)
+          update.write_text(text)
+
+          manifest_path = Path("update-manifest.json")
+          manifest = json.loads(manifest_path.read_text())
+          manifest["buildId"] = build
+          manifest["notes"] = "Staging v81 upgrades the Bottle Orientation Side View to a pseudo-3D clear-glass bottle. Glass highlights, cylindrical depth cues, front/rear datum visibility, and curved clipped label-band projection now make bottle orientation easier to read while preserving the exact v80 world-frame Top View and generated servo/HMI geometry."
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+
+          test = Path("tests/bottle-orientation-panel.test.js")
+          text = test.read_text()
+          text = text.replace('assert.match(source, /oppositeCarouselBottleSpinV79: true/);', 'assert.match(source, /oppositeCarouselBottleSpinV79: true/);\nassert.match(source, /pseudo3dBottleSideViewV81: true/);\nassert.match(source, /curvedWrappedLabelBandV81: true/);\nassert.match(source, /orientationDepthCueV81: true/);\nassert.match(source, /data-pseudo-3d-bottle=\\"true\\"/);\nassert.match(source, /data-pseudo-3d-label=\\"true\\"/);\nassert.match(source, /wrappedBandSegmentPath/);\nassert.match(source, /DATUM FRONT/);')
+          text = re.sub(r'assert\.match\(bootstrap, /[^/]+/\);\nassert\.match\(serviceWorker, /[^/]+/\);\nassert\.equal\(manifest\.buildId, "[^"]+"\);', f'assert.match(bootstrap, /{re.escape(build)}/);\nassert.match(serviceWorker, /{re.escape(build)}/);\nassert.equal(manifest.buildId, "{build}");', text, count=1)
+          text = re.sub(r'console\.log\("[^"]*Bottle[^\"]*regression passed\."\);', 'console.log("Pseudo-3D bottle side-view v81 regression passed.");', text, count=1)
+          test.write_text(text)
+          PY
+
+      - name: Validate syntax
+        run: |
+          node --check app/bottle-orientation-panel-integration.js
+          node --check app/bootstrap.js
+          node --check app/update-manager.js
+          node --check service-worker.js
+
+      - name: Validate bottle orientation regression
+        run: node tests/bottle-orientation-panel.test.js
+
+      - name: Validate existing orientation and map regressions
+        run: |
+          node tests/compact-map-layout-v75.test.js
+          node tests/entry-exit-dead-zone-overlay.test.js
+          node tests/apl-roller-coverage-default.test.js
+
+      - name: Commit pseudo-3D bottle side-view
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/bottle-orientation-panel-integration.js app/bootstrap.js app/update-manager.js service-worker.js update-manifest.json tests/bottle-orientation-panel.test.js
+          git commit -m "Upgrade bottle orientation side view to pseudo-3D"
+          git push origin main
