@@ -3,7 +3,7 @@
 (function installAplSectionHandoffContinuity(global) {
   if (global.LabelerAplSectionHandoffContinuity?.installed) return;
 
-  const VERSION = 2;
+  const VERSION = 3;
   const EPS = 0.001;
   const RETRY_MS = 25;
   let installed = false;
@@ -67,7 +67,7 @@
       event
     ];
     previous.canonicalSectionHandoffV44 = true;
-    previous.passiveReferenceRestCollapsedV57 = true;
+    previous.passiveReferenceRestCollapsedV59 = true;
 
     if (event.applicationReference) {
       previous.applicationReferenceEvents = [
@@ -212,6 +212,19 @@
     };
   }
 
+  function synchronizeTranslatedPlan(current, rows) {
+    const translationService = global.LabelerProfileTranslationService;
+    if (current.motionTranslation && typeof translationService?.syncTranslatedRows === "function") {
+      translationService.syncTranslatedRows(current.motionTranslation, rows);
+    }
+    if (current.motionTranslation?.plan?.steps) {
+      current.motionPlan.planner = current.motionTranslation.plan;
+      if (current.motionPlan.translation && typeof current.motionPlan.translation === "object") {
+        current.motionPlan.translation.commandSummary = current.motionTranslation.commandSummary;
+      }
+    }
+  }
+
   function synchronize(result) {
     const current = runtimeState();
     if (!current || !Array.isArray(result?.rows)) return result?.rows || [];
@@ -220,6 +233,7 @@
       ? current.motionPlan
       : {};
     current.motionPlan.rows = result.rows;
+    synchronizeTranslatedPlan(current, result.rows);
     current.motionPlan.aplSectionHandoffContinuity = {
       version: VERSION,
       applied: result.changes.length > 0 || result.collapsed.length > 0,
@@ -239,7 +253,7 @@
     if (!current || typeof global.applyGeneratedServoProfile !== "function") return false;
 
     const base = global.applyGeneratedServoProfile;
-    if (base.aplSectionHandoffContinuityV57 === true) {
+    if (base.aplSectionHandoffContinuityV59 === true) {
       installed = true;
       return true;
     }
@@ -251,7 +265,7 @@
         : output;
       return synchronize(repair(source));
     };
-    wrapped.aplSectionHandoffContinuityV57 = true;
+    wrapped.aplSectionHandoffContinuityV59 = true;
     wrapped.previousApplyGeneratedServoProfile = base;
     global.applyGeneratedServoProfile = wrapped;
 
