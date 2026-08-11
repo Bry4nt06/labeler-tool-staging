@@ -125,6 +125,8 @@
 
     const bottleHeads = heads();
     drawBottleTableVisual(add, svg, state.radius, bottleHeads);
+    const deadZoneLayer = add("g", { "aria-label": "Bottle entry and exit dead zone", "data-entry-exit-dead-zone-layer": "true" });
+    drawEntryExitDeadZoneOverlay(add, deadZoneLayer);
     const quadrantLayer = add("g", { "aria-label": "Table quadrant references" });
     drawMapQuadrantReferences(add, quadrantLayer);
     const zeroEnd = angleToXY(0, state.radius + 34);

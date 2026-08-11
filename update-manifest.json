@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "station1-bottle-orientation-v72-20260811-1600",
+  "buildId": "entry-exit-dead-zone-overlay-v73-20260811-1604",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v72 adds a shared live Bottle Orientation & Wipe Visual inside both Servo Program and Servo Simulation. The Servo Program visual works independently when Servo Simulation is hidden. It follows Station 1 table/plate motion, uses selected bottle circumference and label length to scale the top-view label arc, and uses ServoForge wipe telemetry to animate actual Station 1 wipe coverage."
+  "notes": "Staging v73 adds an independent Entry / Exit Dead Zone overlay covering 330° through 0° to 30°. It can remain visible at the same time as either Active Move Distance or All Program Moves, and is rendered beneath the motion overlays on both the mechanical map and simulation map."
 }

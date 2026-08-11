@@ -124,6 +124,7 @@
     else if (depthKeys[target.id]) settings.commitDepth(depthKeys[target.id], LabelerWorkspaceActionService.number(target.value, state.depths[depthKeys[target.id]]));
     else if (target === els.showMoveDistanceOverlay) settings.setMovementOverlay("distance", target.checked);
     else if (target === els.showAllProgramMovesOverlay) settings.setMovementOverlay("all", target.checked);
+    else if (target === els.showEntryExitDeadZoneOverlay) settings.setEntryExitDeadZoneOverlay(target.checked);
     else if (target === els.direction) map.setDirection(target.value);
     else if (target === els.tablePitchRadiusMm || target === els.padClearanceMm) settings.setAssemblyGeometry(els.tablePitchRadiusMm?.value, els.padClearanceMm?.value);
     else if (target === els.importSettings) transfer.importSettings(target.files?.[0]);

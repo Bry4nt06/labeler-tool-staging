@@ -202,6 +202,10 @@
               <span class="switch-copy"><strong>Show all program moves</strong><small>Display every servo move and its HMI line.</small></span>
               <span class="switch-control"><input id="showAllProgramMovesOverlay" type="checkbox" /><span class="switch-track" aria-hidden="true"></span></span>
             </label>
+            <label class="switch-setting" for="showEntryExitDeadZoneOverlay">
+              <span class="switch-copy"><strong>Show entry / exit dead zone</strong><small>Highlight the 330° → 30° bottle entry and exit region.</small></span>
+              <span class="switch-control"><input id="showEntryExitDeadZoneOverlay" type="checkbox" /><span class="switch-track" aria-hidden="true"></span></span>
+            </label>
           </section>
           <section id="wipeDownDataPanel" class="panel wipe-down-data-panel" role="dialog" aria-modal="false" aria-labelledby="wipeDownDataTitle" hidden>
             <div class="wipe-data-head"><div><h2 id="wipeDownDataTitle">Label Wipe-Down</h2><span id="wipeLabelSection">Waiting for label</span></div><div class="wipe-data-actions"><strong id="wipePercent">0%</strong><button id="closeWipeDownData" type="button" class="secondary-button compact-builder-button">Close</button></div></div>
@@ -284,7 +288,7 @@
     <script src="app/setup-bindings.js?v=0.9.10"></script>
     <script src="app/map-rendering.js?v=0.9.10"></script>
     <script src="app/table-rendering.js?v=0.9.10"></script>
-    <script src="app/bootstrap.js?v=0.9.10-station1-bottle-orientation-v72-20260811-1600"></script>
+    <script src="app/bootstrap.js?v=0.9.10-entry-exit-dead-zone-overlay-v73-20260811-1604"></script>
     <script src="app/motion-planner-ui.js?v=0.9.10"></script>
     <script src="app/profile-translator-integration.js?v=0.9.10"></script>
     <script src="app/servo-pipeline-validator-integration.js?v=0.9.10"></script>

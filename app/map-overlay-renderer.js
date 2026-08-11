@@ -2,6 +2,73 @@
 
 (function installMapOverlayRenderer(global) {
   const QUADRANT_REFERENCES = Object.freeze([90, 180, 270, 359.9]);
+  const ENTRY_EXIT_DEAD_ZONE = Object.freeze({ start: 330, end: 30, span: 60 });
+
+  function deadZoneSectorPath(innerRadius, outerRadius) {
+    const points = [];
+    const step = 2;
+    for (let angle = ENTRY_EXIT_DEAD_ZONE.start; angle <= 360 + ENTRY_EXIT_DEAD_ZONE.end; angle += step) {
+      points.push(angleToXY(angle, outerRadius));
+    }
+    points.push(angleToXY(360 + ENTRY_EXIT_DEAD_ZONE.end, outerRadius));
+    for (let angle = 360 + ENTRY_EXIT_DEAD_ZONE.end; angle >= ENTRY_EXIT_DEAD_ZONE.start; angle -= step) {
+      points.push(angleToXY(angle, innerRadius));
+    }
+    points.push(angleToXY(ENTRY_EXIT_DEAD_ZONE.start, innerRadius));
+    return points.map((point, index) => `${index ? "L" : "M"} ${point.x} ${point.y}`).join(" ") + " Z";
+  }
+
+  function drawEntryExitDeadZoneOverlay(add, parent) {
+    if (!state.showEntryExitDeadZoneOverlay) return;
+    const innerRadius = 45;
+    const outerRadius = Math.max(innerRadius + 10, Number(state.radius || 0) + 9);
+    add("path", {
+      d: deadZoneSectorPath(innerRadius, outerRadius),
+      fill: "#6e087f",
+      "fill-opacity": 0.30,
+      stroke: "#9e279c",
+      "stroke-width": 1.2,
+      "stroke-opacity": 0.56,
+      "pointer-events": "none",
+      "data-entry-exit-dead-zone": "330-30",
+      "aria-label": "Bottle entry and exit dead zone from 330 to 30 degrees"
+    }, parent);
+
+    [ENTRY_EXIT_DEAD_ZONE.start, ENTRY_EXIT_DEAD_ZONE.end].forEach((angle) => {
+      const inner = angleToXY(angle, innerRadius);
+      const outer = angleToXY(angle, outerRadius);
+      add("line", {
+        x1: inner.x,
+        y1: inner.y,
+        x2: outer.x,
+        y2: outer.y,
+        stroke: "#d63163",
+        "stroke-width": 2,
+        "stroke-opacity": 0.78,
+        "stroke-dasharray": "7 5",
+        "vector-effect": "non-scaling-stroke",
+        "pointer-events": "none",
+        "data-dead-zone-boundary": angle
+      }, parent);
+    });
+
+    const labelPoint = angleToXY(0, Math.max(innerRadius + 24, outerRadius * 0.63));
+    add("text", {
+      x: labelPoint.x,
+      y: labelPoint.y,
+      fill: "#df8fe8",
+      "font-size": 8,
+      "font-weight": 800,
+      "letter-spacing": 0.5,
+      "text-anchor": "middle",
+      "dominant-baseline": "middle",
+      stroke: "var(--map-surface)",
+      "stroke-width": 2.5,
+      "paint-order": "stroke fill",
+      "pointer-events": "none",
+      "data-dead-zone-label": "330-30"
+    }, parent).textContent = "ENTRY / EXIT DEAD ZONE";
+  }
 
   function drawMapQuadrantReferences(add, parent) {
     if (!state.showQuadrantReferences) return;
@@ -96,10 +163,14 @@
   }
 
   global.drawMapQuadrantReferences = drawMapQuadrantReferences;
+  global.drawEntryExitDeadZoneOverlay = drawEntryExitDeadZoneOverlay;
   global.drawAggregateSpacingOverlay = drawAggregateSpacingOverlay;
   global.LabelerMapOverlayRenderer = Object.freeze({
     quadrantReferences: QUADRANT_REFERENCES,
+    entryExitDeadZone: ENTRY_EXIT_DEAD_ZONE,
+    deadZoneSectorPath,
     drawMapQuadrantReferences,
+    drawEntryExitDeadZoneOverlay,
     drawAggregateSpacingOverlay
   });
 })(window);

@@ -56,6 +56,12 @@
     });
   }
 
+  function setEntryExitDeadZoneOverlay(enabled) {
+    commit("showEntryExitDeadZoneOverlay", Boolean(enabled), {
+      render: ["map", "simulation-map"]
+    });
+  }
+
   function setAggregateSpacing(enabled) {
     commit("showAggregateSpacingOverlay", Boolean(enabled), { render: "map" });
   }
@@ -90,6 +96,7 @@
     setWorkspaceView,
     setQuadrantReferences,
     setMovementOverlay,
+    setEntryExitDeadZoneOverlay,
     setAggregateSpacing,
     setGeometry,
     setAssemblyGeometry,
