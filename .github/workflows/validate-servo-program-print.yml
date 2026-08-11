@@ -4,7 +4,9 @@ on:
   push:
     branches: [main]
     paths:
+      - "app/servo-program-table-renderer.js"
       - "app/servo-program-print-integration.js"
+      - "app/servo-program-eight-row-grouping-integration.js"
       - "app/bootstrap.js"
       - "tests/servo-program-print-browser.test.cjs"
       - ".github/workflows/validate-servo-program-print.yml"
@@ -22,13 +24,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Check print module syntax
+      - name: Check Servo Program grouping modules
         run: |
+          node --check app/servo-program-table-renderer.js
           node --check app/servo-program-print-integration.js
+          node --check app/servo-program-eight-row-grouping-integration.js
           node --check app/bootstrap.js
       - name: Install browser harness
         run: npm install --no-save puppeteer-core@24.16.0
       - name: Serve staging
         run: python3 -m http.server 8000 >/tmp/servoforge-http.log 2>&1 &
-      - name: Verify print button and generated build sheet
+      - name: Verify eight-row grouping, printer icon, and print sheet
         run: node tests/servo-program-print-browser.test.cjs
