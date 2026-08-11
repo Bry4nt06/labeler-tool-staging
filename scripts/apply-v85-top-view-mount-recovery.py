@@ -93,5 +93,11 @@ d['buildId']=BUILD
 d['notes']='v85 repairs Bottle Orientation Top View mounting. The panel remains Top View only, with no side view, no standalone controls, and no wipe graphic. Recovery now reacquires rebuilt Servo Program/Simulation hosts and remounts the live Top View after workspace rerenders.'
 manifest.write_text(json.dumps(d,indent=2)+'\n')
 
+legacy=Path('tests/bottle-orientation-panel.test.js')
+lt=legacy.read_text()
+lt=lt.replace('top-view-only-orientation-v84-20260811-1918',BUILD)
+lt=lt.replace('Top-view-only Bottle Orientation v84 regression passed.','Top-view-only Bottle Orientation v85 regression passed.')
+legacy.write_text(lt)
+
 test=Path('tests/bottle-orientation-mount-recovery.test.js')
 test.write_text('''"use strict";\nconst assert=require("assert");\nconst fs=require("fs");\nconst path=require("path");\nconst root=path.resolve(__dirname,"..");\nconst recovery=fs.readFileSync(path.join(root,"app/bottle-orientation-panel-recovery-integration.js"),"utf8");\nconst panel=fs.readFileSync(path.join(root,"app/bottle-orientation-panel-integration.js"),"utf8");\nconst bootstrap=fs.readFileSync(path.join(root,"app/bootstrap.js"),"utf8");\nconst manifest=JSON.parse(fs.readFileSync(path.join(root,"update-manifest.json"),"utf8"));\nassert.match(panel,/topViewOnlyV84: true/);\nassert.doesNotMatch(panel,/data-orientation-side/);\nassert.doesNotMatch(panel,/>WIPE<\\/text>/);\nassert.match(recovery,/const VERSION = 4/);\nassert.match(recovery,/observeDocument/);\nassert.match(recovery,/observeHost\\(source\\);\\n      recoverSource\\(source\\);/);\nassert.match(recovery,/existing\\?\\.host === host/);\nassert.match(recovery,/observers\\.set\\(source, \\{ host, observer \\}\\)/);\nassert.match(recovery,/persistentTopViewMountV85: true/);\nassert.match(recovery,/workspaceHostReacquireV85: true/);\nassert.match(bootstrap,/top-view-mount-recovery-v85-20260811-1928/);\nassert.equal(manifest.buildId,"top-view-mount-recovery-v85-20260811-1928");\nconsole.log("Bottle Orientation top-view mount recovery v85 regression passed.");\n''')
