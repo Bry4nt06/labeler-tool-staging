@@ -3,7 +3,7 @@
 (function installBottleOrientationPanelRecovery(global) {
   if (global.ServoForgeBottleOrientationPanelRecovery?.installed) return;
 
-  const VERSION = 2;
+  const VERSION = 3;
   const sources = ["program", "simulation"];
   const observers = new Map();
   const TOP_CORRECTION_ATTR = "data-machine-direction-bottle-datum-v79";
@@ -64,6 +64,16 @@
     const top = panel?.querySelector?.("[data-orientation-top]");
     const svg = top?.querySelector?.(".bottle-orientation-svg");
     if (!svg) return false;
+
+    // v79 renders the correct +X/right-front bottle datum natively. Keep the
+    // reflection logic below only as a compatibility fallback for an older v78
+    // panel that may still be present during a rolling staging update.
+    if (api()?.rightFrontZeroDatumV79) {
+      svg.setAttribute(TOP_CORRECTION_ATTR, machineDirection());
+      svg.setAttribute("data-bottle-zero-datum", "right-front-reference");
+      svg.setAttribute("data-bottle-spin-relative-to-carousel", "opposite");
+      return true;
+    }
 
     const direction = machineDirection();
     if (svg.getAttribute(TOP_CORRECTION_ATTR) === direction) return true;
@@ -166,6 +176,7 @@
     servoProgramPanelGuaranteedV75: true,
     machineBottleDatumAlignedV79: true,
     oppositeCarouselBottleSpinV79: true,
-    rightFrontZeroDatumV79: true
+    rightFrontZeroDatumV79: true,
+    nativeBottleDatumCompatibilityV79: true
   });
 })(typeof window !== "undefined" ? window : globalThis);

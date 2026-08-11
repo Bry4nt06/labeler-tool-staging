@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "machine-direction-bottle-orientation-v78-20260811-1752";
+  const BUILD_ID = "machine-bottle-datum-alignment-v79-20260811-1756";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 

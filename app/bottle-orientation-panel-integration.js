@@ -3,7 +3,7 @@
 (function installBottleOrientationPanel(global) {
   if (global.LabelerBottleOrientationPanel?.installed) return;
 
-  const VERSION = 3;
+  const VERSION = 4;
   const STYLE_ID = "servoforge-bottle-orientation-panel-style";
   const PANEL_ATTR = "data-bottle-orientation-panel";
   const BASE_DEG_PER_SECOND = 18;
@@ -348,9 +348,12 @@
 
   function polarPoint(angleDeg, radius, cx = 0, cy = 0) {
     const radians = angleDeg * Math.PI / 180;
+    // Bottle-local 0° uses the same +X/right-hand front reference as the
+    // Mechanical Map bottle renderer. Positive SVG angle is clockwise; the
+    // machineVisualAngle sign below makes servo rotation oppose carousel travel.
     return {
-      x: cx + Math.sin(radians) * radius,
-      y: cy + Math.cos(radians) * radius
+      x: cx + Math.cos(radians) * radius,
+      y: cy + Math.sin(radians) * radius
     };
   }
 
@@ -360,7 +363,7 @@
     span = Math.min(359.9, span);
     const start = polarPoint(startDeg, radius, centerX, centerY);
     const end = polarPoint(startDeg + span, radius, centerX, centerY);
-    return `M ${start.x.toFixed(3)} ${start.y.toFixed(3)} A ${radius} ${radius} 0 ${span > 180 ? 1 : 0} 0 ${end.x.toFixed(3)} ${end.y.toFixed(3)}`;
+    return `M ${start.x.toFixed(3)} ${start.y.toFixed(3)} A ${radius} ${radius} 0 ${span > 180 ? 1 : 0} 1 ${end.x.toFixed(3)} ${end.y.toFixed(3)}`;
   }
 
   function machineVisualAngle(angleDeg) {
@@ -874,6 +877,8 @@
     leadingEdgeBodyBackVisualV77: true,
     mainAnimationSyncV77: true,
     machineDirectionVisualV78: true,
-    directionAwareDegreeMarkersV78: true
+    directionAwareDegreeMarkersV78: true,
+    rightFrontZeroDatumV79: true,
+    oppositeCarouselBottleSpinV79: true
   });
 })(typeof window !== "undefined" ? window : globalThis);

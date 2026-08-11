@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "machine-direction-bottle-orientation-v78-20260811-1752",
+  "buildId": "machine-bottle-datum-alignment-v79-20260811-1756",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v78 refines Bottle Orientation to the requested clear long-neck bottle profile, keeps labels cylindrically wrapped to the bottle while it rotates, synchronizes the orientation panel with the main labeler animation, shows Body/Back wipe-down from the leading edge, and makes both bottle rotation and degree markers follow the configured machine direction (CW or CCW)."
+  "notes": "Staging v79 aligns Bottle Orientation with the Mechanical Map bottle datum: 0° is the right-hand/front reference, a CW carousel displays positive bottle servo rotation counterclockwise, and a CCW carousel displays it clockwise. Generated servo/HMI angles are unchanged."
 }
