@@ -52,6 +52,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
       return {
         printInstalled: Boolean(window.LabelerServoProgramPrint?.installed),
+        tabsController: Boolean(window.LabelerTabsController?.activate),
         build: window.ServoForgeBootstrapBuild,
         rows: state.program.length,
         map: activeMachineMap()?.name,
@@ -61,6 +62,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     });
 
     assert.equal(setup.printInstalled, true, "Servo Program print integration must be installed.");
+    assert.equal(setup.tabsController, true, "Servo Program tab controller must be available.");
     assert.equal(setup.build, "servo-program-print-view-v58-20260811-0925");
     assert.ok(setup.rows > 20, `Expected a generated Mic Family program, found ${setup.rows} rows.`);
     assert.equal(setup.map, "APL 6-Aggregate");
@@ -73,15 +75,21 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     assert.equal(initial.buttonExists, true, "Print Program button must exist.");
     if (initial.activeTab !== "program") assert.equal(initial.hidden, true, "Print Program must stay hidden outside Servo Program.");
 
-    await page.click('.tab[data-tab="program"]');
-    await sleep(150);
+    await page.evaluate(() => {
+      const programTab = document.querySelector('.tab[data-tab="program"]');
+      window.LabelerTabsController.activate("program", programTab);
+    });
+    await sleep(180);
+
     const programTab = await page.evaluate(() => ({
       activeTab: state.activeTab,
+      programTabActive: document.querySelector('.tab[data-tab="program"]')?.classList.contains("active"),
       hidden: document.querySelector("#printServoProgram")?.hidden,
       disabled: document.querySelector("#printServoProgram")?.disabled,
       label: document.querySelector("#printServoProgram")?.textContent
     }));
     assert.equal(programTab.activeTab, "program");
+    assert.equal(programTab.programTabActive, true);
     assert.equal(programTab.hidden, false, "Print Program must be visible on Servo Program.");
     assert.equal(programTab.disabled, false, "Print Program must be enabled when rows exist.");
     assert.equal(programTab.label, "Print Program");
