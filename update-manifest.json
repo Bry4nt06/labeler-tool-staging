@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "mic-sensor-continuity-diagnostics-v52-20260810-0823",
+  "buildId": "servo-program-compact-columns-v62-20260811-0949",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging: revalidates sensor orientation from the actual completed wipe angle, removes or replans stale sensor corrections, and preserves bottle-angle continuity when the next CMD 7 begins. Free-space Orient-for-Re-Wipe positioning is no longer treated as physical wipe-pad contact, while real Wipe Turn commands remain coverage-validated. Coder orientation still completes on CMD 3 five degrees before the physical coder."
+  "notes": "Staging v62 simplifies the operator-facing Servo Program and print build sheet by hiding PLC and Encoder columns while retaining those values in the underlying program data. Eight-HMI visual grouping and the compact printer icon remain unchanged."
 }
