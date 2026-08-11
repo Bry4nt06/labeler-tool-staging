@@ -22,99 +22,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-
-      - name: Install bootstrap-independent navigation
+      - name: Apply v69 navigation repair
+        run: python3 scripts/publish-bootstrap-independent-navigation-v69.py
+      - name: Validate v69 navigation repair
         run: |
-          python3 - <<'PY'
-          import json, re
-          from pathlib import Path
-
-          final_build = 'bootstrap-independent-navigation-v69-20260811-1305'
-          final_query = '0.9.10-bootstrap-independent-navigation-v69-20260811-1305'
-
-          index = Path('index.html')
-          text = index.read_text(encoding='utf-8')
-          for old in (
-              '0.9.10-direct-workspace-tabs-v68-20260811-1241',
-              '0.9.10-bootstrap-independent-navigation-v69-20260811-1256',
-              '0.9.10-bootstrap-independent-navigation-v69-20260811-1300'):
-              text = text.replace(old, final_query)
-          text = re.sub(r'\s*<script src="app/controllers/tabs-controller\.js\?v=[^"]+"></script>\n?', '\n', text)
-          marker = '    <script src="drivers/geometry/label-geometry-driver.js?v=0.9.10"></script>\n'
-          if marker not in text:
-              raise SystemExit('Unable to locate first application driver script in index.html')
-          nav = f'    <script src="app/controllers/tabs-controller.js?v={final_query}"></script>\n'
-          text = text.replace(marker, nav + marker, 1)
-          index.write_text(text, encoding='utf-8')
-
-          bootstrap = Path('app/bootstrap.js')
-          text = bootstrap.read_text(encoding='utf-8')
-          text = re.sub(r'const build = "(?:direct-workspace-tabs-v68-20260811-1241|bootstrap-independent-navigation-v69-20260811-(?:1256|1300))";', f'const build = "{final_build}";', text, count=1)
-          text = re.sub(r'const buildUpdatedAt = "Aug 11, 2026 (?:12:41 PM|12:56 PM|1:00 PM) ET";', 'const buildUpdatedAt = "Aug 11, 2026 1:05 PM ET";', text, count=1)
-          lineage = '// Regression lineage: '
-          if final_build not in text.split('\n', 8)[4:8]:
-              text = text.replace(lineage, lineage + final_build + ' • ', 1)
-          text = text.replace('    "app/controllers/tabs-controller.js",\n', '')
-          bootstrap.write_text(text, encoding='utf-8')
-
-          worker = Path('service-worker.js')
-          text = worker.read_text(encoding='utf-8')
-          text = re.sub(r'const CACHE_NAME = "servoforge-labeler-staging-v0\.9\.10-(?:direct-workspace-tabs-v68|bootstrap-independent-navigation-v69)";', 'const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-bootstrap-independent-navigation-v69";', text, count=1)
-          worker.write_text(text, encoding='utf-8')
-
-          manifest_path = Path('update-manifest.json')
-          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-          manifest['buildId'] = final_build
-          manifest['notes'] = ('Staging v69 loads workspace navigation directly from index.html before all application drivers and outside the bootstrap chain. '
-                               'Specs, Build Inputs, Servo Program, Diagnostics, and Servo Simulation remain selectable even if a later startup module fails.')
-          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
-
-          test = Path('tests/top-navigation-recovery.test.js')
-          test.write_text(r'''"use strict";
-
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const vm = require("node:vm");
-
-const root = path.resolve(__dirname, "..");
-const source = fs.readFileSync(path.join(root, "app", "controllers", "tabs-controller.js"), "utf8");
-const bootstrap = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
-const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const serviceWorker = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
-
-assert.doesNotThrow(() => new vm.Script(source));
-assert.match(source, /navigationCaptureV3:\s*true/);
-assert.match(source, /setDirectTabState/);
-assert.match(source, /stopImmediatePropagation/);
-assert.match(index, /app\/controllers\/tabs-controller\.js\?v=0\.9\.10-bootstrap-independent-navigation-v69-20260811-1305/);
-assert.match(index, /app\/bootstrap\.js\?v=0\.9\.10-bootstrap-independent-navigation-v69-20260811-1305/);
-assert.match(index, /app\/update-manager\.js\?v=0\.9\.10-bootstrap-independent-navigation-v69-20260811-1305/);
-assert.match(index, /app\.js\?v=0\.9\.10-bootstrap-independent-navigation-v69-20260811-1305/);
-assert.match(bootstrap, /bootstrap-independent-navigation-v69-20260811-1305/);
-assert.doesNotMatch(bootstrap, /"app\/controllers\/tabs-controller\.js"/);
-assert.match(serviceWorker, /servoforge-labeler-staging-v0\.9\.10-bootstrap-independent-navigation-v69/);
-
-const navIndex = index.indexOf('app/controllers/tabs-controller.js');
-const firstDriverIndex = index.indexOf('drivers/geometry/label-geometry-driver.js');
-const bootstrapIndex = index.indexOf('app/bootstrap.js');
-assert.ok(navIndex >= 0, 'Direct navigation script must exist.');
-assert.ok(navIndex < firstDriverIndex, 'Navigation must load before the application drivers.');
-assert.ok(navIndex < bootstrapIndex, 'Navigation must load before bootstrap.');
-
-console.log("Bootstrap-independent top navigation regression passed.");
-''', encoding='utf-8')
-          PY
-
           node --check app/controllers/tabs-controller.js
           node --check app/bootstrap.js
           node --check service-worker.js
           node --check tests/top-navigation-recovery.test.js
           node tests/top-navigation-recovery.test.js
-          grep -q 'app/controllers/tabs-controller.js?v=0.9.10-bootstrap-independent-navigation-v69-20260811-1305' index.html
-          ! grep -q '"app/controllers/tabs-controller.js"' app/bootstrap.js
-
-      - name: Commit v69
+      - name: Commit v69 navigation repair
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
