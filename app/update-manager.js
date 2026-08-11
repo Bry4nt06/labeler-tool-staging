@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "map-layout-dead-zone-bottle-visual-v75-20260811-1628";
+  const BUILD_ID = "full-cycle-bottle-orientation-v76-20260811-1713";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 

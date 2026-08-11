@@ -3,10 +3,10 @@
 (function installBottleOrientationPanel(global) {
   if (global.LabelerBottleOrientationPanel?.installed) return;
 
-  const VERSION = 1;
+  const VERSION = 2;
   const STYLE_ID = "servoforge-bottle-orientation-panel-style";
   const PANEL_ATTR = "data-bottle-orientation-panel";
-  const BASE_DEG_PER_SECOND = 9;
+  const BASE_DEG_PER_SECOND = 18;
   const SECTION_COLORS = Object.freeze({
     neck: "#ff8a32",
     body: "#4ca8ff",
@@ -143,48 +143,30 @@
   }
 
   function stationOnePath(program) {
-    const map = activeMap();
-    const aggregateStart = finite(
-      map?.aggregateAngles?.["1"],
-      finite(map?.stationAngles?.["1"], NaN)
-    );
-    const objects = stationOneObjects();
-    const objectStarts = objects.map(objectStart).filter(Number.isFinite);
-    const rowSegments = programSegmentsFor(program).filter((row) => {
-      if (Number(row?.station) === 1) return true;
-      if (/\bAgg\s*1\b/i.test(String(row?.action || ""))) return true;
-      try {
-        return global.LabelerWipeTelemetryService?.wipeContextForSegment?.(row)?.station === 1;
-      } catch {
-        return false;
+    // Compatibility name retained from v72. The returned path now spans the
+    // entire generated servo cycle rather than Aggregate/Station 1 only.
+    const segments = programSegmentsFor(program).filter((row) => Number.isFinite(finite(row?.tableAngle, NaN)));
+    if (!segments.length) return { start: 0, end: 360, objects: [], rowSegments: [], fullCycle: true };
+
+    let previousStart = NaN;
+    const rowSegments = segments.map((row, index) => {
+      let unwrappedStart = normalizeAngle(row.tableAngle);
+      if (index > 0 && Number.isFinite(previousStart)) {
+        while (unwrappedStart < previousStart - 0.001) unwrappedStart += 360;
       }
+      previousStart = unwrappedStart;
+      return { ...row, __orientationTableStart: unwrappedStart };
     });
 
-    const rowStarts = rowSegments.map((row) => finite(row?.tableAngle, NaN)).filter(Number.isFinite);
-    let start = Number.isFinite(aggregateStart)
-      ? aggregateStart
-      : objectStarts.length
-        ? Math.min(...objectStarts)
-        : rowStarts.length
-          ? Math.min(...rowStarts)
-          : 0;
-    start = normalizeAngle(start);
+    const start = rowSegments[0].__orientationTableStart;
+    let end = Math.max(...rowSegments.map((row) => (
+      row.__orientationTableStart + Math.max(0, finite(row?.tableTravel, 0))
+    )));
+    if (!Number.isFinite(end) || end <= start + 1) end = start + 360;
+    end = clamp(end, start + 5, start + 720);
 
-    const endCandidates = [];
-    objects.forEach((item) => {
-      const end = unwrapAtOrAfter(objectEnd(item), start);
-      if (Number.isFinite(end)) endCandidates.push(end);
-    });
-    rowSegments.forEach((row) => {
-      const rowStart = unwrapAtOrAfter(row?.tableAngle, start);
-      if (!Number.isFinite(rowStart) || rowStart > start + 150) return;
-      const travel = Math.max(0, finite(row?.tableTravel, 0));
-      endCandidates.push(rowStart + travel);
-    });
-
-    let end = endCandidates.length ? Math.max(...endCandidates) : start + 35;
-    end = clamp(end, start + 5, start + 150);
-    return { start, end, objects, rowSegments };
+    const objects = Array.isArray(activeMap()?.objects) ? activeMap().objects : [];
+    return { start, end, objects, rowSegments, fullCycle: true };
   }
 
   function currentUnwrappedAngle(path) {
@@ -284,19 +266,21 @@
   }
 
   function stationOneCoverage(program, section, tableAngle, geometry) {
+    // Compatibility name retained; coverage now follows whichever section and
+    // wipe station is active at this point in the full servo program.
     const service = global.LabelerWipeTelemetryService;
-    if (!service?.contactedLabelCoverage || !service?.wipeVisualApplication) {
-      return { percentage: 0, leftPercent: 0, rightPercent: 0, tackMode: "center", direction: "ltr" };
-    }
+    if (!service) return { percentage: 0, leftPercent: 0, rightPercent: 0, tackMode: "center", direction: "ltr" };
     try {
-      const visual = service.wipeVisualApplication(section, geometry.lengthMm);
-      const coverage = service.contactedLabelCoverage(
+      const telemetry = service.wipeDownTelemetry?.(program, normalizeAngle(tableAngle));
+      if (telemetry?.section === section) return telemetry;
+      const visual = service.wipeVisualApplication?.(section, geometry.lengthMm) || { tackMode: "center", direction: "ltr" };
+      const coverage = service.contactedLabelCoverage?.(
         program,
         section,
-        1,
+        Number.isFinite(Number(telemetry?.station)) ? Number(telemetry.station) : null,
         normalizeAngle(tableAngle),
         visual
-      );
+      ) || { percentage: 0, leftPercent: 0, rightPercent: 0 };
       return { ...visual, ...coverage };
     } catch {
       return { percentage: 0, leftPercent: 0, rightPercent: 0, tackMode: "center", direction: "ltr" };
@@ -306,7 +290,7 @@
   function currentHardware(tableAngle) {
     try {
       const context = global.LabelerWipeTelemetryService?.wipeStationContextAtAngle?.(normalizeAngle(tableAngle));
-      return context?.station === 1 ? context.object || null : null;
+      return context?.object || null;
     } catch {
       return null;
     }
@@ -316,24 +300,40 @@
     const program = programForSource(source);
     const path = stationOnePath(program);
     const tableAngle = currentUnwrappedAngle(path);
-    const section = stationOneSection();
-    const geometry = labelGeometry(section);
-    const plateAngle = bottleAngleAtTable(tableAngle, program);
     const active = activeRowAt(tableAngle, program);
-    const coverage = stationOneCoverage(program, section, tableAngle, geometry);
+    const service = global.LabelerWipeTelemetryService;
+    let telemetry = null;
+    try { telemetry = service?.wipeDownTelemetry?.(program, normalizeAngle(tableAngle)) || null; } catch { telemetry = null; }
+
+    const explicitSection = String(telemetry?.section || service?.wipeSectionFromRow?.(active) || "").toLowerCase();
+    const section = ["neck", "body", "back"].includes(explicitSection) ? explicitSection : stationOneSection();
+    const geometry = labelGeometry(section);
+    const plateAngle = Number.isFinite(finite(telemetry?.plateAngle, NaN))
+      ? finite(telemetry.plateAngle, 0)
+      : bottleAngleAtTable(tableAngle, program);
+    const coverage = telemetry?.section === section
+      ? telemetry
+      : stationOneCoverage(program, section, tableAngle, geometry);
     const hardware = currentHardware(tableAngle);
+    const station = Number.isFinite(Number(telemetry?.station))
+      ? Number(telemetry.station)
+      : Number.isFinite(Number(active?.station))
+        ? Number(active.station)
+        : null;
+
     return {
       source,
       program,
       path,
       tableAngle,
       section,
+      station,
       geometry,
       plateAngle,
       active,
       coverage,
       hardware,
-      applicationStarted: tableAngle >= path.start - 0.001
+      applicationStarted: Boolean(telemetry?.section) || finite(coverage?.percentage, 0) > 0
     };
   }
 
@@ -404,46 +404,76 @@
   function sideViewSvg(context) {
     const { section, plateAngle, geometry, coverage } = context;
     const cx = 145;
-    const bodyHalf = clamp(48 * geometry.bottleDiameterMm / 60.68, 39, 58);
-    const neckHalf = clamp(bodyHalf * geometry.neckCirc / geometry.bodyCirc, 17, bodyHalf * .68);
-    const bodyTop = 74;
-    const bodyBottom = 225;
-    const shoulderY = 70;
-    const neckTop = 20;
+    const bodyHalf = clamp(39 * geometry.bottleDiameterMm / 60.68, 32, 47);
+    const neckRatio = clamp(geometry.neckCirc / geometry.bodyCirc, 0.30, 0.46);
+    const neckHalf = clamp(bodyHalf * neckRatio, 10.5, 17);
+    const neckTop = 27;
+    const neckBase = 68;
+    const shoulderBottom = 91;
+    const bodyBottom = 226;
+    const bodyPath = [
+      `M ${cx-neckHalf} ${neckTop}`,
+      `L ${cx-neckHalf} ${neckBase-10}`,
+      `C ${cx-neckHalf} ${neckBase+1} ${cx-bodyHalf*0.78} ${shoulderBottom-13} ${cx-bodyHalf} ${shoulderBottom}`,
+      `C ${cx-bodyHalf-3} ${shoulderBottom+8} ${cx-bodyHalf} ${shoulderBottom+17} ${cx-bodyHalf} ${shoulderBottom+25}`,
+      `L ${cx-bodyHalf} ${bodyBottom-15}`,
+      `C ${cx-bodyHalf} ${bodyBottom-4} ${cx-bodyHalf-9} ${bodyBottom} ${cx-bodyHalf-20} ${bodyBottom}`,
+      `L ${cx+bodyHalf-20} ${bodyBottom}`,
+      `C ${cx+bodyHalf-9} ${bodyBottom} ${cx+bodyHalf} ${bodyBottom-4} ${cx+bodyHalf} ${bodyBottom-15}`,
+      `L ${cx+bodyHalf} ${shoulderBottom+25}`,
+      `C ${cx+bodyHalf} ${shoulderBottom+17} ${cx+bodyHalf-3} ${shoulderBottom+8} ${cx+bodyHalf} ${shoulderBottom}`,
+      `C ${cx+bodyHalf*0.78} ${shoulderBottom-13} ${cx+neckHalf} ${neckBase+1} ${cx+neckHalf} ${neckBase-10}`,
+      `L ${cx+neckHalf} ${neckTop}`,
+      "Z"
+    ].join(" ");
+
     const labelRadius = section === "neck" ? neckHalf : bodyHalf;
-    const chordWidth = clamp(2 * labelRadius * Math.abs(Math.sin(Math.min(179, geometry.labelDeg) * Math.PI / 360)), 16, bodyHalf * 2);
+    const chordWidth = clamp(2 * labelRadius * Math.abs(Math.sin(Math.min(179, geometry.labelDeg) * Math.PI / 360)), 15, bodyHalf * 2);
     const baseCenter = section === "back" ? 180 : 0;
     const labelFacingAngle = normalizeAngle(baseCenter + plateAngle);
     const projectedOffset = Math.sin(labelFacingAngle * Math.PI / 180) * labelRadius * .48;
     const labelX = cx + projectedOffset - chordWidth / 2;
-    const labelY = section === "neck" ? 48 : 126;
+    const labelY = section === "neck" ? 55 : 128;
     const labelHeight = section === "neck"
-      ? clamp(finite(geometry.label?.neckHeightMm, 30) / geometry.bottleDiameterMm * 47, 22, 45)
-      : 52;
+      ? clamp(finite(geometry.label?.neckHeightMm, 30) / geometry.bottleDiameterMm * 42, 20, 38)
+      : 48;
     const leftWidth = chordWidth / 2 * clamp(finite(coverage.leftPercent, 0), 0, 100) / 100;
     const rightWidth = chordWidth / 2 * clamp(finite(coverage.rightPercent, 0), 0, 100) / 100;
     const labelColor = SECTION_COLORS[section] || "#4ca8ff";
-    const centerlineX = cx + Math.sin(plateAngle * Math.PI / 180) * bodyHalf * .76;
+    const centerlineX = cx + Math.sin(plateAngle * Math.PI / 180) * bodyHalf * .74;
     const hardwareActive = Boolean(context.hardware) || finite(coverage.percentage, 0) > 0;
     const hardwareY = labelY + labelHeight / 2;
+    const stationText = context.station ? `S${context.station}` : "--";
 
-    return `<svg class="bottle-orientation-svg" viewBox="0 0 290 252" role="img" aria-label="Side bottle view with ${section} label wipe progress">
+    return `<svg class="bottle-orientation-svg" viewBox="0 0 290 252" role="img" aria-label="Clear glass bottle side view with ${section} label wipe progress">
       <defs>
-        <linearGradient id="bottleSideGlass-${context.source}" x1="0" x2="1"><stop offset="0" stop-color="#11171c"/><stop offset=".22" stop-color="#3c302a"/><stop offset=".48" stop-color="#17191a"/><stop offset=".78" stop-color="#47362d"/><stop offset="1" stop-color="#0c1115"/></linearGradient>
-        <clipPath id="bottleClip-${context.source}"><path d="M ${cx-neckHalf} ${neckTop+20} L ${cx-neckHalf} ${shoulderY-12} Q ${cx-bodyHalf} ${shoulderY} ${cx-bodyHalf} ${bodyTop+18} L ${cx-bodyHalf} ${bodyBottom-18} Q ${cx-bodyHalf} ${bodyBottom} ${cx-bodyHalf+18} ${bodyBottom} L ${cx+bodyHalf-18} ${bodyBottom} Q ${cx+bodyHalf} ${bodyBottom} ${cx+bodyHalf} ${bodyBottom-18} L ${cx+bodyHalf} ${bodyTop+18} Q ${cx+bodyHalf} ${shoulderY} ${cx+neckHalf} ${shoulderY-12} L ${cx+neckHalf} ${neckTop+20} Z"/></clipPath>
+        <linearGradient id="bottleSideGlass-${context.source}" x1="0" x2="1">
+          <stop offset="0" stop-color="#dbe8ef" stop-opacity=".18"/>
+          <stop offset=".16" stop-color="#9fb1bc" stop-opacity=".08"/>
+          <stop offset=".42" stop-color="#eff8fc" stop-opacity=".05"/>
+          <stop offset=".68" stop-color="#70818d" stop-opacity=".10"/>
+          <stop offset=".88" stop-color="#e4eff5" stop-opacity=".16"/>
+          <stop offset="1" stop-color="#8ea1ad" stop-opacity=".08"/>
+        </linearGradient>
+        <clipPath id="bottleClip-${context.source}"><path d="${bodyPath}"/></clipPath>
       </defs>
       <text x="145" y="14" text-anchor="middle" class="view-title">SIDE VIEW</text>
-      <path d="M ${cx-neckHalf} ${neckTop+20} L ${cx-neckHalf} ${shoulderY-12} Q ${cx-bodyHalf} ${shoulderY} ${cx-bodyHalf} ${bodyTop+18} L ${cx-bodyHalf} ${bodyBottom-18} Q ${cx-bodyHalf} ${bodyBottom} ${cx-bodyHalf+18} ${bodyBottom} L ${cx+bodyHalf-18} ${bodyBottom} Q ${cx+bodyHalf} ${bodyBottom} ${cx+bodyHalf} ${bodyBottom-18} L ${cx+bodyHalf} ${bodyTop+18} Q ${cx+bodyHalf} ${shoulderY} ${cx+neckHalf} ${shoulderY-12} L ${cx+neckHalf} ${neckTop+20} Z" fill="url(#bottleSideGlass-${context.source})" stroke="#8c7566" stroke-width="2"/>
-      <rect x="${cx-neckHalf-3}" y="${neckTop+4}" width="${neckHalf*2+6}" height="19" rx="5" fill="#17191a" stroke="#8c7566" stroke-width="1.6"/>
-      <line x1="${centerlineX}" y1="24" x2="${centerlineX}" y2="224" stroke="#ff4d3a" stroke-width="2.2" stroke-dasharray="6 5" clip-path="url(#bottleClip-${context.source})"/>
-      <rect x="${labelX}" y="${labelY}" width="${chordWidth}" height="${labelHeight}" rx="3" fill="#397ea9" fill-opacity="${context.applicationStarted ? .42 : .16}" stroke="#78bfe9" stroke-opacity=".75" stroke-width="1"/>
-      ${leftWidth > .2 ? `<rect x="${labelX + chordWidth/2 - leftWidth}" y="${labelY}" width="${leftWidth}" height="${labelHeight}" rx="2" fill="${labelColor}" fill-opacity=".88"/>` : ""}
-      ${rightWidth > .2 ? `<rect x="${labelX + chordWidth/2}" y="${labelY}" width="${rightWidth}" height="${labelHeight}" rx="2" fill="${labelColor}" fill-opacity=".88"/>` : ""}
+      <path d="${bodyPath}" fill="url(#bottleSideGlass-${context.source})" stroke="#9eafb9" stroke-opacity=".78" stroke-width="2"/>
+      <path d="M ${cx-bodyHalf+8} ${shoulderBottom+7} C ${cx-bodyHalf+14} ${shoulderBottom+17} ${cx-bodyHalf+14} ${bodyBottom-32} ${cx-bodyHalf+13} ${bodyBottom-18}" fill="none" stroke="#f0f7fa" stroke-opacity=".30" stroke-width="3.2" stroke-linecap="round"/>
+      <path d="M ${cx+bodyHalf-8} ${shoulderBottom+7} C ${cx+bodyHalf-14} ${shoulderBottom+17} ${cx+bodyHalf-14} ${bodyBottom-42} ${cx+bodyHalf-13} ${bodyBottom-22}" fill="none" stroke="#82949f" stroke-opacity=".25" stroke-width="2.2" stroke-linecap="round"/>
+      <rect x="${cx-neckHalf-1.5}" y="${neckTop-7}" width="${neckHalf*2+3}" height="7" rx="2.5" fill="#c6d4dc" fill-opacity=".08" stroke="#aabac3" stroke-opacity=".75" stroke-width="1.2"/>
+      <line x1="${cx-neckHalf-3}" y1="${neckTop-3}" x2="${cx+neckHalf+3}" y2="${neckTop-3}" stroke="#d7e3e9" stroke-opacity=".62" stroke-width="1.2"/>
+      <line x1="${cx-neckHalf-2}" y1="${neckTop+5}" x2="${cx+neckHalf+2}" y2="${neckTop+5}" stroke="#b7c6ce" stroke-opacity=".48" stroke-width="1"/>
+      <line x1="${cx-neckHalf-1}" y1="${neckTop+11}" x2="${cx+neckHalf+1}" y2="${neckTop+11}" stroke="#aebec7" stroke-opacity=".40" stroke-width="1"/>
+      <line x1="${centerlineX}" y1="20" x2="${centerlineX}" y2="224" stroke="#ff4d3a" stroke-width="2.2" stroke-dasharray="6 5" clip-path="url(#bottleClip-${context.source})"/>
+      <rect x="${labelX}" y="${labelY}" width="${chordWidth}" height="${labelHeight}" rx="3" fill="#4aa6d8" fill-opacity="${context.applicationStarted ? .32 : .10}" stroke="#8fd3f1" stroke-opacity=".72" stroke-width="1"/>
+      ${leftWidth > .2 ? `<rect x="${labelX + chordWidth/2 - leftWidth}" y="${labelY}" width="${leftWidth}" height="${labelHeight}" rx="2" fill="${labelColor}" fill-opacity=".72"/>` : ""}
+      ${rightWidth > .2 ? `<rect x="${labelX + chordWidth/2}" y="${labelY}" width="${rightWidth}" height="${labelHeight}" rx="2" fill="${labelColor}" fill-opacity=".72"/>` : ""}
       <line x1="${labelX+chordWidth/2}" y1="${labelY-5}" x2="${labelX+chordWidth/2}" y2="${labelY+labelHeight+5}" stroke="#fff" stroke-width="1" stroke-dasharray="3 3" opacity=".72"/>
-      <g transform="translate(${cx+bodyHalf+10} ${hardwareY})" opacity="${hardwareActive ? 1 : .38}">
-        <circle cx="0" cy="0" r="11" fill="${hardwareActive ? "#ff6a3d" : "#4f5962"}" stroke="#f7aa8a" stroke-width="1.5"/>
-        <circle cx="0" cy="0" r="4" fill="#11171c"/>
-        <text x="0" y="24" text-anchor="middle" class="hardware-label">${hardwareActive ? "WIPING" : "WIPE"}</text>
+      <g transform="translate(${cx+bodyHalf+12} ${hardwareY})" opacity="${hardwareActive ? 1 : .32}">
+        <circle cx="0" cy="0" r="13" fill="#1d252b" stroke="#788996" stroke-width="1.6"/>
+        <circle cx="0" cy="0" r="4.5" fill="${hardwareActive ? labelColor : "#52606a"}"/>
+        <text x="0" y="24" text-anchor="middle" class="view-mini">${escapeHtml(stationText)}</text>
       </g>
       <text x="145" y="245" text-anchor="middle" class="view-readout">${escapeHtml(section.toUpperCase())} • ${format(geometry.lengthMm, 1)} mm • ${format(coverage.percentage, 0)}% wiped</text>
     </svg>`;
@@ -452,7 +482,7 @@
   function panelMarkup(source) {
     return `<details class="bottle-orientation-panel" ${PANEL_ATTR}="${source}" open>
       <summary>
-        <span><strong>Bottle Orientation &amp; Wipe Visual</strong><small>Station 1 live geometry • synchronized side + top views</small></span>
+        <span><strong>Bottle Orientation &amp; Wipe Visual</strong><small>Full servo cycle • synchronized side + top views</small></span>
         <span class="bottle-orientation-live-badge">LIVE</span>
       </summary>
       <div class="bottle-orientation-content">
@@ -460,7 +490,7 @@
           <div><span>Table</span><strong data-orientation-table>--</strong></div>
           <div><span>Bottle</span><strong data-orientation-bottle>--</strong></div>
           <div><span>HMI / CMD</span><strong data-orientation-command>--</strong></div>
-          <div><span>Station 1 label</span><strong data-orientation-section>--</strong></div>
+          <div><span>Station / label</span><strong data-orientation-section>--</strong></div>
           <div><span>Wipe</span><strong data-orientation-wipe>0%</strong></div>
           <div><span>Contact</span><strong data-orientation-contact>Waiting</strong></div>
         </div>
@@ -468,16 +498,16 @@
           <div class="bottle-orientation-view" data-orientation-side></div>
           <div class="bottle-orientation-view" data-orientation-top></div>
         </div>
-        <div class="bottle-orientation-action" data-orientation-action>Waiting for Station 1 program data.</div>
+        <div class="bottle-orientation-action" data-orientation-action>Waiting for servo program data.</div>
         <div class="bottle-orientation-controls">
           <button type="button" class="secondary-button" data-orientation-action-button="reset">Start</button>
           <button type="button" class="secondary-button" data-orientation-action-button="step-back" aria-label="Step back one table degree">−1°</button>
-          <button type="button" data-orientation-action-button="play" aria-pressed="false">Play Station 1</button>
+          <button type="button" data-orientation-action-button="play" aria-pressed="false">Play Full Cycle</button>
           <button type="button" class="secondary-button" data-orientation-action-button="step-forward" aria-label="Step forward one table degree">+1°</button>
           <label class="bottle-orientation-speed">Speed<select data-orientation-speed><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
         </div>
-        <label class="bottle-orientation-scrubber"><span>Station 1 path</span><input data-orientation-scrubber type="range" min="0" max="100" step="0.1" value="0"><output data-orientation-path-readout>0° → 0°</output></label>
-        <p class="bottle-orientation-note">The circumferential label scale and wipe coverage come from the selected bottle/label geometry and the same Station 1 servo/map data used by ServoForge. The side-view band height is presentation-only where the label specification does not provide a physical height.</p>
+        <label class="bottle-orientation-scrubber"><span>Full program path</span><input data-orientation-scrubber type="range" min="0" max="100" step="0.1" value="0"><output data-orientation-path-readout>0° → 0°</output></label>
+        <p class="bottle-orientation-note">The circumferential label scale and wipe coverage come from the selected bottle/label geometry and the full generated servo program and active map geometry used by ServoForge. The side-view band height is presentation-only where the label specification does not provide a physical height.</p>
       </div>
     </details>`;
   }
@@ -563,10 +593,10 @@
     setText(panel, "[data-orientation-table]", `${format(context.tableAngle, 1)}°`);
     setText(panel, "[data-orientation-bottle]", `${format(context.plateAngle, 1)}°`);
     setText(panel, "[data-orientation-command]", command);
-    setText(panel, "[data-orientation-section]", `${context.section[0].toUpperCase()}${context.section.slice(1)} • ${format(context.geometry.labelDeg, 1)}°`);
+    setText(panel, "[data-orientation-section]", `${context.station ? `S${context.station} • ` : ""}${context.section[0].toUpperCase()}${context.section.slice(1)} • ${format(context.geometry.labelDeg, 1)}°`);
     setText(panel, "[data-orientation-wipe]", `${format(context.coverage.percentage, 0)}%`);
     setText(panel, "[data-orientation-contact]", context.hardware?.name || (context.hardware?.kind ? context.hardware.kind : "Waiting"));
-    setText(panel, "[data-orientation-action]", context.active?.action || "Waiting for Station 1 program data.");
+    setText(panel, "[data-orientation-action]", context.active?.action || "Waiting for servo program data.");
     setText(panel, "[data-orientation-path-readout]", `${format(context.path.start, 1)}° → ${format(context.path.end, 1)}°`);
 
     const scrubber = panel.querySelector("[data-orientation-scrubber]");
@@ -580,7 +610,7 @@
     const playButton = panel.querySelector('[data-orientation-action-button="play"]');
     const thisPlaying = playback.playing && playback.source === source;
     if (playButton) {
-      playButton.textContent = thisPlaying ? "Pause Station 1" : "Play Station 1";
+      playButton.textContent = thisPlaying ? "Pause Full Cycle" : "Play Full Cycle";
       playButton.setAttribute("aria-pressed", thisPlaying ? "true" : "false");
     }
     return true;
@@ -738,6 +768,7 @@
     version: VERSION,
     programForSource,
     stationOnePath,
+    fullProgramPath: stationOnePath,
     contextFor,
     topViewSvg,
     sideViewSvg,
@@ -750,6 +781,8 @@
     station1SharedVisualV72: true,
     programAccessibleWithoutSimulationV72: true,
     geometryDrivenLabelScaleV72: true,
-    wipeTelemetryDrivenV72: true
+    wipeTelemetryDrivenV72: true,
+    fullCycleVisualV76: true,
+    clearLongNeckBottleV76: true
   });
 })(typeof window !== "undefined" ? window : globalThis);
