@@ -1,0 +1,85 @@
+name: Commit verified Station 1 bottle orientation v72 once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/commit-station1-bottle-orientation-v72-once.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "station1-bottle-orientation-v72-commit"
+  cancel-in-progress: false
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out staging main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Materialize v72 runtime from verified build script
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          source = Path('.github/workflows/add-station1-bottle-orientation-v72-once.yml')
+          lines = source.read_text().splitlines()
+          target = '- name: Add shared Bottle Orientation and Wipe Visual'
+          start = next(i for i, line in enumerate(lines) if line.strip() == target)
+          run_line = next(i for i in range(start + 1, len(lines)) if lines[i].strip() == 'run: |')
+          end = next(i for i in range(run_line + 1, len(lines)) if lines[i].startswith('      - name:'))
+          script_lines = []
+          for line in lines[run_line + 1:end]:
+              if line.startswith('          '):
+                  script_lines.append(line[10:])
+              elif not line.strip():
+                  script_lines.append('')
+              else:
+                  raise SystemExit(f'Unexpected indentation: {line!r}')
+          Path('/tmp/build-station1-v72.sh').write_text('\n'.join(script_lines) + '\n')
+          PY
+          bash /tmp/build-station1-v72.sh
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('tests/bottle-orientation-panel.test.js')
+          text = path.read_text()
+          old = 'assert.match(source, /LabelerWipeTelemetryService\\?\\.contactedLabelCoverage/);'
+          new = 'assert.match(source, /service\\.contactedLabelCoverage/);'
+          if old not in text:
+              raise SystemExit('Generated v72 assertion was not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+
+      - name: Validate v72 runtime contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app/bottle-orientation-panel-integration.js
+          node --check app/bootstrap.js
+          node tests/bottle-orientation-panel.test.js
+          node tests/top-view-bottle-renderer.test.js
+          node tests/apl-roller-coverage-default.test.js
+          node tests/bootstrap-module-boundaries.test.js
+          node tests/apl-section-handoff-continuity.test.js
+          grep -q 'app/bootstrap.js?v=0.9.10-station1-bottle-orientation-v72-20260811-1600' index.html
+          grep -q 'app/bottle-orientation-panel-integration.js' app/bootstrap.js
+          grep -q 'app/bottle-orientation-panel-integration.js' service-worker.js
+          grep -q 'station1-bottle-orientation-v72-20260811-1600' update-manifest.json
+
+      - name: Commit v72 application files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Bry4nt06"
+          git config user.email "139938543+Bry4nt06@users.noreply.github.com"
+          git add app/bottle-orientation-panel-integration.js app/bootstrap.js index.html service-worker.js update-manifest.json tests/bottle-orientation-panel.test.js
+          git commit -m "Add Station 1 bottle orientation visual"
+          git push origin main
