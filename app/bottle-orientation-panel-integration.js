@@ -3,7 +3,7 @@
 (function installBottleOrientationPanel(global) {
   if (global.LabelerBottleOrientationPanel?.installed) return;
 
-  const VERSION = 5;
+  const VERSION = 6;
   const STYLE_ID = "servoforge-bottle-orientation-panel-style";
   const PANEL_ATTR = "data-bottle-orientation-panel";
   const BASE_DEG_PER_SECOND = 18;
@@ -525,8 +525,9 @@
   function sideViewSvg(context) {
     const { section, plateAngle, geometry, coverage } = context;
     const cx = 145;
-    // Reference-style 12 oz long-neck profile: narrow cylindrical body,
-    // rounded base, short shoulders, long straight neck, and three lip rings.
+    // Pseudo-3D clear-glass long-neck bottle. The silhouette remains driven by
+    // the selected bottle geometry while light, depth, centerline visibility,
+    // and the label band react to the live servo orientation.
     const bodyHalf = clamp(36 * geometry.bottleDiameterMm / 60.68, 31, 43);
     const neckRatio = clamp(geometry.neckCirc / geometry.bodyCirc, 0.30, 0.43);
     const neckHalf = clamp(bodyHalf * neckRatio, 10, 14.5);
@@ -553,6 +554,9 @@
     const labelRadius = section === "neck" ? neckHalf : bodyHalf;
     const model = labelArcModel(context);
     const visualPlateAngle = machineVisualAngle(plateAngle);
+    const orientationRad = visualPlateAngle * Math.PI / 180;
+    const centerlineFront = Math.cos(orientationRad) >= 0;
+    const centerlineX = cx + Math.sin(orientationRad) * bodyHalf * .78;
     const labelY = section === "neck" ? 70 : 128;
     const labelHeight = section === "neck"
       ? clamp(finite(geometry.label?.neckHeightMm, 30) / geometry.bottleDiameterMm * 40, 19, 34)
@@ -561,38 +565,90 @@
     const labelSegments = projectLabelArcSegments(model.start, model.end, labelRadius, cx);
     const wipedSegments = model.wipeRanges.flatMap(([start, end]) => projectLabelArcSegments(start, end, labelRadius, cx));
     const tackX = projectedTackX(model.tackMode === "leading" ? model.leadingEdge : model.center, labelRadius, cx);
-    const centerlineX = cx + Math.sin(visualPlateAngle * Math.PI / 180) * bodyHalf * .74;
     const hardwareActive = Boolean(context.hardware) || finite(coverage.percentage, 0) > 0;
     const hardwareY = labelY + labelHeight / 2;
     const stationText = context.station ? `S${context.station}` : "--";
-    const labelOpacity = context.applicationStarted ? .34 : .10;
+    const labelOpacity = context.applicationStarted ? .42 : .12;
 
-    return `<svg class="bottle-orientation-svg" viewBox="0 0 290 252" role="img" aria-label="Reference-style clear glass bottle side view with ${section} label wrapped to bottle rotation">
+    function wrappedBandSegmentPath(segment, y, height, radius) {
+      const x0 = finite(segment?.x, cx);
+      const x1 = x0 + Math.max(.8, finite(segment?.width, 0));
+      const mid = (x0 + x1) / 2;
+      const normalized = clamp((mid - cx) / Math.max(1, radius), -1, 1);
+      const faceDepth = Math.sqrt(Math.max(0, 1 - normalized * normalized));
+      const edgeBow = (1 - faceDepth) * 5.5;
+      const crown = faceDepth * 2.2;
+      return [
+        `M ${x0.toFixed(2)} ${(y + edgeBow).toFixed(2)}`,
+        `Q ${mid.toFixed(2)} ${(y - crown).toFixed(2)} ${x1.toFixed(2)} ${(y + edgeBow).toFixed(2)}`,
+        `L ${x1.toFixed(2)} ${(y + height - edgeBow).toFixed(2)}`,
+        `Q ${mid.toFixed(2)} ${(y + height + crown).toFixed(2)} ${x0.toFixed(2)} ${(y + height - edgeBow).toFixed(2)}`,
+        "Z"
+      ].join(" ");
+    }
+
+    function wrappedBandOpacity(segment, baseOpacity) {
+      const mid = finite(segment?.x, cx) + Math.max(.8, finite(segment?.width, 0)) / 2;
+      const normalized = clamp(Math.abs(mid - cx) / Math.max(1, labelRadius), 0, 1);
+      return clamp(baseOpacity * (1 - normalized * .48), .10, .92);
+    }
+
+    return `<svg class="bottle-orientation-svg" data-pseudo-3d-bottle="true" viewBox="0 0 290 252" role="img" aria-label="Pseudo-3D clear glass bottle side view with ${section} label wrapped to live bottle rotation">
       <defs>
         <linearGradient id="bottleSideGlass-${context.source}" x1="0" x2="1">
-          <stop offset="0" stop-color="#dce9ef" stop-opacity=".25"/>
-          <stop offset=".12" stop-color="#f2f8fb" stop-opacity=".12"/>
-          <stop offset=".30" stop-color="#81939e" stop-opacity=".07"/>
-          <stop offset=".50" stop-color="#eef7fb" stop-opacity=".045"/>
-          <stop offset=".72" stop-color="#738591" stop-opacity=".08"/>
-          <stop offset=".90" stop-color="#f0f7fa" stop-opacity=".15"/>
-          <stop offset="1" stop-color="#99aab4" stop-opacity=".12"/>
+          <stop offset="0" stop-color="#61717b" stop-opacity=".24"/>
+          <stop offset=".08" stop-color="#dbe7ec" stop-opacity=".34"/>
+          <stop offset=".22" stop-color="#80919b" stop-opacity=".10"/>
+          <stop offset=".47" stop-color="#eef7fb" stop-opacity=".055"/>
+          <stop offset=".66" stop-color="#768791" stop-opacity=".09"/>
+          <stop offset=".88" stop-color="#e5f0f4" stop-opacity=".26"/>
+          <stop offset="1" stop-color="#54636d" stop-opacity=".26"/>
         </linearGradient>
-        <linearGradient id="labelGlass-${context.source}" x1="0" x2="1"><stop offset="0" stop-color="#4eaee0" stop-opacity=".42"/><stop offset=".5" stop-color="#3d9bc8" stop-opacity=".30"/><stop offset="1" stop-color="#4eaee0" stop-opacity=".42"/></linearGradient>
+        <radialGradient id="bottleDepth-${context.source}" cx="48%" cy="34%" r="68%">
+          <stop offset="0" stop-color="#f5fbfd" stop-opacity=".09"/>
+          <stop offset=".58" stop-color="#9bb0ba" stop-opacity=".035"/>
+          <stop offset="1" stop-color="#020608" stop-opacity=".20"/>
+        </radialGradient>
+        <linearGradient id="labelGlass-${context.source}" x1="0" x2="1">
+          <stop offset="0" stop-color="#29759d" stop-opacity=".44"/>
+          <stop offset=".18" stop-color="#66c4f0" stop-opacity=".58"/>
+          <stop offset=".5" stop-color="#4aaee0" stop-opacity=".42"/>
+          <stop offset=".82" stop-color="#66c4f0" stop-opacity=".56"/>
+          <stop offset="1" stop-color="#235f82" stop-opacity=".42"/>
+        </linearGradient>
         <clipPath id="bottleClip-${context.source}"><path d="${bodyPath}"/></clipPath>
       </defs>
       <text x="145" y="14" text-anchor="middle" class="view-title">SIDE VIEW</text>
-      <path d="${bodyPath}" fill="url(#bottleSideGlass-${context.source})" stroke="#b7c4ca" stroke-opacity=".82" stroke-width="2"/>
-      <path d="M ${cx-bodyHalf+7} ${shoulderBottom+4} C ${cx-bodyHalf+12} ${shoulderBottom+14} ${cx-bodyHalf+12} ${bodyBottom-34} ${cx-bodyHalf+11} ${bodyBottom-17}" fill="none" stroke="#f7fbfd" stroke-opacity=".39" stroke-width="3" stroke-linecap="round"/>
-      <path d="M ${cx+bodyHalf-7} ${shoulderBottom+4} C ${cx+bodyHalf-12} ${shoulderBottom+14} ${cx+bodyHalf-12} ${bodyBottom-40} ${cx+bodyHalf-11} ${bodyBottom-20}" fill="none" stroke="#94a5ae" stroke-opacity=".22" stroke-width="2" stroke-linecap="round"/>
-      <rect x="${cx-neckHalf-2}" y="20" width="${neckHalf*2+4}" height="7" rx="2.5" fill="#d8e3e8" fill-opacity=".10" stroke="#c1cdd3" stroke-opacity=".78" stroke-width="1.2"/>
-      <rect x="${cx-neckHalf-3}" y="27" width="${neckHalf*2+6}" height="6" rx="2" fill="#cbd8de" fill-opacity=".08" stroke="#b3c2ca" stroke-opacity=".68" stroke-width="1"/>
-      <rect x="${cx-neckHalf-2}" y="33" width="${neckHalf*2+4}" height="6" rx="2" fill="#c2d0d7" fill-opacity=".07" stroke="#aabac3" stroke-opacity=".60" stroke-width="1"/>
-      <line x1="${centerlineX}" y1="18" x2="${centerlineX}" y2="228" stroke="#ff4d3a" stroke-width="2.2" stroke-dasharray="6 5" clip-path="url(#bottleClip-${context.source})"/>
-      <g clip-path="url(#bottleClip-${context.source})" data-wrapped-label="true">
-        ${labelSegments.map((segment) => `<rect x="${segment.x}" y="${labelY}" width="${segment.width}" height="${labelHeight}" rx="2.5" fill="url(#labelGlass-${context.source})" fill-opacity="${labelOpacity}" stroke="#8fd3f1" stroke-opacity=".68" stroke-width=".8"/>`).join("")}
-        ${wipedSegments.map((segment) => `<rect x="${segment.x}" y="${labelY}" width="${segment.width}" height="${labelHeight}" rx="2" fill="${labelColor}" fill-opacity=".72"/>`).join("")}
+      <text x="277" y="14" text-anchor="end" class="view-readout" opacity=".72">${centerlineFront ? "DATUM FRONT" : "DATUM REAR"}</text>
+
+      <g data-pseudo-3d-glass="true">
+        <path d="${bodyPath}" fill="url(#bottleSideGlass-${context.source})" stroke="#b9c8cf" stroke-opacity=".88" stroke-width="2"/>
+        <path d="${bodyPath}" fill="url(#bottleDepth-${context.source})" opacity=".92"/>
+        <ellipse cx="${cx}" cy="${bodyBottom-3}" rx="${Math.max(10, bodyHalf-18)}" ry="5.6" fill="#d9e6eb" fill-opacity=".045" stroke="#d5e4e9" stroke-opacity=".18" stroke-width="1"/>
+        <ellipse cx="${cx}" cy="${shoulderBottom+12}" rx="${Math.max(12, bodyHalf-4)}" ry="7.5" fill="none" stroke="#dce8ed" stroke-opacity=".07" stroke-width="1"/>
+        <path d="M ${cx-bodyHalf+7} ${shoulderBottom+4} C ${cx-bodyHalf+12} ${shoulderBottom+14} ${cx-bodyHalf+12} ${bodyBottom-34} ${cx-bodyHalf+11} ${bodyBottom-17}" fill="none" stroke="#f7fbfd" stroke-opacity=".52" stroke-width="3.2" stroke-linecap="round"/>
+        <path d="M ${cx-bodyHalf+13} ${shoulderBottom+1} C ${cx-bodyHalf+18} ${shoulderBottom-6} ${cx-neckHalf+3} ${neckBase+5} ${cx-neckHalf+3} ${neckBase-4}" fill="none" stroke="#f7fbfd" stroke-opacity=".30" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M ${cx+bodyHalf-7} ${shoulderBottom+4} C ${cx+bodyHalf-12} ${shoulderBottom+14} ${cx+bodyHalf-12} ${bodyBottom-40} ${cx+bodyHalf-11} ${bodyBottom-20}" fill="none" stroke="#6d7f89" stroke-opacity=".34" stroke-width="3" stroke-linecap="round"/>
+        <path d="M ${cx+bodyHalf-13} ${shoulderBottom+1} C ${cx+bodyHalf-18} ${shoulderBottom-6} ${cx+neckHalf-3} ${neckBase+5} ${cx+neckHalf-3} ${neckBase-4}" fill="none" stroke="#6a7a84" stroke-opacity=".24" stroke-width="2" stroke-linecap="round"/>
+        <line x1="${cx-2}" y1="${neckTop+12}" x2="${cx-2}" y2="${neckBase-10}" stroke="#edf7fa" stroke-opacity=".14" stroke-width="2"/>
       </g>
+
+      <g data-bottle-lip-depth="true">
+        <ellipse cx="${cx}" cy="22.8" rx="${neckHalf+2}" ry="2.5" fill="#dce7eb" fill-opacity=".07" stroke="#d8e5ea" stroke-opacity=".45" stroke-width="1"/>
+        <rect x="${cx-neckHalf-2}" y="20" width="${neckHalf*2+4}" height="7" rx="2.5" fill="#d8e3e8" fill-opacity=".10" stroke="#c1cdd3" stroke-opacity=".78" stroke-width="1.2"/>
+        <rect x="${cx-neckHalf-3}" y="27" width="${neckHalf*2+6}" height="6" rx="2" fill="#cbd8de" fill-opacity=".08" stroke="#b3c2ca" stroke-opacity=".68" stroke-width="1"/>
+        <rect x="${cx-neckHalf-2}" y="33" width="${neckHalf*2+4}" height="6" rx="2" fill="#c2d0d7" fill-opacity=".07" stroke="#aabac3" stroke-opacity=".60" stroke-width="1"/>
+      </g>
+
+      <line x1="${centerlineX}" y1="18" x2="${centerlineX}" y2="228" stroke="#ff4d3a" stroke-width="2.2" stroke-dasharray="${centerlineFront ? "6 5" : "2 7"}" stroke-opacity="${centerlineFront ? .94 : .28}" clip-path="url(#bottleClip-${context.source})"/>
+
+      <g clip-path="url(#bottleClip-${context.source})" data-wrapped-label="true" data-pseudo-3d-label="true">
+        ${labelSegments.map((segment) => `<path d="${wrappedBandSegmentPath(segment, labelY, labelHeight, labelRadius)}" fill="url(#labelGlass-${context.source})" fill-opacity="${wrappedBandOpacity(segment, labelOpacity).toFixed(3)}" stroke="#9bdaf4" stroke-opacity=".52" stroke-width=".7"/>`).join("")}
+        ${wipedSegments.map((segment) => `<path d="${wrappedBandSegmentPath(segment, labelY, labelHeight, labelRadius)}" fill="${labelColor}" fill-opacity="${wrappedBandOpacity(segment, .82).toFixed(3)}" stroke="#d8f1fb" stroke-opacity=".18" stroke-width=".45"/>`).join("")}
+        <path d="M ${cx-bodyHalf+3} ${labelY+3} Q ${cx} ${labelY-4} ${cx+bodyHalf-3} ${labelY+3}" fill="none" stroke="#e7f7ff" stroke-opacity=".10" stroke-width="1"/>
+        <path d="M ${cx-bodyHalf+3} ${labelY+labelHeight-3} Q ${cx} ${labelY+labelHeight+4} ${cx+bodyHalf-3} ${labelY+labelHeight-3}" fill="none" stroke="#0b2b3c" stroke-opacity=".30" stroke-width="1"/>
+      </g>
+
       ${Number.isFinite(tackX) ? `<line x1="${tackX}" y1="${labelY-4}" x2="${tackX}" y2="${labelY+labelHeight+4}" stroke="${model.tackMode === "leading" ? "#ffd05f" : "#fff"}" stroke-width="1.2" stroke-dasharray="3 3" opacity=".85" clip-path="url(#bottleClip-${context.source})"/>` : ""}
       <g transform="translate(${cx+bodyHalf+13} ${hardwareY})" opacity="${hardwareActive ? 1 : .32}">
         <circle cx="0" cy="0" r="13" fill="#1d252b" stroke="#788996" stroke-width="1.6"/>
@@ -920,6 +976,9 @@
     rightFrontZeroDatumV79: true,
     oppositeCarouselBottleSpinV79: true,
     headOneWorldFrameTopViewV80: true,
-    mechanicalMapTransformParityV80: true
+    mechanicalMapTransformParityV80: true,
+    pseudo3dBottleSideViewV81: true,
+    curvedWrappedLabelBandV81: true,
+    orientationDepthCueV81: true
   });
 })(typeof window !== "undefined" ? window : globalThis);

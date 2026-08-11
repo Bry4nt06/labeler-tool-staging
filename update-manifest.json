@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "head1-world-frame-top-view-v80-20260811-1830",
+  "buildId": "pseudo-3d-bottle-side-view-v81-20260811-1838",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v80 makes the Bottle Orientation Top View a magnified world-frame view of servo/head 1. Its 0/90/180/270 references rotate with the same table-frame transform used by the live Mechanical Map, while the bottle servo angle remains superimposed as the local plate rotation. Generated servo/HMI values are unchanged."
+  "notes": "Staging v81 upgrades the Bottle Orientation Side View to a pseudo-3D clear-glass bottle. Glass highlights, cylindrical depth cues, front/rear datum visibility, and curved clipped label-band projection now make bottle orientation easier to read while preserving the exact v80 world-frame Top View and generated servo/HMI geometry."
 }

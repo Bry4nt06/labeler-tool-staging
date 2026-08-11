@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "head1-world-frame-top-view-v80-20260811-1830";
+  const BUILD_ID = "pseudo-3d-bottle-side-view-v81-20260811-1838";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
