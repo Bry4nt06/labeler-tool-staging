@@ -1,0 +1,119 @@
+name: Publish bootstrap-independent navigation v69
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/publish-bootstrap-independent-navigation-v69.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Publish independent navigation
+        run: |
+          python3 - <<'PY'
+          import json, re
+          from pathlib import Path
+
+          old_build = 'direct-workspace-tabs-v68-20260811-1241'
+          new_build = 'bootstrap-independent-navigation-v69-20260811-1300'
+          old_query = '0.9.10-direct-workspace-tabs-v68-20260811-1241'
+          new_query = '0.9.10-bootstrap-independent-navigation-v69-20260811-1300'
+
+          index = Path('index.html')
+          text = index.read_text(encoding='utf-8')
+          text = text.replace(old_query, new_query)
+          direct_nav = f'    <script src="app/controllers/tabs-controller.js?v={new_query}"></script>\n'
+          text = re.sub(r'    <script src="app/controllers/tabs-controller\.js\?v=[^"]+"></script>\n', '', text)
+          marker = '    <script src="drivers/geometry/label-geometry-driver.js?v=0.9.10"></script>\n'
+          if marker not in text:
+              raise SystemExit('Unable to locate first application script marker')
+          text = text.replace(marker, direct_nav + marker, 1)
+          index.write_text(text, encoding='utf-8')
+
+          bootstrap = Path('app/bootstrap.js')
+          text = bootstrap.read_text(encoding='utf-8')
+          text = text.replace(f'const build = "{old_build}";', f'const build = "{new_build}";')
+          text = text.replace('const buildUpdatedAt = "Aug 11, 2026 12:41 PM ET";', 'const buildUpdatedAt = "Aug 11, 2026 1:00 PM ET";')
+          text = text.replace('// Regression lineage: direct-workspace-tabs-v68-20260811-1241', '// Regression lineage: bootstrap-independent-navigation-v69-20260811-1300 • direct-workspace-tabs-v68-20260811-1241')
+          text = text.replace('    "app/controllers/tabs-controller.js",\n', '')
+          bootstrap.write_text(text, encoding='utf-8')
+
+          worker = Path('service-worker.js')
+          text = worker.read_text(encoding='utf-8').replace(
+              'servoforge-labeler-staging-v0.9.10-direct-workspace-tabs-v68',
+              'servoforge-labeler-staging-v0.9.10-bootstrap-independent-navigation-v69')
+          worker.write_text(text, encoding='utf-8')
+
+          manifest_path = Path('update-manifest.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          manifest['buildId'] = new_build
+          manifest['notes'] = ('Staging v69 loads the workspace tab controller directly before all application drivers and outside the bootstrap module chain. '
+                               'Build Inputs, Servo Program, Specs, Diagnostics, and Servo Simulation no longer depend on later startup modules to become clickable.')
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+
+          test = Path('tests/top-navigation-recovery.test.js')
+          test.write_text(r'''"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+
+const root = path.resolve(__dirname, "..");
+const source = fs.readFileSync(path.join(root, "app", "controllers", "tabs-controller.js"), "utf8");
+const bootstrap = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
+const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const serviceWorker = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
+
+assert.doesNotThrow(() => new vm.Script(source));
+assert.match(source, /navigationCaptureV3:\s*true/);
+assert.match(source, /setDirectTabState/);
+assert.match(source, /stopImmediatePropagation/);
+assert.match(index, /app\/controllers\/tabs-controller\.js\?v=0\.9\.10-bootstrap-independent-navigation-v69-20260811-1300/);
+assert.match(index, /app\/bootstrap\.js\?v=0\.9\.10-bootstrap-independent-navigation-v69-20260811-1300/);
+assert.match(index, /app\/update-manager\.js\?v=0\.9\.10-bootstrap-independent-navigation-v69-20260811-1300/);
+assert.match(index, /app\.js\?v=0\.9\.10-bootstrap-independent-navigation-v69-20260811-1300/);
+assert.match(bootstrap, /bootstrap-independent-navigation-v69-20260811-1300/);
+assert.doesNotMatch(bootstrap, /"app\/controllers\/tabs-controller\.js"/);
+assert.match(serviceWorker, /servoforge-labeler-staging-v0\.9\.10-bootstrap-independent-navigation-v69/);
+
+const navIndex = index.indexOf('app/controllers/tabs-controller.js');
+const firstDriverIndex = index.indexOf('drivers/geometry/label-geometry-driver.js');
+const bootstrapIndex = index.indexOf('app/bootstrap.js');
+assert.ok(navIndex >= 0, 'Direct navigation script must exist.');
+assert.ok(navIndex < firstDriverIndex, 'Navigation must install before the application drivers.');
+assert.ok(navIndex < bootstrapIndex, 'Navigation must install before bootstrap.');
+
+console.log("Bootstrap-independent top navigation regression passed.");
+''', encoding='utf-8')
+          PY
+
+          node --check app/controllers/tabs-controller.js
+          node --check app/bootstrap.js
+          node --check service-worker.js
+          node --check tests/top-navigation-recovery.test.js
+          node tests/top-navigation-recovery.test.js
+          grep -q 'app/controllers/tabs-controller.js?v=0.9.10-bootstrap-independent-navigation-v69-20260811-1300' index.html
+          ! grep -q '"app/controllers/tabs-controller.js"' app/bootstrap.js
+
+      - name: Commit v69
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html app/bootstrap.js service-worker.js update-manifest.json tests/top-navigation-recovery.test.js
+          git commit -m "Publish bootstrap-independent workspace navigation v69"
+          git push origin HEAD:main
