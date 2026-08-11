@@ -3,7 +3,7 @@
 (function installAplSectionHandoffContinuity(global) {
   if (global.LabelerAplSectionHandoffContinuity?.installed) return;
 
-  const VERSION = 1;
+  const VERSION = 2;
   const EPS = 0.001;
   const RETRY_MS = 25;
   let installed = false;
@@ -34,8 +34,138 @@
     return /^Orient\s+(?:Neck|Body|Back)\s+(?:to\s+Tack\s+Reference|for\s+Re-Wipe)/i.test(action);
   }
 
+  function isPassiveReferenceRest(row) {
+    if (Number(row?.cmd) !== 3 || row?.canonicalSectionHandoffV44 !== true) return false;
+    if (row?.applicationReference === true || row?.wipeResetReference === true) return true;
+    const action = String(row?.action || "");
+    return /^Hold\s+for\s+(?:Neck|Body|Back)\s+Application\b/i.test(action)
+      || /^Orient\s+(?:Neck|Body|Back)\s+for\s+Re-Wipe\b/i.test(action);
+  }
+
+  function referenceEvent(row) {
+    return {
+      tableAngle: done(row?.tableAngle),
+      plateAngle: done(row?.plateAngle),
+      action: String(row?.action || ""),
+      station: Number.isFinite(finite(row?.station, NaN)) ? Number(row.station) : undefined,
+      section: String(row?.section || "").toLowerCase() || undefined,
+      applicationReference: row?.applicationReference === true,
+      applicationReferenceMode: row?.applicationReferenceMode,
+      wipeResetReference: row?.wipeResetReference === true,
+      finishedLabelCenterlineDeg: Number.isFinite(finite(row?.finishedLabelCenterlineDeg, NaN))
+        ? done(row.finishedLabelCenterlineDeg)
+        : undefined,
+      motionSource: row?.motionSource || "canonical-section-handoff-v44",
+      canonicalSectionHandoffV44: true
+    };
+  }
+
+  function preserveReferenceMetadata(previous, removed) {
+    const event = referenceEvent(removed);
+    previous.logicalReferenceEvents = [
+      ...(Array.isArray(previous.logicalReferenceEvents) ? previous.logicalReferenceEvents : []),
+      event
+    ];
+    previous.canonicalSectionHandoffV44 = true;
+    previous.passiveReferenceRestCollapsedV57 = true;
+
+    if (event.applicationReference) {
+      previous.applicationReferenceEvents = [
+        ...(Array.isArray(previous.applicationReferenceEvents) ? previous.applicationReferenceEvents : []),
+        event
+      ];
+      previous.applicationReference = true;
+      previous.applicationReferenceTableAngle = event.tableAngle;
+      previous.applicationReferenceStation = event.station;
+      previous.applicationReferenceAction = event.action;
+      previous.applicationReferenceMode = event.applicationReferenceMode;
+      previous.applicationSection = event.section;
+      previous.applicationTargetSection = event.section;
+      if (Number.isFinite(event.finishedLabelCenterlineDeg)) {
+        previous.finishedLabelCenterlineDeg = event.finishedLabelCenterlineDeg;
+      }
+    }
+
+    if (event.wipeResetReference) {
+      previous.wipeResetReferenceEvents = [
+        ...(Array.isArray(previous.wipeResetReferenceEvents) ? previous.wipeResetReferenceEvents : []),
+        event
+      ];
+      previous.wipeResetReference = true;
+      previous.wipeResetReferenceTableAngle = event.tableAngle;
+      previous.wipeResetReferenceStation = event.station;
+      previous.wipeResetReferenceAction = event.action;
+      previous.wipeResetSection = event.section;
+    }
+
+    return event;
+  }
+
+  function collapseRedundantReferenceRests(sourceRows) {
+    const output = [];
+    const collapsed = [];
+
+    (Array.isArray(sourceRows) ? sourceRows : []).forEach((sourceRow) => {
+      const row = { ...sourceRow };
+      const previous = output.at(-1);
+      const previousPlate = finite(previous?.plateAngle, NaN);
+      const currentPlate = finite(row?.plateAngle, NaN);
+      const samePlate = Number.isFinite(previousPlate)
+        && Number.isFinite(currentPlate)
+        && Math.abs(previousPlate - currentPlate) <= EPS;
+
+      if (previous
+        && Number(previous?.cmd) === 3
+        && isPassiveReferenceRest(row)
+        && samePlate) {
+        const event = preserveReferenceMetadata(previous, row);
+        collapsed.push({
+          removedHmi: row.hmi,
+          retainedHmi: previous.hmi,
+          retainedAction: String(previous.action || ""),
+          referenceAction: event.action,
+          referenceTableAngle: event.tableAngle,
+          plateAngle: event.plateAngle,
+          station: event.station,
+          section: event.section,
+          applicationReference: event.applicationReference,
+          wipeResetReference: event.wipeResetReference
+        });
+        return;
+      }
+
+      output.push(row);
+    });
+
+    return { rows: output, collapsed };
+  }
+
+  function recompute(rows) {
+    return rows.map((row, index) => {
+      const next = rows[index + 1];
+      const updated = { ...row, hmi: index + 1, plc: index };
+      if (Number(updated?.cmd) !== 7 || !next) return updated;
+      const startPlate = finite(updated?.plateAngle, NaN);
+      const targetPlate = finite(next?.plateAngle, NaN);
+      const tableStart = finite(updated?.tableAngle, NaN);
+      const tableStop = finite(next?.tableAngle, NaN);
+      if (Number.isFinite(startPlate) && Number.isFinite(targetPlate)) {
+        updated.plannedRotation = targetPlate - startPlate;
+      }
+      if (Number.isFinite(startPlate)
+        && Number.isFinite(targetPlate)
+        && Number.isFinite(tableStart)
+        && Number.isFinite(tableStop)
+        && tableStop > tableStart + EPS) {
+        updated.plannedRatio = Math.abs(targetPlate - startPlate) / (tableStop - tableStart);
+      }
+      return updated;
+    });
+  }
+
   function repair(sourceRows) {
-    const rows = (Array.isArray(sourceRows) ? sourceRows : []).map((row) => ({ ...row }));
+    const collapsedResult = collapseRedundantReferenceRests(sourceRows);
+    const rows = collapsedResult.rows;
     const changes = [];
 
     for (let index = 1; index < rows.length; index += 1) {
@@ -76,8 +206,9 @@
     }
 
     return {
-      rows: rows.map((row, index) => ({ ...row, hmi: index + 1, plc: index })),
-      changes
+      rows: recompute(rows),
+      changes,
+      collapsed: collapsedResult.collapsed
     };
   }
 
@@ -91,9 +222,14 @@
     current.motionPlan.rows = result.rows;
     current.motionPlan.aplSectionHandoffContinuity = {
       version: VERSION,
-      applied: result.changes.length > 0,
-      changes: result.changes
+      applied: result.changes.length > 0 || result.collapsed.length > 0,
+      changes: result.changes,
+      collapsedPassiveRests: result.collapsed,
+      collapsedPassiveRestCount: result.collapsed.length
     };
+    current.motionPlan.logicalReferenceEvents = result.rows.flatMap((row) =>
+      Array.isArray(row?.logicalReferenceEvents) ? row.logicalReferenceEvents : []
+    );
     return result.rows;
   }
 
@@ -103,7 +239,7 @@
     if (!current || typeof global.applyGeneratedServoProfile !== "function") return false;
 
     const base = global.applyGeneratedServoProfile;
-    if (base.aplSectionHandoffContinuityV56 === true) {
+    if (base.aplSectionHandoffContinuityV57 === true) {
       installed = true;
       return true;
     }
@@ -115,7 +251,7 @@
         : output;
       return synchronize(repair(source));
     };
-    wrapped.aplSectionHandoffContinuityV56 = true;
+    wrapped.aplSectionHandoffContinuityV57 = true;
     wrapped.previousApplyGeneratedServoProfile = base;
     global.applyGeneratedServoProfile = wrapped;
 
@@ -123,6 +259,8 @@
       installed: true,
       version: VERSION,
       isSectionHandoffTurn,
+      isPassiveReferenceRest,
+      collapseRedundantReferenceRests,
       repair
     });
     installed = true;
