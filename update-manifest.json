@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "bootstrap-independent-navigation-v69-20260811-1305",
+  "buildId": "compact-build-parameters-v70-20260811-1350",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v69 loads workspace navigation directly from index.html before all application drivers and outside the bootstrap chain. Specs, Build Inputs, Servo Program, Diagnostics, and Servo Simulation remain selectable even if a later startup module fails."
+  "notes": "Staging v70 compacts Build Program Inputs into a denser two-column desktop layout with smaller controls and tighter spacing while preserving all build parameters. It also advances the bootstrap and service-worker cache references so installed and browser-cached staging clients load the current build."
 }
