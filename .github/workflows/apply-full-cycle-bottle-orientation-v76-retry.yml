@@ -1,0 +1,55 @@
+name: Apply full-cycle bottle orientation v76 retry
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/apply-full-cycle-bottle-orientation-v76-retry.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "full-cycle-bottle-orientation-v76-retry"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out staging main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Fix v76 patch source
+        run: node scripts/fix-v76-patch-source.js
+
+      - name: Apply v76 full-cycle orientation update
+        run: node scripts/apply-full-cycle-bottle-orientation-v76.js
+
+      - name: Validate v76 syntax and regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app/bottle-orientation-panel-integration.js
+          node --check app/bottle-orientation-panel-recovery-integration.js
+          node --check app/bootstrap.js
+          node --check app/update-manager.js
+          node --check service-worker.js
+          node tests/bottle-orientation-panel.test.js
+          node tests/map-workspace-bottle-visual-v75.test.js
+          node tests/entry-exit-dead-zone-overlay.test.js
+          node tests/apl-roller-coverage-default.test.js
+
+      - name: Commit verified v76 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/bottle-orientation-panel-integration.js app/bootstrap.js app/update-manager.js service-worker.js index.html update-manifest.json tests/bottle-orientation-panel.test.js
+          git commit -m "Animate bottle orientation through full servo cycle v76"
+          git push origin main
