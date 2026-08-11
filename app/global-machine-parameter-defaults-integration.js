@@ -76,9 +76,12 @@
 (function installBrandContactParameterDefaults(global) {
   if (global.LabelerBrandContactParameterDefaults?.installed) return;
 
+  // Keep the historical scalar exported for compatibility, while the
+  // section-specific tuple is the authoritative default policy.
   const DEFAULT_CONTACT_DEG = 10;
+  const DEFAULT_CONTACT_DEG_BY_SECTION = Object.freeze({ neck: 10, body: 10, back: 0 });
   const STORE_KEY = "contactParameterDegByBrand";
-  const MIGRATION_KEY = "servoforge-brand-contact-parameters-10deg-v1-applied";
+  const MIGRATION_KEY = "servoforge-brand-contact-parameters-10-10-0-v2-applied";
   const RETRY_MS = 50;
   const CONTACT_INPUTS = Object.freeze({
     programNeckContactDeg: "neck",
@@ -102,6 +105,7 @@
   };
   const text = (value) => String(value ?? "").trim();
   const stateRef = () => typeof state !== "undefined" ? state : global.state;
+  const defaultFor = (section) => DEFAULT_CONTACT_DEG_BY_SECTION[section] ?? DEFAULT_CONTACT_DEG;
 
   function brandKey(specOrBrand, applicationMode = "") {
     if (specOrBrand && typeof specOrBrand === "object") {
@@ -133,7 +137,7 @@
   }
 
   function defaultTuple() {
-    return { neck: DEFAULT_CONTACT_DEG, body: DEFAULT_CONTACT_DEG, back: DEFAULT_CONTACT_DEG };
+    return { ...DEFAULT_CONTACT_DEG_BY_SECTION };
   }
 
   function ensureBrand(target = stateRef(), spec = selectedLabel(target), { force = false } = {}) {
@@ -142,9 +146,9 @@
     const key = brandKey(spec, target.applicationMode);
     const existing = store[key] && typeof store[key] === "object" ? store[key] : {};
     store[key] = {
-      neck: force ? DEFAULT_CONTACT_DEG : Math.max(0, finite(existing.neck, DEFAULT_CONTACT_DEG)),
-      body: force ? DEFAULT_CONTACT_DEG : Math.max(0, finite(existing.body, DEFAULT_CONTACT_DEG)),
-      back: force ? DEFAULT_CONTACT_DEG : Math.max(0, finite(existing.back, DEFAULT_CONTACT_DEG))
+      neck: force ? defaultFor("neck") : Math.max(0, finite(existing.neck, defaultFor("neck"))),
+      body: force ? defaultFor("body") : Math.max(0, finite(existing.body, defaultFor("body"))),
+      back: force ? defaultFor("back") : Math.max(0, finite(existing.back, defaultFor("back")))
     };
     return store[key];
   }
@@ -156,11 +160,11 @@
   }
 
   function contactDeg(target = stateRef(), section, spec = selectedLabel(target)) {
-    return Math.max(0, finite(ensureBrand(target, spec)?.[section], DEFAULT_CONTACT_DEG));
+    return Math.max(0, finite(ensureBrand(target, spec)?.[section], defaultFor(section)));
   }
 
   function setContactDeg(target = stateRef(), section, value, spec = selectedLabel(target)) {
-    if (!MM_FIELDS[section] || !spec?.brand) return DEFAULT_CONTACT_DEG;
+    if (!MM_FIELDS[section] || !spec?.brand) return defaultFor(section);
     const tuple = ensureBrand(target, spec);
     tuple[section] = Math.max(0, finite(value, tuple[section]));
     return tuple[section];
@@ -205,12 +209,32 @@
     catch { /* Storage can be unavailable in restricted contexts. */ }
   }
 
+  function migrateLegacyDefaultTuples(target = stateRef()) {
+    if (!target || typeof target !== "object") return false;
+    const store = ensureStore(target);
+    const labels = Array.isArray(target?.labelSpecs) ? target.labelSpecs : [];
+    let changed = false;
+    labels.forEach((spec) => {
+      const key = brandKey(spec, target.applicationMode);
+      const existing = store[key];
+      if (!existing || typeof existing !== "object") return;
+      const isLegacyDefault = finite(existing.neck, NaN) === 10
+        && finite(existing.body, NaN) === 10
+        && finite(existing.back, NaN) === 10;
+      if (!isLegacyDefault) return;
+      store[key] = defaultTuple();
+      changed = true;
+    });
+    return changed;
+  }
+
   function migrateLoadedState(target = stateRef()) {
-    const force = !migrationApplied();
-    ensureAllBrands(target, { force });
+    const firstV2Migration = !migrationApplied();
+    if (firstV2Migration) migrateLegacyDefaultTuples(target);
+    ensureAllBrands(target);
     applySelectedBrand(target);
-    if (force) markMigrationApplied();
-    return force;
+    if (firstV2Migration) markMigrationApplied();
+    return firstV2Migration;
   }
 
   function refreshAfterContextChange() {
@@ -285,7 +309,7 @@
 
   function wrapBuildInputsController() {
     const base = global.LabelerBuildInputsController;
-    if (!base || base.brandContactDefaultsV1) return Boolean(base?.brandContactDefaultsV1);
+    if (!base || base.brandContactDefaultsV2) return Boolean(base?.brandContactDefaultsV2);
     global.LabelerBuildInputsController = Object.freeze({
       ...base,
       selectBrand(value) {
@@ -304,7 +328,7 @@
         if (section) setContactDeg(stateRef(), section, rawValue);
         return base.updateCalculatedField(id, rawValue);
       },
-      brandContactDefaultsV1: true
+      brandContactDefaultsV2: true
     });
     return true;
   }
@@ -330,8 +354,9 @@
 
   global.LabelerBrandContactParameterDefaults = Object.freeze({
     installed: true,
-    version: 1,
+    version: 2,
     DEFAULT_CONTACT_DEG,
+    DEFAULT_CONTACT_DEG_BY_SECTION,
     STORE_KEY,
     MIGRATION_KEY,
     CONTACT_INPUTS,
@@ -347,6 +372,7 @@
     setContactDeg,
     bodyCircumference,
     applySelectedBrand,
+    migrateLegacyDefaultTuples,
     migrateLoadedState,
     patchContactInputs,
     refreshAfterContextChange
