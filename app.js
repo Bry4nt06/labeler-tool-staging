@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "editable-contact-parameters-v65-20260811-1051";
+  const build = "client-delivery-refresh-v74-20260811-1612";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

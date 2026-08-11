@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-station1-bottle-orientation-v72";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-client-delivery-refresh-v74-20260811-1612";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 

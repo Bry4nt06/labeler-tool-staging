@@ -9,7 +9,7 @@
 (function installBootstrapIndependentWorkspaceNavigation(global) {
   if (global.ServoForgeEarlyWorkspaceNavigation?.installed) return;
 
-  const BUILD = "bootstrap-independent-navigation-v69-20260811-1308";
+  const FALLBACK_BUILD = "bootstrap-independent-navigation-v69-20260811-1308";
   const WORKSPACE_TABS = new Set(["specs", "buildInputs", "program", "diagnostics", "simulation"]);
   let lastActivationAt = 0;
 
@@ -116,9 +116,14 @@
 
   function publishBuildMarker() {
     const banner = document.querySelector(".staging-environment-banner");
-    if (banner) {
-      banner.textContent = `STAGING 0.9.10 • BUILD ${BUILD} • UPDATED Aug 11, 2026 1:08 PM ET — NOT PRODUCTION`;
+    if (!banner) return;
+    const activeBuild = String(global.ServoForgeBootstrapBuild || global.SERVOFORGE_BUILD_ID || "").trim();
+    const activeUpdatedAt = String(global.SERVOFORGE_BUILD_UPDATED_AT || "").trim();
+    if (activeBuild) {
+      banner.textContent = `STAGING 0.9.10 • BUILD ${activeBuild} • UPDATED ${activeUpdatedAt || "current build"} — NOT PRODUCTION`;
+      return;
     }
+    banner.textContent = `STAGING 0.9.10 • BUILD ${FALLBACK_BUILD} • UPDATED Aug 11, 2026 1:08 PM ET — NOT PRODUCTION`;
   }
 
   publishBuildMarker();
@@ -128,7 +133,7 @@
   global.ServoForgeEarlyWorkspaceNavigation = Object.freeze({
     installed: true,
     version: 1,
-    build: BUILD,
+    build: FALLBACK_BUILD,
     activate,
     selectedTab,
     bootstrapIndependent: true,

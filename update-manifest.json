@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "entry-exit-dead-zone-overlay-v73-20260811-1604",
+  "buildId": "client-delivery-refresh-v74-20260811-1612",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v73 adds an independent Entry / Exit Dead Zone overlay covering 330° through 0° to 30°. It can remain visible at the same time as either Active Move Distance or All Program Moves, and is rendered beneath the motion overlays on both the mechanical map and simulation map."
+  "notes": "Staging v74 repairs client delivery for the v72 and v73 updates. Runtime script cache keys are unified, the navigation safety layer no longer overwrites a newer build banner, service-worker cache generation advances, and Check for Updates now detects build changes inside release 0.9.10."
 }

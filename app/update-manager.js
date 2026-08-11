@@ -2,6 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
+  const BUILD_ID = "client-delivery-refresh-v74-20260811-1612";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
@@ -9,6 +10,10 @@
 
   function currentVersion() {
     return document.querySelector('meta[name="application-version"]')?.content || RELEASE_VERSION;
+  }
+
+  function currentBuild() {
+    return String(window.ServoForgeBootstrapBuild || window.SERVOFORGE_BUILD_ID || BUILD_ID).trim();
   }
 
   function manifestUrl() {
@@ -49,7 +54,7 @@
     return 0;
   }
 
-  function destinationUrl(rawUrl, version) {
+  function destinationUrl(rawUrl, version, build) {
     let destination;
     try {
       destination = new URL(rawUrl || APP_SCOPE, APP_SCOPE);
@@ -57,6 +62,7 @@
       destination = new URL(APP_SCOPE);
     }
     destination.searchParams.set("version", String(version || RELEASE_VERSION));
+    if (build) destination.searchParams.set("build", String(build));
     destination.searchParams.set("updated", Date.now().toString());
     return destination.toString();
   }
@@ -88,9 +94,9 @@
     }
   }
 
-  function navigateInCurrentWindow(rawUrl, version) {
+  function navigateInCurrentWindow(rawUrl, version, build) {
     saveBeforeNavigation();
-    window.location.replace(destinationUrl(rawUrl, version));
+    window.location.replace(destinationUrl(rawUrl, version, build));
   }
 
   showPendingToolUpdate = function showManagedPendingUpdate() {
@@ -101,7 +107,7 @@
     enforceReleaseVersion();
     if (!("serviceWorker" in navigator) || window.location.protocol === "file:") return;
     try {
-      updateServiceWorkerRegistration = await navigator.serviceWorker.register(`./service-worker.js?v=${RELEASE_VERSION}`, {
+      updateServiceWorkerRegistration = await navigator.serviceWorker.register(`./service-worker.js?v=${RELEASE_VERSION}&build=${encodeURIComponent(BUILD_ID)}`, {
         scope: "./",
         updateViaCache: "none"
       });
@@ -113,6 +119,7 @@
 
   checkForToolUpdates = async function checkForManagedToolUpdates() {
     const installedVersion = currentVersion();
+    const installedBuild = currentBuild();
     setStatus("Checking for updates…", "Check for Updates", true);
     try {
       const source = manifestUrl();
@@ -123,16 +130,20 @@
       if (!response.ok) throw new Error(`Update server returned ${response.status}.`);
       const manifest = await response.json();
       const latestVersion = String(manifest?.version || "").trim();
+      const latestBuild = String(manifest?.buildId || "").trim();
       if (!latestVersion) throw new Error("Update manifest does not contain a version.");
-      if (compareVersions(latestVersion, installedVersion) <= 0) {
-        setStatus(`Up to date • Version ${installedVersion}`, "Check for Updates", false);
+      const versionComparison = compareVersions(latestVersion, installedVersion);
+      const sameBuild = !latestBuild || latestBuild === installedBuild;
+      if (versionComparison < 0 || (versionComparison === 0 && sameBuild)) {
+        setStatus(`Up to date • Version ${installedVersion} • Build ${installedBuild}`, "Check for Updates", false);
         return;
       }
       const destination = String(manifest.releaseUrl || manifest.downloadUrl || APP_SCOPE).trim();
-      setStatus(`Applying version ${latestVersion} in this window…`, "Applying Update", true);
+      const updateLabel = versionComparison > 0 ? `version ${latestVersion}` : `build ${latestBuild}`;
+      setStatus(`Applying ${updateLabel} in this window…`, "Applying Update", true);
       saveBeforeNavigation();
       await clearStaleRuntime();
-      navigateInCurrentWindow(destination, latestVersion);
+      navigateInCurrentWindow(destination, latestVersion, latestBuild);
     } catch (error) {
       console.error("Update check failed", error);
       setStatus("Unable to apply the update. Check the connection and try again.", "Check for Updates", false);
