@@ -49,3 +49,5 @@ jobs:
           git add app/bottle-orientation-panel-integration.js app/bootstrap.js app/update-manager.js service-worker.js update-manifest.json tests/bottle-orientation-panel.test.js
           git commit -m "Switch bottle orientation to three-quarter perspective v83"
           git push origin main
+
+# rerun after regression transition update
