@@ -52,6 +52,17 @@ function updateBuilderTypeControls() {
     endLabel.hidden = isSinglePlacement;
     endLabel.firstChild.textContent = isAplRoller ? "Roller surface coverage (table deg) " : "Stop / point 2 (deg) ";
   }
+  const startInput = document.querySelector("#builderObjectStart");
+  const endInput = document.querySelector("#builderObjectEnd");
+  const previousType = String(select.dataset.builderPreviousType || "");
+  if (endInput && isAplRoller && previousType !== "roller") {
+    endInput.dataset.nonRollerEnd = endInput.value;
+    endInput.value = "5";
+  } else if (endInput && !isAplRoller && previousType === "roller") {
+    endInput.value = endInput.dataset.nonRollerEnd || String(num(startInput?.value, 0) + 10);
+    delete endInput.dataset.nonRollerEnd;
+  }
+  select.dataset.builderPreviousType = select.value;
 }
 
 function renderAggregateAngleEditor(machineMap) {

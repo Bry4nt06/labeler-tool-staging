@@ -7,6 +7,8 @@
   const STELLA_330_FULL_WRAP_CALIBRATION_VERSION = 2;
   const BLANK_MAP_SEED_VERSION = 1;
   const DEFAULT_SPENDER_PLATE_ANGLE_DEG = 75;
+  const APL_ROLLER_COVERAGE_DEFAULT_DEG = 5;
+  const APL_ROLLER_COVERAGE_DEFAULT_VERSION = 1;
   const VALID_OBJECT_KINDS = Object.freeze([
     "pad", "brush", "brush-channel", "roller", "gripper", "coding", "sensor"
   ]);
@@ -66,9 +68,9 @@
       || kind === "sensor"
       || (application === "cold-glue" && kind === "roller");
     const start = finite(singlePoint ? item?.angle : item?.start, 0);
-    const originalEnd = finite(singlePoint ? item?.angle : item?.end, start + 10);
+    const originalEnd = finite(singlePoint ? item?.angle : item?.end, start + APL_ROLLER_COVERAGE_DEFAULT_DEG);
     const wipeSpanDeg = aplRoller
-      ? Math.max(0.1, finite(item?.wipeSpanDeg, Math.abs(originalEnd - start) || 10))
+      ? Math.max(0.1, finite(item?.wipeSpanDeg, Math.abs(originalEnd - start) || APL_ROLLER_COVERAGE_DEFAULT_DEG))
       : 0;
     const end = kind === "coding"
       ? start + 5
@@ -374,6 +376,10 @@
 
     return {
       schemaVersion: MACHINE_MAP_SCHEMA_VERSION,
+      aplRollerCoverageDefaultVersion: Math.max(0, Math.round(finite(
+        input.aplRollerCoverageDefaultVersion,
+        APL_ROLLER_COVERAGE_DEFAULT_VERSION
+      ))),
       blankSeedVersion: Math.max(0, Math.round(finite(input.blankSeedVersion, 0))),
       isTemplate: Boolean(input.isTemplate),
       id: String(input.id || (typeof context.idFactory === "function"
@@ -448,6 +454,8 @@
     STELLA_330_FULL_WRAP_CALIBRATION_VERSION,
     BLANK_MAP_SEED_VERSION,
     DEFAULT_SPENDER_PLATE_ANGLE_DEG,
+    APL_ROLLER_COVERAGE_DEFAULT_DEG,
+    APL_ROLLER_COVERAGE_DEFAULT_VERSION,
     VALID_OBJECT_KINDS,
     VALID_LABEL_SECTIONS,
     finite,

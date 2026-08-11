@@ -207,7 +207,10 @@ function addBuilderObjectFromControls() {
       : document.querySelector("#builderObjectSide")?.value === "inner" ? "inner" : "outer";
   const station = Math.max(1, Math.min(6, Math.round(num(document.querySelector("#builderObjectStation")?.value, nextAplStation()))));
   const start = num(document.querySelector("#builderObjectStart")?.value, 0);
-  const end = num(document.querySelector("#builderObjectEnd")?.value, start + 10);
+  const endControl = document.querySelector("#builderObjectEnd");
+  const isAplRoller = state.applicationMode === "apl" && type === "roller";
+  const rollerCoverageDeg = isAplRoller ? Math.max(0.1, num(endControl?.value, 5)) : undefined;
+  const end = isAplRoller ? start + rollerCoverageDeg : num(endControl?.value, start + 10);
   const name = String(document.querySelector("#builderObjectName")?.value || "").trim()
     || (type === "coding"
       ? "Coding"
@@ -229,7 +232,7 @@ function addBuilderObjectFromControls() {
     innerStart: start,
     innerEnd: end,
     angle: type === "sensor" || (state.applicationMode === "cold-glue" && type === "roller") ? start : undefined,
-    wipeSpanDeg: state.applicationMode === "apl" && type === "roller" ? Math.max(0.1, Math.abs(end - start)) : undefined,
+    wipeSpanDeg: rollerCoverageDeg,
     extension: num(document.querySelector("#builderObjectExtension")?.value, 20),
     servoAssist: type === "sensor" && Boolean(document.querySelector("#builderSensorAssist")?.checked),
     requiredVisibilityPercent: type === "sensor" ? num(document.querySelector("#builderSensorVisibility")?.value, 50) : 50,

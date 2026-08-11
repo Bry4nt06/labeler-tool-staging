@@ -18,7 +18,7 @@
               kind: "roller",
               side,
               start: Number(angle),
-              wipeSpanDeg: 10,
+              wipeSpanDeg: 5,
               extension: 20
             });
           });

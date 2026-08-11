@@ -81,6 +81,23 @@
       && map?.name === "Cold Glue 3-Aggregate";
   }
 
+  function migrateAplRollerCoverageDefault(map) {
+    if (!map || schema.inferredMachineMapApplicationMode(map) !== "apl") return false;
+    const currentVersion = Math.max(0, Math.round(finite(map.aplRollerCoverageDefaultVersion, 0)));
+    if (currentVersion >= schema.APL_ROLLER_COVERAGE_DEFAULT_VERSION) return false;
+
+    let changed = false;
+    map.objects = (Array.isArray(map.objects) ? map.objects : []).map((item) => {
+      if (item?.kind !== "roller" || schema.itemApplicationMode(item) !== "apl") return item;
+      const coverage = finite(item?.wipeSpanDeg, NaN);
+      if (!Number.isFinite(coverage) || Math.abs(coverage - 10) > 0.001) return item;
+      changed = true;
+      return { ...item, wipeSpanDeg: schema.APL_ROLLER_COVERAGE_DEFAULT_DEG };
+    });
+    map.aplRollerCoverageDefaultVersion = schema.APL_ROLLER_COVERAGE_DEFAULT_VERSION;
+    return changed;
+  }
+
   function normalizeMapRecord(map, {
     createMap,
     mapLocationFor,
@@ -89,14 +106,21 @@
     const applicationMode = schema.inferredMachineMapApplicationMode(map);
     if (map && Number(map.schemaVersion) === schema.MACHINE_MAP_SCHEMA_VERSION) {
       map.applicationMode = applicationMode;
+      migrateAplRollerCoverageDefault(map);
       map.isTemplate = false;
       map.aggregateAngles = normalizeAggregateAngles(map.aggregateAngles, applicationMode, map.objects);
       map.spenderPlateAngles = schema.normalizeSpenderPlateAngles(map.spenderPlateAngles);
       Object.assign(map, mapLocationFor(map));
       return { map, replaced: false };
     }
+    const created = createMap({
+      ...(map || {}),
+      applicationMode,
+      aplRollerCoverageDefaultVersion: finite(map?.aplRollerCoverageDefaultVersion, 0)
+    });
+    migrateAplRollerCoverageDefault(created);
     return {
-      map: createMap({ ...(map || {}), applicationMode }),
+      map: created,
       replaced: true
     };
   }
@@ -228,6 +252,7 @@
     isLegacyStella330Layout,
     calibrateStella330Map,
     isRetiredColdGlueMap,
+    migrateAplRollerCoverageDefault,
     normalizeMapRecord,
     repairBlankAplMap,
     migrateLibrary
