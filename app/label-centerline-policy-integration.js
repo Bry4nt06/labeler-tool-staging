@@ -3,59 +3,71 @@
 (function installLabelCenterlinePolicy(global) {
   if (global.LabelerLabelCenterlinePolicy?.installed) return;
 
-  const VERSION = 2;
+  const VERSION = 3;
+  const RETRY_MS = 25;
   const CENTER_TACK = "center-tack";
   const LEADING_EDGE = "leading-edge";
+  const FRONT_ALIGNMENT_TOLERANCE_DEG = 3;
+  const REAR_ALIGNMENT_TOLERANCE_DEG = 4;
   const DEFAULT_REFERENCES = Object.freeze({
     neck: CENTER_TACK,
     body: LEADING_EDGE,
     back: LEADING_EDGE
   });
-  const FRONT_ALIGNMENT_TOLERANCE_DEG = 1;
-  const REAR_ALIGNMENT_TOLERANCE_DEG = 1;
-  const RETRY_MS = 50;
 
   const finite = (value, fallback = NaN) => {
     if (value === null || value === undefined || value === "") return fallback;
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
   };
-  const stateRef = () => typeof state !== "undefined" ? state : global.state;
 
-  function signedDelta(value, reference) {
-    return ((finite(value, 0) - finite(reference, 0) + 540) % 360) - 180;
+  const normalize = (value) => {
+    let angle = finite(value, 0) % 360;
+    if (angle < 0) angle += 360;
+    return angle;
+  };
+
+  function signedDelta(from, to) {
+    let delta = normalize(to) - normalize(from);
+    while (delta > 180) delta -= 360;
+    while (delta <= -180) delta += 360;
+    return delta;
   }
 
-  function circularDistance(value, reference) {
-    return Math.abs(signedDelta(value, reference));
+  function circularDistance(a, b) {
+    return Math.abs(signedDelta(a, b));
   }
 
   function nearestEquivalent(target, reference) {
     const base = finite(target, 0);
-    const current = finite(reference, base);
-    return base + 360 * Math.round((current - base) / 360);
+    const ref = finite(reference, base);
+    return base + Math.round((ref - base) / 360) * 360;
   }
 
   function normalizeApplicationReference(value, fallback = CENTER_TACK) {
-    const normalized = String(value ?? "").trim().toLowerCase().replace(/[_\s]+/g, "-");
-    if (["leading", "leading-edge", "edge", "left-edge"].includes(normalized)) return LEADING_EDGE;
-    if (["center", "centre", "center-tack", "centre-tack", "centerline", "centreline"].includes(normalized)) return CENTER_TACK;
+    const text = String(value || "").trim().toLowerCase();
+    if (["leading", "leading-edge", "leading edge", "lead", "edge"].includes(text)) return LEADING_EDGE;
+    if (["center", "center-tack", "center tack", "centre", "centre-tack", "centre tack"].includes(text)) return CENTER_TACK;
     return fallback;
   }
 
-  function ensureApplicationReferenceDefaults(target = stateRef()) {
-    if (!target || typeof target !== "object") return null;
-    target.buildInputs = target.buildInputs && typeof target.buildInputs === "object" ? target.buildInputs : {};
-    const inputs = target.buildInputs;
-    const legacyNeck = normalizeApplicationReference(inputs.neckApplication, DEFAULT_REFERENCES.neck);
-    inputs.neckApplicationReference = normalizeApplicationReference(inputs.neckApplicationReference, legacyNeck);
-    inputs.bodyApplicationReference = normalizeApplicationReference(inputs.bodyApplicationReference, DEFAULT_REFERENCES.body);
-    inputs.backApplicationReference = normalizeApplicationReference(inputs.backApplicationReference, DEFAULT_REFERENCES.back);
+  function stateRef() {
+    try {
+      if (typeof state !== "undefined" && state) return state;
+    } catch {}
+    return global.state || null;
+  }
 
-    // Keep the previous Neck field synchronized for integrations that have not
-    // yet retired the legacy two-value setting.
-    inputs.neckApplication = inputs.neckApplicationReference === LEADING_EDGE ? "Leading Edge" : "Center";
-    return inputs;
+  function ensureApplicationReferenceDefaults(target = stateRef()) {
+    if (!target) return null;
+    target.buildInputs = target.buildInputs && typeof target.buildInputs === "object"
+      ? target.buildInputs
+      : {};
+    Object.entries(DEFAULT_REFERENCES).forEach(([section, fallback]) => {
+      const key = `${section}ApplicationReference`;
+      target.buildInputs[key] = normalizeApplicationReference(target.buildInputs[key], fallback);
+    });
+    return target.buildInputs;
   }
 
   function applications() {
@@ -225,23 +237,49 @@
     return "";
   }
 
+  function logicalApplicationRows(row) {
+    const explicit = Array.isArray(row?.applicationReferenceEvents)
+      ? row.applicationReferenceEvents.filter((event) => event?.applicationReference === true)
+      : [];
+    const fallback = explicit.length
+      ? []
+      : (Array.isArray(row?.logicalReferenceEvents)
+        ? row.logicalReferenceEvents.filter((event) => event?.applicationReference === true)
+        : []);
+    const events = explicit.length ? explicit : fallback;
+    if (!events.length) return [row];
+
+    return events.map((event) => ({
+      ...row,
+      ...event,
+      hmi: row?.hmi,
+      plc: row?.plc,
+      physicalCarrierRow: row,
+      logicalApplicationReference: true
+    }));
+  }
+
   function applicationReferences(rows = [], target = stateRef()) {
     const result = { neck: [], body: [], back: [] };
     (Array.isArray(rows) ? rows : []).forEach((row, index) => {
-      const section = sectionFromApplicationRow(row);
-      const angle = finite(row?.plateAngle, NaN);
-      if (!section || !Number.isFinite(angle)) return;
-      const mode = applicationReference(section, row, target);
-      const centerline = finishedCenterlineFromApplication(section, angle, row, target);
-      result[section].push({
-        section,
-        angle,
-        applicationAngle: angle,
-        applicationReferenceMode: mode,
-        centerline,
-        labelWidthDeg: labelWidthDeg(section, target),
-        index,
-        row
+      logicalApplicationRows(row).forEach((candidate) => {
+        const section = sectionFromApplicationRow(candidate);
+        const angle = finite(candidate?.plateAngle, NaN);
+        if (!section || !Number.isFinite(angle)) return;
+        const mode = applicationReference(section, candidate, target);
+        const centerline = finishedCenterlineFromApplication(section, angle, candidate, target);
+        result[section].push({
+          section,
+          angle,
+          applicationAngle: angle,
+          applicationReferenceMode: mode,
+          centerline,
+          labelWidthDeg: labelWidthDeg(section, target),
+          index,
+          row: candidate,
+          physicalCarrierRow: candidate?.physicalCarrierRow || row,
+          logicalApplicationReference: candidate?.logicalApplicationReference === true
+        });
       });
     });
     return result;
@@ -356,13 +394,13 @@
   function wrapSeedGenerator() {
     const base = global.generatedAplSeedProfile;
     if (typeof base !== "function") return false;
-    if (base.labelCenterlinePolicyV2) return true;
+    if (base.labelCenterlinePolicyV3) return true;
 
     const wrapped = function generatedAplSeedProfileWithApplicationReferencePolicy(...args) {
       ensureApplicationReferenceDefaults(stateRef());
       return rewriteGeneratedSeed(base.apply(this, args));
     };
-    wrapped.labelCenterlinePolicyV2 = true;
+    wrapped.labelCenterlinePolicyV3 = true;
     wrapped.previousGeneratedAplSeedProfile = base;
     global.generatedAplSeedProfile = wrapped;
 
@@ -371,7 +409,7 @@
       global.LabelerAplSeedProfileGenerator = Object.freeze({
         ...generator,
         generateSeed: wrapped,
-        labelCenterlinePolicyV2: true
+        labelCenterlinePolicyV3: true
       });
     }
     return true;
@@ -408,6 +446,7 @@
     rawSeedTargets,
     generatedTargets,
     sectionFromApplicationRow,
+    logicalApplicationRows,
     applicationReferences,
     applicationTargetForSection,
     centerlineForSection,
