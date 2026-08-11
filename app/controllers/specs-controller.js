@@ -83,7 +83,6 @@
           id,
           applicationMode: actions.call("normalizeLabelApplicationMode", state.applicationMode) || state.applicationMode,
           brand,
-          specNumber: "",
           bottleType: state.selectedBottle,
           bodyLengthMm: null,
           backLengthMm: null,
@@ -104,7 +103,7 @@
 
   function updateLabel(index, key, value) {
     const spec = state.labelSpecs[index];
-    if (!spec) return;
+    if (!spec || key === "specNumber") return;
     const selectedBeforeUpdate = state.selectedBrand === spec.brand;
     const affectsSelectedProgram = selectedBeforeUpdate
       && (labelNumericFields.has(key) || key === "applicationMode");
@@ -119,7 +118,7 @@
         }
         const oldBrand = spec.brand;
         if (labelNumericFields.has(key)) spec[key] = numericInput(value, spec[key]);
-        else if (key === "brand" || key === "specNumber") spec[key] = String(value ?? "");
+        else if (key === "brand") spec[key] = String(value ?? "");
         else return;
         if (key === "brand" && state.selectedBrand === oldBrand) state.selectedBrand = spec.brand;
         if (selectedBeforeUpdate && labelPresenceFields.has(key)) actions.call("applyLabelLengthStationRules");
