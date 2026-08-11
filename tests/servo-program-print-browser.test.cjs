@@ -50,14 +50,21 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       applyGeneratedServoProfile();
       renderProgram();
 
+      const liveHeaders = [...document.querySelectorAll("#programTable th, #program th")]
+        .map((node) => node.textContent.trim())
+        .filter(Boolean);
+
       return {
         printInstalled: Boolean(window.LabelerServoProgramPrint?.installed),
         groupingInstalled: Boolean(window.LabelerServoProgramEightRowGrouping?.installed),
         groupSize: window.LabelerServoProgramEightRowGrouping?.groupSize,
+        printColumnCount: window.LabelerServoProgramEightRowGrouping?.printColumnCount,
         tabsController: Boolean(window.LabelerTabsController?.activate),
         build: window.ServoForgeBootstrapBuild,
         rows: state.program.length,
         liveDividers: document.querySelectorAll("tr.program-eight-row-divider").length,
+        liveHeaders,
+        liveHeaderCount: liveHeaders.length,
         map: activeMachineMap()?.name,
         brand: state.selectedBrand,
         bottle: state.selectedBottle
@@ -68,12 +75,18 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     assert.equal(setup.printInstalled, true, "Servo Program print integration must be installed.");
     assert.equal(setup.groupingInstalled, true, "Eight-row grouping integration must be installed.");
     assert.equal(setup.groupSize, 8, "Servo Program grouping must use eight HMI rows per visual block.");
+    assert.equal(setup.printColumnCount, 9, "Printed Servo Program should expose nine operator-facing columns.");
     assert.equal(setup.tabsController, true, "Servo Program tab controller must be available.");
     assert.ok(setup.build, "Current staging build ID must be available.");
     assert.ok(setup.rows > 20, `Expected a generated Mic Family program, found ${setup.rows} rows.`);
     assert.equal(setup.map, "APL 6-Aggregate");
     assert.equal(setup.liveDividers, expectedDividers,
       `Live Servo Program must show one small divider after each complete 8-row group; expected ${expectedDividers}, found ${setup.liveDividers}.`);
+    assert.equal(setup.liveHeaders.includes("PLC"), false, "PLC must be hidden from the live Servo Program table.");
+    assert.equal(setup.liveHeaders.some((header) => /encoder/i.test(header)), false,
+      "Encoder travel must be hidden from the live Servo Program table.");
+    assert.equal(setup.liveHeaders.includes("HMI"), true);
+    assert.equal(setup.liveHeaders.some((header) => header === "CMD" || header === "Travel command"), true);
 
     const initial = await page.evaluate(() => ({
       activeTab: state.activeTab,
@@ -148,10 +161,14 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     assert.match(printed.html, /3 Label APL — Neck \/ Body \/ Back/);
     assert.ok(printed.html.includes(setup.build), "Print sheet must list the current staging build ID.");
     assert.match(printed.html, /Code box center from left edge/);
-    assert.match(printed.html, /HMI/);
-    assert.match(printed.html, /Table Angle/);
-    assert.match(printed.html, /Bottle Angle/);
-    assert.match(printed.html, /Action/);
+    assert.match(printed.html, /<th>HMI<\/th>/);
+    assert.match(printed.html, /<th>CMD<\/th>/);
+    assert.match(printed.html, /<th>Table Angle<\/th>/);
+    assert.match(printed.html, /<th>Bottle Angle<\/th>/);
+    assert.match(printed.html, /<th>Action<\/th>/);
+    assert.doesNotMatch(printed.html, /<th>PLC<\/th>/, "PLC must be hidden from the printed Servo Program.");
+    assert.doesNotMatch(printed.html, /<th>Encoder(?: Travel)?<\/th>/i,
+      "Encoder must be hidden from the printed Servo Program.");
 
     const printDividerCount = (printed.html.match(/class="hmi-group-divider"/g) || []).length;
     assert.equal(printDividerCount, expectedDividers,
@@ -163,7 +180,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     );
     assert.deepEqual(meaningfulErrors, [], `Print-feature browser errors were emitted:\n${meaningfulErrors.join("\n\n")}`);
 
-    console.log("Servo Program eight-row grouping and compact print browser regression passed.");
+    console.log("Servo Program compact-column, eight-row grouping, and print regression passed.");
     console.log(JSON.stringify({ setup, expectedDividers, programTab, printDividerCount, printedLength: printed.html.length }, null, 2));
   } finally {
     await browser.close();
