@@ -8,8 +8,8 @@ const fs = require("fs");
 require("./apply-bottle-orientation-v77.js");
 
 const PREVIOUS_BUILD = "reference-bottle-wrap-sync-v77-20260811-1748";
-const BUILD = "machine-direction-bottle-orientation-v78-20260811-1806";
-const UPDATED = "Aug 11, 2026 6:06 PM ET";
+const BUILD = "machine-direction-bottle-orientation-v78-20260811-1752";
+const UPDATED = "Aug 11, 2026 5:52 PM ET";
 
 function read(path) { return fs.readFileSync(path, "utf8"); }
 function write(path, content) { fs.writeFileSync(path, content); }
@@ -99,10 +99,11 @@ manifest.notes = "Staging v78 refines Bottle Orientation to the requested clear 
 write(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 
 let test = read("tests/bottle-orientation-panel.test.js");
-test = test.replace("assert.match(source, /Clear glass bottle side view/);", "assert.match(source, /Reference-style clear glass bottle side view/);");
-test = test.replace("assert.match(source, /stop-color=\\\"#dbe8ef\\\"/);", "assert.match(source, /stop-color=\\\"#dce9ef\\\"/);");
-test = test.replace("assert.match(source, /stop-opacity=\\\"\\.18\\\"/);", "assert.match(source, /stop-opacity=\\\"\\.25\\\"/);");
-test = test.replace("assert.match(source, /neckBase\\+1/);", "assert.match(source, /neckBase\\+3/);");
+// Retire source-text expectations that described the v76 bottle drawing.
+test = test.split("Clear glass bottle side view").join("Reference-style clear glass bottle side view");
+test = test.split("#dbe8ef").join("#dce9ef");
+test = test.split("\\.18").join("\\.25");
+test = test.split("neckBase\\+1").join("neckBase\\+3");
 test = replaceRequired(
   test,
   `assert.match(source, /mainAnimationSyncV77: true/);`,
