@@ -21,14 +21,14 @@
   function drawEntryExitDeadZoneOverlay(add, parent) {
     if (!state.showEntryExitDeadZoneOverlay) return;
     const innerRadius = 45;
-    const outerRadius = Math.max(innerRadius + 10, Number(state.radius || 0) + 9);
+    const outerRadius = Math.max(innerRadius + 10, Number(state.radius || 0) - 24);
     add("path", {
       d: deadZoneSectorPath(innerRadius, outerRadius),
-      fill: "#6e087f",
-      "fill-opacity": 0.30,
-      stroke: "#9e279c",
+      fill: "#ef737a",
+      "fill-opacity": 0.22,
+      stroke: "#ff9aa0",
       "stroke-width": 1.2,
-      "stroke-opacity": 0.56,
+      "stroke-opacity": 0.70,
       "pointer-events": "none",
       "data-entry-exit-dead-zone": "330-30",
       "aria-label": "Bottle entry and exit dead zone from 330 to 30 degrees"
@@ -42,7 +42,7 @@
         y1: inner.y,
         x2: outer.x,
         y2: outer.y,
-        stroke: "#d63163",
+        stroke: "#ff7078",
         "stroke-width": 2,
         "stroke-opacity": 0.78,
         "stroke-dasharray": "7 5",
@@ -55,8 +55,8 @@
     const labelPoint = angleToXY(0, Math.max(innerRadius + 24, outerRadius * 0.63));
     add("text", {
       x: labelPoint.x,
-      y: labelPoint.y,
-      fill: "#df8fe8",
+      y: labelPoint.y - 9,
+      fill: "#ffd1d4",
       "font-size": 8,
       "font-weight": 800,
       "letter-spacing": 0.5,

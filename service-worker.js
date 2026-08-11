@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-client-delivery-refresh-v74-20260811-1612";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-map-layout-dead-zone-bottle-visual-v75-20260811-1628";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -93,7 +93,9 @@ const CORE_ASSETS = Object.freeze([
   "./app/table-rendering.js",
   "./app/bootstrap.js",
   "./app/compact-build-parameters-integration.js",
+  "./app/map-workspace-compact-support-integration.js",
   "./app/bottle-orientation-panel-integration.js",
+  "./app/bottle-orientation-panel-recovery-integration.js",
   "./app/export-service.js",
   "./app/global-actions.js",
   "./app/animation-runtime.js",

@@ -48,6 +48,9 @@
     const configuredAssemblyLayer = add("g", { "aria-label": "Configured wipe-down assemblies" });
     drawConfiguredAssemblies(add, configuredAssemblyLayer);
 
+    const deadZoneLabel = deadZoneLayer.querySelector?.("[data-dead-zone-label]");
+    if (deadZoneLabel) svg.appendChild(deadZoneLabel);
+
     const centerReadout = add("g", { "aria-label": "Current table angle" });
     const centerAngleFontSize = Math.abs(state.previewAngle) >= 100 ? 14 : Math.abs(state.previewAngle) >= 10 ? 16 : 18;
     add("circle", { cx: 0, cy: 0, r: 39, fill: "var(--map-readout)", "fill-opacity": 0.96, stroke: "var(--map-ring)", "stroke-width": 1.5 }, centerReadout);
