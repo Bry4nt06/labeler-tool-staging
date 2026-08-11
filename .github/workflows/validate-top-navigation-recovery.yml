@@ -1,0 +1,28 @@
+name: Validate top navigation recovery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - app/bootstrap.js
+      - app/controllers/tabs-controller.js
+      - tests/top-navigation-recovery.test.js
+      - .github/workflows/validate-top-navigation-recovery.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: |
+          node --check app/controllers/tabs-controller.js
+          node --check tests/top-navigation-recovery.test.js
+      - name: Run top navigation recovery regression
+        run: node tests/top-navigation-recovery.test.js
