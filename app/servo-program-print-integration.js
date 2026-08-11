@@ -5,6 +5,7 @@
 
   const BUTTON_ID = "printServoProgram";
   const STYLE_ID = "servo-program-print-action-style";
+  let tabObserver = null;
 
   function number(value, fallback = 0) {
     const parsed = Number(value);
@@ -320,6 +321,13 @@
     button.disabled = !(Array.isArray(state?.program) && state.program.length);
   }
 
+  function observeProgramTab(programTab) {
+    tabObserver?.disconnect?.();
+    if (typeof MutationObserver !== "function" || !programTab) return;
+    tabObserver = new MutationObserver(syncButton);
+    tabObserver.observe(programTab, { attributes: true, attributeFilter: ["class"] });
+  }
+
   function installButton() {
     if (document.getElementById(BUTTON_ID)) return;
     const programTab = document.querySelector('.tab[data-tab="program"]');
@@ -334,8 +342,9 @@
     button.addEventListener("click", openPrintView);
     programTab.insertAdjacentElement("afterend", button);
 
-    document.querySelector(".tabs")?.addEventListener("click", () => global.setTimeout(syncButton, 0));
+    observeProgramTab(programTab);
     document.addEventListener("input", syncButton);
+    document.addEventListener("change", syncButton);
     syncButton();
   }
 
@@ -347,7 +356,7 @@
 
   global.LabelerServoProgramPrint = Object.freeze({
     installed: true,
-    version: 1,
+    version: 2,
     printModel,
     printHtml,
     openPrintView,
