@@ -1,0 +1,91 @@
+name: Diagnose deployed workspace navigation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/diagnose-deployed-navigation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install browser harness
+        run: npm install --no-save puppeteer-core@24.16.0
+      - name: Exercise deployed staging navigation
+        run: |
+          cat > /tmp/nav-test.cjs <<'NODE'
+          const puppeteer = require(process.cwd() + '/node_modules/puppeteer-core');
+          const fs = require('fs');
+
+          (async () => {
+            const executablePath = ['/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'].find(fs.existsSync);
+            if (!executablePath) throw new Error('Chrome/Chromium not found');
+            const browser = await puppeteer.launch({ executablePath, headless: true, args:['--no-sandbox','--disable-dev-shm-usage'] });
+            const page = await browser.newPage();
+            await page.setViewport({ width: 1600, height: 1000 });
+            const errors = [];
+            const consoleErrors = [];
+            page.on('pageerror', e => errors.push(e.stack || e.message || String(e)));
+            page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+
+            await page.goto('https://bry4nt06.github.io/labeler-tool-staging/?navdiag=' + Date.now(), { waitUntil:'domcontentloaded', timeout:30000 });
+            await new Promise(r => setTimeout(r, 6000));
+
+            const initial = await page.evaluate(() => ({
+              banner: document.querySelector('.staging-environment-banner')?.textContent?.trim() || '',
+              activeTabState: typeof state !== 'undefined' ? state.activeTab : null,
+              activePanel: document.querySelector('.table-wrap.active')?.id || null,
+              tabsController: Boolean(window.LabelerTabsController?.navigationCaptureV2),
+              blockingDialogs: [...document.querySelectorAll('dialog')].map(d => ({ id:d.id, open:d.open, text:(d.textContent||'').trim().slice(0,180) })),
+              startupError: document.querySelector('.startup-error')?.textContent?.trim() || '',
+              tabs: [...document.querySelectorAll('.tabs .tab[data-tab]')].map(el => ({ text:(el.textContent||'').trim(), tab:el.dataset.tab, active:el.classList.contains('active') }))
+            }));
+            console.log('INITIAL', JSON.stringify(initial, null, 2));
+
+            const tabs = initial.tabs;
+            const results = [];
+            for (const item of tabs) {
+              const selector = `.tabs .tab[data-tab="${item.tab}"]`;
+              const geometry = await page.$eval(selector, el => {
+                const r = el.getBoundingClientRect();
+                const x = r.left + r.width / 2;
+                const y = r.top + r.height / 2;
+                const top = document.elementFromPoint(x, y);
+                return {
+                  rect:{ left:r.left, top:r.top, width:r.width, height:r.height },
+                  topTag:top?.tagName || null,
+                  topId:top?.id || null,
+                  topClass:top?.className || null,
+                  topText:(top?.textContent || '').trim().slice(0,100),
+                  isSelf:top === el || el.contains(top)
+                };
+              });
+              let clickError = null;
+              try { await page.click(selector); } catch (e) { clickError = e.message; }
+              await new Promise(r => setTimeout(r, 500));
+              const after = await page.evaluate(tab => ({
+                stateTab: typeof state !== 'undefined' ? state.activeTab : null,
+                activePanel: document.querySelector('.table-wrap.active')?.id || null,
+                tabActive: document.querySelector(`.tabs .tab[data-tab="${tab}"]`)?.classList.contains('active') || false,
+                openDialogs: [...document.querySelectorAll('dialog[open]')].map(d => d.id || '(unnamed)'),
+                specDialogExists: Boolean(document.querySelector('#specificationRequiredDialog'))
+              }), item.tab);
+              results.push({ item, geometry, clickError, after });
+            }
+            console.log('RESULTS', JSON.stringify(results, null, 2));
+            console.log('PAGE_ERRORS', JSON.stringify(errors, null, 2));
+            console.log('CONSOLE_ERRORS', JSON.stringify(consoleErrors, null, 2));
+            await browser.close();
+          })().catch(err => { console.error(err.stack || err); process.exitCode = 1; });
+          NODE
+          node /tmp/nav-test.cjs
