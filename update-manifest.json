@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "spec-number-retired-v64-20260811-1038",
+  "buildId": "startup-overlay-release-v67-20260811-1234",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v64 retires the legacy Spec # field from ServoForge label recipes. New labels no longer create a Spec number property, the default label library no longer stores it, persisted recipes have the field removed at runtime, legacy Spec # required-field dialogs are suppressed, and the Print Program build sheet omits Spec # entirely. Specs editing remains unrestricted."
+  "notes": "Staging v67 fixes the workspace navigation lock by correcting Map Builder startup dependency order. Assembly model and geometry drivers plus the assembly adapter now load before map defaults and migration, so normalizeAssembly is available before persistent maps initialize. The startup overlay can complete and Build Inputs, Servo Program, Diagnostics, and Servo Simulation remain clickable. Spec # retirement remains active."
 }
