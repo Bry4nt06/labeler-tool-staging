@@ -1,0 +1,56 @@
+name: Apply client delivery refresh v74 once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/apply-client-delivery-refresh-v74-once.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "client-delivery-refresh-v74"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out staging main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply v74 client delivery refresh
+        run: node scripts/apply-client-delivery-refresh-v74.js
+
+      - name: Validate syntax and delivery markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app/setup-bindings.js
+          node --check app/bootstrap.js
+          node --check app/update-manager.js
+          node --check app.js
+          node --check service-worker.js
+          grep -q 'client-delivery-refresh-v74-20260811-1612' index.html
+          grep -q 'showEntryExitDeadZoneOverlay' index.html
+          grep -q '330-30' app/map-overlay-renderer.js
+          grep -q 'station1' app/bottle-orientation-panel-integration.js || grep -q 'Station 1' app/bottle-orientation-panel-integration.js
+
+      - name: Commit verified v74 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html app/bootstrap.js app/setup-bindings.js app.js service-worker.js app/update-manager.js update-manifest.json
+          if git diff --cached --quiet; then
+            echo "No runtime changes to commit."
+            exit 0
+          fi
+          git commit -m "Repair staging client delivery for v72 and v73"
+          git push origin HEAD:main
