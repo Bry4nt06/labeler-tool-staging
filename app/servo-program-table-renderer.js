@@ -6,7 +6,7 @@ function renderProgram() {
   const body = els.program.querySelector("tbody");
   const segments = programSegments(state.program);
   const maxSpeed = segments.reduce((best, segment) => Number.isFinite(segment.absSpeed) && segment.absSpeed > (best?.absSpeed ?? -Infinity) ? segment : best, null);
-  segments.forEach((row) => {
+  segments.forEach((row, index) => {
     const status = row.moveFault
       ? ["status-bad", `FAULT ${fmt(finishAngle(row.absSpeed), 1)} >= ${fmt(finishAngle(state.maxMoveRatio), 1)}`]
       : !Number.isFinite(row.plateAngle) && row.cmd !== 0
@@ -20,6 +20,14 @@ function renderProgram() {
     const plateOverride = Number.isFinite(row.plateAngleOverride) ? fmt(row.plateAngleOverride, 1) : "";
     tr.innerHTML = `<td>${row.hmi}</td><td>${row.plc}</td><td>${servoCommandControl(row, false, 'data-program-field="command"')}</td><td><input class="num compact-input generated-angle" type="number" value="${fmt(row.generatedTableAngle, 1)}" readonly title="Generated table angle"></td><td><input class="num compact-input angle-override${tableOverride !== "" ? " active-override" : ""}" data-program-field="tableAngle" type="number" step="0.5" placeholder="Override" value="${tableOverride}" aria-label="Override table angle for HMI ${row.hmi}"></td><td><input class="num compact-input generated-angle" type="number" value="${Number.isFinite(row.generatedPlateAngle) ? fmt(row.generatedPlateAngle, 1) : ""}" readonly title="Generated bottle angle"></td><td><input class="num compact-input angle-override${plateOverride !== "" ? " active-override" : ""}" data-program-field="plateAngle" type="number" step="0.1" placeholder="Override" value="${plateOverride}" aria-label="Override bottle angle for HMI ${row.hmi}"></td><td class="num">${fmt(row.tableTravel, 1)}</td><td class="num">${fmt(row.plateTravel, 1)}</td><td class="num">${Number.isFinite(row.plateTravel) ? fmt(finishAngle(window.LabelerGeometryDriver?.encoderCountsFromPlateDegrees(row.plateTravel, state.encoderCountsPerRev, state.servoGearRatio)), 1) : ""}</td><td class="${status[0]}">${status[1]}</td><td class="num ${speedClass}">${Number.isFinite(row.absSpeed) ? fmt(finishAngle(row.absSpeed), 1) : ""}</td><td><input data-program-field="action" value="${row.action}"></td>`;
     body.appendChild(tr);
+
+    if ((index + 1) % 8 === 0 && index < segments.length - 1) {
+      const divider = document.createElement("tr");
+      divider.className = "program-eight-row-divider";
+      divider.setAttribute("aria-hidden", "true");
+      divider.innerHTML = `<td colspan="13" style="height:5px;padding:0;border:0;background:transparent;"></td>`;
+      body.appendChild(divider);
+    }
   });
   updateActiveServoProgramRow();
 }
