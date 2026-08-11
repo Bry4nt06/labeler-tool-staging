@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "direct-workspace-tabs-v68-20260811-1241",
+  "buildId": "bootstrap-independent-navigation-v69-20260811-1305",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Staging v68 makes workspace tab navigation render-independent. Specs, Build Inputs, Servo Program, Diagnostics, and Servo Simulation now activate their panels directly before any persistence work, and the selected panel is explicitly unhidden. Map Builder, Print, and Settings behavior is unchanged."
+  "notes": "Staging v69 loads workspace navigation directly from index.html before all application drivers and outside the bootstrap chain. Specs, Build Inputs, Servo Program, Diagnostics, and Servo Simulation remain selectable even if a later startup module fails."
 }
