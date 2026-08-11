@@ -1,0 +1,39 @@
+name: Apply Map Machine Settings and Wipe Direction v87
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/apply-v87-map-machine-settings-wipe-direction.yml"
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - run: python3 scripts/apply-v87-map-machine-settings-wipe-direction.py
+      - run: |
+          node --check app/controllers/map-builder-event-controller.js
+          node --check app/map-builder-controller.js
+          node --check app/company-default-map-catalog-integration.js
+          node --check app/wipe-telemetry-service.js
+          node --check app/wipe-down-builder.js
+          node --check app/bootstrap.js
+          node --check app/update-manager.js
+          node --check service-worker.js
+      - run: node tests/map-machine-settings-editability-v87.test.js
+      - run: node tests/wipe-direction-machine-parity-v87.test.js
+      - run: node tests/bottle-orientation-runtime-load.test.js
+      - run: node tests/bottle-orientation-panel.test.js
+      - run: node tests/bottle-orientation-mount-recovery.test.js
+      - run: node tests/compact-layout-defaults-wipe-orientation.test.js
+      - run: node tests/entry-exit-dead-zone-overlay.test.js
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/controllers/map-builder-event-controller.js app/map-builder-controller.js app/company-default-map-catalog-integration.js app/wipe-telemetry-service.js app/wipe-down-builder.js app/bootstrap.js app/update-manager.js service-worker.js update-manifest.json tests/map-machine-settings-editability-v87.test.js tests/wipe-direction-machine-parity-v87.test.js tests/bottle-orientation-panel.test.js tests/bottle-orientation-mount-recovery.test.js
+          git commit -m "Restore machine settings editing and wipe direction v87"
+          git push origin main
