@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "map-machine-settings-wipe-direction-v87-20260811-1940",
+  "buildId": "wipe-panel-runtime-direction-v88-20260811-1956",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "v87 keeps the confirmed Top View-only Bottle Orientation baseline unchanged, restores editable Map Builder machine settings, preserves local machine-setting overrides on protected default maps, and locks Label Wipe-Down direction to the active map: clockwise is left-to-right; counter-clockwise is right-to-left."
+  "notes": "v88 keeps the confirmed Top View-only Bottle Orientation and working Map Builder machine settings unchanged. Label Wipe-Down now follows the same synchronized runtime machine direction as the Mechanical Map: clockwise is left-to-right; counter-clockwise is right-to-left."
 }
