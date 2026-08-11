@@ -146,6 +146,8 @@ old_build = "pseudo-3d-bottle-side-view-v81-20260811-1838"
 text = text.replace(old_build.replace("-", "\\-"), BUILD.replace("-", "\\-"))
 text = text.replace(f'assert.equal(manifest.buildId, "{old_build}");', f'assert.equal(manifest.buildId, "{BUILD}");')
 text = text.replace('console.log("Pseudo-3D bottle side-view v81 regression passed.");', 'console.log("Side-view grid and degree reference v82 regression passed.");')
+text = text.replace('assert.match(source, /stop-color="#dbe7ec"/);', 'assert.match(source, /stop-color="#e8f4f8"/);')
+text = text.replace('assert.match(source, /stop-opacity="\\.34"/);', 'assert.match(source, /stop-opacity="\\.46"/);')
 needle = 'assert.match(source, /orientationDepthCueV81: true/);'
 addition = needle + '''\nassert.match(source, /selectedMockupBottleV82: true/);\nassert.match(source, /sideViewOrientationFloorV82: true/);\nassert.match(source, /sideViewDegreeRingV82: true/);\nassert.match(source, /liveBaseAngleMarkerV82: true/);\nassert.match(source, /data-side-orientation-floor=\\"true\\"/);\nassert.match(source, /orientationRingPoint/);\nassert.match(source, /orientationMarker/);\nassert.match(source, /\[0,90,180,270\]\.map/);'''
 if needle not in text:
