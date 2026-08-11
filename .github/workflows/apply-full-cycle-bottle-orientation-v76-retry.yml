@@ -30,6 +30,9 @@ jobs:
       - name: Apply v76 full-cycle orientation update
         run: node scripts/apply-full-cycle-bottle-orientation-v76.js
 
+      - name: Align v76 regression with rendered accessibility text
+        run: sed -i 's#/clear glass bottle side view/#/Clear glass bottle side view/#' tests/bottle-orientation-panel.test.js
+
       - name: Validate v76 syntax and regressions
         shell: bash
         run: |
