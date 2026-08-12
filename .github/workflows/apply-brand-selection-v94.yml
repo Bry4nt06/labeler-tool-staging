@@ -49,11 +49,14 @@ jobs:
       - name: Navigation ownership regression
         run: node tests/top-navigation-recovery.test.js
 
-      - name: Specs unrestricted editing regression
-        run: node tests/specs-unrestricted-editing.test.js
+      - name: Specification retirement regression
+        run: node tests/specification-required-fields.test.js
 
-      - name: Spec number retirement regression
-        run: node tests/spec-number-retirement.test.js
+      - name: Specification sensor guidance regression
+        run: node tests/specification-sensor-guidance.test.js
+
+      - name: Spec editability regression
+        run: node tests/map-lock-spec-editability-and-bud-zero.test.js
 
       - name: Bottle orientation regression
         run: node tests/bottle-orientation-panel.test.js
