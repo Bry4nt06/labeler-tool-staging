@@ -1,4 +1,4 @@
-name: Apply brand selection presentation v93
+name: Validate brand selection presentation v93
 
 on:
   push:
@@ -8,19 +8,14 @@ on:
       - .github/workflows/apply-brand-selection-v93.yml
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  repair:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Apply v93 patch
-        run: python3 scripts/apply-v93-brand-selection-presentation.py
 
       - name: Validate syntax
         run: |
@@ -31,6 +26,7 @@ jobs:
           node --check app/bootstrap.js
           node --check app.js
           node --check service-worker.js
+          node --check tests/workspace-selection-delivery-v93.test.js
 
       - name: Brand regeneration regression
         run: node tests/brand-selection-regeneration.test.js
@@ -38,21 +34,14 @@ jobs:
       - name: Brand presentation regression
         run: node tests/brand-selection-presentation-v93.test.js
 
+      - name: v93 delivery regression
+        run: node tests/workspace-selection-delivery-v93.test.js
+
       - name: Setup binding ownership regression
         run: node tests/setup-bindings-retirement.test.js
 
       - name: Top navigation regression
         run: node tests/top-navigation-recovery.test.js
-
-      - name: Verify v93 client build markers
-        run: |
-          BUILD='brand-selection-presentation-v93-20260811-2124'
-          grep -Fq "$BUILD" app/bootstrap.js
-          grep -Fq "$BUILD" app.js
-          grep -Fq "$BUILD" index.html
-          grep -Fq "$BUILD" service-worker.js
-          grep -Fq "$BUILD" app/update-manager.js
-          node -e "const m=require('./update-manifest.json'); if(m.buildId !== '$BUILD') process.exit(1)"
 
       - name: Bottle orientation regression
         run: node tests/bottle-orientation-panel.test.js
@@ -65,15 +54,3 @@ jobs:
 
       - name: APL handoff regression
         run: node tests/apl-section-handoff-continuity.test.js
-
-      - name: Commit v93
-        run: |
-          if git diff --quiet; then
-            echo "No v93 changes to commit."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Fix Brand selection presentation race v93"
-          git push origin HEAD:main
