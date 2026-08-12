@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "anonymous-feedback-center-v95-20260812-1755";
+  const BUILD_ID = "public-ratings-v96-20260812-1821";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
@@ -162,7 +162,7 @@
 
 (function loadStagingFeatureModules() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "anonymous-feedback-center-v95-20260812-1755";
+  const BUILD_ID = "public-ratings-v96-20260812-1821";
   const modules = [
     "app/diagnostics-workspace-integration.js",
     "app/workspace-developer-integration.js",

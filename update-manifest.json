@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "anonymous-feedback-center-v95-20260812-1755",
+  "buildId": "public-ratings-v96-20260812-1821",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
-  "notes": "v95 adds a login-free Feedback & Support Center beside Settings. Users receive a private browser identity automatically, can submit bugs, requests, questions and ratings, review their ticket history, receive ServoForge Support replies, continue conversations, and update 1\u20135 star ratings. Current build/map/brand diagnostics can be attached automatically. A protected Support Admin inbox allows replies and status changes without exposing database credentials. v94 Brand event ownership and all validated APL/servo behavior remain unchanged."
+  "notes": "v96 adds a public Ratings tab to Feedback & Support between My Requests and Support Admin. Ratings are intentionally stored separately from private support tickets. Users can leave or update a 1\u20135 star rating, an optional display name, and an optional public comment limited to 200 characters. The Ratings tab shows the aggregate average, rating count, and up to 200 recent ratings. No end-user login is required. v95 support tickets and v94 Brand selection authority remain unchanged."
 }

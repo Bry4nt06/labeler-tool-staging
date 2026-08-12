@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
-const BUILD = "anonymous-feedback-center-v95-20260812-1755";
+const BUILD = "public-ratings-v96-20260812-1821";
 const guidance = fs.readFileSync(path.join(root, "app/controllers/specification-sensor-guidance-controller.js"), "utf8");
 const setup = fs.readFileSync(path.join(root, "app/controllers/setup-event-controller-integration.js"), "utf8");
 assert.match(guidance, /brandSelectionOwnedByBuildInputsV94:\s*true/);
