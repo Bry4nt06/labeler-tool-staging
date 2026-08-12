@@ -1,0 +1,74 @@
+name: Apply Community Library v97
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-v97-community-library.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply v97 patch
+        run: python3 scripts/apply-v97-community-library.py
+
+      - name: Validate syntax
+        run: |
+          node --check app/community-library-integration.js
+          node --check app/feedback-center-integration.js
+          node --check app/bootstrap.js
+          node --check app.js
+          node --check app/update-manager.js
+          node --check service-worker.js
+          node --check tests/community-library-v97.test.js
+
+      - name: Community Library regression
+        run: node tests/community-library-v97.test.js
+
+      - name: Community API browse smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          TOKEN="sf-ci-$(date +%s)-$RANDOM-$RANDOM-community-library"
+          RESPONSE=$(curl -fsS 'https://dtdewgbfckwvldceussa.supabase.co/functions/v1/servoforge-community' \
+            -H 'content-type: application/json' \
+            --data "{\"action\":\"browse\",\"token\":\"$TOKEN\"}")
+          node -e 'const d=JSON.parse(process.argv[1]); if(!Array.isArray(d.packages)) process.exit(1)' "$RESPONSE"
+
+      - name: Feedback and public ratings regressions
+        run: |
+          node tests/feedback-center-v95.test.js
+          node tests/public-ratings-v96.test.js
+
+      - name: Brand selection regressions
+        run: |
+          node tests/brand-selection-event-authority-v94.test.js
+          node tests/brand-selection-presentation-v93.test.js
+          node tests/brand-selection-regeneration.test.js
+
+      - name: Protected Bottle Orientation and APL regressions
+        run: |
+          node tests/bottle-orientation-panel.test.js
+          node tests/apl-section-handoff-continuity.test.js
+          node tests/apl-roller-coverage-default.test.js
+          node tests/entry-exit-dead-zone-overlay.test.js
+
+      - name: Commit v97
+        run: |
+          if git diff --quiet; then
+            echo 'No v97 changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Add Community Library and simplify staging Settings v97'
+          git push origin HEAD:main
