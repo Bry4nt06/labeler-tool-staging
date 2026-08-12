@@ -1,0 +1,202 @@
+name: Apply wipe panel semantic direction v89
+
+on:
+  push:
+    paths:
+      - ".github/workflows/apply-v89-wipe-semantic-direction.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch semantic machine direction and delivery IDs
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          BUILD = "wipe-panel-semantic-direction-v89-20260811-2005"
+          UPDATED = "Aug 11, 2026 8:05 PM ET"
+
+          service_path = Path("app/wipe-telemetry-service.js")
+          service = service_path.read_text(encoding="utf-8")
+          replacement = '''function liveWipeMachineDirection() {
+            // Use the operator-facing Map Builder direction first. The legacy
+            // runtime state.direction uses the opposite internal motion convention,
+            // so it is only an inverted fallback when no semantic map direction exists.
+            const selected = typeof document !== "undefined"
+              ? String(document.getElementById("mapDirection")?.value || "").toLowerCase()
+              : "";
+            if (selected === "cw" || selected === "ccw") return selected;
+            try {
+              const configured = String(activeMachineMap?.()?.machineSettings?.direction || "").toLowerCase();
+              if (configured === "cw" || configured === "ccw") return configured;
+            } catch {
+              // Fall through to the internal runtime convention below.
+            }
+            const runtime = String(state.direction || "").toLowerCase();
+            if (runtime === "cw") return "ccw";
+            if (runtime === "ccw") return "cw";
+            return "ccw";
+          }
+
+          function wipeVisualApplication'''
+          service, count = re.subn(
+              r'function liveWipeMachineDirection\(\) \{.*?\n\}\n\nfunction wipeVisualApplication',
+              replacement,
+              service,
+              count=1,
+              flags=re.S,
+          )
+          if count != 1:
+              raise SystemExit("Unable to replace liveWipeMachineDirection")
+          service = service.replace("runtimeDirectionParityV88: true", "semanticMachineDirectionV89: true")
+          service_path.write_text(service, encoding="utf-8")
+
+          feature_path = Path("app/simulation-collapsible-integration.js")
+          feature = feature_path.read_text(encoding="utf-8")
+          feature = feature.replace(
+              "app/wipe-telemetry-service.js?v=0.9.7-table-rendering-retired-v1",
+              "app/wipe-telemetry-service.js?v=0.9.10-wipe-direction-v89",
+          )
+          feature = feature.replace(
+              "app/wipe-telemetry-renderer.js?v=0.9.7-table-rendering-retired-v1",
+              "app/wipe-telemetry-renderer.js?v=0.9.10-wipe-direction-v89",
+          )
+          feature_path.write_text(feature, encoding="utf-8")
+
+          bootstrap_path = Path("app/bootstrap.js")
+          bootstrap = bootstrap_path.read_text(encoding="utf-8")
+          bootstrap = re.sub(r'const build = "[^"]+";', f'const build = "{BUILD}";', bootstrap, count=1)
+          bootstrap = re.sub(r'const buildUpdatedAt = "[^"]+";', f'const buildUpdatedAt = "{UPDATED}";', bootstrap, count=1)
+          bootstrap = bootstrap.replace("// Regression lineage: ", f"// Regression lineage: {BUILD} • ", 1)
+          bootstrap_path.write_text(bootstrap, encoding="utf-8")
+
+          app_path = Path("app.js")
+          app = app_path.read_text(encoding="utf-8")
+          app = re.sub(r'const build = "[^"]+";', f'const build = "{BUILD}";', app, count=1)
+          app_path.write_text(app, encoding="utf-8")
+
+          index_path = Path("index.html")
+          index = index_path.read_text(encoding="utf-8")
+          index = index.replace("head1-world-frame-top-view-v80-20260811-1830", BUILD)
+          index_path.write_text(index, encoding="utf-8")
+
+          update_path = Path("app/update-manager.js")
+          update = update_path.read_text(encoding="utf-8")
+          update = re.sub(r'const BUILD_ID = "[^"]+";', f'const BUILD_ID = "{BUILD}";', update, count=1)
+          update_path.write_text(update, encoding="utf-8")
+
+          manifest_path = Path("update-manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          manifest["buildId"] = BUILD
+          manifest["notes"] = (
+              "v89 keeps the confirmed Top View-only Bottle Orientation and working Map Builder machine settings unchanged. "
+              "Label Wipe-Down now uses the operator-facing machine direction: clockwise is left-to-right and "
+              "counter-clockwise is right-to-left; the legacy runtime direction is only an inverted fallback."
+          )
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+          v88_test = Path("tests/wipe-panel-runtime-direction-v88.test.js")
+          v88_test.write_text('''"use strict";
+          const assert = require("assert");
+          const fs = require("fs");
+          const path = require("path");
+          const source = fs.readFileSync(path.resolve(__dirname, "../app/wipe-telemetry-service.js"), "utf8");
+          const functionStart = source.indexOf("function liveWipeMachineDirection()");
+          const functionEnd = source.indexOf("function wipeVisualApplication", functionStart);
+          assert.ok(functionStart >= 0 && functionEnd > functionStart);
+          const fn = source.slice(functionStart, functionEnd);
+          assert.ok(fn.indexOf("mapDirection") >= 0, "semantic Map Builder direction must be read");
+          assert.ok(fn.indexOf("activeMachineMap") >= 0, "active map direction must be a fallback");
+          assert.ok(fn.indexOf("state.direction") >= 0, "legacy runtime direction must remain a final fallback");
+          assert.ok(fn.indexOf("mapDirection") < fn.indexOf("state.direction"), "semantic direction must precede runtime convention");
+          assert.match(source, /semanticMachineDirectionV89: true/);
+          console.log("Wipe direction compatibility regression passed under v89 semantic parity.");
+          ''', encoding="utf-8")
+
+          Path("tests/wipe-panel-semantic-direction-v89.test.js").write_text('''"use strict";
+          const assert = require("node:assert/strict");
+          const fs = require("node:fs");
+          const path = require("node:path");
+          const vm = require("node:vm");
+
+          const source = fs.readFileSync(path.resolve(__dirname, "../app/wipe-telemetry-service.js"), "utf8");
+          const manifestSource = fs.readFileSync(path.resolve(__dirname, "../app/simulation-collapsible-integration.js"), "utf8");
+          let selectedDirection = "cw";
+          const sandbox = {
+            console,
+            document: {
+              getElementById(id) {
+                return id === "mapDirection" ? { value: selectedDirection } : null;
+              }
+            },
+            state: {
+              direction: "ccw",
+              buildInputs: {
+                neckApplication: "Center Tack",
+                neckContactMm: 10,
+                bodyContactMm: 10,
+                backContactMm: 0
+              }
+            },
+            activeMachineMap() {
+              return { machineSettings: { direction: "ccw" } };
+            },
+            num(value, fallback = 0) {
+              const parsed = Number(value);
+              return Number.isFinite(parsed) ? parsed : fallback;
+            }
+          };
+          sandbox.window = sandbox;
+          vm.createContext(sandbox);
+          vm.runInContext(source, sandbox);
+          const service = sandbox.LabelerWipeTelemetryService;
+
+          assert.equal(service.liveWipeMachineDirection(), "cw", "UI Clockwise must be semantic CW even when runtime says CCW");
+          assert.equal(service.wipeVisualApplication("body", 100).direction, "ltr", "Clockwise must render left-to-right");
+
+          selectedDirection = "ccw";
+          sandbox.state.direction = "cw";
+          assert.equal(service.liveWipeMachineDirection(), "ccw", "UI Counter-clockwise must be semantic CCW even when runtime says CW");
+          assert.equal(service.wipeVisualApplication("body", 100).direction, "rtl", "Counter-clockwise must render right-to-left");
+
+          assert.match(manifestSource, /wipe-telemetry-service\.js\?v=0\.9\.10-wipe-direction-v89/);
+          assert.match(manifestSource, /wipe-telemetry-renderer\.js\?v=0\.9\.10-wipe-direction-v89/);
+          console.log("Wipe panel semantic direction v89 regression passed: CW=L->R, CCW=R->L.");
+          ''', encoding="utf-8")
+          PY
+
+      - name: Validate v89
+        shell: bash
+        run: |
+          node --check app/wipe-telemetry-service.js
+          node --check app/wipe-telemetry-renderer.js
+          node --check app/simulation-collapsible-integration.js
+          node --check app/bootstrap.js
+          node tests/wipe-direction-machine-parity-v87.test.js
+          node tests/wipe-panel-runtime-direction-v88.test.js
+          node tests/wipe-panel-semantic-direction-v89.test.js
+          node tests/feature-integration-readiness.test.js
+          node tests/bottle-orientation-runtime-load.test.js
+          node tests/bottle-orientation-panel.test.js
+          node tests/entry-exit-dead-zone-overlay.test.js
+          node tests/apl-roller-coverage-default.test.js
+
+      - name: Commit v89 runtime
+        shell: bash
+        run: |
+          git config user.name "ServoForge Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/wipe-telemetry-service.js app/simulation-collapsible-integration.js app/bootstrap.js app.js index.html app/update-manager.js update-manifest.json tests/wipe-panel-runtime-direction-v88.test.js tests/wipe-panel-semantic-direction-v89.test.js
+          git commit -m "Fix wipe panel semantic machine direction v89"
+          git push
