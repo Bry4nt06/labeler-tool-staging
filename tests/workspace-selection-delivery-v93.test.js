@@ -7,8 +7,8 @@ const BUILD = "brand-selection-presentation-v93-20260811-2124";
 const actions = fs.readFileSync(path.join(root, "app/controllers/workspace-action-service.js"), "utf8");
 assert.match(actions, /function presentCurrentState\(/);
 assert.match(actions, /coordinator\.driver\.present\(coordinator\.handlers\(\)\)/);
-assert.doesNotMatch(actions.match(/function presentCurrentState\([\s\S]*?
-  \}/)?.[0] || "", /call\("render"\)/);
+const presentationBoundary = actions.match(/function presentCurrentState\([\s\S]*?\n  \}/)?.[0] || "";
+assert.doesNotMatch(presentationBoundary, /call\("render"\)/);
 const build = fs.readFileSync(path.join(root, "app/controllers/build-inputs-controller.js"), "utf8");
 assert.match(build, /render:\s*null/);
 assert.match(build, /actions\.present\?\.\(\)/);
