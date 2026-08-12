@@ -1,0 +1,41 @@
+name: Apply public ratings v96
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-v96-public-ratings.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply v96 patch
+        run: python3 scripts/apply-v96-public-ratings.py
+      - name: Validate v96 and protected behavior
+        run: |
+          node --check app/feedback-center-integration.js
+          node --check app/bootstrap.js
+          node --check app/update-manager.js
+          node --check service-worker.js
+          node tests/public-ratings-v96.test.js
+          node tests/feedback-center-v95.test.js
+          node tests/brand-selection-event-authority-v94.test.js
+          node tests/brand-selection-presentation-v93.test.js
+          node tests/bottle-orientation-panel.test.js
+          node tests/apl-section-handoff-continuity.test.js
+          node tests/apl-roller-coverage-default.test.js
+      - name: Commit v96
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Add public Ratings tab v96'
+          git push origin HEAD:main
