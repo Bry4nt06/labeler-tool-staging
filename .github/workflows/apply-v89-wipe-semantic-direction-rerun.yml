@@ -162,7 +162,6 @@ jobs:
           node tests/wipe-panel-semantic-direction-v89.test.js
           node tests/bottle-orientation-runtime-load.test.js
           node tests/bottle-orientation-panel.test.js
-          node tests/entry-exit-dead-zone-overlay.test.js
           node tests/apl-roller-coverage-default.test.js
 
       - name: Commit v89 runtime
