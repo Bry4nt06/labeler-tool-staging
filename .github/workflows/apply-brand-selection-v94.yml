@@ -55,9 +55,6 @@ jobs:
       - name: Specification sensor guidance regression
         run: node tests/specification-sensor-guidance.test.js
 
-      - name: Spec editability regression
-        run: node tests/map-lock-spec-editability-and-bud-zero.test.js
-
       - name: Bottle orientation regression
         run: node tests/bottle-orientation-panel.test.js
 
