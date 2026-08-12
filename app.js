@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "wipe-panel-semantic-direction-v89-20260811-2005";
+  const build = "wipe-runtime-delivery-v90-20260811-2020";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

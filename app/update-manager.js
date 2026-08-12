@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "wipe-panel-semantic-direction-v89-20260811-2005";
+  const BUILD_ID = "wipe-runtime-delivery-v90-20260811-2020";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
@@ -161,6 +161,7 @@
 
 (function loadStagingFeatureModules() {
   const RELEASE_VERSION = "0.9.10";
+  const BUILD_ID = "wipe-runtime-delivery-v90-20260811-2020";
   const modules = [
     "app/diagnostics-workspace-integration.js",
     "app/workspace-developer-integration.js",
@@ -183,7 +184,7 @@
         return;
       }
       const script = document.createElement("script");
-      script.src = `./${path}?v=${RELEASE_VERSION}`;
+      script.src = `./${path}?v=${RELEASE_VERSION}&build=${encodeURIComponent(BUILD_ID)}`;
       script.async = false;
       script.dataset.releaseManagedFeature = "true";
       script.addEventListener("load", () => {

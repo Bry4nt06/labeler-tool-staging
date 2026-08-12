@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "wipe-panel-semantic-direction-v89-20260811-2005",
+  "buildId": "wipe-runtime-delivery-v90-20260811-2020",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "v89 keeps the confirmed Top View-only Bottle Orientation and working Map Builder machine settings unchanged. Label Wipe-Down now uses the operator-facing machine direction: clockwise is left-to-right and counter-clockwise is right-to-left; the legacy runtime direction is only an inverted fallback."
+  "notes": "v90 is a runtime-delivery hardening build. Wipe direction behavior is unchanged from v89: clockwise is left-to-right and counter-clockwise is right-to-left. Dynamic staging feature modules and the wipe service/renderer now use build-specific URLs so an installed PWA cannot reuse the older v88 loader."
 }

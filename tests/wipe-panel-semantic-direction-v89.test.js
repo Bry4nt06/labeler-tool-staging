@@ -23,6 +23,6 @@ selectedDirection = "ccw";
 sandbox.state.direction = "cw";
 assert.equal(service.liveWipeMachineDirection(), "ccw");
 assert.equal(service.wipeVisualApplication("body", 100).direction, "rtl");
-assert.match(loader, /wipe-telemetry-service\.js\?v=0\.9\.10-wipe-direction-v89/);
-assert.match(loader, /wipe-telemetry-renderer\.js\?v=0\.9\.10-wipe-direction-v89/);
+assert.match(loader, /wipe-telemetry-service\.js\?v=0\.9\.10-wipe-direction-v90/);
+assert.match(loader, /wipe-telemetry-renderer\.js\?v=0\.9\.10-wipe-direction-v90/);
 console.log("Wipe panel semantic direction v89 regression passed: CW=L->R, CCW=R->L.");
