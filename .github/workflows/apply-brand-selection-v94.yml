@@ -18,7 +18,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply v94 patch
-        run: python3 scripts/apply-v94-brand-event-authority.py
+        run: |
+          python3 scripts/apply-v94-brand-event-authority.py
+          python3 scripts/fix-v94-generated-test.py
 
       - name: Validate syntax
         run: |
