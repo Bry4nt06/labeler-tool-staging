@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "brand-selection-event-authority-v94-20260811-2150";
+  const build = "anonymous-feedback-center-v95-20260812-1755";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

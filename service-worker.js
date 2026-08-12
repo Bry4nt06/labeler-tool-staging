@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-brand-selection-event-authority-v94-20260811-2150";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-anonymous-feedback-center-v95-20260812-1755";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -165,6 +165,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/optimizer-post-wipe-coverage-fix-integration.js",
   "./app/apl-final-aggregate-terminal-integration.js",
   "./app/update-manager.js",
+  "./app/feedback-center-integration.js",
   "./app.js"
 ]);
 
