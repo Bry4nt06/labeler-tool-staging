@@ -26,6 +26,7 @@ jobs:
 
           BUILD = "wipe-panel-semantic-direction-v89-20260811-2005"
           UPDATED = "Aug 11, 2026 8:05 PM ET"
+          OLD_V87 = "map-machine-settings-wipe-direction-v87-20260811-1940"
 
           p = Path("app/wipe-telemetry-service.js")
           s = p.read_text(encoding="utf-8")
@@ -85,11 +86,20 @@ jobs:
           s = re.sub(r'const BUILD_ID = "[^"]+";', f'const BUILD_ID = "{BUILD}";', s, count=1)
           p.write_text(s, encoding="utf-8")
 
+          p = Path("service-worker.js")
+          s = p.read_text(encoding="utf-8").replace(OLD_V87, BUILD)
+          p.write_text(s, encoding="utf-8")
+
           p = Path("update-manifest.json")
           m = json.loads(p.read_text(encoding="utf-8"))
           m["buildId"] = BUILD
           m["notes"] = "v89 keeps the confirmed Top View-only Bottle Orientation and working Map Builder machine settings unchanged. Label Wipe-Down now uses the operator-facing machine direction: clockwise is left-to-right and counter-clockwise is right-to-left; the legacy runtime direction is only an inverted fallback."
           p.write_text(json.dumps(m, indent=2) + "\n", encoding="utf-8")
+
+          p = Path("tests/bottle-orientation-panel.test.js")
+          s = p.read_text(encoding="utf-8").replace(OLD_V87, BUILD)
+          s = s.replace("Top-view-only Bottle Orientation v87 baseline regression passed.", "Top-view-only Bottle Orientation baseline regression passed.")
+          p.write_text(s, encoding="utf-8")
 
           Path("tests/wipe-panel-runtime-direction-v88.test.js").write_text('''"use strict";
           const assert = require("assert");
@@ -146,6 +156,7 @@ jobs:
           node --check app/wipe-telemetry-renderer.js
           node --check app/simulation-collapsible-integration.js
           node --check app/bootstrap.js
+          node --check service-worker.js
           node tests/wipe-direction-machine-parity-v87.test.js
           node tests/wipe-panel-runtime-direction-v88.test.js
           node tests/wipe-panel-semantic-direction-v89.test.js
@@ -158,6 +169,6 @@ jobs:
         run: |
           git config user.name "ServoForge Automation"
           git config user.email "actions@users.noreply.github.com"
-          git add app/wipe-telemetry-service.js app/simulation-collapsible-integration.js app/bootstrap.js app.js index.html app/update-manager.js update-manifest.json tests/wipe-panel-runtime-direction-v88.test.js tests/wipe-panel-semantic-direction-v89.test.js
+          git add app/wipe-telemetry-service.js app/simulation-collapsible-integration.js app/bootstrap.js app.js index.html app/update-manager.js service-worker.js update-manifest.json tests/bottle-orientation-panel.test.js tests/wipe-panel-runtime-direction-v88.test.js tests/wipe-panel-semantic-direction-v89.test.js
           git commit -m "Fix wipe panel semantic machine direction v89"
           git push
