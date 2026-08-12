@@ -194,17 +194,22 @@ function contactedLabelCoverage(program, section, station, throughTableAngle, vi
 }
 
 function liveWipeMachineDirection() {
-  // The Mechanical Map is rendered from the synchronized runtime state, so the
-  // wipe panel must use that exact same direction source. A persisted map copy
-  // can briefly lag behind the live runtime after a direction edit.
-  const runtime = String(state.direction || "").toLowerCase();
-  if (runtime === "cw" || runtime === "ccw") return runtime;
+  // Use the operator-facing Map Builder direction first. The legacy
+  // runtime state.direction uses the opposite internal motion convention,
+  // so it is only an inverted fallback when no semantic map direction exists.
+  const selected = typeof document !== "undefined"
+    ? String(document.getElementById("mapDirection")?.value || "").toLowerCase()
+    : "";
+  if (selected === "cw" || selected === "ccw") return selected;
   try {
     const configured = String(activeMachineMap?.()?.machineSettings?.direction || "").toLowerCase();
     if (configured === "cw" || configured === "ccw") return configured;
   } catch {
-    // Default below only when neither live runtime nor map configuration exists.
+    // Fall through to the internal runtime convention below.
   }
+  const runtime = String(state.direction || "").toLowerCase();
+  if (runtime === "cw") return "ccw";
+  if (runtime === "ccw") return "cw";
   return "ccw";
 }
 
@@ -279,5 +284,5 @@ window.LabelerWipeTelemetryService = Object.freeze({
   wipeVisualApplication,
   wipeDownTelemetry,
   centerTackServoDirectionV2: true,
-  runtimeDirectionParityV88: true
+  semanticMachineDirectionV89: true
 });
