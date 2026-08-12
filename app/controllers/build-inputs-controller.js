@@ -58,34 +58,62 @@
     commit(() => { state.selectedSite = value; }, { render: null });
   }
 
+  let brandSelectionSequence = 0;
+
   function selectBrand(value) {
     const requested = String(value ?? "");
     const available = actions.call("labelSpecsForApplication") || state.labelSpecs || [];
     const selected = available.find((row) => String(row?.brand ?? "") === requested);
     if (!selected) return false;
     const requestedBrand = String(selected.brand);
+    const transaction = ++brandSelectionSequence;
+
+    const applyRequestedSelection = () => {
+      state.selectedBrand = requestedBrand;
+      actions.call("ensureBottleReferenceForLabel", selected);
+      actions.call("applyLabelLengthStationRules");
+      global.LabelerLabelCenterlinePolicy?.ensureApplicationReferenceDefaults?.(state);
+    };
+
+    const restoreBuildInputs = () => {
+      global.LabelerTabsController?.setDirectTabState?.(
+        "buildInputs",
+        global.document?.querySelector?.('.tabs .tab[data-tab="buildInputs"]') || null
+      );
+    };
 
     return actions.execute({
       mutate() {
-        state.selectedBrand = requestedBrand;
-        actions.call("ensureBottleReferenceForLabel", selected);
-        actions.call("applyLabelLengthStationRules");
-        global.LabelerLabelCenterlinePolicy?.ensureApplicationReferenceDefaults?.(state);
+        applyRequestedSelection();
       },
       regenerate: true,
-      persist: false,
+      persist: true,
       render: "all",
+      restoreTab: "buildInputs",
       beforeRender() {
         if (String(state.selectedBrand ?? "") !== requestedBrand) {
-          state.selectedBrand = requestedBrand;
-          actions.call("ensureBottleReferenceForLabel", selected);
-          actions.call("applyLabelLengthStationRules");
-          global.LabelerLabelCenterlinePolicy?.ensureApplicationReferenceDefaults?.(state);
+          applyRequestedSelection();
           actions.call("applyGeneratedServoProfile");
-          state.selectedBrand = requestedBrand;
-          actions.call("ensureBottleReferenceForLabel", selected);
+          applyRequestedSelection();
         }
-        actions.call("saveCurrentSettings");
+      },
+      after() {
+        if (transaction !== brandSelectionSequence) return;
+        applyRequestedSelection();
+        restoreBuildInputs();
+
+        const settle = () => {
+          if (transaction !== brandSelectionSequence) return;
+          const selectionChanged = String(state.selectedBrand ?? "") !== requestedBrand;
+          const activeTab = String(state.activeTab || "");
+          if (selectionChanged) applyRequestedSelection();
+          if (selectionChanged && typeof global.renderBuildInputs === "function") global.renderBuildInputs();
+          if (selectionChanged || activeTab !== "buildInputs") restoreBuildInputs();
+          if (selectionChanged || activeTab !== "buildInputs") actions.call("saveCurrentSettings");
+        };
+
+        if (typeof global.requestAnimationFrame === "function") global.requestAnimationFrame(settle);
+        else if (typeof global.setTimeout === "function") global.setTimeout(settle, 0);
       }
     });
   }

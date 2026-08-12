@@ -40,7 +40,11 @@
   }
 
   function execute(options = {}) {
-    const tabBefore = options.preserveTab === false ? "" : activeWorkspaceTab();
+    const tabBefore = options.preserveTab === false
+      ? ""
+      : typeof options.restoreTab === "string" && options.restoreTab
+        ? options.restoreTab
+        : activeWorkspaceTab();
     const result = typeof options.mutate === "function" ? options.mutate() : undefined;
     if (options.syncMap) call("syncApplicationMapToLegacyState");
     if (options.syncAssemblyMap) call("syncMapPointsFromAssemblies");

@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "workspace-selection-delivery-v91-20260811-2033";
+  const build = "brand-selection-transaction-v92-20260811-2109";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

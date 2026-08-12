@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-workspace-selection-delivery-v91-20260811-2033";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-brand-selection-transaction-v92-20260811-2109";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -170,7 +170,8 @@ const CORE_ASSETS = Object.freeze([
 
 function normalizedRequest(source) {
   const url = new URL(typeof source === "string" ? source : source.url, self.registration.scope);
-  url.search = "";
+  const buildTagged = url.searchParams.has("build");
+  if (!buildTagged) url.search = "";
   url.hash = "";
   return new Request(url.href, { method: "GET" });
 }

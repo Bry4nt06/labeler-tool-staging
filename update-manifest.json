@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "workspace-selection-delivery-v91-20260811-2033",
+  "buildId": "brand-selection-transaction-v92-20260811-2109",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
-  "notes": "v91 fixes workspace build selection and update delivery. Brand/Label Spec selections are protected through profile regeneration, the active workspace tab is preserved across full renders and updates, and update navigation targets a build-specific index.html. Existing Top View and wipe-direction semantics remain unchanged."
+  "notes": "v92 fixes the Build Inputs Brand selection race. The obsolete v69 window-capture navigation shim is retired so the statically loaded Tabs controller is the sole workspace navigation owner; Brand changes now execute as an explicit Build Inputs transaction that survives regeneration, full render, and the deferred UI pass. Bootstrap controller loading and service-worker build caching are also build-aware. Existing Top View, wipe-direction, APL geometry, and Servo Program semantics are unchanged."
 }

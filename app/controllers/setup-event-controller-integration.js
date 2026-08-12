@@ -133,7 +133,12 @@
     else if (target === els.mapLibrarySelect) application.selectMachineMap(target.value);
     else if (target.id === "zoneSelect") build.selectZone(target.value);
     else if (target.id === "siteSelect") build.selectSite(target.value);
-    else if (target.id === "brandSelect") build.selectBrand(target.value);
+    else if (target.id === "brandSelect") {
+      const requestedBrand = target.value;
+      tabs.setDirectTabState?.("buildInputs", document.querySelector('.tabs .tab[data-tab="buildInputs"]'));
+      const accepted = build.selectBrand(requestedBrand);
+      if (accepted === false) target.value = state.selectedBrand;
+    }
     else if (target.id === "bottleSelect") {
       const accepted = build.selectBottle(target.value, { render: null });
       if (accepted === false) target.value = state.selectedBottle;
