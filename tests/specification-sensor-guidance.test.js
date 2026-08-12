@@ -23,7 +23,6 @@ function validState() {
     bottleSpecs: [{ bottleType: "11.2 oz", diameterTargetMm: 60, radiusReductionMm: 0.3 }],
     labelSpecs: [{
       brand: "Stella",
-      specNumber: "ST-112",
       applicationMode: "apl",
       bodyLengthMm: 85,
       backLengthMm: 76,
@@ -38,9 +37,10 @@ function validState() {
 
 assert.strictEqual(requirements.validateState(validState()).length, 0);
 
-const missingSpec = validState();
-missingSpec.labelSpecs[0].specNumber = "";
-assert.ok(requirements.validateState(missingSpec).some((issue) => issue.field === "specNumber"));
+const retiredSpecNumber = validState();
+retiredSpecNumber.labelSpecs[0].specNumber = "";
+assert.ok(!requirements.validateState(retiredSpecNumber).some((issue) => issue.field === "specNumber"),
+  "Retired Spec # must not participate in specification guidance.");
 
 const partialNeck = validState();
 partialNeck.labelSpecs[0].neckHeightMm = 0;
