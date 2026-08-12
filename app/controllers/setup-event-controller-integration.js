@@ -284,6 +284,7 @@
 
   global.LabelerSetupEventControllers = Object.freeze({
     installed: true,
+    brandSelectionAuthorityV94: true,
     settings,
     map,
     specs,

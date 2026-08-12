@@ -73,7 +73,6 @@
   function validateLabel(spec, index, issues) {
     const rowName = String(spec?.brand || `Label row ${index + 1}`);
     if (!String(spec?.brand || "").trim()) addIssue(issues, "label", index, "brand", rowName, "Brand is required.");
-    if (!String(spec?.specNumber || "").trim()) addIssue(issues, "label", index, "specNumber", rowName, "Spec # is required.");
     if (!["apl", "cold-glue"].includes(String(spec?.applicationMode || "").toLowerCase())) {
       addIssue(issues, "label", index, "applicationMode", rowName, "Application is required.");
     }
@@ -474,25 +473,11 @@
     global.setTimeout(waitForValidationPatch, 75);
   }
 
-  document.addEventListener("click", (event) => {
-    const tab = event.target.closest?.(".tab[data-tab]");
-    const source = runtimeState();
-    if (!tab || tab.dataset.tab === "specs" || source?.activeTab !== "specs") return;
-    if (validateAndPrompt()) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-  }, true);
-
-  document.addEventListener("change", (event) => {
-    const brandSelect = event.target.closest?.("#brandSelect");
-    if (!brandSelect) return;
-    const issues = validateSpecifications();
-    if (!issues.length) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    brandSelect.value = String(runtimeState()?.selectedBrand || "");
-    showRequiredDialog(issues);
-  }, true);
+  // v94 ownership boundary: specification guidance is advisory. Workspace tab
+  // navigation is owned by LabelerTabsController, and #brandSelect changes are
+  // owned exclusively by LabelerSetupEventControllers/BuildInputsController.
+  // Guidance may highlight/report specification issues, but it must never
+  // prevent navigation, rewrite a Brand select value, or consume that event.
 
   document.addEventListener("input", (event) => {
     if (event.target.closest?.("#specs")) scheduleHighlightRefresh();
@@ -511,6 +496,10 @@
 
   global.LabelerSpecificationSensorGuidanceController = Object.freeze({
     installed: true,
+    advisoryOnlyV94: true,
+    brandSelectionOwnedByBuildInputsV94: true,
+    workspaceNavigationOwnedByTabsV94: true,
+    retiredSpecNumberRequirementV94: true,
     validateSpecifications,
     validateAndPrompt,
     showRequiredDialog,

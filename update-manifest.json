@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "brand-selection-presentation-v93-20260811-2124",
+  "buildId": "brand-selection-event-authority-v94-20260811-2150",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
-  "notes": "v93 fixes the remaining Build Inputs Brand-selection display/runtime race. Brand changes no longer enter the full render preparation pipeline; the requested recipe is committed, its Servo Program is regenerated, settings are persisted, and the rendering coordinator runs presentation stages only. Build Inputs, Bottle Type, Validation, Servo Program, map, and related views are repainted from the committed recipe again after the native select settles. v92 navigation ownership, Top View, wipe-direction, APL geometry, and validator semantics remain unchanged."
+  "notes": "v94 fixes the actual Brand-selector snap-back source. Specification & Sensor Guidance no longer intercepts Build Inputs Brand changes or workspace tab navigation, and the retired Spec # field is no longer treated as a hidden required-field gate. Brand selection is owned exclusively by the setup/Build Inputs controller; specification guidance remains advisory. v93 Brand transaction/presentation behavior, APL geometry, validator semantics, Top View, Bottle Orientation, and wipe-direction behavior remain unchanged."
 }
