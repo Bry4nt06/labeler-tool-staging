@@ -40,7 +40,6 @@ asset = '  "./app/feedback-center-integration.js",\n'
 if asset not in text:
     anchor = '  "./app/update-manager.js",\n'
     if anchor not in text:
-        # fallback near controller assets
         anchor = '  "./app/controllers/settings-controller.js",\n'
     if anchor not in text:
         raise SystemExit("service worker asset anchor missing")
@@ -54,6 +53,12 @@ manifest["notes"] = (
     "v95 adds a login-free Feedback & Support Center beside Settings. Users receive a private browser identity automatically, can submit bugs, requests, questions and ratings, review their ticket history, receive ServoForge Support replies, continue conversations, and update 1–5 star ratings. Current build/map/brand diagnostics can be attached automatically. A protected Support Admin inbox allows replies and status changes without exposing database credentials. v94 Brand event ownership and all validated APL/servo behavior remain unchanged."
 )
 manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+# Move only delivery/build-pin assertions forward. Functional assertions stay unchanged.
+for test_path in Path("tests").glob("*.test.js"):
+    text = test_path.read_text(encoding="utf-8")
+    if OLD in text:
+        test_path.write_text(text.replace(OLD, NEW), encoding="utf-8")
 
 # Focused regression.
 write("tests/feedback-center-v95.test.js", '''"use strict";
