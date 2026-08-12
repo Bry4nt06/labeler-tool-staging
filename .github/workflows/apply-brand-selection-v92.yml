@@ -22,17 +22,23 @@ jobs:
       - name: Apply patch
         run: python3 scripts/apply-v92-brand-selection.py
 
-      - name: Align Bottle Orientation build regression
+      - name: Align legacy build marker regressions
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          path = Path("tests/bottle-orientation-panel.test.js")
-          text = path.read_text(encoding="utf-8")
-          old = "wipe-panel-semantic-direction-v89-20260811-2005"
-          new = "brand-selection-transaction-v92-20260811-2109"
-          if old not in text:
-              raise SystemExit("stale Bottle Orientation build marker not found")
-          path.write_text(text.replace(old, new), encoding="utf-8")
+          build = "brand-selection-transaction-v92-20260811-2109"
+          replacements = {
+              "tests/bottle-orientation-panel.test.js": ["wipe-panel-semantic-direction-v89-20260811-2005"],
+              "tests/entry-exit-dead-zone-overlay.test.js": ["head1-world-frame-top-view-v80-20260811-1830"],
+          }
+          for filename, stale_markers in replacements.items():
+              path = Path(filename)
+              text = path.read_text(encoding="utf-8")
+              for marker in stale_markers:
+                  if marker not in text:
+                      raise SystemExit(f"stale build marker {marker} not found in {filename}")
+                  text = text.replace(marker, build)
+              path.write_text(text, encoding="utf-8")
           PY
 
       - name: Validate syntax
