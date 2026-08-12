@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "public-ratings-v96-20260812-1821";
+  const build = "community-library-v97-20260812-1918";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
