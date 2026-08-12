@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-wipe-runtime-delivery-v90-20260811-2020";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-workspace-selection-delivery-v91-20260811-2033";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 

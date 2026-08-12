@@ -27,7 +27,7 @@ function loadSavedSettings() {
   if (!raw) return;
   try {
     const saved = JSON.parse(raw);
-    ["headCount", "radius", "zeroAngle", "direction", "previewAngle", "previewBottleAngle", "animationSpeed", "maxMoveRatio", "tablePitchRadiusMm", "referencePitchRadiusMm", "autoScaleTableMap", "encoderCountsPerRev", "servoGearRatio", "padClearanceMm", "showMoveDistanceOverlay", "showAllProgramMovesOverlay", "showQuadrantReferences", "showAggregateSpacingOverlay", "workspaceView", "wipeBuilderOpen", "activeMapId", "mapZoom", "mapPanX", "mapPanY", "mapLocked", "selectedBrand", "selectedBottle", "selectedZone", "selectedSite", "mapLibraryZone", "mapLibrarySite", "themePreset"].forEach((key) => {
+    ["headCount", "radius", "zeroAngle", "direction", "previewAngle", "previewBottleAngle", "animationSpeed", "maxMoveRatio", "tablePitchRadiusMm", "referencePitchRadiusMm", "autoScaleTableMap", "encoderCountsPerRev", "servoGearRatio", "padClearanceMm", "showMoveDistanceOverlay", "showAllProgramMovesOverlay", "showQuadrantReferences", "showAggregateSpacingOverlay", "workspaceView", "wipeBuilderOpen", "activeTab", "activeMapId", "mapZoom", "mapPanX", "mapPanY", "mapLocked", "selectedBrand", "selectedBottle", "selectedZone", "selectedSite", "mapLibraryZone", "mapLibrarySite", "themePreset"].forEach((key) => {
       if (saved[key] !== undefined) state[key] = saved[key];
     });
     // Older builds stored degrees per 0.1-second tick. Preserve the perceived
@@ -147,6 +147,7 @@ function settingsSnapshot() {
     showAggregateSpacingOverlay: state.showAggregateSpacingOverlay,
     workspaceView: state.workspaceView,
     wipeBuilderOpen: state.wipeBuilderOpen,
+    activeTab: state.activeTab,
     mapLibrary: state.mapLibrary,
     servoProfileLibrary: state.servoProfileLibrary,
     activeServoProfileId: state.activeServoProfileId,

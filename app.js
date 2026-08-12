@@ -47,18 +47,12 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "wipe-runtime-delivery-v90-20260811-2020";
+  const build = "workspace-selection-delivery-v91-20260811-2033";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
-      const expected = new URL(`./${path}`, window.location.href).pathname;
-      const existing = [...document.scripts].find((script) => {
-        try {
-          return new URL(script.src, window.location.href).pathname === expected;
-        } catch {
-          return false;
-        }
-      });
+      const expected = new URL(`./${path}?v=${encodeURIComponent(version)}&build=${encodeURIComponent(build)}`, window.location.href).href;
+      const existing = [...document.scripts].find((script) => script.src === expected);
       if (existing) {
         if (existing.dataset.loaded === "true") resolve();
         else {

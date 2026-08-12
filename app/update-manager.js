@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "wipe-runtime-delivery-v90-20260811-2020";
+  const BUILD_ID = "workspace-selection-delivery-v91-20260811-2033";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
@@ -61,6 +61,7 @@
     } catch {
       destination = new URL(APP_SCOPE);
     }
+    if (destination.pathname.endsWith("/")) destination.pathname += "index.html";
     destination.searchParams.set("version", String(version || RELEASE_VERSION));
     if (build) destination.searchParams.set("build", String(build));
     destination.searchParams.set("updated", Date.now().toString());
@@ -161,7 +162,7 @@
 
 (function loadStagingFeatureModules() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "wipe-runtime-delivery-v90-20260811-2020";
+  const BUILD_ID = "workspace-selection-delivery-v91-20260811-2033";
   const modules = [
     "app/diagnostics-workspace-integration.js",
     "app/workspace-developer-integration.js",
@@ -172,9 +173,8 @@
 
   function loadScript(path) {
     return new Promise((resolve, reject) => {
-      const existing = [...document.scripts].find((script) => {
-        try { return new URL(script.src, location.href).pathname.endsWith(`/${path}`); } catch { return false; }
-      });
+      const expected = new URL(`./${path}?v=${RELEASE_VERSION}&build=${encodeURIComponent(BUILD_ID)}`, location.href).href;
+      const existing = [...document.scripts].find((script) => script.src === expected);
       if (existing) {
         if (existing.dataset.loaded === "true") resolve();
         else {

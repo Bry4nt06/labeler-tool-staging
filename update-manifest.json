@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "wipe-runtime-delivery-v90-20260811-2020",
-  "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "v90 is a runtime-delivery hardening build. Wipe direction behavior is unchanged from v89: clockwise is left-to-right and counter-clockwise is right-to-left. Dynamic staging feature modules and the wipe service/renderer now use build-specific URLs so an installed PWA cannot reuse the older v88 loader."
+  "buildId": "workspace-selection-delivery-v91-20260811-2033",
+  "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
+  "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
+  "notes": "v91 fixes workspace build selection and update delivery. Brand/Label Spec selections are protected through profile regeneration, the active workspace tab is preserved across full renders and updates, and update navigation targets a build-specific index.html. Existing Top View and wipe-direction semantics remain unchanged."
 }

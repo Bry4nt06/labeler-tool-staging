@@ -114,6 +114,10 @@ async function initializeLabelerApp() {
 
     progress?.set(96, "Rendering ServoForge workspace…");
     render();
+    window.LabelerTabsController?.setDirectTabState?.(
+      String(state.activeTab || "specs"),
+      document.querySelector(`.tabs .tab[data-tab="${String(state.activeTab || "specs")}"]`)
+    );
     window.LabelerHealthStatusUiController.refresh();
     window.LabelerSensorActivationController.refresh();
     window.LabelerLocalPersistenceController.initialize();
