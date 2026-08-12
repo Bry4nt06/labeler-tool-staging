@@ -1,0 +1,40 @@
+name: Run v91 workspace selection patch
+
+on:
+  push:
+    paths:
+      - ".github/workflows/run-v91-workspace-selection-delivery.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply v91 patch
+        run: python scripts/apply-v91-workspace-selection-delivery.py
+      - name: Validate v91
+        run: |
+          node --check app/persistence.js
+          node --check app/controllers/workspace-action-service.js
+          node --check app/controllers/build-inputs-controller.js
+          node --check app/startup-runtime.js
+          node --check app/update-manager.js
+          node --check app/bootstrap.js
+          node --check app.js
+          node --check service-worker.js
+          node tests/workspace-selection-delivery-v91.test.js
+          node tests/wipe-direction-machine-parity-v87.test.js
+          node tests/wipe-panel-semantic-direction-v89.test.js
+          node tests/bottle-orientation-runtime-load.test.js
+      - name: Commit v91 runtime
+        run: |
+          git config user.name "ServoForge Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/persistence.js app/controllers/workspace-action-service.js app/controllers/build-inputs-controller.js app/startup-runtime.js app/update-manager.js app/bootstrap.js app.js service-worker.js index.html update-manifest.json tests/workspace-selection-delivery-v91.test.js
+          git commit -m "Preserve workspace build selection and harden updates v91"
+          git push
