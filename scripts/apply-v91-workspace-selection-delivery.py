@@ -1,0 +1,246 @@
+from pathlib import Path
+import json
+import re
+
+BUILD = "workspace-selection-delivery-v91-20260811-2033"
+UPDATED = "Aug 11, 2026 8:33 PM ET"
+OLD_BUILD = "wipe-runtime-delivery-v90-20260811-2020"
+
+# Persist active workspace tab.
+p = Path("app/persistence.js")
+s = p.read_text(encoding="utf-8")
+s = s.replace('"workspaceView", "wipeBuilderOpen", "activeMapId"', '"workspaceView", "wipeBuilderOpen", "activeTab", "activeMapId"', 1)
+s = s.replace('    wipeBuilderOpen: state.wipeBuilderOpen,\n    mapLibrary:', '    wipeBuilderOpen: state.wipeBuilderOpen,\n    activeTab: state.activeTab,\n    mapLibrary:', 1)
+if '"activeTab"' not in s or 'activeTab: state.activeTab' not in s:
+    raise SystemExit("activeTab persistence patch failed")
+p.write_text(s, encoding="utf-8")
+
+# Preserve active workspace tab around all controller-driven full renders and add beforeRender hook.
+p = Path("app/controllers/workspace-action-service.js")
+s = p.read_text(encoding="utf-8")
+old = '''  function execute(options = {}) {
+    const result = typeof options.mutate === "function" ? options.mutate() : undefined;
+    if (options.syncMap) call("syncApplicationMapToLegacyState");
+    if (options.syncAssemblyMap) call("syncMapPointsFromAssemblies");
+    if (options.regenerate) call("applyGeneratedServoProfile");
+    if (options.persist) call("saveCurrentSettings");
+    renderTargets(options.render);
+    if (typeof options.after === "function") options.after(result);
+    return result;
+  }
+'''
+new = '''  function activeWorkspaceTab() {
+    let stateTab = "";
+    try { stateTab = String(global.state?.activeTab || (typeof state !== "undefined" ? state.activeTab : "") || ""); }
+    catch { stateTab = ""; }
+    const domTab = String(global.document?.querySelector?.(".tabs .tab.active[data-tab]")?.dataset?.tab || "");
+    return domTab || stateTab || "specs";
+  }
+
+  function restoreWorkspaceTab(tabName) {
+    const name = String(tabName || "");
+    if (!name) return;
+    const tabs = global.LabelerTabsController;
+    if (typeof tabs?.setDirectTabState === "function") {
+      tabs.setDirectTabState(name, global.document?.querySelector?.(`.tabs .tab[data-tab="${name}"]`) || null);
+      return;
+    }
+    global.ServoForgeEarlyWorkspaceNavigation?.activate?.(name);
+  }
+
+  function execute(options = {}) {
+    const tabBefore = options.preserveTab === false ? "" : activeWorkspaceTab();
+    const result = typeof options.mutate === "function" ? options.mutate() : undefined;
+    if (options.syncMap) call("syncApplicationMapToLegacyState");
+    if (options.syncAssemblyMap) call("syncMapPointsFromAssemblies");
+    if (options.regenerate) call("applyGeneratedServoProfile");
+    if (typeof options.beforeRender === "function") options.beforeRender(result);
+    if (options.persist) call("saveCurrentSettings");
+    renderTargets(options.render);
+    if (tabBefore) restoreWorkspaceTab(tabBefore);
+    if (typeof options.after === "function") options.after(result);
+    return result;
+  }
+'''
+if old not in s:
+    raise SystemExit("workspace action execute anchor not found")
+s = s.replace(old, new, 1)
+p.write_text(s, encoding="utf-8")
+
+# Protect explicit Brand / Label Spec selection through profile regeneration.
+p = Path("app/controllers/build-inputs-controller.js")
+s = p.read_text(encoding="utf-8")
+old = '''  function selectBrand(value) {
+    commit(() => {
+      state.selectedBrand = value;
+      actions.call("ensureBottleReferenceForLabel", actions.call("selectedLabelSpec"));
+      actions.call("applyLabelLengthStationRules");
+      global.LabelerLabelCenterlinePolicy?.ensureApplicationReferenceDefaults?.(state);
+    }, { regenerate: true });
+  }
+'''
+new = '''  function selectBrand(value) {
+    const requested = String(value ?? "");
+    const available = actions.call("labelSpecsForApplication") || state.labelSpecs || [];
+    const selected = available.find((row) => String(row?.brand ?? "") === requested);
+    if (!selected) return false;
+    const requestedBrand = String(selected.brand);
+
+    return actions.execute({
+      mutate() {
+        state.selectedBrand = requestedBrand;
+        actions.call("ensureBottleReferenceForLabel", selected);
+        actions.call("applyLabelLengthStationRules");
+        global.LabelerLabelCenterlinePolicy?.ensureApplicationReferenceDefaults?.(state);
+      },
+      regenerate: true,
+      persist: false,
+      render: "all",
+      beforeRender() {
+        if (String(state.selectedBrand ?? "") !== requestedBrand) {
+          state.selectedBrand = requestedBrand;
+          actions.call("ensureBottleReferenceForLabel", selected);
+          actions.call("applyLabelLengthStationRules");
+          global.LabelerLabelCenterlinePolicy?.ensureApplicationReferenceDefaults?.(state);
+          actions.call("applyGeneratedServoProfile");
+          state.selectedBrand = requestedBrand;
+          actions.call("ensureBottleReferenceForLabel", selected);
+        }
+        actions.call("saveCurrentSettings");
+      }
+    });
+  }
+'''
+if old not in s:
+    raise SystemExit("selectBrand anchor not found")
+s = s.replace(old, new, 1)
+p.write_text(s, encoding="utf-8")
+
+# Restore active tab after initial startup render.
+p = Path("app/startup-runtime.js")
+s = p.read_text(encoding="utf-8")
+old = '''    render();
+    window.LabelerHealthStatusUiController.refresh();'''
+new = '''    render();
+    window.LabelerTabsController?.setDirectTabState?.(
+      String(state.activeTab || "specs"),
+      document.querySelector(`.tabs .tab[data-tab="${String(state.activeTab || "specs")}"]`)
+    );
+    window.LabelerHealthStatusUiController.refresh();'''
+if old not in s:
+    raise SystemExit("startup render anchor not found")
+s = s.replace(old, new, 1)
+p.write_text(s, encoding="utf-8")
+
+# Update manager: direct index.html navigation and exact build-aware feature script reuse.
+p = Path("app/update-manager.js")
+s = p.read_text(encoding="utf-8").replace(OLD_BUILD, BUILD)
+old = '''    destination.searchParams.set("version", String(version || RELEASE_VERSION));
+    if (build) destination.searchParams.set("build", String(build));'''
+new = '''    if (destination.pathname.endsWith("/")) destination.pathname += "index.html";
+    destination.searchParams.set("version", String(version || RELEASE_VERSION));
+    if (build) destination.searchParams.set("build", String(build));'''
+if old not in s:
+    raise SystemExit("update destination anchor not found")
+s = s.replace(old, new, 1)
+old = '''      const existing = [...document.scripts].find((script) => {
+        try { return new URL(script.src, location.href).pathname.endsWith(`/${path}`); } catch { return false; }
+      });'''
+new = '''      const expected = new URL(`./${path}?v=${RELEASE_VERSION}&build=${encodeURIComponent(BUILD_ID)}`, location.href).href;
+      const existing = [...document.scripts].find((script) => script.src === expected);'''
+if old not in s:
+    raise SystemExit("update feature loader anchor not found")
+s = s.replace(old, new, 1)
+p.write_text(s, encoding="utf-8")
+
+# app.js: exact build-aware existing-script matching.
+p = Path("app.js")
+s = p.read_text(encoding="utf-8").replace(OLD_BUILD, BUILD)
+old = '''      const expected = new URL(`./${path}`, window.location.href).pathname;
+      const existing = [...document.scripts].find((script) => {
+        try {
+          return new URL(script.src, window.location.href).pathname === expected;
+        } catch {
+          return false;
+        }
+      });'''
+new = '''      const expected = new URL(`./${path}?v=${encodeURIComponent(version)}&build=${encodeURIComponent(build)}`, window.location.href).href;
+      const existing = [...document.scripts].find((script) => script.src === expected);'''
+if old not in s:
+    raise SystemExit("app.js loader anchor not found")
+s = s.replace(old, new, 1)
+p.write_text(s, encoding="utf-8")
+
+# bootstrap: v91 metadata and build-aware existing-script matching when that legacy form is present.
+p = Path("app/bootstrap.js")
+s = p.read_text(encoding="utf-8").replace(OLD_BUILD, BUILD)
+s = re.sub(r'const buildUpdatedAt = "[^"]+";', f'const buildUpdatedAt = "{UPDATED}";', s, count=1)
+old = '''      const expected = new URL(`./${path}`, window.location.href).pathname;
+      const existing = [...document.scripts].find((script) => {
+        try {
+          return new URL(script.src, window.location.href).pathname === expected;
+        } catch {
+          return false;
+        }
+      });'''
+if old in s:
+    new = '''      const expected = new URL(`./${path}?v=${encodeURIComponent(version)}&build=${encodeURIComponent(build)}`, window.location.href).href;
+      const existing = [...document.scripts].find((script) => script.src === expected);'''
+    s = s.replace(old, new, 1)
+p.write_text(s, encoding="utf-8")
+
+# Build metadata.
+p = Path("service-worker.js")
+s = p.read_text(encoding="utf-8").replace(OLD_BUILD, BUILD)
+p.write_text(s, encoding="utf-8")
+
+p = Path("index.html")
+s = p.read_text(encoding="utf-8").replace(OLD_BUILD, BUILD)
+p.write_text(s, encoding="utf-8")
+
+p = Path("update-manifest.json")
+manifest = json.loads(p.read_text(encoding="utf-8"))
+manifest["buildId"] = BUILD
+manifest["releaseUrl"] = "https://bry4nt06.github.io/labeler-tool-staging/index.html"
+manifest["downloadUrl"] = manifest["releaseUrl"]
+manifest["notes"] = "v91 fixes workspace build selection and update delivery. Brand/Label Spec selections are protected through profile regeneration, the active workspace tab is preserved across full renders and updates, and update navigation targets a build-specific index.html. Existing Top View and wipe-direction semantics remain unchanged."
+p.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+# Regression file.
+Path("tests/workspace-selection-delivery-v91.test.js").write_text('''"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const root = path.resolve(__dirname, "..");
+const BUILD = "workspace-selection-delivery-v91-20260811-2033";
+const persistence = fs.readFileSync(path.join(root, "app/persistence.js"), "utf8");
+assert.match(persistence, /"wipeBuilderOpen", "activeTab", "activeMapId"/);
+assert.match(persistence, /activeTab:\\s*state\\.activeTab/);
+const actions = fs.readFileSync(path.join(root, "app/controllers/workspace-action-service.js"), "utf8");
+assert.match(actions, /function activeWorkspaceTab\\(/);
+assert.match(actions, /restoreWorkspaceTab\\(tabBefore\\)/);
+assert.match(actions, /options\\.beforeRender/);
+const build = fs.readFileSync(path.join(root, "app/controllers/build-inputs-controller.js"), "utf8");
+assert.match(build, /const requestedBrand = String\\(selected\\.brand\\)/);
+assert.match(build, /state\\.selectedBrand = requestedBrand/);
+assert.match(build, /actions\\.call\\("saveCurrentSettings"\\)/);
+const startup = fs.readFileSync(path.join(root, "app/startup-runtime.js"), "utf8");
+assert.match(startup, /LabelerTabsController\\?\\.setDirectTabState/);
+const updater = fs.readFileSync(path.join(root, "app/update-manager.js"), "utf8");
+assert.match(updater, new RegExp(BUILD));
+assert.match(updater, /destination\\.pathname\\.endsWith\\("\\/"\\)/);
+assert.doesNotMatch(updater, /pathname\\.endsWith\\(`\\/\\$\\{path\\}`\\)/);
+const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
+assert.match(app, new RegExp(BUILD));
+assert.match(app, /script\\.src === expected/);
+const bootstrap = fs.readFileSync(path.join(root, "app/bootstrap.js"), "utf8");
+const sw = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
+const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const manifest = JSON.parse(fs.readFileSync(path.join(root, "update-manifest.json"), "utf8"));
+assert.match(bootstrap, new RegExp(BUILD));
+assert.match(sw, new RegExp(BUILD));
+assert.match(index, new RegExp(BUILD));
+assert.equal(manifest.buildId, BUILD);
+assert.equal(manifest.releaseUrl, "https://bry4nt06.github.io/labeler-tool-staging/index.html");
+console.log("Workspace selection and update delivery v91 regression passed.");
+''', encoding="utf-8")
