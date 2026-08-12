@@ -20,6 +20,30 @@
     if (unique.has("labeler-map")) call("renderLabelerMapReference");
   }
 
+  function presentCurrentState() {
+    const coordinator = global.LabelerRenderingCoordinator;
+    if (typeof coordinator?.driver?.present === "function" && typeof coordinator?.handlers === "function") {
+      return coordinator.driver.present(coordinator.handlers());
+    }
+
+    // Compatibility fallback for startup/test environments where the rendering
+    // coordinator has not been installed yet. This is intentionally presentation
+    // only: do not call global render(), because render() runs normalization.
+    [
+      "renderMap",
+      "renderStations",
+      "renderBottleSpecs",
+      "renderLabelSpecs",
+      "renderBuildInputs",
+      "renderProgram",
+      "renderSimulation",
+      "renderHeads",
+      "renderValidation",
+      "renderTopControls"
+    ].forEach((name) => call(name));
+    return null;
+  }
+
   function activeWorkspaceTab() {
     let stateTab = "";
     try { stateTab = String(global.state?.activeTab || (typeof state !== "undefined" ? state.activeTab : "") || ""); }
@@ -65,6 +89,7 @@
   global.LabelerWorkspaceActionService = Object.freeze({
     execute,
     render: renderTargets,
+    present: presentCurrentState,
     call,
     number
   });

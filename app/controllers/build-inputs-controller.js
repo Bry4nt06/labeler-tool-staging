@@ -82,34 +82,46 @@
       );
     };
 
+    const presentRequestedSelection = ({ regenerate = false, persist = false } = {}) => {
+      applyRequestedSelection();
+      if (regenerate) actions.call("applyGeneratedServoProfile");
+      applyRequestedSelection();
+      if (persist) actions.call("saveCurrentSettings");
+      actions.present?.();
+      restoreBuildInputs();
+    };
+
     return actions.execute({
       mutate() {
         applyRequestedSelection();
       },
       regenerate: true,
       persist: true,
-      render: "all",
+      render: null,
       restoreTab: "buildInputs",
-      beforeRender() {
-        if (String(state.selectedBrand ?? "") !== requestedBrand) {
-          applyRequestedSelection();
-          actions.call("applyGeneratedServoProfile");
-          applyRequestedSelection();
-        }
-      },
       after() {
         if (transaction !== brandSelectionSequence) return;
-        applyRequestedSelection();
-        restoreBuildInputs();
+
+        // The generated profile was built from the requested recipe above.
+        // Reassert the recipe before presentation so a compatibility wrapper
+        // cannot leave the visible controls on the previous Brand/Bottle.
+        presentRequestedSelection({ persist: true });
 
         const settle = () => {
           if (transaction !== brandSelectionSequence) return;
           const selectionChanged = String(state.selectedBrand ?? "") !== requestedBrand;
-          const activeTab = String(state.activeTab || "");
-          if (selectionChanged) applyRequestedSelection();
-          if (selectionChanged && typeof global.renderBuildInputs === "function") global.renderBuildInputs();
-          if (selectionChanged || activeTab !== "buildInputs") restoreBuildInputs();
-          if (selectionChanged || activeTab !== "buildInputs") actions.call("saveCurrentSettings");
+          if (selectionChanged) {
+            // A late compatibility task changed the recipe. Rebuild from the
+            // requested Brand before repainting, rather than displaying a mix
+            // of the old Servo Program and the new select value.
+            presentRequestedSelection({ regenerate: true, persist: true });
+            return;
+          }
+          // Always repaint once after the native select settles. v92 restored
+          // state here but skipped this repaint when state already matched,
+          // leaving the old Brand/Bottle visible in Build Inputs.
+          actions.present?.();
+          restoreBuildInputs();
         };
 
         if (typeof global.requestAnimationFrame === "function") global.requestAnimationFrame(settle);

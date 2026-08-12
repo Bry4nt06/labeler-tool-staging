@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "brand-selection-transaction-v92-20260811-2109";
+  const BUILD_ID = "brand-selection-presentation-v93-20260811-2124";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
@@ -162,7 +162,7 @@
 
 (function loadStagingFeatureModules() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "brand-selection-transaction-v92-20260811-2109";
+  const BUILD_ID = "brand-selection-presentation-v93-20260811-2124";
   const modules = [
     "app/diagnostics-workspace-integration.js",
     "app/workspace-developer-integration.js",

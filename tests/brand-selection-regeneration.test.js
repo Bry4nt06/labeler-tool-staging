@@ -65,7 +65,8 @@ assert.strictEqual(sandbox.state.selectedBrand, "Two Label");
 assert.strictEqual(sandbox.state.selectedBottle, "Bottle B");
 assert.strictEqual(execution?.regenerate, true, "Selecting a brand must regenerate its Servo Program.");
 assert.strictEqual(execution?.persist, true, "Selecting a brand must persist the normalized selection.");
-assert.strictEqual(execution?.render, "all", "Selecting a brand must rerender the workspace after regeneration.");
+assert.strictEqual(execution?.render, null, "Selecting a brand must not enter the full normalization render cycle.");
+assert.equal(typeof execution?.after, "function", "Selecting a brand must present the committed recipe after regeneration.");
 assert.ok(calls.includes("applyLabelLengthStationRules"), "Label-presence station rules must run before regeneration.");
 assert.ok(calls.includes("regenerate"), "The action service must execute profile regeneration.");
 
