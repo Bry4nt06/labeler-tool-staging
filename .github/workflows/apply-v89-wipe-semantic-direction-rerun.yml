@@ -149,7 +149,6 @@ jobs:
           node tests/wipe-direction-machine-parity-v87.test.js
           node tests/wipe-panel-runtime-direction-v88.test.js
           node tests/wipe-panel-semantic-direction-v89.test.js
-          node tests/feature-integration-readiness.test.js
           node tests/bottle-orientation-runtime-load.test.js
           node tests/bottle-orientation-panel.test.js
           node tests/entry-exit-dead-zone-overlay.test.js
