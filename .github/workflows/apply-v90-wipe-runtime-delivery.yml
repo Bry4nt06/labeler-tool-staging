@@ -1,0 +1,131 @@
+name: Apply wipe runtime delivery v90
+
+on:
+  push:
+    paths:
+      - ".github/workflows/apply-v90-wipe-runtime-delivery.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch v90 runtime delivery
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          OLD = "wipe-panel-semantic-direction-v89-20260811-2005"
+          BUILD = "wipe-runtime-delivery-v90-20260811-2020"
+          UPDATED = "Aug 11, 2026 8:20 PM ET"
+
+          # Update manager: align build identity and make dynamically loaded feature
+          # modules build-addressed instead of release-version-only.
+          p = Path("app/update-manager.js")
+          s = p.read_text(encoding="utf-8")
+          s = s.replace(f'const BUILD_ID = "{OLD}";', f'const BUILD_ID = "{BUILD}";', 1)
+          marker = '(function loadStagingFeatureModules() {\n  const RELEASE_VERSION = "0.9.10";'
+          replacement = marker + f'\n  const BUILD_ID = "{BUILD}";'
+          if marker not in s:
+              raise SystemExit("feature module loader marker not found")
+          s = s.replace(marker, replacement, 1)
+          old_src = 'script.src = `./${path}?v=${RELEASE_VERSION}`;'
+          new_src = 'script.src = `./${path}?v=${RELEASE_VERSION}&build=${encodeURIComponent(BUILD_ID)}`;'
+          if old_src not in s:
+              raise SystemExit("feature module script URL marker not found")
+          s = s.replace(old_src, new_src, 1)
+          p.write_text(s, encoding="utf-8")
+
+          # The feature module that loads the wipe service/renderer also receives a
+          # new URL key, preventing reuse of the old HTTP-cached module pair.
+          p = Path("app/simulation-collapsible-integration.js")
+          s = p.read_text(encoding="utf-8")
+          s = s.replace("app/wipe-telemetry-service.js?v=0.9.10-wipe-direction-v89", "app/wipe-telemetry-service.js?v=0.9.10-wipe-direction-v90")
+          s = s.replace("app/wipe-telemetry-renderer.js?v=0.9.10-wipe-direction-v89", "app/wipe-telemetry-renderer.js?v=0.9.10-wipe-direction-v90")
+          p.write_text(s, encoding="utf-8")
+
+          # Align all top-level build-addressed delivery points.
+          for relative in ["index.html", "app.js", "service-worker.js"]:
+              p = Path(relative)
+              s = p.read_text(encoding="utf-8").replace(OLD, BUILD)
+              p.write_text(s, encoding="utf-8")
+
+          p = Path("app/bootstrap.js")
+          s = p.read_text(encoding="utf-8")
+          s = re.sub(r'const build = "[^"]+";', f'const build = "{BUILD}";', s, count=1)
+          s = re.sub(r'const buildUpdatedAt = "[^"]+";', f'const buildUpdatedAt = "{UPDATED}";', s, count=1)
+          s = s.replace("// Regression lineage: ", f"// Regression lineage: {BUILD} • ", 1)
+          p.write_text(s, encoding="utf-8")
+
+          p = Path("update-manifest.json")
+          m = json.loads(p.read_text(encoding="utf-8"))
+          m["buildId"] = BUILD
+          m["notes"] = (
+              "v90 is a runtime-delivery hardening build. Wipe direction behavior is unchanged from v89: "
+              "clockwise is left-to-right and counter-clockwise is right-to-left. Dynamic staging feature modules "
+              "and the wipe service/renderer now use build-specific URLs so an installed PWA cannot reuse the older v88 loader."
+          )
+          p.write_text(json.dumps(m, indent=2) + "\n", encoding="utf-8")
+
+          # Keep the behavior regression current with the new delivery key.
+          p = Path("tests/wipe-panel-semantic-direction-v89.test.js")
+          s = p.read_text(encoding="utf-8")
+          s = s.replace("wipe-direction-v89", "wipe-direction-v90")
+          p.write_text(s, encoding="utf-8")
+
+          Path("tests/wipe-runtime-delivery-v90.test.js").write_text('''"use strict";
+          const assert = require("node:assert/strict");
+          const fs = require("node:fs");
+          const path = require("node:path");
+          const root = path.resolve(__dirname, "..");
+          const build = "wipe-runtime-delivery-v90-20260811-2020";
+          const update = fs.readFileSync(path.join(root, "app/update-manager.js"), "utf8");
+          const feature = fs.readFileSync(path.join(root, "app/simulation-collapsible-integration.js"), "utf8");
+          const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+          const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
+          const bootstrap = fs.readFileSync(path.join(root, "app/bootstrap.js"), "utf8");
+          const sw = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
+          const manifest = JSON.parse(fs.readFileSync(path.join(root, "update-manifest.json"), "utf8"));
+          assert.match(update, /loadStagingFeatureModules[\s\S]*const BUILD_ID = "wipe-runtime-delivery-v90-20260811-2020"/);
+          assert.match(update, /script\.src = `\.\/\$\{path\}\?v=\$\{RELEASE_VERSION\}&build=\$\{encodeURIComponent\(BUILD_ID\)\}`/);
+          assert.match(feature, /wipe-telemetry-service\.js\?v=0\.9\.10-wipe-direction-v90/);
+          assert.match(feature, /wipe-telemetry-renderer\.js\?v=0\.9\.10-wipe-direction-v90/);
+          for (const source of [index, app, bootstrap, sw]) assert.ok(source.includes(build), "top-level delivery point must carry v90 build id");
+          assert.equal(manifest.buildId, build);
+          console.log("Wipe runtime delivery v90 regression passed.");
+          ''', encoding="utf-8")
+          PY
+
+      - name: Validate v90
+        shell: bash
+        run: |
+          node --check app/update-manager.js
+          node --check app/simulation-collapsible-integration.js
+          node --check app/wipe-telemetry-service.js
+          node --check app/wipe-telemetry-renderer.js
+          node --check app.js
+          node --check app/bootstrap.js
+          node --check service-worker.js
+          node tests/wipe-direction-machine-parity-v87.test.js
+          node tests/wipe-panel-runtime-direction-v88.test.js
+          node tests/wipe-panel-semantic-direction-v89.test.js
+          node tests/wipe-runtime-delivery-v90.test.js
+          node tests/bottle-orientation-runtime-load.test.js
+
+      - name: Commit v90 runtime
+        shell: bash
+        run: |
+          git config user.name "ServoForge Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/update-manager.js app/simulation-collapsible-integration.js app/wipe-telemetry-service.js app/wipe-telemetry-renderer.js app/bootstrap.js app.js index.html service-worker.js update-manifest.json tests/wipe-panel-semantic-direction-v89.test.js tests/wipe-runtime-delivery-v90.test.js
+          git commit -m "Harden wipe runtime delivery v90"
+          git push
