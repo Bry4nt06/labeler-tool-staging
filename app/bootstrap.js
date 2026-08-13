@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "community-library-v104-20260813-1851";
-  const buildUpdatedAt = "Aug 13, 2026 6:51 PM ET";
+  const build = "community-library-v106-20260813-1906";
+  const buildUpdatedAt = "Aug 13, 2026 7:06 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
