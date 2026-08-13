@@ -16,8 +16,7 @@
     "app/machine-profile-framing.js",
     "app/servo-overrides.js",
     "app/profile-translation-service.js",
-    "app/profile-translator-validation.js",
-    "app/top-action-icons-integration.js"
+    "app/profile-translator-validation.js"
   ]);
 
   function loadScript(path) {
