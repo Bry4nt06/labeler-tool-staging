@@ -11,6 +11,7 @@ on:
       - "tests/apl-coder-neck-body-final-aggregate.test.js"
       - "tests/landshark-common-generator-runtime.test.js"
       - "tests/bottle-orientation-panel.test.js"
+      - "tests/top-view-bottle-renderer.test.js"
       - ".github/workflows/validate-coder-radial-alignment.yml"
   workflow_dispatch:
 
