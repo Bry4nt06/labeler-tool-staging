@@ -1,18 +1,22 @@
 "use strict";
 
 (function alignReleaseReadinessToStaging() {
-  const RELEASE_VERSION = "0.9.2";
   const ENVIRONMENT = "staging";
   const RETRY_MS = 50;
   let installed = false;
   let observer = null;
   let alignmentPending = false;
 
+  function releaseVersion() {
+    return String(
+      window.SERVOFORGE_RELEASE_VERSION
+      || document.querySelector('meta[name="application-version"]')?.content
+      || "0.9.10"
+    ).trim();
+  }
+
   function alignInterface() {
     alignmentPending = false;
-    const meta = document.querySelector('meta[name="application-version"]');
-    if (meta && meta.content !== RELEASE_VERSION) meta.content = RELEASE_VERSION;
-
     const runButton = document.querySelector("#runReleaseReadiness");
     if (runButton && !runButton.disabled && runButton.textContent !== "Run Staging Check") {
       runButton.textContent = "Run Staging Check";
@@ -38,7 +42,7 @@
   function install() {
     if (installed) return true;
     const driver = window.LabelerReleaseReadinessDriver;
-    if (!driver?.run || driver.stagingAlignmentV2) return false;
+    if (!driver?.run || driver.stagingAlignmentV3) return false;
     const baseRun = driver.run.bind(driver);
     const basePrepareOffline = typeof driver.prepareOffline === "function"
       ? driver.prepareOffline.bind(driver)
@@ -46,15 +50,16 @@
 
     window.LabelerReleaseReadinessDriver = Object.freeze({
       ...driver,
-      stagingAlignmentV2: true,
+      stagingAlignmentV3: true,
       async run(options = {}) {
+        const expectedVersion = releaseVersion();
         const report = await baseRun({
           ...options,
-          expectedVersion: RELEASE_VERSION,
+          expectedVersion,
           environment: ENVIRONMENT
         });
         if (report) {
-          report.version = RELEASE_VERSION;
+          report.version = expectedVersion;
           report.environment = ENVIRONMENT;
         }
         scheduleAlignment();
@@ -62,9 +67,10 @@
       },
       ...(basePrepareOffline ? {
         async prepareOffline(options = {}) {
+          const expectedVersion = releaseVersion();
           const response = await basePrepareOffline({
             ...options,
-            expectedVersion: RELEASE_VERSION,
+            expectedVersion,
             environment: ENVIRONMENT
           });
           scheduleAlignment();
