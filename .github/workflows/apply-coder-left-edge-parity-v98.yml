@@ -1,0 +1,79 @@
+name: Apply coder left-edge parity v98
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/apply-coder-left-edge-parity-v98.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply v98 coder parity patch
+        run: python3 scripts/apply-v98-coder-left-edge-parity.py
+
+      - name: Validate syntax
+        run: |
+          node --check drivers/profile/coder-orientation-driver.js
+          node --check app/apl-coder-codebox-orientation-integration.js
+          node --check app/bootstrap.js
+          node --check app.js
+          node --check service-worker.js
+          node --check tests/coder-left-edge-direction-parity-v98.test.js
+
+      - name: Coder direction parity regression
+        run: node tests/coder-left-edge-direction-parity-v98.test.js
+
+      - name: APL coder section regression
+        run: node tests/apl-coder-neck-body-final-aggregate.test.js
+
+      - name: LandShark common generator regression
+        run: node tests/landshark-common-generator-runtime.test.js
+
+      - name: Label centerline regression
+        run: node tests/label-centerline-policy.test.js
+
+      - name: Bottle orientation regression
+        run: node tests/bottle-orientation-panel.test.js
+
+      - name: Top-view bottle regression
+        run: node tests/top-view-bottle-renderer.test.js
+
+      - name: APL handoff regression
+        run: node tests/apl-section-handoff-continuity.test.js
+
+      - name: APL roller coverage regression
+        run: node tests/apl-roller-coverage-default.test.js
+
+      - name: Wipe direction parity regression
+        run: |
+          node tests/wipe-direction-machine-parity-v87.test.js
+          node tests/wipe-panel-semantic-direction-v89.test.js
+          node tests/wipe-runtime-delivery-v90.test.js
+
+      - name: Brand selection regression
+        run: node tests/brand-selection-event-authority-v94.test.js
+
+      - name: Community regression
+        run: node tests/community-library-v97.test.js
+
+      - name: Commit v98
+        run: |
+          if git diff --quiet; then
+            echo 'No v98 changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Fix coder left-edge direction parity v98'
+          git push origin HEAD:main
