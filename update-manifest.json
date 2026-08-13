@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "community-library-v105-20260813-1858",
+  "buildId": "community-library-v106-20260813-1906",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Community Library v105 makes the top Community icon own an authoritative capture-phase click handler that opens the Community dialog directly. v104 compact browsing, Zone/Site metadata, saved spec selection, and Spec # fields remain unchanged. Existing v102 servo/coder behavior remains unchanged."
+  "notes": "Community Library v106 routes clicks by the visible Community icon hit rectangle at document capture level and raises the Community action above overlapping UI layers. v104 compact browsing, required Zone/Site metadata, saved spec selection, and Bottle/Label Spec # fields remain unchanged. Existing v102 servo/coder behavior remains unchanged."
 }
