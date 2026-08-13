@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "coder-radial-codebox-alignment-v102-20260813-1613",
-  "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
-  "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
-  "notes": "v102 solves the coding target in the finished bottle-local frame. Code Box Center remains the positive physical distance measured from the printed left edge, and the generated plate command now positions that exact label point on the coder radial centerline for either physical machine direction. The prior application hold angle is retained as process history but no longer shifts the coder-facing target. v101 top action icons and prior protected behavior remain unchanged."
+  "buildId": "community-library-v104-20260813-1851",
+  "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
+  "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
+  "notes": "Community Library v104 adds compact browsing, Zone/Site filtering and required upload metadata, saved Map/Bottle/Brand selection, Bottle and Label Spec # inputs, and Community button recovery. Existing v102 coder radial alignment behavior remains unchanged."
 }
