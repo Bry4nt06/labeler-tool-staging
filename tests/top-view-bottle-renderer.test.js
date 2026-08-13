@@ -65,7 +65,8 @@ assert.match(animationSource, /querySelectorAll\("\[data-animation-pocket\]"\)/)
 assert.match(animationSource, /headsByNumber/);
 assert.match(animationSource, /node\.setAttribute\("transform", `translate\(\$\{head\.x\} \$\{head\.y\}\)`\)/);
 assert.match(animationSource, /synchronizedBottlePocketsV1:\s*true/);
-assert.match(bootstrapSource, /bottle-pocket-sync-20260807-1223/);
+assert.match(bootstrapSource, /app\/bottle-orientation-panel-integration\.js/);
+assert.match(bootstrapSource, /app\/bottle-orientation-panel-recovery-integration\.js/);
 
 const elements = [];
 const group = {
