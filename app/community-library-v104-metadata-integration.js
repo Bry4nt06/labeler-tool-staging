@@ -5,10 +5,11 @@
   const base = global.LabelerCommunityLibrary;
   if (!base?.installed) return;
 
-  const BUILD = "community-library-v106-20260813-1906";
+  const BUILD = "community-library-v107-20260813-1914";
   const normalizeCode = (value) => String(value ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
   const normalizeSpec = (value) => String(value ?? "").trim().slice(0, 80);
   const baseApi = base.api.bind(base);
+  let recoveryLoadPromise = null;
 
   async function api(action, payload = {}) {
     if (action !== "upload") return baseApi(action, payload);
@@ -70,8 +71,7 @@
     makeSpecInput("communityUploadBrandField", "communityUploadBrandSelect", "communityUploadBrandSpecNumber", "communityBrandSpecNumber");
   }
 
-  function openCommunity() {
-    const dialog = document.getElementById("servoforgeCommunityDialog");
+  function showDialog(dialog) {
     if (!dialog) return false;
     try {
       if (!dialog.open) dialog.showModal();
@@ -79,14 +79,64 @@
       dialog.setAttribute("open", "");
     }
     const browse = dialog.querySelector('[data-community-tab="browse"]');
-    if (browse && !browse.classList.contains("active")) browse.click();
+    if (browse) browse.click();
+    global.__SERVOFORGE_COMMUNITY_OPEN_STATE = "open";
     return true;
+  }
+
+  function installRecoveryNotice(message) {
+    let notice = document.getElementById("servoforgeCommunityRecoveryNotice");
+    if (!notice) {
+      notice = document.createElement("div");
+      notice.id = "servoforgeCommunityRecoveryNotice";
+      notice.setAttribute("role", "status");
+      notice.style.cssText = "position:fixed;top:58px;right:16px;z-index:2147483647;max-width:360px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);box-shadow:0 12px 30px rgba(0,0,0,.35);font-size:12px";
+      document.body.appendChild(notice);
+    }
+    notice.textContent = message;
+    clearTimeout(global.__sfCommunityRecoveryNoticeTimer);
+    global.__sfCommunityRecoveryNoticeTimer = setTimeout(() => notice?.remove(), 4000);
+  }
+
+  function reloadBaseCommunity() {
+    if (recoveryLoadPromise) return recoveryLoadPromise;
+    recoveryLoadPromise = new Promise((resolve, reject) => {
+      global.__SERVOFORGE_COMMUNITY_OPEN_STATE = "recovering";
+      installRecoveryNotice("Opening Community Library…");
+      try { delete global.LabelerCommunityLibrary; } catch { global.LabelerCommunityLibrary = undefined; }
+      const script = document.createElement("script");
+      script.src = `./app/community-library-integration.js?v=${encodeURIComponent(global.SERVOFORGE_RELEASE_VERSION || "0.9.10")}&build=community-launch-recovery-v107-${Date.now()}`;
+      script.async = false;
+      script.dataset.communityRecoveryLoader = "true";
+      script.addEventListener("load", () => resolve(document.getElementById("servoforgeCommunityDialog")), { once: true });
+      script.addEventListener("error", () => reject(new Error("Unable to reload the Community Library module.")), { once: true });
+      document.body.appendChild(script);
+    }).finally(() => { recoveryLoadPromise = null; });
+    return recoveryLoadPromise;
+  }
+
+  function openCommunity() {
+    const existing = document.getElementById("servoforgeCommunityDialog");
+    if (existing) return Promise.resolve(showDialog(existing));
+
+    return reloadBaseCommunity()
+      .then((dialog) => {
+        const recovered = dialog || document.getElementById("servoforgeCommunityDialog");
+        if (!recovered) throw new Error("Community Library loaded but its dialog was not created.");
+        enhance();
+        return showDialog(recovered);
+      })
+      .catch((error) => {
+        global.__SERVOFORGE_COMMUNITY_OPEN_STATE = `error:${error.message}`;
+        installRecoveryNotice(`Community Library could not open: ${error.message}`);
+        console.error("[ServoForge Community] launcher recovery failed", error);
+        return false;
+      });
   }
 
   function recoverCommunityButton() {
     const button = document.getElementById("communityLibraryButton");
-    const dialog = document.getElementById("servoforgeCommunityDialog");
-    if (!button || !dialog) return false;
+    if (!button) return false;
 
     button.disabled = false;
     button.removeAttribute("aria-disabled");
@@ -100,16 +150,16 @@
       cluster.style.pointerEvents = "auto";
     }
 
-    if (button.dataset.communityV106Recovery !== "true") {
-      button.dataset.communityV106Recovery = "true";
+    if (button.dataset.communityV107Recovery !== "true") {
+      button.dataset.communityV107Recovery = "true";
       button.addEventListener("click", (event) => {
         event.preventDefault();
-        openCommunity();
+        void openCommunity();
       }, true);
     }
 
-    if (document.documentElement.dataset.communityCoordinateRecovery !== "true") {
-      document.documentElement.dataset.communityCoordinateRecovery = "true";
+    if (document.documentElement.dataset.communityCoordinateRecoveryV107 !== "true") {
+      document.documentElement.dataset.communityCoordinateRecoveryV107 = "true";
       document.addEventListener("click", (event) => {
         const current = document.getElementById("communityLibraryButton");
         if (!current) return;
@@ -118,7 +168,7 @@
         if (!inside) return;
         event.preventDefault();
         event.stopImmediatePropagation();
-        openCommunity();
+        void openCommunity();
       }, true);
     }
     return true;
@@ -138,7 +188,7 @@
       enhance();
       const buttonReady = recoverCommunityButton();
       const formReady = Boolean(document.getElementById("communityUploadZone") && document.getElementById("communityUploadSite"));
-      if ((!buttonReady || !formReady) && attempts < 120) setTimeout(applyWhenReady, 25);
+      if ((!buttonReady || !formReady) && attempts < 240) setTimeout(applyWhenReady, 25);
     };
     applyWhenReady();
 
@@ -154,5 +204,5 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once: true });
   else bind();
 
-  global.ServoForgeCommunityLibraryV104 = Object.freeze({ installed: true, build: BUILD, enhance, recoverCommunityButton, openCommunity, normalizeCode });
+  global.ServoForgeCommunityLibraryV104 = Object.freeze({ installed: true, build: BUILD, enhance, recoverCommunityButton, openCommunity, reloadBaseCommunity, normalizeCode });
 })(typeof window !== "undefined" ? window : globalThis);
