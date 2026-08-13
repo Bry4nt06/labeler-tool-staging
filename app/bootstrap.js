@@ -2,9 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "coder-radial-codebox-alignment-v102-20260813-1613";
-  const buildUpdatedAt = "Aug 13, 2026 4:34 PM ET";
-  // v101 UI-only release. Runtime/regression lineage is retained through v100.
+  const build = "community-library-v104-20260813-1851";
+  const buildUpdatedAt = "Aug 13, 2026 6:51 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
