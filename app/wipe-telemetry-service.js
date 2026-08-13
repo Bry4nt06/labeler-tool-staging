@@ -193,24 +193,29 @@ function contactedLabelCoverage(program, section, station, throughTableAngle, vi
   return { percentage, leftPercent, rightPercent, backspinFillPercent, mainWipePercent };
 }
 
+function physicalWipeMachineDirection(value) {
+  const stored = String(value || "").toLowerCase() === "cw" ? "cw" : "ccw";
+  const driver = typeof window !== "undefined" ? window.LabelerCoderOrientationDriver : null;
+  if (typeof driver?.physicalDirection === "function") return driver.physicalDirection(stored);
+  return stored === "cw" ? "ccw" : "cw";
+}
+
 function liveWipeMachineDirection() {
-  // Use the operator-facing Map Builder direction first. The legacy
-  // runtime state.direction uses the opposite internal motion convention,
-  // so it is only an inverted fallback when no semantic map direction exists.
+  // Map Builder values intentionally retain the legacy stored coordinate token
+  // for saved-map compatibility. Translate before presenting physical CW/CCW.
   const selected = typeof document !== "undefined"
     ? String(document.getElementById("mapDirection")?.value || "").toLowerCase()
     : "";
-  if (selected === "cw" || selected === "ccw") return selected;
+  if (selected === "cw" || selected === "ccw") return physicalWipeMachineDirection(selected);
   try {
     const configured = String(activeMachineMap?.()?.machineSettings?.direction || "").toLowerCase();
-    if (configured === "cw" || configured === "ccw") return configured;
+    if (configured === "cw" || configured === "ccw") return physicalWipeMachineDirection(configured);
   } catch {
-    // Fall through to the internal runtime convention below.
+    // Fall through to the runtime coordinate token below.
   }
   const runtime = String(state.direction || "").toLowerCase();
-  if (runtime === "cw") return "ccw";
-  if (runtime === "ccw") return "cw";
-  return "ccw";
+  if (runtime === "cw" || runtime === "ccw") return physicalWipeMachineDirection(runtime);
+  return "cw";
 }
 
 function wipeVisualApplication(section, labelLengthMm) {
@@ -278,11 +283,13 @@ window.LabelerWipeTelemetryService = Object.freeze({
   objectContactIntervals,
   mergedIntervalLength,
   wipeObjectSideForRow,
+  physicalWipeMachineDirection,
   wipeVisualSideForPlateTravel,
   contactedLabelCoverage,
   liveWipeMachineDirection,
   wipeVisualApplication,
   wipeDownTelemetry,
   centerTackServoDirectionV2: true,
-  semanticMachineDirectionV89: true
+  semanticMachineDirectionV89: true,
+  physicalDirectionTranslationV99: true
 });
