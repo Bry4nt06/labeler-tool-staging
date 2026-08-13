@@ -10,6 +10,7 @@ on:
       - "tests/coder-left-edge-direction-parity-v98.test.js"
       - "tests/apl-coder-neck-body-final-aggregate.test.js"
       - "tests/landshark-common-generator-runtime.test.js"
+      - "tests/bottle-orientation-panel.test.js"
       - ".github/workflows/validate-coder-radial-alignment.yml"
   workflow_dispatch:
 
