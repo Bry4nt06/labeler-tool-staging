@@ -25,7 +25,7 @@ state.showMoveDistanceOverlay = true; state.showAllProgramMovesOverlay = true;
 nodes = collect();
 assert(nodes.some((n) => n.attrs["data-entry-exit-dead-zone"] === "330-30"), "dead zone must remain active with other overlays");
 const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
-assert.match(index, /id="showEntryExitDeadZoneOverlay"/); assert.match(index, /330° → 30°/); assert.match(index, /community-library-v97-20260812-1918/);
+assert.match(index, /id="showEntryExitDeadZoneOverlay"/); assert.match(index, /330° → 30°/); assert.match(index, /coder-left-edge-parity-v98-20260813-1402/);
 const settings = fs.readFileSync(path.join(root, "app/controllers/settings-controller.js"), "utf8");
 assert.match(settings, /function setEntryExitDeadZoneOverlay/); assert.match(settings, /commit\("showEntryExitDeadZoneOverlay"/);
 for (const relative of ["app/mechanical-map-scene-renderer.js", "app/simulation-map-scene-renderer.js"]) { const source = fs.readFileSync(path.join(root, relative), "utf8"); assert.match(source, /drawEntryExitDeadZoneOverlay\(add, deadZoneLayer\)/); assert(source.indexOf("drawEntryExitDeadZoneOverlay(add, deadZoneLayer)") < source.indexOf("drawMoveDistanceOverlay")); }

@@ -61,7 +61,10 @@
     if (![application, width, code, center, offset].every(Number.isFinite)) return null;
 
     const direction = physicalDirection(storedDirection);
-    const rawTarget = center + (direction === "cw" ? -offset : offset);
+    // Code Box Center From Left Label Edge is a direction-invariant printed-
+    // label datum. Machine direction is applied later by the world/servo
+    // transform; swapping to the opposite label edge here mirrors twice.
+    const rawTarget = center - offset;
     const target = nearestEquivalent(rawTarget, finite(currentPlateAngle, rawTarget));
     return {
       target,
@@ -74,7 +77,9 @@
       code,
       inspection,
       leftEdgeOffset: offset,
-      referenceEdge: "left"
+      referenceEdge: "left",
+      targetReference: "printed-label-left-edge",
+      directionInvariantLeftEdge: true
     };
   }
 

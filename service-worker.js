@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-community-library-v97-20260812-1918";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-coder-left-edge-parity-v98-20260813-1402";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 

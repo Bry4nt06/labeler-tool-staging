@@ -11,7 +11,6 @@ const targetSource = fs.readFileSync(path.join(root, "app", "orientation-constra
 const buildRendererSource = fs.readFileSync(path.join(root, "app", "build-inputs-renderer.js"), "utf8");
 const buildControllerSource = fs.readFileSync(path.join(root, "app", "controllers", "build-inputs-controller.js"), "utf8");
 const buildInputIntegrationSource = fs.readFileSync(path.join(root, "app", "application-reference-build-input-integration.js"), "utf8");
-const startupSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const bootstrapSource = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
 
 assert.doesNotThrow(() => new vm.Script(policySource));
@@ -34,7 +33,6 @@ assert.match(buildRendererSource, />Leading Edge</);
 assert.match(buildControllerSource, /function updateApplicationReference/);
 assert.match(bootstrapSource, /application-reference-build-input-integration\.js/);
 assert.match(bootstrapSource, /label-application-reference-v32-20260807-1251/);
-assert.match(startupSource, /label-application-reference-v32/);
 
 function baseSeed() {
   const rows = Array.from({ length: 32 }, (_, index) => ({

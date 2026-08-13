@@ -43,7 +43,7 @@ Row insertion, row detection, and command sequencing were intentionally preserve
 - legacy `cw` maps resolve to physical counter-clockwise;
 - legacy `ccw` maps resolve to physical clockwise;
 - automatic label-section selection prefers back, then body, then neck;
-- a 100° label with a 20° code-box offset produces targets of 80° and 20° in opposite physical directions;
+- historical note: the original driver produced 80° and 20° logical targets in opposite directions; v98 supersedes that assumption because Code Box Center From Left Label Edge is direction-invariant and physical mirroring belongs to the world/servo transform;
 - nearest-equivalent targeting preserves continuous bottle-angle travel.
 
 ## Remaining migrations

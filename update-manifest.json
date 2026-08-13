@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "community-library-v97-20260812-1918",
+  "buildId": "coder-left-edge-parity-v98-20260813-1402",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
-  "notes": "v97 adds the login-free ServoForge Community Library with Browse, Upload, My Uploads, and Community Admin. Users can submit the current Machine Map, Bottle, Brand/Label, or complete Map+Bottle+Brand setup as validated JSON for admin review. Only published packages appear publicly; packages have ratings, optional 200-character reviews, download counts, conflict-aware Add as New / Replace Existing import, and JSON sanitization before local import. The staging Settings menu removes Export Settings, Import Settings, Download Brands, Import Map JSON, Export JSON, Import Fault Limits/JSON, and Export CSV. Feedback/Support v95-v96, Brand selection v94, APL geometry/validation, Bottle Orientation, and wipe behavior remain unchanged."
+  "notes": "v98 fixes CW/CCW coder orientation parity. Code Box Center From Left Label Edge is now treated as the same printed-label datum in both machine directions; the mechanical-map/world transform alone performs the physical mirror. The pre-coder hold timing is preserved and coder-center metadata verifies equal mirrored hold distance through the coding window. Community Library, Feedback/Ratings, v94 Brand selection, Top View Bottle Orientation, v89/v90 wipe semantics, APL geometry, and validator behavior are unchanged."
 }

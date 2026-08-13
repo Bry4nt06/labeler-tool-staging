@@ -236,6 +236,9 @@
     if (Number.isFinite(coderStart) && Number.isFinite(coderEnd)) {
       while (coderEnd <= coderStart + EPS) coderEnd += 360;
     }
+    const coderCenter = Number.isFinite(coderStart) && Number.isFinite(coderEnd)
+      ? coderStart + (coderEnd - coderStart) / 2
+      : NaN;
 
     const geometry = {
       section,
@@ -250,7 +253,8 @@
       finalAggregateTableAngle: lastTable,
       finalAggregatePlateAngle: currentPlate,
       coderStart,
-      coderEnd
+      coderEnd,
+      coderCenter
     };
 
     if (![circumferenceMm, labelLengthMm, codeBoxCenterMm, labelWidthDeg, codeBoxOffsetDeg, targetApplication, lastTable, currentPlate, coderStart, coderEnd].every(Number.isFinite)) {
@@ -327,6 +331,7 @@
       codingObjectId: coder.id,
       codingWindowStart: finish(coderStart),
       codingWindowStop: finish(coderEnd),
+      codingWindowCenter: finish(coderCenter),
       codingReadyTableAngle: finish(readyTable),
       preCoderMarginDeg: PRE_CODER_MARGIN_DEG,
       codeBoxCenterMm,
