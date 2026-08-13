@@ -2,6 +2,7 @@
 
 (function alignReleaseReadinessToStaging() {
   const ENVIRONMENT = "staging";
+  const BUILD_MARKER = "staging-readiness-v104-20260813-1851";
   const RETRY_MS = 50;
   let installed = false;
   let observer = null;
@@ -51,6 +52,7 @@
     window.LabelerReleaseReadinessDriver = Object.freeze({
       ...driver,
       stagingAlignmentV3: true,
+      stagingAlignmentBuild: BUILD_MARKER,
       async run(options = {}) {
         const expectedVersion = releaseVersion();
         const report = await baseRun({
