@@ -3,7 +3,7 @@
 (function installServoForgeTopActionIcons(global) {
   if (global.LabelerTopActionIcons?.installed) return;
 
-  const BUILD_MARKER = "top-action-icon-cluster-v101-20260813-1603";
+  const BUILD_MARKER = "top-action-icon-cluster-v105-20260813-1858";
   const icons = Object.freeze({
     community: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
     feedback: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path><path d="M8 9h8"></path><path d="M8 13h5"></path></svg>',
@@ -39,6 +39,27 @@
     if (unread) button.appendChild(unread);
   }
 
+  function bindCommunityAction(button) {
+    if (!button || button.dataset.communityTopActionBound === "true") return;
+    button.dataset.communityTopActionBound = "true";
+    button.disabled = false;
+    button.removeAttribute("aria-disabled");
+    button.style.pointerEvents = "auto";
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const dialog = document.getElementById("servoforgeCommunityDialog");
+      if (!dialog) return;
+      try {
+        if (!dialog.open) dialog.showModal();
+      } catch {
+        dialog.setAttribute("open", "");
+      }
+      const browseTab = dialog.querySelector('[data-community-tab="browse"]');
+      if (browseTab) browseTab.click();
+    }, true);
+  }
+
   function apply() {
     const topbar = document.querySelector(".topbar");
     const community = document.getElementById("communityLibraryButton");
@@ -58,6 +79,7 @@
 
     setIconButton(community, icons.community, "Community");
     setIconButton(feedback, icons.feedback, "Feedback");
+    bindCommunityAction(community);
 
     const summary = settings.querySelector(":scope > summary");
     if (summary) {
@@ -66,7 +88,6 @@
       summary.setAttribute("aria-label", "Settings");
     }
 
-    // Keep these three controls together in the requested visual order.
     cluster.append(community, feedback, settings);
     return true;
   }
