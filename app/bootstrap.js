@@ -25,6 +25,7 @@
     "app/controllers/settings-controller.js",
     "app/feedback-center-integration.js",
     "app/community-library-integration.js",
+    "app/community-library-v104-metadata-integration.js",
     "app/community-library-v103-integration.js",
     "app/top-action-icons-integration.js",
     "app/controllers/settings-reset-controller.js",
