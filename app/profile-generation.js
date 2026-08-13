@@ -2,7 +2,7 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.2";
-  const moduleBuild = "coder-measured-input-transform-v100-20260813-1546";
+  const moduleBuild = "top-action-icon-cluster-v101-20260813-1603";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",
@@ -16,7 +16,8 @@
     "app/machine-profile-framing.js",
     "app/servo-overrides.js",
     "app/profile-translation-service.js",
-    "app/profile-translator-validation.js"
+    "app/profile-translator-validation.js",
+    "app/top-action-icons-integration.js"
   ]);
 
   function loadScript(path) {
