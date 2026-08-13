@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "coder-servo-direction-transform-v99-20260813-1436";
+  const build = "coder-measured-input-transform-v100-20260813-1546";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
