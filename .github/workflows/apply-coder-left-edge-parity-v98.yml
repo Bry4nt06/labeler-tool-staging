@@ -19,7 +19,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply v98 coder parity patch
-        run: python3 scripts/apply-v98-coder-left-edge-parity.py
+        run: |
+          python3 scripts/apply-v98-coder-left-edge-parity.py
+          python3 scripts/fix-v98-stale-centerline-marker.py
 
       - name: Validate syntax
         run: |
@@ -29,6 +31,7 @@ jobs:
           node --check app.js
           node --check service-worker.js
           node --check tests/coder-left-edge-direction-parity-v98.test.js
+          node --check tests/label-centerline-policy.test.js
 
       - name: Coder direction parity regression
         run: node tests/coder-left-edge-direction-parity-v98.test.js
