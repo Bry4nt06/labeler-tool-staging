@@ -5,6 +5,7 @@
   const base = global.LabelerCommunityLibrary;
   if (!base?.installed) return;
 
+  const BUILD = "community-library-v104-20260813-1851";
   const normalizeCode = (value) => String(value ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
   const normalizeSpec = (value) => String(value ?? "").trim().slice(0, 80);
   const baseApi = base.api.bind(base);
@@ -40,7 +41,7 @@
     select.parentNode.insertBefore(row, select);
     row.appendChild(select);
 
-    const wrapper = document.createElement("label");
+    const wrapper = document.createElement("span");
     wrapper.className = "sf-community-inline-spec";
     const caption = document.createElement("span");
     caption.textContent = "Spec #";
@@ -50,6 +51,7 @@
     input.maxLength = 80;
     input.placeholder = "Spec #";
     input.autocomplete = "off";
+    input.setAttribute("aria-label", "Spec number");
     wrapper.append(caption, input);
     row.appendChild(wrapper);
   }
@@ -68,17 +70,38 @@
     makeSpecInput("communityUploadBrandField", "communityUploadBrandSelect", "communityUploadBrandSpecNumber", "communityBrandSpecNumber");
   }
 
+  function recoverCommunityButton() {
+    const button = document.getElementById("communityLibraryButton");
+    const dialog = document.getElementById("servoforgeCommunityDialog");
+    if (!button || !dialog) return false;
+    if (button.dataset.communityV104Recovery === "true") return true;
+    button.dataset.communityV104Recovery = "true";
+    button.addEventListener("click", () => {
+      try {
+        if (!dialog.open) dialog.showModal();
+      } catch {
+        dialog.setAttribute("open", "");
+      }
+      document.querySelector('[data-community-tab="browse"]')?.click();
+    });
+    return true;
+  }
+
   function bind() {
     if (!document.getElementById("servoforgeCommunityV104Styles")) {
       const style = document.createElement("style");
       style.id = "servoforgeCommunityV104Styles";
-      style.textContent = ".sf-community-spec-select-row{display:grid;grid-template-columns:minmax(0,1fr) 126px;gap:6px;align-items:end}.sf-community-inline-spec{display:flex;flex-direction:column;gap:4px;min-width:0}.sf-community-inline-spec span{font-size:10.5px;color:var(--muted)}.sf-community-inline-spec input{width:100%;min-width:0}@media(max-width:560px){.sf-community-spec-select-row{grid-template-columns:1fr}}";
+      style.textContent = ".sf-community-spec-select-row{display:grid;grid-template-columns:minmax(0,1fr) 126px;gap:6px;align-items:end}.sf-community-inline-spec{display:flex;flex-direction:column;gap:4px;min-width:0}.sf-community-inline-spec>span{font-size:10.5px;color:var(--muted)}.sf-community-inline-spec input{width:100%;min-width:0}@media(max-width:560px){.sf-community-spec-select-row{grid-template-columns:1fr}}";
       document.head.appendChild(style);
     }
 
+    let attempts = 0;
     const applyWhenReady = () => {
+      attempts += 1;
       enhance();
-      if (!document.getElementById("communityUploadZone")) setTimeout(applyWhenReady, 25);
+      const buttonReady = recoverCommunityButton();
+      const formReady = Boolean(document.getElementById("communityUploadZone") && document.getElementById("communityUploadSite"));
+      if ((!buttonReady || !formReady) && attempts < 120) setTimeout(applyWhenReady, 25);
     };
     applyWhenReady();
 
@@ -86,11 +109,13 @@
       if (!["communityZone", "communitySite"].includes(event.target?.name)) return;
       event.target.value = normalizeCode(event.target.value);
     });
-    document.querySelector('[data-community-tab="upload"]')?.addEventListener("click", () => setTimeout(enhance, 0));
+    document.addEventListener("click", (event) => {
+      if (event.target?.closest?.('[data-community-tab="upload"]')) setTimeout(enhance, 0);
+    });
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once: true });
   else bind();
 
-  global.ServoForgeCommunityLibraryV104 = Object.freeze({ installed: true, enhance, normalizeCode });
+  global.ServoForgeCommunityLibraryV104 = Object.freeze({ installed: true, build: BUILD, enhance, recoverCommunityButton, normalizeCode });
 })(typeof window !== "undefined" ? window : globalThis);
