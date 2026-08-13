@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "coder-measured-input-transform-v100-20260813-1546",
+  "buildId": "top-action-icon-cluster-v101-20260813-1603",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
-  "notes": "v100 lets operators enter the positive physical Code Box Center measurement exactly as measured from the printed left label edge. ServoForge applies the machine-direction sign only to the label-local coder offset while preserving the established application angle. A measured +15 remains stored as +15, while the generated servo correction can internally become -15 when the selected machine direction requires it. Legacy negative workaround values are interpreted by magnitude. v99 physical machine-direction and bottle-orientation behavior is retained."
+  "notes": "v101 groups Community, Feedback, and Settings together in the top-right action area and replaces their text labels with compact accessible icons. Community uses a people icon, Feedback uses a message icon with the existing unread badge preserved, and Settings uses a gear icon. Existing Community, Feedback, Settings, coder, bottle-orientation, APL, validator, and persistence behavior is unchanged."
 }
