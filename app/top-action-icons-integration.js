@@ -3,7 +3,7 @@
 (function installServoForgeTopActionIcons(global) {
   if (global.LabelerTopActionIcons?.installed) return;
 
-  const BUILD_MARKER = "top-action-icon-cluster-v108-20260813-1920";
+  const BUILD_MARKER = "top-action-icon-cluster-v109-20260813-1924";
   let communityRepairPromise = null;
   const icons = Object.freeze({
     community: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
@@ -54,7 +54,7 @@
   function loadCommunityModule(path, tag) {
     return new Promise((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = `./${path}?v=${encodeURIComponent(global.SERVOFORGE_RELEASE_VERSION || "0.9.10")}&build=${encodeURIComponent(`community-library-v108-20260813-1920-${tag}`)}`;
+      script.src = `./${path}?v=${encodeURIComponent(global.SERVOFORGE_RELEASE_VERSION || "0.9.10")}&build=${encodeURIComponent(`community-library-v109-20260813-1924-${tag}`)}`;
       script.async = false;
       script.addEventListener("load", resolve, { once: true });
       script.addEventListener("error", () => reject(new Error(`Unable to load ${path}.`)), { once: true });
@@ -112,8 +112,8 @@
   }
 
   function bindCommunityAction(button) {
-    if (!button || button.dataset.communityTopActionV108Bound === "true") return;
-    button.dataset.communityTopActionV108Bound = "true";
+    if (!button || button.dataset.communityTopActionV109Bound === "true") return;
+    button.dataset.communityTopActionV109Bound = "true";
     button.disabled = false;
     button.removeAttribute("aria-disabled");
     button.style.pointerEvents = "auto";
@@ -144,6 +144,7 @@
     setIconButton(community, icons.community, "Community");
     setIconButton(feedback, icons.feedback, "Feedback");
     bindCommunityAction(community);
+    void repairCommunityEnhancements();
 
     const summary = settings.querySelector(":scope > summary");
     if (summary) {
