@@ -17,8 +17,6 @@
   }
 
   function physicalDirection(storedDirection) {
-    // Saved maps use the original coordinate-system names. Translate them at
-    // the geometry boundary instead of changing stored map coordinates.
     return normalizedStoredDirection(storedDirection) === "cw" ? "ccw" : "cw";
   }
 
@@ -27,8 +25,6 @@
   }
 
   function servoDirectionSign(storedDirection) {
-    // Same local bottle/plate sign used by the Mechanical Map. The saved token
-    // is a legacy coordinate convention, not the operator-facing direction.
     return normalizedStoredDirection(storedDirection) === "cw" ? -1 : 1;
   }
 
@@ -47,7 +43,7 @@
 
   function leftEdgeOffset({ labelWidthDeg, codeBoxOffsetDeg, inspectionOffsetDeg = 0 }) {
     const width = finite(labelWidthDeg, NaN);
-    const code = finite(codeBoxOffsetDeg, NaN);
+    const code = Math.abs(finite(codeBoxOffsetDeg, NaN));
     const inspection = finite(inspectionOffsetDeg, 0);
     if (!Number.isFinite(width) || !Number.isFinite(code)) return NaN;
     return width / 2 - code + inspection;
@@ -64,7 +60,7 @@
   }) {
     const application = finite(applicationTarget, NaN);
     const width = finite(labelWidthDeg, NaN);
-    const code = finite(codeBoxOffsetDeg, NaN);
+    const code = Math.abs(finite(codeBoxOffsetDeg, NaN));
     const inspection = finite(inspectionOffsetDeg, 0);
     const center = labelCenter({ section, applicationTarget: application, labelWidthDeg: width });
     const offset = leftEdgeOffset({ labelWidthDeg: width, codeBoxOffsetDeg: code, inspectionOffsetDeg: inspection });
@@ -73,17 +69,12 @@
     const stored = normalizedStoredDirection(storedDirection);
     const direction = physicalDirection(stored);
     const servoSign = servoDirectionSign(stored);
-
-    // Resolve exactly one point on the printed artwork first. For Body/Back
-    // leading-edge application this is application + Code Box Center From Left
-    // Label Edge. Reversing the machine never substitutes the opposite label end.
     const printedDatum = center - offset;
-
-    // Convert that same artwork point into the legacy/internal plate coordinate.
-    // The physical target stays the same, while the HMI/CMD target is allowed to
-    // be greater or smaller when the carousel direction changes.
-    const rawTarget = servoSign * printedDatum;
+    const measuredLocalOffset = printedDatum - application;
+    const machineLocalOffset = servoSign * measuredLocalOffset;
+    const rawTarget = application + machineLocalOffset;
     const target = nearestEquivalent(rawTarget, finite(currentPlateAngle, rawTarget));
+
     return {
       target,
       rawTarget,
@@ -91,6 +82,8 @@
       storedDirection: stored,
       servoDirectionSign: servoSign,
       printedCodeBoxDatum: printedDatum,
+      measuredLocalOffset,
+      machineLocalOffset,
       application,
       center,
       width,
@@ -100,6 +93,7 @@
       referenceEdge: "left",
       targetReference: "printed-label-left-edge",
       directionInvariantLeftEdge: true,
+      positiveMeasuredInput: true,
       directionDependentServoCommand: true
     };
   }
