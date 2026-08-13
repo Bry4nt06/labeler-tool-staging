@@ -22,6 +22,16 @@
     return normalizedStoredDirection(storedDirection) === "cw" ? "ccw" : "cw";
   }
 
+  function directionLabel(storedDirection) {
+    return physicalDirection(storedDirection) === "cw" ? "Clockwise" : "Counter-clockwise";
+  }
+
+  function servoDirectionSign(storedDirection) {
+    // Same local bottle/plate sign used by the Mechanical Map. The saved token
+    // is a legacy coordinate convention, not the operator-facing direction.
+    return normalizedStoredDirection(storedDirection) === "cw" ? -1 : 1;
+  }
+
   function nearestEquivalent(target, reference) {
     const base = finite(target, 0);
     const current = finite(reference, base);
@@ -60,17 +70,27 @@
     const offset = leftEdgeOffset({ labelWidthDeg: width, codeBoxOffsetDeg: code, inspectionOffsetDeg: inspection });
     if (![application, width, code, center, offset].every(Number.isFinite)) return null;
 
-    const direction = physicalDirection(storedDirection);
-    // Code Box Center From Left Label Edge is a direction-invariant printed-
-    // label datum. Machine direction is applied later by the world/servo
-    // transform; swapping to the opposite label edge here mirrors twice.
-    const rawTarget = center - offset;
+    const stored = normalizedStoredDirection(storedDirection);
+    const direction = physicalDirection(stored);
+    const servoSign = servoDirectionSign(stored);
+
+    // Resolve exactly one point on the printed artwork first. For Body/Back
+    // leading-edge application this is application + Code Box Center From Left
+    // Label Edge. Reversing the machine never substitutes the opposite label end.
+    const printedDatum = center - offset;
+
+    // Convert that same artwork point into the legacy/internal plate coordinate.
+    // The physical target stays the same, while the HMI/CMD target is allowed to
+    // be greater or smaller when the carousel direction changes.
+    const rawTarget = servoSign * printedDatum;
     const target = nearestEquivalent(rawTarget, finite(currentPlateAngle, rawTarget));
     return {
       target,
       rawTarget,
       physicalDirection: direction,
-      storedDirection: normalizedStoredDirection(storedDirection),
+      storedDirection: stored,
+      servoDirectionSign: servoSign,
+      printedCodeBoxDatum: printedDatum,
       application,
       center,
       width,
@@ -79,7 +99,8 @@
       leftEdgeOffset: offset,
       referenceEdge: "left",
       targetReference: "printed-label-left-edge",
-      directionInvariantLeftEdge: true
+      directionInvariantLeftEdge: true,
+      directionDependentServoCommand: true
     };
   }
 
@@ -88,6 +109,8 @@
     LABEL_SECTIONS,
     normalizedStoredDirection,
     physicalDirection,
+    directionLabel,
+    servoDirectionSign,
     nearestEquivalent,
     labelCenter,
     leftEdgeOffset,
