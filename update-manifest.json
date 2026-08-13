@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "community-library-v109-20260813-1924",
+  "buildId": "community-library-v111-20260813-1936",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Community Library v109 repairs the v103/v104 enhancement stack at startup and after dialog recovery so Zone/Site browse filters, required Zone/Site upload fields, saved Bottle/Brand selectors, and Bottle/Label Spec # inputs remain available after self-healing. Existing servo/coder behavior remains unchanged."
+  "notes": "Community Library v111 shows only the selectors required by the chosen package type: Machine Map only for map uploads, Bottle plus Bottle Spec # for bottle uploads, Brand/Label plus Label Spec # for label uploads, and all three selectors for Complete Setup. Zone and Site remain required for every upload."
 }
