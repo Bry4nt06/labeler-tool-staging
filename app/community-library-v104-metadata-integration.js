@@ -5,7 +5,7 @@
   const base = global.LabelerCommunityLibrary;
   if (!base?.installed) return;
 
-  const BUILD = "community-library-v104-20260813-1851";
+  const BUILD = "community-library-v106-20260813-1906";
   const normalizeCode = (value) => String(value ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
   const normalizeSpec = (value) => String(value ?? "").trim().slice(0, 80);
   const baseApi = base.api.bind(base);
@@ -70,20 +70,57 @@
     makeSpecInput("communityUploadBrandField", "communityUploadBrandSelect", "communityUploadBrandSpecNumber", "communityBrandSpecNumber");
   }
 
+  function openCommunity() {
+    const dialog = document.getElementById("servoforgeCommunityDialog");
+    if (!dialog) return false;
+    try {
+      if (!dialog.open) dialog.showModal();
+    } catch {
+      dialog.setAttribute("open", "");
+    }
+    const browse = dialog.querySelector('[data-community-tab="browse"]');
+    if (browse && !browse.classList.contains("active")) browse.click();
+    return true;
+  }
+
   function recoverCommunityButton() {
     const button = document.getElementById("communityLibraryButton");
     const dialog = document.getElementById("servoforgeCommunityDialog");
     if (!button || !dialog) return false;
-    if (button.dataset.communityV104Recovery === "true") return true;
-    button.dataset.communityV104Recovery = "true";
-    button.addEventListener("click", () => {
-      try {
-        if (!dialog.open) dialog.showModal();
-      } catch {
-        dialog.setAttribute("open", "");
-      }
-      document.querySelector('[data-community-tab="browse"]')?.click();
-    });
+
+    button.disabled = false;
+    button.removeAttribute("aria-disabled");
+    button.style.pointerEvents = "auto";
+    button.style.position = "relative";
+    button.style.zIndex = "1002";
+    const cluster = button.closest("#servoforgeTopActionCluster");
+    if (cluster) {
+      cluster.style.position = "relative";
+      cluster.style.zIndex = "1001";
+      cluster.style.pointerEvents = "auto";
+    }
+
+    if (button.dataset.communityV106Recovery !== "true") {
+      button.dataset.communityV106Recovery = "true";
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        openCommunity();
+      }, true);
+    }
+
+    if (document.documentElement.dataset.communityCoordinateRecovery !== "true") {
+      document.documentElement.dataset.communityCoordinateRecovery = "true";
+      document.addEventListener("click", (event) => {
+        const current = document.getElementById("communityLibraryButton");
+        if (!current) return;
+        const rect = current.getBoundingClientRect();
+        const inside = event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
+        if (!inside) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        openCommunity();
+      }, true);
+    }
     return true;
   }
 
@@ -91,7 +128,7 @@
     if (!document.getElementById("servoforgeCommunityV104Styles")) {
       const style = document.createElement("style");
       style.id = "servoforgeCommunityV104Styles";
-      style.textContent = ".sf-community-spec-select-row{display:grid;grid-template-columns:minmax(0,1fr) 126px;gap:6px;align-items:end}.sf-community-inline-spec{display:flex;flex-direction:column;gap:4px;min-width:0}.sf-community-inline-spec>span{font-size:10.5px;color:var(--muted)}.sf-community-inline-spec input{width:100%;min-width:0}@media(max-width:560px){.sf-community-spec-select-row{grid-template-columns:1fr}}";
+      style.textContent = ".sf-community-spec-select-row{display:grid;grid-template-columns:minmax(0,1fr) 126px;gap:6px;align-items:end}.sf-community-inline-spec{display:flex;flex-direction:column;gap:4px;min-width:0}.sf-community-inline-spec>span{font-size:10.5px;color:var(--muted)}.sf-community-inline-spec input{width:100%;min-width:0}#servoforgeTopActionCluster{position:relative!important;z-index:1001!important;pointer-events:auto!important}#communityLibraryButton{position:relative!important;z-index:1002!important;pointer-events:auto!important}@media(max-width:560px){.sf-community-spec-select-row{grid-template-columns:1fr}}";
       document.head.appendChild(style);
     }
 
@@ -117,5 +154,5 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once: true });
   else bind();
 
-  global.ServoForgeCommunityLibraryV104 = Object.freeze({ installed: true, build: BUILD, enhance, recoverCommunityButton, normalizeCode });
+  global.ServoForgeCommunityLibraryV104 = Object.freeze({ installed: true, build: BUILD, enhance, recoverCommunityButton, openCommunity, normalizeCode });
 })(typeof window !== "undefined" ? window : globalThis);
