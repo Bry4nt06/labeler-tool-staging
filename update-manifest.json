@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "top-action-icon-cluster-v101-20260813-1603",
+  "buildId": "coder-radial-codebox-alignment-v102-20260813-1613",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
-  "notes": "v101 groups Community, Feedback, and Settings together in the top-right action area and replaces their text labels with compact accessible icons. Community uses a people icon, Feedback uses a message icon with the existing unread badge preserved, and Settings uses a gear icon. Existing Community, Feedback, Settings, coder, bottle-orientation, APL, validator, and persistence behavior is unchanged."
+  "notes": "v102 solves the coding target in the finished bottle-local frame. Code Box Center remains the positive physical distance measured from the printed left edge, and the generated plate command now positions that exact label point on the coder radial centerline for either physical machine direction. The prior application hold angle is retained as process history but no longer shifts the coder-facing target. v101 top action icons and prior protected behavior remain unchanged."
 }
