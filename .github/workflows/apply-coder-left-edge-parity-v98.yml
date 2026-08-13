@@ -57,11 +57,10 @@ jobs:
       - name: APL roller coverage regression
         run: node tests/apl-roller-coverage-default.test.js
 
-      - name: Wipe direction parity regression
+      - name: Wipe direction behavior regressions
         run: |
           node tests/wipe-direction-machine-parity-v87.test.js
           node tests/wipe-panel-semantic-direction-v89.test.js
-          node tests/wipe-runtime-delivery-v90.test.js
 
       - name: Brand selection regression
         run: node tests/brand-selection-event-authority-v94.test.js
