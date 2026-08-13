@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "coder-left-edge-parity-v98-20260813-1402";
+  const build = "coder-servo-direction-transform-v99-20260813-1436";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
