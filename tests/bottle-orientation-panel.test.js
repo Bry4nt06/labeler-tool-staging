@@ -34,7 +34,14 @@ assert.doesNotMatch(markup,/data-orientation-scrubber/);
 assert.doesNotMatch(markup,/data-orientation-speed/);
 assert.doesNotMatch(markup,/data-orientation-action-button/);
 assert.match(recovery,/nativeBottleDatumCompatibilityV79: true/);
-assert.match(bootstrap,/coder-left-edge-parity-v98-20260813-1402/);
-assert.match(serviceWorker,/coder-left-edge-parity-v98-20260813-1402/);
-assert.equal(manifest.buildId,"coder-left-edge-parity-v98-20260813-1402");
+
+// Delivery checks are capability-based rather than pinned to an obsolete build ID.
+// New releases must continue loading and caching both Top View modules.
+assert.match(bootstrap,/app\/bottle-orientation-panel-integration\.js/);
+assert.match(bootstrap,/app\/bottle-orientation-panel-recovery-integration\.js/);
+assert.match(serviceWorker,/\.\/app\/bottle-orientation-panel-integration\.js/);
+assert.match(serviceWorker,/\.\/app\/bottle-orientation-panel-recovery-integration\.js/);
+assert.equal(typeof manifest.buildId,"string");
+assert.ok(manifest.buildId.length>0);
+
 console.log("Top-view-only Bottle Orientation baseline regression passed.");
