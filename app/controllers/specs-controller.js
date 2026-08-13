@@ -117,7 +117,12 @@
           return;
         }
         const oldBrand = spec.brand;
-        if (labelNumericFields.has(key)) spec[key] = numericInput(value, spec[key]);
+        if (labelNumericFields.has(key)) {
+          const numeric = numericInput(value, spec[key]);
+          spec[key] = key === "codeBoxCenterMm" && Number.isFinite(Number(numeric))
+            ? Math.abs(Number(numeric))
+            : numeric;
+        }
         else if (key === "brand") spec[key] = String(value ?? "");
         else return;
         if (key === "brand" && state.selectedBrand === oldBrand) state.selectedBrand = spec.brand;
