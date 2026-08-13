@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "coder-left-edge-parity-v98-20260813-1402";
+  const BUILD_ID = "coder-radial-codebox-alignment-v102-20260813-1613";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
@@ -162,7 +162,7 @@
 
 (function loadStagingFeatureModules() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "coder-left-edge-parity-v98-20260813-1402";
+  const BUILD_ID = "coder-radial-codebox-alignment-v102-20260813-1613";
   const modules = [
     "app/diagnostics-workspace-integration.js",
     "app/workspace-developer-integration.js",

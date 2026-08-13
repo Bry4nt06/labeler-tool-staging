@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "coder-measured-input-transform-v100-20260813-1546";
+  const build = "coder-radial-codebox-alignment-v102-20260813-1613";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

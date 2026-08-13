@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "top-action-icon-cluster-v101-20260813-1603";
-  const buildUpdatedAt = "Aug 13, 2026 4:03 PM ET";
+  const build = "coder-radial-codebox-alignment-v102-20260813-1613";
+  const buildUpdatedAt = "Aug 13, 2026 4:34 PM ET";
   // v101 UI-only release. Runtime/regression lineage is retained through v100.
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
