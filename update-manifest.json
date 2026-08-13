@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "community-library-v106-20260813-1906",
+  "buildId": "community-library-v109-20260813-1924",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Community Library v106 routes clicks by the visible Community icon hit rectangle at document capture level and raises the Community action above overlapping UI layers. v104 compact browsing, required Zone/Site metadata, saved spec selection, and Bottle/Label Spec # fields remain unchanged. Existing v102 servo/coder behavior remains unchanged."
+  "notes": "Community Library v109 repairs the v103/v104 enhancement stack at startup and after dialog recovery so Zone/Site browse filters, required Zone/Site upload fields, saved Bottle/Brand selectors, and Bottle/Label Spec # inputs remain available after self-healing. Existing servo/coder behavior remains unchanged."
 }
