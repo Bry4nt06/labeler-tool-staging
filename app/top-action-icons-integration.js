@@ -3,7 +3,8 @@
 (function installServoForgeTopActionIcons(global) {
   if (global.LabelerTopActionIcons?.installed) return;
 
-  const BUILD_MARKER = "top-action-icon-cluster-v107-20260813-1914";
+  const BUILD_MARKER = "top-action-icon-cluster-v108-20260813-1920";
+  let communityRepairPromise = null;
   const icons = Object.freeze({
     community: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
     feedback: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path><path d="M8 9h8"></path><path d="M8 13h5"></path></svg>',
@@ -39,10 +40,63 @@
     if (unread) button.appendChild(unread);
   }
 
+  function hasCommunityEnhancements() {
+    return Boolean(
+      document.getElementById("communityZoneFilter") &&
+      document.getElementById("communitySiteFilter") &&
+      document.getElementById("communityUploadZone") &&
+      document.getElementById("communityUploadSite") &&
+      document.getElementById("communityUploadBottleSelect") &&
+      document.getElementById("communityUploadBrandSelect")
+    );
+  }
+
+  function loadCommunityModule(path, tag) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = `./${path}?v=${encodeURIComponent(global.SERVOFORGE_RELEASE_VERSION || "0.9.10")}&build=${encodeURIComponent(`community-library-v108-20260813-1920-${tag}`)}`;
+      script.async = false;
+      script.addEventListener("load", resolve, { once: true });
+      script.addEventListener("error", () => reject(new Error(`Unable to load ${path}.`)), { once: true });
+      document.body.appendChild(script);
+    });
+  }
+
+  function repairCommunityEnhancements() {
+    if (!document.getElementById("servoforgeCommunityDialog")) return Promise.resolve(false);
+    if (hasCommunityEnhancements()) {
+      global.ServoForgeCommunityLibraryV104?.enhance?.();
+      return Promise.resolve(true);
+    }
+    if (communityRepairPromise) return communityRepairPromise;
+
+    communityRepairPromise = (async () => {
+      try {
+        delete global.ServoForgeCommunityLibraryV104;
+        delete global.ServoForgeCommunityLibraryV103;
+      } catch {
+        global.ServoForgeCommunityLibraryV104 = undefined;
+        global.ServoForgeCommunityLibraryV103 = undefined;
+      }
+      await loadCommunityModule("app/community-library-v104-metadata-integration.js", "metadata");
+      await loadCommunityModule("app/community-library-v103-integration.js", "controls");
+      global.ServoForgeCommunityLibraryV104?.enhance?.();
+      global.ServoForgeCommunityLibraryV103?.refreshLocationCatalog?.();
+      return hasCommunityEnhancements();
+    })().catch((error) => {
+      console.error("[ServoForge Community] enhancement repair failed", error);
+      return false;
+    }).finally(() => {
+      communityRepairPromise = null;
+    });
+
+    return communityRepairPromise;
+  }
+
   function launchCommunity() {
     const launcher = global.ServoForgeCommunityLibraryV104?.openCommunity;
     if (typeof launcher === "function") {
-      void launcher();
+      Promise.resolve(launcher()).then(() => repairCommunityEnhancements());
       return true;
     }
     const dialog = document.getElementById("servoforgeCommunityDialog");
@@ -53,12 +107,13 @@
       dialog.setAttribute("open", "");
     }
     dialog.querySelector('[data-community-tab="browse"]')?.click();
+    void repairCommunityEnhancements();
     return true;
   }
 
   function bindCommunityAction(button) {
-    if (!button || button.dataset.communityTopActionV107Bound === "true") return;
-    button.dataset.communityTopActionV107Bound = "true";
+    if (!button || button.dataset.communityTopActionV108Bound === "true") return;
+    button.dataset.communityTopActionV108Bound = "true";
     button.disabled = false;
     button.removeAttribute("aria-disabled");
     button.style.pointerEvents = "auto";
@@ -113,6 +168,7 @@
     build: BUILD_MARKER,
     apply,
     launchCommunity,
+    repairCommunityEnhancements,
     order: Object.freeze(["community", "feedback", "settings"])
   });
 
