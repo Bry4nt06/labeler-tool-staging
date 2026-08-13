@@ -2,7 +2,7 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.2";
-  const moduleBuild = "servo-validator-plan-sync-v59-20260811";
+  const moduleBuild = "coder-measured-input-transform-v100-20260813-1546";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",
@@ -21,11 +21,11 @@
 
   function loadScript(path) {
     return new Promise((resolve, reject) => {
-      const expected = new URL(`./${path}`, window.location.href).pathname;
-      const existing = [...document.scripts].find((script) => {
-        try { return new URL(script.src, window.location.href).pathname === expected; }
-        catch { return false; }
-      });
+      const expected = new URL(
+        `./${path}?v=${encodeURIComponent(version)}&build=${encodeURIComponent(moduleBuild)}`,
+        window.location.href
+      ).href;
+      const existing = [...document.scripts].find((script) => script.src === expected);
       if (existing) {
         if (existing.dataset.loaded === "true") resolve();
         else {
@@ -39,6 +39,7 @@
       script.src = `./${path}?v=${encodeURIComponent(version)}&build=${encodeURIComponent(moduleBuild)}`;
       script.async = false;
       script.dataset.profileGenerationModule = path;
+      script.dataset.profileGenerationBuild = moduleBuild;
       script.addEventListener("load", () => {
         script.dataset.loaded = "true";
         resolve();
@@ -49,6 +50,7 @@
   }
 
   window.ServoForgeProfileGenerationModules = modules;
+  window.ServoForgeProfileGenerationBuild = moduleBuild;
   window.ServoForgeProfileGenerationReady = modules.reduce(
     (promise, path) => promise.then(() => loadScript(path)),
     Promise.resolve()
