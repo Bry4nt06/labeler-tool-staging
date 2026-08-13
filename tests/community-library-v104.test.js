@@ -1,0 +1,20 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const root = path.resolve(__dirname, "..");
+const v104 = fs.readFileSync(path.join(root, "app/community-library-v104-metadata-integration.js"), "utf8");
+const bootstrap = fs.readFileSync(path.join(root, "app/bootstrap.js"), "utf8");
+
+assert.ok(v104.includes("input.required = true"), "Zone and Site must be required.");
+assert.ok(v104.includes('communityUploadBottleSpecNumber'), "Bottle Spec # input is required in the Community upload UI.");
+assert.ok(v104.includes('communityUploadBrandSpecNumber'), "Brand/Label Spec # input is required in the Community upload UI.");
+assert.ok(v104.includes('communityBottleSpecNumber'), "Bottle Spec # must be submitted as Community metadata.");
+assert.ok(v104.includes('communityBrandSpecNumber'), "Brand Spec # must be submitted as Community metadata.");
+assert.ok(v104.includes('Zone and Site are required.'), "Blank Zone/Site submissions must be blocked.");
+assert.ok(v104.includes('.slice(0, 3)'), "Zone and Site remain capped at three characters.");
+const base = bootstrap.indexOf('"app/community-library-integration.js"');
+const v104Index = bootstrap.indexOf('"app/community-library-v104-metadata-integration.js"');
+const v103Index = bootstrap.indexOf('"app/community-library-v103-integration.js"');
+assert.ok(base >= 0 && v104Index > base && v103Index > v104Index, "v104 must load after the base Community module and before v103.");
+console.log("Community Library v104 required metadata regression passed.");
