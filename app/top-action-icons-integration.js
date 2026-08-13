@@ -74,7 +74,7 @@
   let attempts = 0;
   function settle() {
     attempts += 1;
-    if (apply() || attempts >= 20) return;
+    if (apply() || attempts >= 200) return;
     global.setTimeout(settle, 50);
   }
 
