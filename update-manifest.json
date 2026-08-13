@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "community-library-v104-20260813-1851",
+  "buildId": "community-library-v105-20260813-1858",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Community Library v104 adds compact browsing, Zone/Site filtering and required upload metadata, saved Map/Bottle/Brand selection, Bottle and Label Spec # inputs, and Community button recovery. Existing v102 coder radial alignment behavior remains unchanged."
+  "notes": "Community Library v105 makes the top Community icon own an authoritative capture-phase click handler that opens the Community dialog directly. v104 compact browsing, Zone/Site metadata, saved spec selection, and Spec # fields remain unchanged. Existing v102 servo/coder behavior remains unchanged."
 }
