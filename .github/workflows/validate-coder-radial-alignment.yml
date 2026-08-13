@@ -12,6 +12,7 @@ on:
       - "tests/landshark-common-generator-runtime.test.js"
       - "tests/bottle-orientation-panel.test.js"
       - "tests/top-view-bottle-renderer.test.js"
+      - "tests/wipe-panel-semantic-direction-v89.test.js"
       - ".github/workflows/validate-coder-radial-alignment.yml"
   workflow_dispatch:
 
@@ -24,38 +25,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Syntax checks
         run: |
           node --check drivers/profile/coder-orientation-driver.js
           node --check app/apl-coder-codebox-orientation-integration.js
           node --check app/profile-generation.js
-
       - name: Coder radial-frame regression
         run: node tests/coder-left-edge-direction-parity-v98.test.js
-
       - name: APL coder integration regression
         run: node tests/apl-coder-neck-body-final-aggregate.test.js
-
       - name: Land Shark runtime regression
         run: node tests/landshark-common-generator-runtime.test.js
-
       - name: Bottle Orientation regressions
         run: |
           node tests/bottle-orientation-panel.test.js
           node tests/top-view-bottle-renderer.test.js
-
       - name: Protected APL regressions
         run: |
           node tests/apl-section-handoff-continuity.test.js
           node tests/apl-roller-coverage-default.test.js
-
       - name: Physical wipe-direction regressions
         run: |
           node tests/wipe-direction-machine-parity-v87.test.js
           node tests/wipe-panel-runtime-direction-v88.test.js
           node tests/wipe-panel-semantic-direction-v89.test.js
-
       - name: Brand and Community regressions
         run: |
           node tests/brand-selection-event-authority-v94.test.js
