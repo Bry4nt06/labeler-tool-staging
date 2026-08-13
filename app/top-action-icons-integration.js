@@ -3,7 +3,7 @@
 (function installServoForgeTopActionIcons(global) {
   if (global.LabelerTopActionIcons?.installed) return;
 
-  const BUILD_MARKER = "top-action-icon-cluster-v110-20260813-1927";
+  const BUILD_MARKER = "top-action-icon-cluster-v111-20260813-1936";
   const locationById = new Map();
   let lastSuggestedName = "";
 
@@ -31,6 +31,7 @@
       .sf-top-action-cluster svg{width:20px;height:20px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
       .sf-top-action-cluster>.top-settings-menu{margin:0;align-self:flex-start}.sf-top-action-cluster>.top-settings-menu>summary{list-style:none;text-align:center;font-size:0}.sf-top-action-cluster>.top-settings-menu>summary::-webkit-details-marker{display:none}
       .sf-community-fallback-row{display:grid;grid-template-columns:minmax(0,1fr) 130px;gap:6px;align-items:end}.sf-community-fallback-row input,.sf-community-fallback-row select{width:100%;min-width:0}
+      #communityUploadMapField[hidden],#communityUploadBottleField[hidden],#communityUploadBrandField[hidden]{display:none!important}
       @media(max-width:560px){.sf-community-fallback-row{grid-template-columns:1fr}}
     `;
     document.head.appendChild(style);
@@ -114,7 +115,12 @@
       communityUploadBottleField: type === "bottle" || type === "bundle",
       communityUploadBrandField: type === "brand" || type === "bundle"
     };
-    Object.entries(visibility).forEach(([id, show]) => { const node = document.getElementById(id); if (node) node.hidden = !show; });
+    Object.entries(visibility).forEach(([id, show]) => {
+      const node = document.getElementById(id);
+      if (!node) return;
+      node.hidden = !show;
+      node.style.display = show ? "" : "none";
+    });
   }
 
   function refreshUploadPreview(forceName = false) {
@@ -277,8 +283,8 @@
   }
 
   function bindCommunityAction(button) {
-    if (!button || button.dataset.communityTopActionV110Bound === "true") return;
-    button.dataset.communityTopActionV110Bound = "true";
+    if (!button || button.dataset.communityTopActionV111Bound === "true") return;
+    button.dataset.communityTopActionV111Bound = "true";
     button.disabled = false;
     button.removeAttribute("aria-disabled");
     button.style.pointerEvents = "auto";
