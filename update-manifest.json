@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "coder-left-edge-parity-v98-20260813-1402",
+  "buildId": "coder-servo-direction-transform-v99-20260813-1436",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/index.html",
-  "notes": "v98 fixes CW/CCW coder orientation parity. Code Box Center From Left Label Edge is now treated as the same printed-label datum in both machine directions; the mechanical-map/world transform alone performs the physical mirror. The pre-coder hold timing is preserved and coder-center metadata verifies equal mirrored hold distance through the coding window. Community Library, Feedback/Ratings, v94 Brand selection, Top View Bottle Orientation, v89/v90 wipe semantics, APL geometry, and validator behavior are unchanged."
+  "notes": "v99 corrects physical direction labeling and keeps the printed code-box datum fixed while allowing direction-specific servo targets."
 }
