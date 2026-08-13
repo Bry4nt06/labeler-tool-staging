@@ -3,7 +3,7 @@
 (function installServoForgeTopActionIcons(global) {
   if (global.LabelerTopActionIcons?.installed) return;
 
-  const BUILD_MARKER = "top-action-icon-cluster-v105-20260813-1858";
+  const BUILD_MARKER = "top-action-icon-cluster-v107-20260813-1914";
   const icons = Object.freeze({
     community: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
     feedback: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path><path d="M8 9h8"></path><path d="M8 13h5"></path></svg>',
@@ -15,8 +15,8 @@
     const style = document.createElement("style");
     style.id = "servoforgeTopActionIconStyles";
     style.textContent = `
-      .sf-top-action-cluster{margin-left:auto;display:flex;align-items:flex-start;justify-content:flex-end;gap:8px;align-self:flex-start;flex:0 0 auto}
-      .sf-top-action-cluster>.sf-top-icon-button,.sf-top-action-cluster>.top-settings-menu>summary{position:relative;width:40px;height:40px;min-width:40px;min-height:40px;margin:0!important;padding:0!important;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:9px;background:linear-gradient(180deg,var(--btn-a),var(--btn-b));color:#ecfff6;box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 8px 18px rgba(0,0,0,.16);cursor:pointer}
+      .sf-top-action-cluster{margin-left:auto;display:flex;align-items:flex-start;justify-content:flex-end;gap:8px;align-self:flex-start;flex:0 0 auto;position:relative;z-index:1001;pointer-events:auto}
+      .sf-top-action-cluster>.sf-top-icon-button,.sf-top-action-cluster>.top-settings-menu>summary{position:relative;width:40px;height:40px;min-width:40px;min-height:40px;margin:0!important;padding:0!important;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:9px;background:linear-gradient(180deg,var(--btn-a),var(--btn-b));color:#ecfff6;box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 8px 18px rgba(0,0,0,.16);cursor:pointer;pointer-events:auto}
       .sf-top-action-cluster>.sf-top-icon-button:hover,.sf-top-action-cluster>.top-settings-menu>summary:hover{border-color:rgba(120,255,190,.75);color:#fff;background:linear-gradient(180deg,var(--btn-hover-a),var(--btn-hover-b))}
       .sf-top-action-cluster svg{width:20px;height:20px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
       .sf-top-action-cluster>.top-settings-menu{margin:0;align-self:flex-start}
@@ -39,24 +39,33 @@
     if (unread) button.appendChild(unread);
   }
 
+  function launchCommunity() {
+    const launcher = global.ServoForgeCommunityLibraryV104?.openCommunity;
+    if (typeof launcher === "function") {
+      void launcher();
+      return true;
+    }
+    const dialog = document.getElementById("servoforgeCommunityDialog");
+    if (!dialog) return false;
+    try {
+      if (!dialog.open) dialog.showModal();
+    } catch {
+      dialog.setAttribute("open", "");
+    }
+    dialog.querySelector('[data-community-tab="browse"]')?.click();
+    return true;
+  }
+
   function bindCommunityAction(button) {
-    if (!button || button.dataset.communityTopActionBound === "true") return;
-    button.dataset.communityTopActionBound = "true";
+    if (!button || button.dataset.communityTopActionV107Bound === "true") return;
+    button.dataset.communityTopActionV107Bound = "true";
     button.disabled = false;
     button.removeAttribute("aria-disabled");
     button.style.pointerEvents = "auto";
     button.addEventListener("click", (event) => {
       event.preventDefault();
-      event.stopImmediatePropagation();
-      const dialog = document.getElementById("servoforgeCommunityDialog");
-      if (!dialog) return;
-      try {
-        if (!dialog.open) dialog.showModal();
-      } catch {
-        dialog.setAttribute("open", "");
-      }
-      const browseTab = dialog.querySelector('[data-community-tab="browse"]');
-      if (browseTab) browseTab.click();
+      const launched = launchCommunity();
+      if (launched) event.stopImmediatePropagation();
     }, true);
   }
 
@@ -95,7 +104,7 @@
   let attempts = 0;
   function settle() {
     attempts += 1;
-    if (apply() || attempts >= 200) return;
+    if (apply() || attempts >= 240) return;
     global.setTimeout(settle, 50);
   }
 
@@ -103,6 +112,7 @@
     installed: true,
     build: BUILD_MARKER,
     apply,
+    launchCommunity,
     order: Object.freeze(["community", "feedback", "settings"])
   });
 
