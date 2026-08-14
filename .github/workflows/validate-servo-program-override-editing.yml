@@ -1,0 +1,24 @@
+name: Validate Servo Program Override Editing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/controllers/servo-program-controller.js"
+      - "app/controllers/servo-program-event-controller.js"
+      - "tests/servo-program-override-editing.test.js"
+      - ".github/workflows/validate-servo-program-override-editing.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate syntax and override lifecycle
+        run: |
+          node --check app/controllers/servo-program-controller.js
+          node --check app/controllers/servo-program-event-controller.js
+          node tests/servo-program-override-editing.test.js
