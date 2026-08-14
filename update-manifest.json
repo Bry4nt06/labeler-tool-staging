@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "servo-override-scroll-stable-v115-20260814-1755",
+  "buildId": "wipe-direction-inner-radius-v116-20260814-1800",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Servo Program scroll-stable override v115 keeps the existing program table DOM in place when Table or Bottle overrides are committed, recalculates travel/status/speed metrics in place, preserves the actual document and nested scroll containers, and prevents the workspace from jumping to the top after an override edit."
+  "notes": "Wipe direction and inner-pad geometry v116 restores Label Wipe-Down and progressive label coverage to the physical machine direction after the stored-direction parity change, and normalizes APL Inside wipe depth as an outward radial distance so newly added inside wipe-down pads remain outside the servo-table pitch radius without changing inside roller geometry."
 }
