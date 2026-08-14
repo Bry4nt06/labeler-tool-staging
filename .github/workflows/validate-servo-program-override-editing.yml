@@ -34,16 +34,16 @@ jobs:
           node --check app/controllers/servo-program-controller.js
           node --check app/controllers/servo-program-event-controller.js
           node tests/servo-program-override-editing.test.js
-      - name: Verify published v114 cache identity
+      - name: Verify published v115 cache identity
         run: |
-          grep -F "servo-override-live-row-v114-20260814-1741" app/bootstrap.js
+          grep -F "servo-override-scroll-stable-v115-20260814-1755" app/bootstrap.js
           grep -F "servo-override-live-row-v114-20260814-1741" app/profile-generation.js
-          grep -F "servo-override-live-row-v114-20260814-1741" index.html
-          grep -F "servo-override-live-row-v114-20260814-1741" service-worker.js
-          grep -F "servo-override-live-row-v114-20260814-1741" update-manifest.json
+          grep -F "servo-override-scroll-stable-v115-20260814-1755" index.html
+          grep -F "servo-override-scroll-stable-v115-20260814-1755" service-worker.js
+          grep -F "servo-override-scroll-stable-v115-20260814-1755" update-manifest.json
       - name: Install browser harness
         run: npm install --no-save puppeteer-core@24.16.0
       - name: Serve staging
         run: python3 -m http.server 8000 >/tmp/servoforge-http.log 2>&1 &
-      - name: Verify real-browser override typing, commit, and clear
+      - name: Verify real-browser override typing, commit, clear, and scroll preservation
         run: node tests/servo-program-override-browser.test.cjs
