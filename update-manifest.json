@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "community-library-v111-20260813-1936",
+  "buildId": "servo-override-editing-v113-20260814-1728",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Community Library v111 shows only the selectors required by the chosen package type: Machine Map only for map uploads, Bottle plus Bottle Spec # for bottle uploads, Brand/Label plus Label Spec # for label uploads, and all three selectors for Complete Setup. Zone and Site remain required for every upload."
+  "notes": "Servo Program override editing v113 prevents full-page rerenders while typing or using number steppers, commits Table/Bottle overrides on edit completion, preserves page/table scroll position, and treats a cleared field as removal of the override."
 }

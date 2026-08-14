@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-coder-radial-codebox-alignment-v102-20260813-1613";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-servo-override-editing-v113-20260814-1728";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
