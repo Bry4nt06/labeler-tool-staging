@@ -2,7 +2,7 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.2";
-  const moduleBuild = "coder-radial-codebox-alignment-v102-20260813-1613";
+  const moduleBuild = "servo-override-live-row-v114-20260814-1741";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",

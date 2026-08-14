@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-servo-override-editing-v113-20260814-1728";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-servo-override-live-row-v114-20260814-1741";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 

@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "servo-override-editing-v113-20260814-1728";
-  const buildUpdatedAt = "Aug 14, 2026 5:28 PM ET";
+  const build = "servo-override-live-row-v114-20260814-1741";
+  const buildUpdatedAt = "Aug 14, 2026 5:41 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "servo-override-editing-v113-20260814-1728",
+  "buildId": "servo-override-live-row-v114-20260814-1741",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Servo Program override editing v113 prevents full-page rerenders while typing or using number steppers, commits Table/Bottle overrides on edit completion, preserves page/table scroll position, and treats a cleared field as removal of the override."
+  "notes": "Servo Program override live-row v114 updates the active program row while editing, avoids full profile regeneration on blur, defers targeted presentation refresh until the edit event completes, restores generated values on clear, and cache-busts both the controller and profile-generation module bundles."
 }
