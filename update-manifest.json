@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "servo-override-live-row-v114-20260814-1741",
+  "buildId": "servo-override-scroll-stable-v115-20260814-1755",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Servo Program override live-row v114 updates the active program row while editing, avoids full profile regeneration on blur, defers targeted presentation refresh until the edit event completes, restores generated values on clear, and cache-busts both the controller and profile-generation module bundles."
+  "notes": "Servo Program scroll-stable override v115 keeps the existing program table DOM in place when Table or Bottle overrides are committed, recalculates travel/status/speed metrics in place, preserves the actual document and nested scroll containers, and prevents the workspace from jumping to the top after an override edit."
 }
