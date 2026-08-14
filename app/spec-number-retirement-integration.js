@@ -5,6 +5,7 @@
 
   const FIELD = "specNumber";
   const DIALOG_ID = "specificationRequiredDialog";
+  const COMMUNITY_SPEC_FILTER_BUILD = "community-spec-filter-v112-20260813-2008";
   let printInterceptInstalled = false;
 
   function runtimeState() {
@@ -141,6 +142,16 @@
     }, true);
   }
 
+  function loadCommunitySpecFilter() {
+    if (typeof document === "undefined" || global.ServoForgeCommunitySpecFilter?.installed) return;
+    if (document.querySelector('script[data-servoforge-community-spec-filter="true"]')) return;
+    const script = document.createElement("script");
+    script.src = `./app/community-library-spec-filter-integration.js?v=${encodeURIComponent(global.SERVOFORGE_RELEASE_VERSION || "0.9.10")}&build=${encodeURIComponent(COMMUNITY_SPEC_FILTER_BUILD)}`;
+    script.async = false;
+    script.dataset.servoforgeCommunitySpecFilter = "true";
+    document.body.appendChild(script);
+  }
+
   function retireAll() {
     retireFromState();
     retireRequirements();
@@ -149,6 +160,7 @@
 
   retireAll();
   installPrintIntercept();
+  loadCommunitySpecFilter();
 
   if (typeof document !== "undefined" && typeof MutationObserver === "function") {
     const observer = new MutationObserver(() => retireAll());
@@ -165,6 +177,8 @@
   global.setTimeout?.(retireAll, 0);
   global.setTimeout?.(retireAll, 250);
   global.setTimeout?.(retireAll, 1000);
+  global.setTimeout?.(loadCommunitySpecFilter, 0);
+  global.setTimeout?.(loadCommunitySpecFilter, 500);
 
   global.LabelerSpecNumberRetirement = Object.freeze({
     installed: true,
@@ -175,6 +189,7 @@
     filteredIssues,
     printHtmlWithoutSpecNumber,
     openPrintView,
-    specNumberRetiredV1: true
+    specNumberRetiredV1: true,
+    loadCommunitySpecFilter
   });
 })(typeof window !== "undefined" ? window : globalThis);
