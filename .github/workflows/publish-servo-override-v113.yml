@@ -1,4 +1,4 @@
-name: Publish Servo Program Override Live Row v114
+name: Publish Servo Program Scroll-Stable Override v115
 
 on:
   push:
@@ -17,31 +17,23 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-      - name: Align v114 runtime and cache identities
+      - name: Align v115 runtime and cache identities
         run: |
           python - <<'PY'
           from pathlib import Path
           import json
 
-          build = "servo-override-live-row-v114-20260814-1741"
-          previous_build = "servo-override-editing-v113-20260814-1728"
-          legacy_profile_build = "coder-radial-codebox-alignment-v102-20260813-1613"
-          updated_at = "Aug 14, 2026 5:41 PM ET"
+          build = "servo-override-scroll-stable-v115-20260814-1755"
+          previous_build = "servo-override-live-row-v114-20260814-1741"
+          updated_at = "Aug 14, 2026 5:55 PM ET"
 
           bootstrap = Path("app/bootstrap.js")
           text = bootstrap.read_text(encoding="utf-8")
           text = text.replace(f'const build = "{previous_build}";', f'const build = "{build}";')
-          text = text.replace('const buildUpdatedAt = "Aug 14, 2026 5:28 PM ET";', f'const buildUpdatedAt = "{updated_at}";')
+          text = text.replace('const buildUpdatedAt = "Aug 14, 2026 5:41 PM ET";', f'const buildUpdatedAt = "{updated_at}";')
           if f'const build = "{build}";' not in text:
               raise SystemExit("bootstrap build identity was not updated")
           bootstrap.write_text(text, encoding="utf-8")
-
-          profile = Path("app/profile-generation.js")
-          text = profile.read_text(encoding="utf-8")
-          text = text.replace(f'const moduleBuild = "{legacy_profile_build}";', f'const moduleBuild = "{build}";')
-          if f'const moduleBuild = "{build}";' not in text:
-              raise SystemExit("profile-generation module cache identity was not updated")
-          profile.write_text(text, encoding="utf-8")
 
           index = Path("index.html")
           text = index.read_text(encoding="utf-8")
@@ -49,14 +41,8 @@ jobs:
               f'app/bootstrap.js?v=0.9.10&build={previous_build}',
               f'app/bootstrap.js?v=0.9.10&build={build}'
           )
-          text = text.replace(
-              f'app/profile-generation.js?v=0.9.10&build={legacy_profile_build}',
-              f'app/profile-generation.js?v=0.9.10&build={build}'
-          )
           if f'app/bootstrap.js?v=0.9.10&build={build}' not in text:
               raise SystemExit("index bootstrap cache identity was not updated")
-          if f'app/profile-generation.js?v=0.9.10&build={build}' not in text:
-              raise SystemExit("index profile-generation cache identity was not updated")
           index.write_text(text, encoding="utf-8")
 
           sw = Path("service-worker.js")
@@ -73,34 +59,32 @@ jobs:
           manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
           manifest["buildId"] = build
           manifest["notes"] = (
-              "Servo Program override live-row v114 updates the active program row while editing, "
-              "avoids full profile regeneration on blur, defers targeted presentation refresh until "
-              "the edit event completes, restores generated values on clear, and cache-busts both "
-              "the controller and profile-generation module bundles."
+              "Servo Program scroll-stable override v115 keeps the existing program table DOM in place "
+              "when Table or Bottle overrides are committed, recalculates travel/status/speed metrics "
+              "in place, preserves the actual document and nested scroll containers, and prevents the "
+              "workspace from jumping to the top after an override edit."
           )
           manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
           PY
-      - name: Validate v114 publication
+      - name: Validate v115 publication
         run: |
           node --check app/servo-overrides.js
           node --check app/controllers/servo-program-controller.js
           node --check app/controllers/servo-program-event-controller.js
-          node --check app/profile-generation.js
           node --check app/bootstrap.js
           node --check service-worker.js
           node tests/servo-program-override-editing.test.js
-          grep -F "servo-override-live-row-v114-20260814-1741" app/bootstrap.js
-          grep -F "servo-override-live-row-v114-20260814-1741" app/profile-generation.js
-          grep -F "servo-override-live-row-v114-20260814-1741" index.html
-          grep -F "servo-override-live-row-v114-20260814-1741" service-worker.js
-          grep -F "servo-override-live-row-v114-20260814-1741" update-manifest.json
+          grep -F "servo-override-scroll-stable-v115-20260814-1755" app/bootstrap.js
+          grep -F "servo-override-scroll-stable-v115-20260814-1755" index.html
+          grep -F "servo-override-scroll-stable-v115-20260814-1755" service-worker.js
+          grep -F "servo-override-scroll-stable-v115-20260814-1755" update-manifest.json
           git diff --check
-      - name: Commit v114 publication
+      - name: Commit v115 publication
         run: |
           git config user.name "Bry4nt06"
           git config user.email "139938543+Bry4nt06@users.noreply.github.com"
-          git add app/bootstrap.js app/profile-generation.js index.html service-worker.js update-manifest.json
+          git add app/bootstrap.js index.html service-worker.js update-manifest.json
           if ! git diff --cached --quiet; then
-            git commit -m "Publish Servo Program override live-row v114"
+            git commit -m "Publish Servo Program scroll-stable override v115"
             git push origin main
           fi
