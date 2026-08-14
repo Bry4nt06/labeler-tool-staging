@@ -1,0 +1,67 @@
+name: Publish Servo Program Override Fix v113
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/publish-servo-override-v113.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Align v113 shell and offline cache identity
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          build = "servo-override-editing-v113-20260814-1728"
+          old = "coder-radial-codebox-alignment-v102-20260813-1613"
+
+          index = Path("index.html")
+          text = index.read_text(encoding="utf-8")
+          text = text.replace(
+              f'app/bootstrap.js?v=0.9.10&build={old}',
+              f'app/bootstrap.js?v=0.9.10&build={build}'
+          )
+          index.write_text(text, encoding="utf-8")
+
+          sw = Path("service-worker.js")
+          text = sw.read_text(encoding="utf-8")
+          text = text.replace(
+              'const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-coder-radial-codebox-alignment-v102-20260813-1613";',
+              f'const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-{build}";'
+          )
+          sw.write_text(text, encoding="utf-8")
+
+          manifest_path = Path("update-manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          manifest["buildId"] = build
+          manifest["notes"] = "Servo Program override editing v113 prevents full-page rerenders while typing or using number steppers, commits Table/Bottle overrides on edit completion, preserves page/table scroll position, and treats a cleared field as removal of the override."
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+          PY
+      - name: Validate override behavior
+        run: |
+          node --check app/controllers/servo-program-controller.js
+          node --check app/controllers/servo-program-event-controller.js
+          node --check app/bootstrap.js
+          node --check service-worker.js
+          node tests/servo-program-override-editing.test.js
+          git diff --check
+      - name: Commit v113 publication
+        run: |
+          git config user.name "Bry4nt06"
+          git config user.email "139938543+Bry4nt06@users.noreply.github.com"
+          git add index.html service-worker.js update-manifest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish Servo Program override editing v113"
+            git push origin main
+          fi
