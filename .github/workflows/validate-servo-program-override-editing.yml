@@ -4,10 +4,17 @@ on:
   push:
     branches: [main]
     paths:
+      - "app/servo-overrides.js"
       - "app/controllers/servo-program-controller.js"
       - "app/controllers/servo-program-event-controller.js"
+      - "app/profile-generation.js"
+      - "app/bootstrap.js"
+      - "service-worker.js"
+      - "index.html"
       - "tests/servo-program-override-editing.test.js"
+      - "tests/servo-program-override-browser.test.cjs"
       - ".github/workflows/validate-servo-program-override-editing.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,10 +22,21 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Validate syntax and override lifecycle
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate override modules and live state lifecycle
         run: |
+          node --check app/servo-overrides.js
           node --check app/controllers/servo-program-controller.js
           node --check app/controllers/servo-program-event-controller.js
           node tests/servo-program-override-editing.test.js
+      - name: Install browser harness
+        run: npm install --no-save puppeteer-core@24.16.0
+      - name: Serve staging
+        run: python3 -m http.server 8000 >/tmp/servoforge-http.log 2>&1 &
+      - name: Verify real-browser override typing, commit, and clear
+        run: node tests/servo-program-override-browser.test.cjs
