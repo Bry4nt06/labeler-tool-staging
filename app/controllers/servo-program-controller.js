@@ -34,8 +34,7 @@
     const row = rowForHmi(hmi);
     if (!row || !["tableAngle", "plateAngle"].includes(field)) return false;
     const rawValue = String(value ?? "");
-    actions.call("setServoAngleOverride", row, field, rawValue.trim() === "" ? "" : rawValue);
-    return true;
+    return actions.call("setServoAngleOverride", row, field, rawValue.trim() === "" ? "" : rawValue) !== false;
   }
 
   function updateOverride(hmi, field, value) {
@@ -52,10 +51,6 @@
 
     callback();
 
-    if (programNode) {
-      programNode.scrollTop = programTop;
-      programNode.scrollLeft = programLeft;
-    }
     const restore = () => {
       if (programNode) {
         programNode.scrollTop = programTop;
@@ -63,23 +58,32 @@
       }
       if (typeof global.scrollTo === "function") global.scrollTo(pageX, pageY);
     };
+    restore();
     if (typeof global.requestAnimationFrame === "function") global.requestAnimationFrame(restore);
-    else restore();
   }
 
   function refreshOverridePresentation() {
     preserveProgramViewport(() => {
       actions.call("renderProgram");
       actions.call("renderValidation");
-      actions.call("renderSimulation");
       actions.call("renderAnimationFrame");
     });
   }
 
+  function scheduleOverridePresentationRefresh() {
+    const refresh = () => refreshOverridePresentation();
+    if (typeof global.requestAnimationFrame === "function") global.requestAnimationFrame(refresh);
+    else if (typeof global.setTimeout === "function") global.setTimeout(refresh, 0);
+    else refresh();
+  }
+
   function commitOverride(hmi, field, value) {
     if (!setOverride(hmi, field, value)) return false;
-    actions.call("applyGeneratedServoProfile");
-    refreshOverridePresentation();
+    // setServoAngleOverride now updates both the authoritative override store
+    // and the current program row. Do not regenerate the complete program here:
+    // replacing every generated row during focusout caused the active editor to
+    // snap back and made the workspace visibly jump.
+    scheduleOverridePresentationRefresh();
     return true;
   }
 
@@ -96,6 +100,7 @@
     updateOverride,
     commitOverride,
     refreshOverridePresentation,
+    scheduleOverridePresentationRefresh,
     updateAction
   });
 })(window);
