@@ -19,13 +19,29 @@
     return { hmi, field };
   }
 
+  function isOverrideField(field) {
+    return field === "tableAngle" || field === "plateAngle";
+  }
+
+  function stageOverride(target) {
+    const context = programContext(target);
+    if (!context || !isOverrideField(context.field)) return false;
+    program.updateOverride(context.hmi, context.field, target.value);
+    return true;
+  }
+
+  function commitOverride(target) {
+    const context = programContext(target);
+    if (!context || !isOverrideField(context.field)) return false;
+    program.commitOverride(context.hmi, context.field, target.value);
+    return true;
+  }
+
   function updateCommittedField(target) {
     const context = programContext(target);
-    if (!context || context.field === "action") return false;
+    if (!context || context.field === "action" || isOverrideField(context.field)) return false;
     if (context.field === "command") program.updateCommand(context.hmi, target.value);
-    else if (context.field === "tableAngle" || context.field === "plateAngle") {
-      program.updateOverride(context.hmi, context.field, target.value);
-    } else return false;
+    else return false;
     return true;
   }
 
@@ -36,21 +52,39 @@
     return true;
   }
 
+  document.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    if (stageOverride(target) || updateAction(target)) consume(event);
+  }, true);
+
   document.addEventListener("change", (event) => {
     const target = event.target;
-    if (!(target instanceof Element) || !updateCommittedField(target)) return;
+    if (!(target instanceof Element)) return;
+    if (stageOverride(target) || updateCommittedField(target)) consume(event);
+  }, true);
+
+  document.addEventListener("focusout", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element) || !commitOverride(target)) return;
     consume(event);
   }, true);
 
-  document.addEventListener("input", (event) => {
+  document.addEventListener("keydown", (event) => {
     const target = event.target;
-    if (!(target instanceof Element) || !updateAction(target)) return;
+    const context = target instanceof Element ? programContext(target) : null;
+    if (!context || !isOverrideField(context.field) || event.key !== "Enter") return;
+    event.preventDefault();
     consume(event);
+    target.blur?.();
   }, true);
 
   global.LabelerServoProgramEventController = Object.freeze({
     installed: true,
     programContext,
+    isOverrideField,
+    stageOverride,
+    commitOverride,
     updateCommittedField,
     updateAction
   });
