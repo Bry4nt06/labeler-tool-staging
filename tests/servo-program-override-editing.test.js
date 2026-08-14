@@ -135,14 +135,15 @@ event = dispatch("focusout", input);
 assert.strictEqual(event.propagationStopped, true);
 assert.strictEqual(callsNamed("setServoAngleOverride").length, beforeCommitSetCount + 1);
 assert.strictEqual(callsNamed("applyGeneratedServoProfile").length, 0, "Blur must not regenerate and replace all generated rows.");
-for (const name of ["renderProgram", "renderValidation", "renderAnimationFrame"]) {
+assert.strictEqual(callsNamed("renderProgram").length, 0, "Blur must not rebuild the Servo Program table or replace its editor DOM.");
+for (const name of ["renderValidation", "renderAnimationFrame"]) {
   assert.ok(callsNamed(name).length >= 1, `${name} should refresh after commit.`);
 }
 assert.strictEqual(callsNamed("renderSimulation").length, 0, "Override commit should not rebuild the Simulation workspace.");
 assert.strictEqual(executeCalls.length, 0, "Override commit must not call render: all.");
 assert.strictEqual(programHost.scrollTop, 41);
 assert.strictEqual(programHost.scrollLeft, 17);
-assert.deepStrictEqual(callsNamed("scrollTo").at(-1).args, [0, 225], "Page scroll should be restored after targeted refresh.");
+assert.deepStrictEqual(callsNamed("scrollTo").at(-1).args, [0, 225], "Fallback page scroll should be restored after targeted refresh.");
 
 const clearInput = new FakeElement("plateAngle", "");
 dispatch("input", clearInput);
@@ -152,6 +153,7 @@ dispatch("focusout", clearInput);
 assert.deepStrictEqual(callsNamed("setServoAngleOverride").at(-1).args.slice(1), ["plateAngle", ""], "Blank input must remove the override rather than become zero.");
 assert.strictEqual(state.program[0].plateAngleOverride, null);
 assert.strictEqual(state.program[0].plateAngle, 20);
+assert.strictEqual(callsNamed("renderProgram").length, 0, "Clearing must also avoid rebuilding the Servo Program table.");
 assert.strictEqual(executeCalls.length, 0);
 
 const profileKey = "map-1|apl|brand-1|bottle-1";
@@ -169,6 +171,8 @@ for (const type of ["input", "change", "focusout", "keydown"]) {
 }
 
 assert.ok(!controllerSource.includes("applyGeneratedServoProfile"), "Override commit must never regenerate the complete Servo Program.");
+assert.ok(!controllerSource.includes('actions.call("renderProgram")'), "Override commit must keep the existing Servo Program DOM in place.");
+assert.ok(controllerSource.includes("refreshProgramMetricsInPlace"), "Override commit must refresh calculated row metrics without rebuilding the table.");
 assert.ok(overrideSource.includes("row[metadata.overrideField]"), "The real override service must synchronize the live row during editing.");
 
-console.log("Servo Program live override editing regression passed.");
+console.log("Servo Program live override editing and viewport regression passed.");
