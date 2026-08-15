@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "wipe-side-servo-parity-v119-20260814-2302";
+  const build = "autocol-end-curve-v120-20260814-2319";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -144,6 +144,9 @@
     progress?.set(74, "Aligning wipe visuals with servo coordinates…");
     const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
     await loadScript("app/wipe-side-servo-parity-v119.js", version);
+
+    progress?.set(75, "Applying Autocol end-of-curve policy…");
+    await loadScript("app/autocol-terminal-boundary-v120.js", version);
 
     if (typeof initializeLabelerApp !== "function") {
       throw new Error("initializeLabelerApp is not loaded.");
