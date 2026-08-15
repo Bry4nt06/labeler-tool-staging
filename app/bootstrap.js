@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "wipe-side-servo-parity-v119-20260814-2302";
-  const buildUpdatedAt = "Aug 14, 2026 11:02 PM ET";
+  const build = "printed-codebox-left-edge-v121-20260814-2345";
+  const buildUpdatedAt = "Aug 14, 2026 11:45 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
