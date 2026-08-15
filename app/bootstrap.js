@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "printed-codebox-left-edge-v121-20260814-2345";
-  const buildUpdatedAt = "Aug 14, 2026 11:45 PM ET";
+  const build = "autocol-codebox-orientation-v122-20260815-0001";
+  const buildUpdatedAt = "Aug 15, 2026 12:01 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
