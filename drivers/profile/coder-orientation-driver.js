@@ -42,7 +42,7 @@
   }
 
   function leftEdgeOffset({ labelWidthDeg, codeBoxOffsetDeg, inspectionOffsetDeg = 0 }) {
-    const width = finite(labelWidthDeg, NaN);
+    const width = Math.abs(finite(labelWidthDeg, NaN));
     const code = Math.abs(finite(codeBoxOffsetDeg, NaN));
     const inspection = finite(inspectionOffsetDeg, 0);
     if (!Number.isFinite(width) || !Number.isFinite(code)) return NaN;
@@ -51,9 +51,19 @@
 
   // Finished-label geometry is fixed in the bottle-local Top View frame. Body
   // and neck are centered on the bottle's 0° reference; back is centered 180°
-  // opposite. This frame does not change when the carousel direction changes.
+  // opposite. SVG +angles run clockwise on screen. When an operator faces the
+  // bottle from outside the machine, the printed label's physical LEFT edge is
+  // therefore the +half-width edge, not the SVG arc's -half-width start point.
+  // This artwork frame never mirrors when carousel/machine direction changes.
   function bottleSectionCenter(section) {
     return String(section || "").toLowerCase() === "back" ? 180 : 0;
+  }
+
+  function printedLabelLeftEdgeLocalAngle({ section, labelWidthDeg }) {
+    const width = Math.abs(finite(labelWidthDeg, NaN));
+    const sectionCenter = bottleSectionCenter(section);
+    if (!Number.isFinite(width) || !Number.isFinite(sectionCenter)) return NaN;
+    return sectionCenter + width / 2;
   }
 
   function printedCodeBoxLocalAngle({
@@ -62,15 +72,17 @@
     codeBoxOffsetDeg,
     inspectionOffsetDeg = 0
   }) {
-    const width = finite(labelWidthDeg, NaN);
+    const width = Math.abs(finite(labelWidthDeg, NaN));
     const code = Math.abs(finite(codeBoxOffsetDeg, NaN));
     const inspection = finite(inspectionOffsetDeg, 0);
     const sectionCenter = bottleSectionCenter(section);
-    if (![width, code, inspection, sectionCenter].every(Number.isFinite)) return NaN;
+    const printedLeftEdge = printedLabelLeftEdgeLocalAngle({ section, labelWidthDeg: width });
+    if (![width, code, inspection, sectionCenter, printedLeftEdge].every(Number.isFinite)) return NaN;
 
-    // Code Box Center is measured positively from the printed label's left edge.
-    // The rendered finished-label arc uses center - width/2 as that same edge.
-    return sectionCenter - width / 2 + code - inspection;
+    // Code Box Ctr is always the positive physical measurement from the printed
+    // LEFT edge toward the label interior. It is an artwork measurement, so it
+    // does not swap sides for left/right-hand or CW/CCW machines.
+    return printedLeftEdge - code + inspection;
   }
 
   function coderFacingRay(coderSide = "outer") {
@@ -88,17 +100,18 @@
     coderSide = "outer"
   }) {
     const application = finite(applicationTarget, NaN);
-    const width = finite(labelWidthDeg, NaN);
+    const width = Math.abs(finite(labelWidthDeg, NaN));
     const code = Math.abs(finite(codeBoxOffsetDeg, NaN));
     const inspection = finite(inspectionOffsetDeg, 0);
     const sectionCenter = bottleSectionCenter(section);
+    const printedLeftEdge = printedLabelLeftEdgeLocalAngle({ section, labelWidthDeg: width });
     const localCodeBoxAngle = printedCodeBoxLocalAngle({
       section,
       labelWidthDeg: width,
       codeBoxOffsetDeg: code,
       inspectionOffsetDeg: inspection
     });
-    if (![width, code, inspection, sectionCenter, localCodeBoxAngle].every(Number.isFinite)) return null;
+    if (![width, code, inspection, sectionCenter, printedLeftEdge, localCodeBoxAngle].every(Number.isFinite)) return null;
 
     const stored = normalizedStoredDirection(storedDirection);
     const direction = physicalDirection(stored);
@@ -109,8 +122,8 @@
     // world bottle feature = head radial + servoSign*plate + local feature.
     // At an outside coder the code-box feature must equal the outward head radial
     // ray (0° local world offset); at an inside coder it must equal 180°.
-    // Solve that physical constraint directly. The original application servo
-    // angle is diagnostic metadata only and must not move the finished code box.
+    // Solve that physical constraint directly. Machine direction is applied only
+    // to the servo coordinate; the printed-artwork datum above remains unchanged.
     const rawTarget = servoSign * (facingRay - localCodeBoxAngle);
     const target = nearestEquivalent(rawTarget, finite(currentPlateAngle, rawTarget));
     const worldFeatureOffset = servoSign * target + localCodeBoxAngle;
@@ -121,6 +134,7 @@
       physicalDirection: direction,
       storedDirection: stored,
       servoDirectionSign: servoSign,
+      printedLabelLeftEdgeLocalAngle: printedLeftEdge,
       printedCodeBoxLocalAngle: localCodeBoxAngle,
       printedCodeBoxDatum: localCodeBoxAngle,
       bottleSectionCenter: sectionCenter,
@@ -133,6 +147,8 @@
       coderSide: String(coderSide || "outer").toLowerCase(),
       referenceEdge: "left",
       targetReference: "bottle-local-code-box-to-coder-ray",
+      operatorFacingLeftEdge: true,
+      printedArtworkDirectionInvariant: true,
       directionInvariantLeftEdge: true,
       positiveMeasuredInput: true,
       radialFrameTarget: true,
@@ -152,6 +168,7 @@
     labelCenter,
     leftEdgeOffset,
     bottleSectionCenter,
+    printedLabelLeftEdgeLocalAngle,
     printedCodeBoxLocalAngle,
     coderFacingRay,
     codeBoxTarget
