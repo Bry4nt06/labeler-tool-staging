@@ -12,7 +12,8 @@ const profileSource = fs.readFileSync(path.join(root, "app", "profile-generation
 const appSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const bootstrapSource = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "update-manifest.json"), "utf8"));
-const BUILD = "printed-codebox-left-edge-v121-20260814-2345";
+const V121_BUILD = "printed-codebox-left-edge-v121-20260814-2345";
+const CURRENT_BUILD = "autocol-codebox-orientation-v122-20260815-0001";
 
 assert.doesNotThrow(() => new vm.Script(visualSource, { filename: "printed-codebox-left-edge-v121.js" }));
 assert.equal(driver.printedLabelLeftEdgeLocalAngle({ section: "body", labelWidthDeg: 100 }), 50);
@@ -52,10 +53,13 @@ assert.match(visualSource, /#76f06a/);
 assert.match(visualSource, /#ffd166/);
 assert.match(visualSource, /printedLabelLeftEdgeLocalAngle/);
 assert.match(visualSource, /printedCodeBoxLocalAngle/);
-assert.match(profileSource, new RegExp(BUILD));
-assert.match(appSource, new RegExp(BUILD));
+assert.match(visualSource, new RegExp(V121_BUILD));
+assert.match(profileSource, /app\/autocol-coder-codebox-generation-v122\.js/);
+assert.match(profileSource, new RegExp(CURRENT_BUILD));
+assert.match(appSource, new RegExp(CURRENT_BUILD));
 assert.match(appSource, /app\/printed-codebox-left-edge-v121\.js/);
-assert.match(bootstrapSource, new RegExp(BUILD));
-assert.equal(manifest.buildId, BUILD);
+assert.match(bootstrapSource, new RegExp(CURRENT_BUILD));
+assert.equal(manifest.buildId, CURRENT_BUILD);
+assert.match(manifest.notes, /v121/i);
 
 console.log("Printed Code Box Ctr from operator-facing label left edge v121 regression passed.");
