@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "autocol-end-curve-v120-20260814-2319";
+  const build = "printed-codebox-left-edge-v121-20260814-2345";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -147,6 +147,9 @@
 
     progress?.set(75, "Applying Autocol end-of-curve policy…");
     await loadScript("app/autocol-terminal-boundary-v120.js", version);
+
+    progress?.set(76, "Aligning printed code-box artwork…");
+    await loadScript("app/printed-codebox-left-edge-v121.js", version);
 
     if (typeof initializeLabelerApp !== "function") {
       throw new Error("initializeLabelerApp is not loaded.");
