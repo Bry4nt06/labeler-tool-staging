@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "wipe-direction-inner-radius-v116-20260814-1800";
+  const build = "wipe-inner-bottle-spin-v117-20260814-2235";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -141,9 +141,9 @@
     progress?.set(70, "Loading workspace controllers…");
     if (window.ServoForgeBootstrapReady) await window.ServoForgeBootstrapReady;
 
-    progress?.set(74, "Aligning wipe direction and pad geometry…");
+    progress?.set(74, "Restoring inner wipe geometry and physical bottle spin…");
     const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
-    await loadScript("app/wipe-direction-inner-radius-hotfix-v116.js", version);
+    await loadScript("app/wipe-inner-bottle-spin-hotfix-v117.js", version);
 
     if (typeof initializeLabelerApp !== "function") {
       throw new Error("initializeLabelerApp is not loaded.");
