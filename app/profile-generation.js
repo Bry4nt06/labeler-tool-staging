@@ -2,7 +2,7 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.2";
-  const moduleBuild = "printed-codebox-left-edge-v121-20260814-2345";
+  const moduleBuild = "autocol-codebox-orientation-v122-20260815-0001";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",
@@ -11,6 +11,7 @@
     "app/apl-map-profile-generation.js",
     "app/apl-overlapping-pad-handoff-integration.js",
     "drivers/profile/coder-orientation-driver.js",
+    "app/autocol-coder-codebox-generation-v122.js",
     "app/apl-coder-codebox-orientation-integration.js",
     "app/profile-routing.js",
     "app/machine-profile-framing.js",
