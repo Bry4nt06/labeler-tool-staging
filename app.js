@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "printed-codebox-left-edge-v121-20260814-2345";
+  const build = "autocol-codebox-orientation-v122-20260815-0001";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
