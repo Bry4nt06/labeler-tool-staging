@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "printed-codebox-left-edge-v121-20260814-2345",
+  "buildId": "autocol-codebox-orientation-v122-20260815-0001",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Printed code-box left-edge v121 fixes the bottle-local artwork convention used by coder orientation. ServoForge now defines the physical printed LEFT edge as the operator-facing +half-label-width edge in Top View and calculates Code Box Ctr inward from that edge. The printed artwork datum remains identical on left-hand/right-hand and CW/CCW machines; machine direction changes only the servo-coordinate transform. A green printed-left-edge tick and yellow Code Box Ctr tick are rendered on the active coded label so Mechanical Map and Servo Simulation visibly use the same datum as the servo target. Includes prior v120 Autocol end-of-curve and v119 wipe-side parity behavior."
+  "notes": "Autocol coder orientation v122 carries the confirmed v121 printed-artwork convention into the cold-glue servo generator. A mapped Autocol coder now uses the selected label's Code Box Ctr measurement from the physical printed LEFT edge, converts that artwork point through the machine-direction servo transform, inserts a legal Rest -> Correction -> Rest coder stage after the final wipe/roller motion, and holds the achieved code-box target through the coder and the 359 degree End of curve. The artwork location remains identical for left/right-hand and CW/CCW machines; only the servo plate command changes. The generator reports specific coder label, geometry, turn-window, and speed-envelope issues instead of moving the coder onto another table revolution. Includes v121 visual left-edge/code-box markers, v120 Autocol terminal policy, and v119 wipe-side parity."
 }
