@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "autocol-end-curve-v120-20260814-2319",
+  "buildId": "printed-codebox-left-edge-v121-20260814-2345",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Autocol end-of-curve v120 preserves the final physical motion/rest row and appends a dedicated zero-motion CMD 3 End of curve reference at 359 degrees for Autocol machine-family programs. Planner and translation rows are synchronized one-to-one with the appended terminal row. Existing valid Autocol 359-degree boundaries remain unchanged; TopModul behavior is unaffected. Includes prior v119 wipe-side servo parity behavior."
+  "notes": "Printed code-box left-edge v121 fixes the bottle-local artwork convention used by coder orientation. ServoForge now defines the physical printed LEFT edge as the operator-facing +half-label-width edge in Top View and calculates Code Box Ctr inward from that edge. The printed artwork datum remains identical on left-hand/right-hand and CW/CCW machines; machine direction changes only the servo-coordinate transform. A green printed-left-edge tick and yellow Code Box Ctr tick are rendered on the active coded label so Mechanical Map and Servo Simulation visibly use the same datum as the servo target. Includes prior v120 Autocol end-of-curve and v119 wipe-side parity behavior."
 }
