@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "servo-override-scroll-stable-v115-20260814-1755";
-  const buildUpdatedAt = "Aug 14, 2026 5:55 PM ET";
+  const build = "wipe-inner-bottle-spin-v117-20260814-2235";
+  const buildUpdatedAt = "Aug 14, 2026 10:35 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
