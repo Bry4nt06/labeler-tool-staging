@@ -5,6 +5,7 @@ on:
     paths:
       - "drivers/profile/coder-orientation-driver.js"
       - "app/apl-coder-codebox-orientation-integration.js"
+      - "app/printed-codebox-left-edge-v121.js"
       - "app/profile-generation.js"
       - "app/bootstrap.js"
       - "app.js"
@@ -12,6 +13,7 @@ on:
       - "service-worker.js"
       - "app/update-manager.js"
       - "tests/coder-left-edge-direction-parity-v98.test.js"
+      - "tests/printed-codebox-left-edge-v121.test.js"
       - "tests/bottle-orientation-panel.test.js"
       - "tests/top-view-bottle-renderer.test.js"
       - "tests/wipe-panel-semantic-direction-v89.test.js"
@@ -29,12 +31,14 @@ jobs:
         run: |
           node --check drivers/profile/coder-orientation-driver.js
           node --check app/apl-coder-codebox-orientation-integration.js
+          node --check app/printed-codebox-left-edge-v121.js
           node --check app/profile-generation.js
           node --check app/bootstrap.js
           node --check app.js
       - name: Coder and Land Shark
         run: |
           node tests/coder-left-edge-direction-parity-v98.test.js
+          node tests/printed-codebox-left-edge-v121.test.js
           node tests/apl-coder-neck-body-final-aggregate.test.js
           node tests/landshark-common-generator-runtime.test.js
       - name: Bottle Orientation and APL
