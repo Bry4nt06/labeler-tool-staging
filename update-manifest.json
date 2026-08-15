@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "wipe-side-servo-parity-v119-20260814-2302",
+  "buildId": "autocol-end-curve-v120-20260814-2319",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Wipe-side servo parity v119 keeps the v118 bottle orientation and signed inward Inside wipe-pad geometry, but corrects center-tack label wipe progress so left/right coverage follows the same servo-coordinate rotation sign as the rendered bottle. Leading-edge wipe direction remains based on physical machine CW/CCW semantics. Regression coverage verifies the APL 6-Aggregate center-tack side is corrected without changing leading-edge coverage."
+  "notes": "Autocol end-of-curve v120 preserves the final physical motion/rest row and appends a dedicated zero-motion CMD 3 End of curve reference at 359 degrees for Autocol machine-family programs. Planner and translation rows are synchronized one-to-one with the appended terminal row. Existing valid Autocol 359-degree boundaries remain unchanged; TopModul behavior is unaffected. Includes prior v119 wipe-side servo parity behavior."
 }
