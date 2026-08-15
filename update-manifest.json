@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "wipe-direction-inner-radius-v116-20260814-1800",
+  "buildId": "wipe-inner-bottle-spin-v117-20260814-2235",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Wipe direction and inner-pad geometry v116 restores Label Wipe-Down and progressive label coverage to the physical machine direction after the stored-direction parity change, and normalizes APL Inside wipe depth as an outward radial distance so newly added inside wipe-down pads remain outside the servo-table pitch radius without changing inside roller geometry."
+  "notes": "Wipe inner/bottle-spin v117 restores APL Inside wipe-down pads to the signed inward radius shown by the physical map, repairs any positive wipeInner depth left by v116, preserves the physical wipe-progress direction correction, and reverses only the rendered bottle servo-spin sign to match physical machine direction. Servo/coder command geometry is unchanged."
 }
