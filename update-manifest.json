@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "bottle-servo-coordinate-parity-v118-20260814-2248",
+  "buildId": "wipe-side-servo-parity-v119-20260814-2302",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Bottle servo-coordinate parity v118 retires v117's extra physical-direction bottle transform. Mechanical Map and Servo Simulation bottle orientation again follow the authoritative servo/coder coordinate transform while APL Inside wipe-down pads remain signed inward and wipe-progress labels retain physical CW/CCW semantics. Regression coverage locks the APL 6-Aggregate stored ccw servo sign to +1 for positive commanded plate travel."
+  "notes": "Wipe-side servo parity v119 keeps the v118 bottle orientation and signed inward Inside wipe-pad geometry, but corrects center-tack label wipe progress so left/right coverage follows the same servo-coordinate rotation sign as the rendered bottle. Leading-edge wipe direction remains based on physical machine CW/CCW semantics."
 }
