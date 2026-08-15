@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "wipe-inner-bottle-spin-v117-20260814-2235",
+  "buildId": "bottle-servo-coordinate-parity-v118-20260814-2248",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Wipe inner/bottle-spin v117 restores APL Inside wipe-down pads to the signed inward radius shown by the physical map, repairs any positive wipeInner depth left by v116, preserves the physical wipe-progress direction correction, and reverses only the rendered bottle servo-spin sign to match physical machine direction. Servo/coder command geometry is unchanged."
+  "notes": "Bottle servo-coordinate parity v118 retires v117's extra physical-direction bottle transform. Mechanical Map and Servo Simulation bottle orientation again follow the authoritative servo/coder coordinate transform while APL Inside wipe-down pads remain signed inward and wipe-progress labels retain physical CW/CCW semantics."
 }
