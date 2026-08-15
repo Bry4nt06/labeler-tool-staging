@@ -4,5 +4,5 @@
   "buildId": "wipe-side-servo-parity-v119-20260814-2302",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Wipe-side servo parity v119 keeps the v118 bottle orientation and signed inward Inside wipe-pad geometry, but corrects center-tack label wipe progress so left/right coverage follows the same servo-coordinate rotation sign as the rendered bottle. Leading-edge wipe direction remains based on physical machine CW/CCW semantics."
+  "notes": "Wipe-side servo parity v119 keeps the v118 bottle orientation and signed inward Inside wipe-pad geometry, but corrects center-tack label wipe progress so left/right coverage follows the same servo-coordinate rotation sign as the rendered bottle. Leading-edge wipe direction remains based on physical machine CW/CCW semantics. Regression coverage verifies the APL 6-Aggregate center-tack side is corrected without changing leading-edge coverage."
 }
