@@ -228,7 +228,7 @@
     }
     if (type === "brand") {
       if (!brand) throw new Error("Choose a Brand / Label spec to upload.");
-      return { payload: { brand: clone(brand) }, name: brand.brand || "Community Brand", map: null, bottle, brand };
+      return { payload: { brand: clone(brand) }, name: brand.brand || "Community Brand", map: null, bottle: null, brand };
     }
     if (!map || !bottle || !brand) throw new Error("A Complete Setup requires a Machine Map, Bottle spec, and Brand / Label spec.");
     return { payload: { map: clone(map), bottle: clone(bottle), brand: clone(brand) }, name: `${brand.brand || "Brand"} • ${map.name || "Map"}`, map, bottle, brand };
