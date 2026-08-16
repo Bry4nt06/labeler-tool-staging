@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "map-builder-object-add-v123-20260816-0735";
+  const build = "update-delivery-self-heal-v124-20260816-0750";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

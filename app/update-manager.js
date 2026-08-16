@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "coder-radial-codebox-alignment-v102-20260813-1613";
+  const BUILD_ID = "update-delivery-self-heal-v124-20260816-0750";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
@@ -106,6 +106,10 @@
 
   registerToolUpdateService = async function registerManagedToolUpdateService() {
     enforceReleaseVersion();
+    window.updateDeliveryAutoCheckV124 = true;
+    window.setTimeout(() => {
+      if (typeof globalThis.checkForToolUpdates === "function") globalThis.checkForToolUpdates();
+    }, 750);
     if (!("serviceWorker" in navigator) || window.location.protocol === "file:") return;
     try {
       updateServiceWorkerRegistration = await navigator.serviceWorker.register(`./service-worker.js?v=${RELEASE_VERSION}&build=${encodeURIComponent(BUILD_ID)}`, {
@@ -162,7 +166,7 @@
 
 (function loadStagingFeatureModules() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "coder-radial-codebox-alignment-v102-20260813-1613";
+  const BUILD_ID = "update-delivery-self-heal-v124-20260816-0750";
   const modules = [
     "app/diagnostics-workspace-integration.js",
     "app/workspace-developer-integration.js",

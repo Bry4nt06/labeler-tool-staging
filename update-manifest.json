@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "map-builder-object-add-v123-20260816-0735",
+  "buildId": "update-delivery-self-heal-v124-20260816-0750",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Map Builder object-add v123 repairs the current Add Object DOM binding, surfaces Add Object runtime failures in the builder status, and preserves locally edited object layouts on protected company-default maps. Structural Map Builder edits now mark the map as a local structural override so added, edited, duplicated, removed, and dragged objects survive persistence and company-default catalog reconciliation. Existing v122 Autocol coder orientation and v121 printed-codebox geometry remain unchanged."
+  "notes": "Update-delivery v124 aligns every staging startup asset, updater, profile loader, bootstrap, and service-worker cache to one build identity. Startup now automatically checks the release manifest after update-service registration so installed PWAs surface current builds without depending on stale script query IDs. The verified Map Builder v123 object-add and persistence fix remains unchanged, with v122 Autocol coder behavior and v121 printed-codebox geometry retained."
 }
