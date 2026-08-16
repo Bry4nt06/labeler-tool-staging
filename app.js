@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "update-delivery-self-heal-v124-20260816-0750";
+  const build = "physical-wipe-direction-v125-20260816-0905";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -144,6 +144,9 @@
     progress?.set(74, "Aligning wipe visuals with servo coordinates…");
     const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
     await loadScript("app/wipe-side-servo-parity-v119.js", version);
+
+    progress?.set(74.5, "Following physical machine wipe direction…");
+    await loadScript("app/physical-wipe-direction-v125.js", version);
 
     progress?.set(75, "Applying Autocol end-of-curve policy…");
     await loadScript("app/autocol-terminal-boundary-v120.js", version);

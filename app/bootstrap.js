@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "update-delivery-self-heal-v124-20260816-0750";
-  const buildUpdatedAt = "Aug 16, 2026 7:50 AM ET";
+  const build = "physical-wipe-direction-v125-20260816-0905";
+  const buildUpdatedAt = "Aug 16, 2026 9:05 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");

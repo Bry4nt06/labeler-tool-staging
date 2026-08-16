@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "update-delivery-self-heal-v124-20260816-0750";
+  const BUILD_ID = "physical-wipe-direction-v125-20260816-0905";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
@@ -166,7 +166,7 @@
 
 (function loadStagingFeatureModules() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "update-delivery-self-heal-v124-20260816-0750";
+  const BUILD_ID = "physical-wipe-direction-v125-20260816-0905";
   const modules = [
     "app/diagnostics-workspace-integration.js",
     "app/workspace-developer-integration.js",

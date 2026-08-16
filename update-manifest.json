@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "update-delivery-self-heal-v124-20260816-0750",
+  "buildId": "physical-wipe-direction-v125-20260816-0905",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Update-delivery v124 aligns every staging startup asset, updater, profile loader, bootstrap, and service-worker cache to one build identity. Startup now automatically checks the release manifest after update-service registration so installed PWAs surface current builds without depending on stale script query IDs. The verified Map Builder v123 object-add and persistence fix remains unchanged, with v122 Autocol coder behavior and v121 printed-codebox geometry retained."
+  "notes": "v125 restores label wipe progression to physical machine-direction authority. Center-tack coverage no longer receives the legacy v119 servo-coordinate side swap. CW and CCW machines now mirror the label wipe visual correctly while bottle orientation transforms remain unchanged. v124 update delivery, Map Builder v123 object-add/persistence, Autocol coder v122, and printed-codebox v121 behavior are retained."
 }
