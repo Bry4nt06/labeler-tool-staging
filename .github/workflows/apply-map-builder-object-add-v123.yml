@@ -1,5 +1,5 @@
 name: Apply Map Builder object-add v123
-# retry after making index cache-bust optional
+# retry after lifecycle test version cleanup
 
 on:
   push:
