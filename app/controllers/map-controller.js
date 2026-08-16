@@ -46,7 +46,8 @@
         builderBindingsInstalled = true;
       }
       const objectCount = verifyBuilderPopulation(machineMap);
-      setBuilderStatus(`STAGING 0.9.8 • ${machineMap.name} • ${objectCount} configured object${objectCount === 1 ? "" : "s"}`);
+      const releaseVersion = global.SERVOFORGE_RELEASE_VERSION || "0.9.10";
+      setBuilderStatus(`STAGING ${releaseVersion} • ${machineMap.name} • ${objectCount} configured object${objectCount === 1 ? "" : "s"}`);
       return true;
     } catch (error) {
       const message = error?.message || String(error || "Unknown Map Builder error");
@@ -272,7 +273,7 @@
       actions.call("saveCurrentSettings");
     } else if (completed.kind === "object") {
       if (!completed.moved) state.builderHistory?.undo?.pop();
-      actions.call("refreshAfterBuilderEdit", { persist: true });
+      actions.call("refreshAfterBuilderEdit", { persist: true, structural: true });
       actions.call("selectMapBuilderObject", completed.objectId, { openBuilder: true, scroll: true });
     } else {
       if (!completed.moved && state.selectedMapObjectId) {

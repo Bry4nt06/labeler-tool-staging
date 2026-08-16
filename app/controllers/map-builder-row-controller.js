@@ -173,7 +173,7 @@
       if (summaryName) summaryName.textContent = editable.objects[index].name;
     }
 
-    refreshAfterBuilderEdit({ persist: true });
+    refreshAfterBuilderEdit({ persist: true, structural: true });
     if (persist && rerenderFields.has(field)) renderWipeDownBuilder();
     return true;
   }
@@ -190,7 +190,7 @@
     const key = String(item.station);
     if (target.value === "auto") delete editable.stationSections[key];
     else editable.stationSections[key] = target.value;
-    refreshAfterBuilderEdit({ persist: true });
+    refreshAfterBuilderEdit({ persist: true, structural: true });
     renderWipeDownBuilder();
     return true;
   }
@@ -208,7 +208,7 @@
     recordBuilderHistory(`${historyVerb} ${resolved.item.name}`);
     resolved.editable.objects.splice(resolved.index, 1);
     if (String(state.selectedMapObjectId || "") === String(objectId)) state.selectedMapObjectId = "";
-    refreshAfterBuilderEdit({ persist: true });
+    refreshAfterBuilderEdit({ persist: true, structural: true });
     renderWipeDownBuilder();
     return true;
   }
@@ -265,7 +265,7 @@
     }
 
     builderExpandedStation = null;
-    refreshAfterBuilderEdit({ persist: true });
+    refreshAfterBuilderEdit({ persist: true, structural: true });
     renderWipeDownBuilder();
     return true;
   }
@@ -281,7 +281,7 @@
       name: `${item.name} Copy`
     }, editable.applicationMode, editable.stationCount));
     builderExpandedStation = String(item.kind === "coding" ? "coding" : item.station);
-    refreshAfterBuilderEdit({ persist: true });
+    refreshAfterBuilderEdit({ persist: true, structural: true });
     renderWipeDownBuilder();
     return true;
   }
@@ -320,7 +320,7 @@
       copy.end += offset;
       editable.objects.push(copy);
     });
-    refreshAfterBuilderEdit({ persist: true });
+    refreshAfterBuilderEdit({ persist: true, structural: true });
     builderExpandedStation = String(targetStation);
     renderWipeDownBuilder();
     return true;

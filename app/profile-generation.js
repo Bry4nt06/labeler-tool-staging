@@ -1,8 +1,8 @@
 "use strict";
 
 (function loadServoForgeProfileGenerationModules() {
-  const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.2";
-  const moduleBuild = "autocol-codebox-orientation-v122-20260815-0001";
+  const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
+  const moduleBuild = "map-builder-object-add-v123-20260816-0735";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",

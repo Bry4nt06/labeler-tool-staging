@@ -44,7 +44,11 @@ function restoreBuilderHistory(direction) {
   renderWipeDownBuilder();
 }
 
-function refreshAfterBuilderEdit({ persist = false } = {}) {
+function refreshAfterBuilderEdit({ persist = false, structural = false } = {}) {
+  if (structural) {
+    const machineMap = typeof activeMachineMap === "function" ? activeMachineMap() : null;
+    if (machineMap) machineMap.localStructuralMapOverride = true;
+  }
   syncApplicationMapToLegacyState();
   applyGeneratedServoProfile();
   renderMap();

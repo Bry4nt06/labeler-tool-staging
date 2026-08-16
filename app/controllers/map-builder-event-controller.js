@@ -34,6 +34,23 @@
     event.stopImmediatePropagation();
   }
 
+  function runBuilderAction(label, action) {
+    try {
+      const result = action();
+      if (label === "Add map object" && !result) throw new Error("The Map Builder did not create an object.");
+      return result;
+    } catch (error) {
+      const message = error?.message || String(error || "Unknown Map Builder error");
+      console.error(`${label} failed`, error);
+      const status = document.querySelector("#builderStatus");
+      if (status) {
+        status.textContent = `${label} failed: ${message}`;
+        status.classList?.add("status-bad");
+      }
+      return null;
+    }
+  }
+
   document.addEventListener("input", (event) => {
     const target = event.target;
     if (!(target instanceof Element) || !definitionFields.has(target.id)) return;
@@ -73,7 +90,7 @@
     else if (target.closest("#saveMachineMap")) builder.saveDefinition("click");
     else if (target.closest("#addMachineType")) builder.addMachineType();
     else if (target.closest("#deleteMachineMap")) builder.deleteActiveMap();
-    else if (target.closest("#addBuilderObject")) builder.addObject();
+    else if (target.closest("#addBuilderObject")) runBuilderAction("Add map object", () => builder.addObject());
     else if (target.closest("#resetBuilderMap")) builder.resetMap();
     else return;
 

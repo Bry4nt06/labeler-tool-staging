@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "autocol-codebox-orientation-v122-20260815-0001";
-  const buildUpdatedAt = "Aug 15, 2026 12:01 AM ET";
+  const build = "map-builder-object-add-v123-20260816-0735";
+  const buildUpdatedAt = "Aug 16, 2026 7:35 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");

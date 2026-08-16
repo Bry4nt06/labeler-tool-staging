@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "autocol-codebox-orientation-v122-20260815-0001",
+  "buildId": "map-builder-object-add-v123-20260816-0735",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "Autocol coder orientation v122 carries the confirmed v121 printed-artwork convention into the cold-glue servo generator. A mapped Autocol coder now uses the selected label's Code Box Ctr measurement from the physical printed LEFT edge, converts that artwork point through the machine-direction servo transform, inserts a legal Rest -> Correction -> Rest coder stage after the final wipe/roller motion, and holds the achieved code-box target through the coder and the 359 degree End of curve. The artwork location remains identical for left/right-hand and CW/CCW machines; only the servo plate command changes. The generator reports specific coder label, geometry, turn-window, and speed-envelope issues instead of moving the coder onto another table revolution. Includes v121 visual left-edge/code-box markers, v120 Autocol terminal policy, and v119 wipe-side parity."
+  "notes": "Map Builder object-add v123 repairs the current Add Object DOM binding, surfaces Add Object runtime failures in the builder status, and preserves locally edited object layouts on protected company-default maps. Structural Map Builder edits now mark the map as a local structural override so added, edited, duplicated, removed, and dragged objects survive persistence and company-default catalog reconciliation. Existing v122 Autocol coder orientation and v121 printed-codebox geometry remain unchanged."
 }

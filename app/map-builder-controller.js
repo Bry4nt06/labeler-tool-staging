@@ -63,7 +63,7 @@ function saveMapDefinitionFromControls(event) {
   ensureAplObjectsForNewStations(map, previousLimit);
   if (liveInput) {
     loadMachineMapIntoRuntime(map, false);
-    refreshAfterBuilderEdit({ persist: true });
+    refreshAfterBuilderEdit({ persist: true, structural: true });
     return;
   }
   loadMachineMapIntoRuntime(map, true);
@@ -134,7 +134,7 @@ function optimizeActiveColdGlueMap() {
     return false;
   }
   builderExpandedStation = String(activeSlotNumbers(activeMachineMap().enabledStations)[0] || 1);
-  refreshAfterBuilderEdit({ persist: true });
+  refreshAfterBuilderEdit({ persist: true, structural: true });
   renderWipeDownBuilder();
   return true;
 }
@@ -258,7 +258,7 @@ function addBuilderObjectFromControls() {
   }
   builderExpandedStation = String(type === "coding" ? "coding" : station);
   if (els.configuredMapObjectsSection) els.configuredMapObjectsSection.open = true;
-  refreshAfterBuilderEdit({ persist: true });
+  refreshAfterBuilderEdit({ persist: true, structural: true });
   renderWipeDownBuilder();
   return addedObject;
 }
@@ -273,6 +273,7 @@ function resetActiveBuilderMap() {
       ? []
       : createMachineMap({ applicationMode: "apl", aggregateCount: 6, stationCount: 6 }).objects;
   }
+  machineMap.localStructuralMapOverride = true;
   loadMachineMapIntoRuntime(machineMap, true);
   saveCurrentSettings();
   renderWipeDownBuilder();

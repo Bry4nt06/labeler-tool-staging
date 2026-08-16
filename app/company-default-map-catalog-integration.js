@@ -53,6 +53,17 @@
     const localById = new Map(currentBeforeEnforcement.map((map) => [key(map?.id), map]));
     const official = approvedMaps(catalog).map((packaged) => {
       const local = localById.get(key(packaged?.id));
+      if (local?.localStructuralMapOverride) {
+        return {
+          ...clone(local),
+          id: packaged.id,
+          companyDefaultProgram: true,
+          companyDefaultProgramVersion: packaged.companyDefaultProgramVersion,
+          protectedDefaultMap: true,
+          localStructuralMapOverride: true,
+          localMachineSettingsOverride: Boolean(local.localMachineSettingsOverride)
+        };
+      }
       if (!local?.localMachineSettingsOverride) return packaged;
       return {
         ...packaged,

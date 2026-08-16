@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "autocol-codebox-orientation-v122-20260815-0001";
+  const build = "map-builder-object-add-v123-20260816-0735";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
