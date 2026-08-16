@@ -1,4 +1,4 @@
-# v126 regression rerun after cross-realm assertion fix
+# v126 regression rerun after cancel-confirmation assertion fix
 name: Publish Community Admin delete v126
 
 on:
