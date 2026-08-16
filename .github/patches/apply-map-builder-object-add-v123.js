@@ -110,6 +110,10 @@ replace("app/bootstrap.js", (value) => value
 
 replace("app.js", (value) => value.replace(/const build = "[^"]+";/, `const build = "${BUILD}";`));
 
+replace("app/profile-generation.js", (value) => value
+  .replace(/const moduleBuild = "[^"]+";/, `const moduleBuild = "${BUILD}";`)
+  .replace(/\|\| "0\.9\.2"/, `|| "${VERSION}"`));
+
 replace("service-worker.js", (value) => value
   .replace(/const CACHE_NAME = "[^"]+";/, `const CACHE_NAME = "servoforge-labeler-staging-v${VERSION}-${BUILD}";`));
 
@@ -125,7 +129,7 @@ write("update-manifest.json", JSON.stringify({
   buildId: BUILD,
   releaseUrl: "https://bry4nt06.github.io/labeler-tool-staging/",
   downloadUrl: "https://bry4nt06.github.io/labeler-tool-staging/",
-  notes: "Map Builder object-add v123 repairs the current Add Object DOM binding, surfaces Add Object runtime failures in the builder status, and preserves locally edited object layouts on protected company-default maps. Structural Map Builder edits now mark the map as a local structural override so added, edited, duplicated, removed, and dragged objects survive persistence and company-default catalog reconciliation. Existing v122 Autocol coder orientation and servo behavior are unchanged."
+  notes: "Map Builder object-add v123 repairs the current Add Object DOM binding, surfaces Add Object runtime failures in the builder status, and preserves locally edited object layouts on protected company-default maps. Structural Map Builder edits now mark the map as a local structural override so added, edited, duplicated, removed, and dragged objects survive persistence and company-default catalog reconciliation. Existing v122 Autocol coder orientation and v121 printed-codebox geometry remain unchanged."
 }, null, 2) + "\n");
 
 console.log(`Applied ${BUILD}.`);
