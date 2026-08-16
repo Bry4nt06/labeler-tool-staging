@@ -5,7 +5,7 @@
   const library = global.LabelerCommunityLibrary;
   if (!library?.installed) return;
 
-  const BUILD = "community-library-v103-20260813-1756";
+  const BUILD = "community-location-observer-fix-v129-20260816-1552";
   const metadataById = new Map();
   let lastSuggestedName = "";
 
@@ -102,14 +102,22 @@
   }
 
   function annotateCard(card, loc) {
-    card.querySelector(".sf-community-location-line")?.remove();
-    if (!loc?.zone && !loc?.site) return;
+    const zone = code(loc?.zone);
+    const site = code(loc?.site);
+    const existing = card.querySelector(".sf-community-location-line");
+    if (!zone && !site) {
+      existing?.remove();
+      return;
+    }
+    if (existing?.dataset?.communityZone === zone && existing?.dataset?.communitySite === site) return;
     const head = card.querySelector(".sf-community-card-head");
     if (!head) return;
-    const line = document.createElement("div");
+    const line = existing || document.createElement("div");
     line.className = "sf-community-location-line";
-    line.innerHTML = `${loc.zone ? `<span class="sf-community-location-chip">Zone ${esc(loc.zone)}</span>` : ""}${loc.site ? `<span class="sf-community-location-chip">Site ${esc(loc.site)}</span>` : ""}`;
-    head.insertAdjacentElement("afterend", line);
+    line.dataset.communityZone = zone;
+    line.dataset.communitySite = site;
+    line.innerHTML = `${zone ? `<span class="sf-community-location-chip">Zone ${esc(zone)}</span>` : ""}${site ? `<span class="sf-community-location-chip">Site ${esc(site)}</span>` : ""}`;
+    if (!existing) head.insertAdjacentElement("afterend", line);
   }
 
   function applyLocationFilter() {
@@ -220,7 +228,7 @@
     }
     if (type === "brand") {
       if (!brand) throw new Error("Choose a Brand / Label spec to upload.");
-      return { payload: { brand: clone(brand) }, name: brand.brand || "Community Brand", map: null, bottle: null, brand };
+      return { payload: { brand: clone(brand) }, name: brand.brand || "Community Brand", map: null, bottle, brand };
     }
     if (!map || !bottle || !brand) throw new Error("A Complete Setup requires a Machine Map, Bottle spec, and Brand / Label spec.");
     return { payload: { map: clone(map), bottle: clone(bottle), brand: clone(brand) }, name: `${brand.brand || "Brand"} • ${map.name || "Map"}`, map, bottle, brand };
@@ -323,5 +331,5 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once: true });
   else bind();
 
-  global.ServoForgeCommunityLibraryV103 = Object.freeze({ installed: true, build: BUILD, normalizeCode: code, refreshLocationCatalog, applyLocationFilter, refreshUploadPreview });
+  global.ServoForgeCommunityLibraryV103 = Object.freeze({ installed: true, build: BUILD, normalizeCode: code, refreshLocationCatalog, applyLocationFilter, refreshUploadPreview, idempotentLocationAnnotationV129: true });
 })(typeof window !== "undefined" ? window : globalThis);
