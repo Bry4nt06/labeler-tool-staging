@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "community-admin-delete-v126-20260816-0920";
-  const buildUpdatedAt = "Aug 16, 2026 9:20 AM ET";
+  const build = "bottle-orientation-wipe-direction-v127-20260816-0935";
+  const buildUpdatedAt = "Aug 16, 2026 9:35 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");

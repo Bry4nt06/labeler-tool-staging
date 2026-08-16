@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "community-admin-delete-v126-20260816-0920";
+  const build = "bottle-orientation-wipe-direction-v127-20260816-0935";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

@@ -3,7 +3,7 @@
 (function installBottleOrientationPanel(global) {
   if (global.LabelerBottleOrientationPanel?.installed) return;
 
-  const VERSION = 10;
+  const VERSION = 11;
   const STYLE_ID = "servoforge-bottle-orientation-panel-style";
   const PANEL_ATTR = "data-bottle-orientation-panel";
   const BASE_DEG_PER_SECOND = 18;
@@ -322,7 +322,7 @@
     // configured as Leading Edge. This is a presentation correction only; the
     // generated servo program and wipe telemetry remain authoritative.
     if (section === "body" || section === "back") coverage.tackMode = "leading";
-    if (!coverage.direction) coverage.direction = runtimeState()?.direction === "cw" ? "ltr" : "rtl";
+    coverage.direction = topViewWipeDirection();
     const hardware = currentHardware(tableAngle);
     const station = Number.isFinite(Number(telemetry?.station))
       ? Number(telemetry.station)
@@ -371,6 +371,42 @@
     return String(runtimeState()?.direction || "cw").toLowerCase() === "cw" ? -angle : angle;
   }
 
+  function physicalMachineDirection() {
+  try {
+    const v125 = global.ServoForgePhysicalWipeDirectionV125;
+    if (typeof v125?.physicalMachineDirection === "function") {
+      const resolved = String(v125.physicalMachineDirection() || "").toLowerCase();
+      if (resolved === "cw" || resolved === "ccw") return resolved;
+    }
+  } catch { }
+  try {
+    const service = global.LabelerWipeTelemetryService;
+    if (typeof service?.liveWipeMachineDirection === "function") {
+      const resolved = String(service.liveWipeMachineDirection() || "").toLowerCase();
+      if (resolved === "cw" || resolved === "ccw") return resolved;
+    }
+  } catch { }
+  let stored = "";
+  try { stored = String(global.document?.getElementById?.("mapDirection")?.value || "").toLowerCase(); } catch { }
+  if (stored !== "cw" && stored !== "ccw") stored = String(runtimeState()?.direction || "ccw").toLowerCase();
+  if (stored !== "cw" && stored !== "ccw") stored = "ccw";
+  try {
+    const driver = global.LabelerCoderOrientationDriver;
+    if (typeof driver?.physicalDirection === "function") {
+      const resolved = String(driver.physicalDirection(stored) || "").toLowerCase();
+      if (resolved === "cw" || resolved === "ccw") return resolved;
+    }
+  } catch { }
+  return stored === "cw" ? "ccw" : "cw";
+}
+
+function topViewWipeDirection() {
+  // The shared wipe panel linearizes physical CW as left-to-right.
+  // In the bottle-local top view, increasing SVG angle is clockwise
+  // and the fixed wipe contact sweeps opposite bottle rotation.
+  return physicalMachineDirection() === "cw" ? "rtl" : "ltr";
+}
+
   function tableFrameVisualAngle(tableAngle) {
     // Use the exact table/head transform used by the live Mechanical Map.
     // This makes the Top View a magnified world-frame view of servo/head 1,
@@ -405,7 +441,7 @@
     const tackMode = (section === "body" || section === "back")
       ? "leading"
       : String(coverage?.tackMode || "center").toLowerCase();
-    const direction = String(coverage?.direction || (runtimeState()?.direction === "cw" ? "ltr" : "rtl")).toLowerCase() === "rtl"
+    const direction = String(coverage?.direction || topViewWipeDirection()).toLowerCase() === "rtl"
       ? "rtl"
       : "ltr";
     const start = center - half;
@@ -788,6 +824,8 @@
     stationOnePath,
     fullProgramPath: stationOnePath,
     contextFor,
+    physicalMachineDirection,
+    topViewWipeDirection,
     machineVisualAngle,
     tableFrameVisualAngle,
     headOneWorldVisualAngle,
@@ -819,5 +857,7 @@
     topViewWipeGraphicRemovedV84: true,
     mainAnimationOnlyV84: true,
     staleSideViewExportRemovedV86: true,
+    physicalMachineDirectionWipeV127: true,
+    topViewAngularWipeParityV127: true,
   });
 })(typeof window !== "undefined" ? window : globalThis);

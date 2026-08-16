@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "community-admin-delete-v126-20260816-0920";
+  const BUILD_ID = "bottle-orientation-wipe-direction-v127-20260816-0935";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
@@ -166,7 +166,7 @@
 
 (function loadStagingFeatureModules() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "community-admin-delete-v126-20260816-0920";
+  const BUILD_ID = "bottle-orientation-wipe-direction-v127-20260816-0935";
   const modules = [
     "app/diagnostics-workspace-integration.js",
     "app/workspace-developer-integration.js",

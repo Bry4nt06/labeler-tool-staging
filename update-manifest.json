@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "community-admin-delete-v126-20260816-0920",
+  "buildId": "bottle-orientation-wipe-direction-v127-20260816-0935",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "v126 adds a permanent Delete action to Community Admin. Delete requires the active Community Admin key, calls the existing server-authorized adminDelete action, confirms before removal, deletes dependent ratings through the database cascade, and refreshes the active admin queue. Physical wipe direction v125, update delivery v124, Map Builder v123, Autocol coder v122, and printed-codebox v121 behavior are retained."
+  "notes": "v127 corrects Bottle Orientation label wipe-down direction after the physical machine-direction changes. The top-view label arc now resolves live physical CW/CCW on every render and converts the shared linear wipe convention into the bottle-local angular frame: physical CW wipes high-angle to low-angle and physical CCW mirrors it. Bottle/table transforms, Servo Program commands, coder geometry, v125 physical wipe telemetry, and v126 Community Admin delete are retained."
 }
