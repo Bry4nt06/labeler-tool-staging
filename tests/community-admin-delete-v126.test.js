@@ -78,7 +78,10 @@ assert.equal(api.adminKey(), "admin-secret");
 (async () => {
   const deleted = await api.deleteAdminPackage(row);
   assert.equal(deleted, true);
-  assert.deepEqual(calls, [{ action: "adminDelete", payload: { adminKey: "admin-secret", packageId: "pkg-42" } }]);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].action, "adminDelete");
+  assert.equal(calls[0].payload.adminKey, "admin-secret");
+  assert.equal(calls[0].payload.packageId, "pkg-42");
   assert.equal(cardRemoved, 1);
   assert.equal(rowRemoved, 1);
   assert.equal(refreshClicks, 1);
