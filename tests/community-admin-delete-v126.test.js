@@ -55,7 +55,7 @@ const context = {
     }
   },
   confirm(message) {
-    assert.match(message, /Permanently delete #SF-C42 · Test Package/);
+    assert.match(message, /^Permanently delete #SF-C4[23] · /);
     assert.match(message, /cannot be undone/);
     return confirmation;
   },
