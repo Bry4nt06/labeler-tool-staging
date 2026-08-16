@@ -5,11 +5,12 @@
   const base = global.LabelerCommunityLibrary;
   if (!base?.installed) return;
 
-  const BUILD = "community-library-v107-20260813-1914";
+  const BUILD = "community-launch-freeze-guard-v128-20260816-1548";
   const normalizeCode = (value) => String(value ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
   const normalizeSpec = (value) => String(value ?? "").trim().slice(0, 80);
   const baseApi = base.api.bind(base);
   let recoveryLoadPromise = null;
+  let openingCommunity = false;
 
   async function api(action, payload = {}) {
     if (action !== "upload") return baseApi(action, payload);
@@ -116,8 +117,23 @@
   }
 
   function openCommunity() {
+    if (openingCommunity) return Promise.resolve(true);
+    openingCommunity = true;
+    global.__SERVOFORGE_COMMUNITY_OPENING_V128 = true;
+
+    const finish = () => {
+      openingCommunity = false;
+      global.__SERVOFORGE_COMMUNITY_OPENING_V128 = false;
+    };
+
     const existing = document.getElementById("servoforgeCommunityDialog");
-    if (existing) return Promise.resolve(showDialog(existing));
+    if (existing) {
+      try {
+        return Promise.resolve(showDialog(existing));
+      } finally {
+        finish();
+      }
+    }
 
     return reloadBaseCommunity()
       .then((dialog) => {
@@ -131,7 +147,8 @@
         installRecoveryNotice(`Community Library could not open: ${error.message}`);
         console.error("[ServoForge Community] launcher recovery failed", error);
         return false;
-      });
+      })
+      .finally(finish);
   }
 
   function recoverCommunityButton() {
@@ -161,6 +178,7 @@
     if (document.documentElement.dataset.communityCoordinateRecoveryV107 !== "true") {
       document.documentElement.dataset.communityCoordinateRecoveryV107 = "true";
       document.addEventListener("click", (event) => {
+        if (!event.isTrusted) return;
         const current = document.getElementById("communityLibraryButton");
         if (!current) return;
         const rect = current.getBoundingClientRect();
@@ -204,5 +222,5 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once: true });
   else bind();
 
-  global.ServoForgeCommunityLibraryV104 = Object.freeze({ installed: true, build: BUILD, enhance, recoverCommunityButton, openCommunity, reloadBaseCommunity, normalizeCode });
+  global.ServoForgeCommunityLibraryV104 = Object.freeze({ installed: true, build: BUILD, enhance, recoverCommunityButton, openCommunity, reloadBaseCommunity, normalizeCode, communityOpenReentryGuardV128: true, trustedCoordinateRecoveryOnlyV128: true });
 })(typeof window !== "undefined" ? window : globalThis);
