@@ -113,7 +113,11 @@ replace("app.js", (value) => value.replace(/const build = "[^"]+";/, `const buil
 replace("service-worker.js", (value) => value
   .replace(/const CACHE_NAME = "[^"]+";/, `const CACHE_NAME = "servoforge-labeler-staging-v${VERSION}-${BUILD}";`));
 
-replace("index.html", (value) => value.replaceAll(PREVIOUS_BUILD, BUILD));
+{
+  const current = read("index.html");
+  const next = current.replaceAll(PREVIOUS_BUILD, BUILD);
+  if (next !== current) write("index.html", next);
+}
 
 write("update-manifest.json", JSON.stringify({
   schemaVersion: 1,
