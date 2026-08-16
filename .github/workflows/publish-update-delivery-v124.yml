@@ -1,4 +1,5 @@
 name: Publish update-delivery v124
+# retry after making Map Builder v123 regression release-aware
 
 on:
   push:
