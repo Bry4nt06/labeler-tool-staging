@@ -15,7 +15,8 @@ const eventController = fs.readFileSync(path.join(root, "app/controllers/map-bui
 const catalogSource = fs.readFileSync(path.join(root, "app/company-default-map-catalog-integration.js"), "utf8");
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "update-manifest.json"), "utf8"));
 
-assert.equal(manifest.buildId, "map-builder-object-add-v123-20260816-0735");
+assert.ok(String(manifest.buildId || "").trim(), "Current release manifest must define a buildId.");
+assert.match(String(manifest.notes || ""), /Map Builder v123|Map Builder object-add v123/i, "Later builds must retain the verified Map Builder v123 behavior in release notes.");
 for (const id of ["builderObjectExtension", "builderSensorAssist", "builderSensorVisibility", "addBuilderObject"]) {
   assert.match(defaults, new RegExp(`${id}: document\\.querySelector\\(\"#${id}\"\\)`), `${id} must be registered in els.`);
 }
