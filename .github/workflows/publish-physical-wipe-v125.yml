@@ -79,7 +79,7 @@ jobs:
               'buildId': BUILD,
               'releaseUrl': 'https://bry4nt06.github.io/labeler-tool-staging/',
               'downloadUrl': 'https://bry4nt06.github.io/labeler-tool-staging/',
-              'notes': 'v125 restores label wipe progression to physical machine-direction authority. Center-tack coverage no longer receives the legacy v119 servo-coordinate side swap. CW and CCW machines now mirror the label wipe visual correctly while bottle orientation transforms remain unchanged. v124 update delivery, v123 Map Builder, v122 Autocol coder, and v121 printed-codebox behavior are retained.'
+              'notes': 'v125 restores label wipe progression to physical machine-direction authority. Center-tack coverage no longer receives the legacy v119 servo-coordinate side swap. CW and CCW machines now mirror the label wipe visual correctly while bottle orientation transforms remain unchanged. v124 update delivery, Map Builder v123 object-add/persistence, Autocol coder v122, and printed-codebox v121 behavior are retained.'
           }
           write('update-manifest.json', json.dumps(manifest, indent=2) + '\n')
 
