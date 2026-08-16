@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "physical-wipe-direction-v125-20260816-0905",
+  "buildId": "community-admin-delete-v126-20260816-0920",
   "releaseUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
   "downloadUrl": "https://bry4nt06.github.io/labeler-tool-staging/",
-  "notes": "v125 restores label wipe progression to physical machine-direction authority. Center-tack coverage no longer receives the legacy v119 servo-coordinate side swap. CW and CCW machines now mirror the label wipe visual correctly while bottle orientation transforms remain unchanged. v124 update delivery, Map Builder v123 object-add/persistence, Autocol coder v122, and printed-codebox v121 behavior are retained."
+  "notes": "v126 adds a permanent Delete action to Community Admin. Delete requires the active Community Admin key, calls the existing server-authorized adminDelete action, confirms before removal, deletes dependent ratings through the database cascade, and refreshes the active admin queue. Physical wipe direction v125, update delivery v124, Map Builder v123, Autocol coder v122, and printed-codebox v121 behavior are retained."
 }

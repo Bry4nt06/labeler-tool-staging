@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "physical-wipe-direction-v125-20260816-0905";
+  const build = "community-admin-delete-v126-20260816-0920";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -147,6 +147,9 @@
 
     progress?.set(74.5, "Following physical machine wipe direction…");
     await loadScript("app/physical-wipe-direction-v125.js", version);
+
+    progress?.set(74.7, "Enabling Community Admin delete…");
+    await loadScript("app/community-admin-delete-v126.js", version);
 
     progress?.set(75, "Applying Autocol end-of-curve policy…");
     await loadScript("app/autocol-terminal-boundary-v120.js", version);
