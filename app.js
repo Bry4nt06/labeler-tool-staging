@@ -157,6 +157,9 @@
     progress?.set(76, "Aligning printed code-box artwork…");
     await loadScript("app/printed-codebox-left-edge-v121.js", version);
 
+    progress?.set(76.5, "Correcting Cold Glue center-tack brush entry…");
+    await loadScript("app/cold-glue-brush-direction-v128.js", version);
+
     if (typeof initializeLabelerApp !== "function") {
       throw new Error("initializeLabelerApp is not loaded.");
     }
