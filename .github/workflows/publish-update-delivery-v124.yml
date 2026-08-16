@@ -1,0 +1,147 @@
+name: Publish update-delivery v124
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/publish-update-delivery-v124.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "publish-update-delivery-v124"
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out staging main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Align staging delivery identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import pathlib
+          import re
+
+          root = pathlib.Path('.')
+          VERSION = '0.9.10'
+          BUILD = 'update-delivery-self-heal-v124-20260816-0750'
+          UPDATED = 'Aug 16, 2026 7:50 AM ET'
+
+          def read(path):
+              return (root / path).read_text(encoding='utf-8')
+
+          def write(path, text):
+              (root / path).write_text(text, encoding='utf-8')
+
+          index = read('index.html')
+          index = re.sub(r'build=[^"&]+', f'build={BUILD}', index)
+          write('index.html', index)
+
+          updater = read('app/update-manager.js')
+          updater = re.sub(r'const BUILD_ID = "[^"]+";', f'const BUILD_ID = "{BUILD}";', updater)
+          marker = 'updateDeliveryAutoCheckV124'
+          if marker not in updater:
+              needle = '  registerToolUpdateService = async function registerManagedToolUpdateService() {\n    enforceReleaseVersion();\n'
+              replacement = (
+                  '  registerToolUpdateService = async function registerManagedToolUpdateService() {\n'
+                  '    enforceReleaseVersion();\n'
+                  '    window.updateDeliveryAutoCheckV124 = true;\n'
+                  '    window.setTimeout(() => {\n'
+                  '      if (typeof globalThis.checkForToolUpdates === "function") globalThis.checkForToolUpdates();\n'
+                  '    }, 750);\n'
+              )
+              if needle not in updater:
+                  raise SystemExit('Unable to install automatic update check.')
+              updater = updater.replace(needle, replacement, 1)
+          write('app/update-manager.js', updater)
+
+          bootstrap = read('app/bootstrap.js')
+          bootstrap = re.sub(r'const build = "[^"]+";', f'const build = "{BUILD}";', bootstrap, count=1)
+          bootstrap = re.sub(r'const buildUpdatedAt = "[^"]+";', f'const buildUpdatedAt = "{UPDATED}";', bootstrap, count=1)
+          write('app/bootstrap.js', bootstrap)
+
+          app = read('app.js')
+          app = re.sub(r'const build = "[^"]+";', f'const build = "{BUILD}";', app, count=1)
+          write('app.js', app)
+
+          profile = read('app/profile-generation.js')
+          profile = re.sub(r'const moduleBuild = "[^"]+";', f'const moduleBuild = "{BUILD}";', profile, count=1)
+          write('app/profile-generation.js', profile)
+
+          worker = read('service-worker.js')
+          worker = re.sub(r'const CACHE_NAME = "[^"]+";', f'const CACHE_NAME = "servoforge-labeler-staging-v{VERSION}-{BUILD}";', worker, count=1)
+          write('service-worker.js', worker)
+
+          manifest = {
+              'schemaVersion': 1,
+              'version': VERSION,
+              'buildId': BUILD,
+              'releaseUrl': 'https://bry4nt06.github.io/labeler-tool-staging/',
+              'downloadUrl': 'https://bry4nt06.github.io/labeler-tool-staging/',
+              'notes': 'Update-delivery v124 aligns every staging startup asset, updater, profile loader, bootstrap, and service-worker cache to one build identity. Startup now automatically checks the release manifest after update-service registration so installed PWAs surface current builds without depending on stale script query IDs. The verified Map Builder v123 object-add and persistence fix remains unchanged.'
+          }
+          write('update-manifest.json', json.dumps(manifest, indent=2) + '\n')
+          PY
+
+      - name: Validate staging delivery
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app/update-manager.js
+          node --check app/bootstrap.js
+          node --check app/profile-generation.js
+          node --check app.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          import json, pathlib, re
+          root = pathlib.Path('.')
+          build = 'update-delivery-self-heal-v124-20260816-0750'
+          index = (root/'index.html').read_text(encoding='utf-8')
+          updater = (root/'app/update-manager.js').read_text(encoding='utf-8')
+          bootstrap = (root/'app/bootstrap.js').read_text(encoding='utf-8')
+          app = (root/'app.js').read_text(encoding='utf-8')
+          profile = (root/'app/profile-generation.js').read_text(encoding='utf-8')
+          worker = (root/'service-worker.js').read_text(encoding='utf-8')
+          manifest = json.loads((root/'update-manifest.json').read_text(encoding='utf-8'))
+          assert manifest['buildId'] == build
+          assert build in bootstrap and build in app and build in profile and build in worker
+          assert 'updateDeliveryAutoCheckV124' in updater
+          assert updater.count(f'const BUILD_ID = "{build}";') >= 2
+          ids = re.findall(r'build=([^"&]+)', index)
+          assert ids and set(ids) == {build}, set(ids)
+          PY
+          node tests/map-builder-action-dispatch.test.js
+          node tests/map-builder-lifecycle.test.js
+          node tests/map-builder-row-controller.test.js
+          node tests/map-builder-object-add-v123.test.js
+          node tests/autocol-coder-codebox-v122.test.js
+          node tests/printed-codebox-left-edge-v121.test.js
+          git diff --check
+
+      - name: Commit staging v124
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Bry4nt06"
+          git config user.email "139938543+Bry4nt06@users.noreply.github.com"
+          git add index.html app/update-manager.js app/bootstrap.js app/profile-generation.js app.js service-worker.js update-manifest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Align PWA update delivery v124"
+            git push origin main
+          fi
