@@ -5,10 +5,11 @@
   const base = global.LabelerCommunityLibrary;
   if (!base?.installed) return;
 
-  const BUILD = "community-launch-freeze-guard-v128-20260816-1548";
+  const BUILD = "community-railway-native-launch-v130-20260816-1555";
   const normalizeCode = (value) => String(value ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
   const normalizeSpec = (value) => String(value ?? "").trim().slice(0, 80);
   const baseApi = base.api.bind(base);
+  const railwayHost = /\.up\.railway\.app$/i.test(String(global.location?.hostname || ""));
   let recoveryLoadPromise = null;
   let openingCommunity = false;
 
@@ -167,6 +168,15 @@
       cluster.style.pointerEvents = "auto";
     }
 
+    // Railway already receives a normal, working Community button from the base
+    // module. Do not install the legacy document-level coordinate recovery there;
+    // it can compete with the native click path and is unnecessary on this host.
+    if (railwayHost) {
+      button.dataset.communityV107Recovery = "railway-native";
+      global.__SERVOFORGE_COMMUNITY_RAILWAY_NATIVE_V130 = true;
+      return true;
+    }
+
     if (button.dataset.communityV107Recovery !== "true") {
       button.dataset.communityV107Recovery = "true";
       button.addEventListener("click", (event) => {
@@ -222,5 +232,5 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once: true });
   else bind();
 
-  global.ServoForgeCommunityLibraryV104 = Object.freeze({ installed: true, build: BUILD, enhance, recoverCommunityButton, openCommunity, reloadBaseCommunity, normalizeCode, communityOpenReentryGuardV128: true, trustedCoordinateRecoveryOnlyV128: true });
+  global.ServoForgeCommunityLibraryV104 = Object.freeze({ installed: true, build: BUILD, enhance, recoverCommunityButton, openCommunity, reloadBaseCommunity, normalizeCode, communityOpenReentryGuardV128: true, trustedCoordinateRecoveryOnlyV128: true, railwayNativeLaunchV130: railwayHost });
 })(typeof window !== "undefined" ? window : globalThis);
