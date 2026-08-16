@@ -105,6 +105,7 @@ const sandbox = {
   Boolean,
   Error,
   LabelerWorkspaceActionService: actions,
+  SERVOFORGE_RELEASE_VERSION: "0.9.10",
   requestAnimationFrame(callback) { callback(); }
 };
 sandbox.window = sandbox;
@@ -117,7 +118,7 @@ assert.strictEqual(sandbox.LabelerMapController.populateBuilder({ bind: true }),
 assert.strictEqual(state.activeMapId, machineMap.id, "Invalid active map should fall back to the first saved map.");
 assert.strictEqual(renderCount, 1, "Builder should render once during direct population.");
 assert.strictEqual(bindCount, 1, "Builder controls should bind once.");
-assert.match(els.builderStatus.textContent, /STAGING 0\.9\.8/);
+assert.match(els.builderStatus.textContent, /STAGING 0\.9\.10/);
 assert.match(els.builderStatus.textContent, /Lifecycle Test Map/);
 
 sandbox.LabelerMapController.populateBuilder({ bind: true });
