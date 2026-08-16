@@ -3,7 +3,6 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
-const BUILD = "coder-left-edge-parity-v98-20260813-1402";
 const community = fs.readFileSync(path.join(root, "app/community-library-integration.js"), "utf8");
 const bootstrap = fs.readFileSync(path.join(root, "app/bootstrap.js"), "utf8");
 const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
@@ -11,6 +10,8 @@ const sw = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 const updater = fs.readFileSync(path.join(root, "app/update-manager.js"), "utf8");
 const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "update-manifest.json"), "utf8"));
+const BUILD = String(manifest.buildId || "").trim();
+assert.ok(BUILD, "Current staging build id must be available.");
 
 assert.match(community, /servoforge-community/);
 assert.match(community, /Browse/);
@@ -38,6 +39,6 @@ for (const label of ["Export Settings", "Import Settings", "Export JSON", "Impor
 }
 for (const label of ["Download Brands", "Import Map JSON", "Import Fault Limits"]) assert.ok(community.includes(`"${label}"`));
 
-for (const source of [bootstrap, index, sw, updater, app]) assert.match(source, new RegExp(BUILD));
-assert.equal(manifest.buildId, BUILD);
+const escapedBuild = BUILD.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+for (const source of [bootstrap, index, sw, updater, app]) assert.match(source, new RegExp(escapedBuild));
 console.log("Community Library v97 and staging Settings cleanup regression passed.");
