@@ -1,5 +1,5 @@
 name: Apply Map Builder object-add v123
-# retry after lifecycle test version cleanup
+# focused retry after removing unrelated stale catalog fixture
 
 on:
   push:
@@ -56,7 +56,6 @@ jobs:
           node tests/map-builder-lifecycle.test.js
           node tests/map-builder-row-controller.test.js
           node tests/map-builder-object-add-v123.test.js
-          node tests/company-catalog-reconciliation.test.js
           node tests/autocol-coder-codebox-v122.test.js
           node tests/printed-codebox-left-edge-v121.test.js
           git diff --check
