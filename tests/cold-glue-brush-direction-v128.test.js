@@ -1,5 +1,6 @@
 "use strict";
 
+// Regression: Cold Glue labels are center-tacked, pre-oriented before brush contact, and wiped center-out in physical machine direction.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
