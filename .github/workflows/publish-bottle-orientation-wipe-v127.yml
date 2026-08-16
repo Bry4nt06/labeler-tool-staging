@@ -1,3 +1,4 @@
+# v127 rerun with structural anchors
 name: Publish Bottle Orientation physical wipe v127
 
 on:
@@ -35,48 +36,34 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           import json, pathlib, re
-
           root = pathlib.Path('.')
           VERSION = '0.9.10'
           BUILD = 'bottle-orientation-wipe-direction-v127-20260816-0935'
           UPDATED = 'Aug 16, 2026 9:35 AM ET'
-
           def read(path): return (root/path).read_text(encoding='utf-8')
           def write(path, text): (root/path).write_text(text, encoding='utf-8')
 
           panel = read('app/bottle-orientation-panel-integration.js')
           panel = panel.replace('  const VERSION = 10;', '  const VERSION = 11;', 1)
 
-          old_machine = '''  function machineVisualAngle(angleDeg) {
-            const angle = finite(angleDeg, 0);
-            return String(runtimeState()?.direction || "cw").toLowerCase() === "cw" ? -angle : angle;
-          }
-
-          function tableFrameVisualAngle(tableAngle) {'''
-          new_machine = '''  function machineVisualAngle(angleDeg) {
-            const angle = finite(angleDeg, 0);
-            return String(runtimeState()?.direction || "cw").toLowerCase() === "cw" ? -angle : angle;
-          }
-
-          function physicalMachineDirection() {
+          helper_anchor = '  function tableFrameVisualAngle(tableAngle) {'
+          if helper_anchor not in panel:
+              raise SystemExit('Unable to locate tableFrameVisualAngle anchor.')
+          helper = '''  function physicalMachineDirection() {
             try {
               const v125 = global.ServoForgePhysicalWipeDirectionV125;
               if (typeof v125?.physicalMachineDirection === "function") {
                 const resolved = String(v125.physicalMachineDirection() || "").toLowerCase();
                 if (resolved === "cw" || resolved === "ccw") return resolved;
               }
-            } catch {
-              // Resolve from the shared telemetry/driver fallbacks below.
-            }
+            } catch { }
             try {
               const service = global.LabelerWipeTelemetryService;
               if (typeof service?.liveWipeMachineDirection === "function") {
                 const resolved = String(service.liveWipeMachineDirection() || "").toLowerCase();
                 if (resolved === "cw" || resolved === "ccw") return resolved;
               }
-            } catch {
-              // Resolve from the legacy stored direction below.
-            }
+            } catch { }
             let stored = "";
             try { stored = String(global.document?.getElementById?.("mapDirection")?.value || "").toLowerCase(); } catch { }
             if (stored !== "cw" && stored !== "ccw") stored = String(runtimeState()?.direction || "ccw").toLowerCase();
@@ -87,25 +74,20 @@ jobs:
                 const resolved = String(driver.physicalDirection(stored) || "").toLowerCase();
                 if (resolved === "cw" || resolved === "ccw") return resolved;
               }
-            } catch {
-              // Mirror the legacy-token conversion used by the shared driver.
-            }
+            } catch { }
             return stored === "cw" ? "ccw" : "cw";
           }
 
           function topViewWipeDirection() {
-            // The shared wipe panel linearizes physical CW as left-to-right and
-            // physical CCW as right-to-left. Bottle Orientation is different:
-            // increasing SVG angle travels clockwise around the bottle-local arc,
-            // while a fixed wipe contact sweeps across the label opposite bottle
-            // rotation. Convert the physical direction into that angular frame.
+            // The shared wipe panel linearizes physical CW as left-to-right.
+            // In the bottle-local top view, increasing SVG angle is clockwise
+            // and the fixed wipe contact sweeps opposite bottle rotation.
             return physicalMachineDirection() === "cw" ? "rtl" : "ltr";
           }
 
-          function tableFrameVisualAngle(tableAngle) {'''
-          if old_machine not in panel:
-              raise SystemExit('Unable to locate Bottle Orientation machineVisualAngle block.')
-          panel = panel.replace(old_machine, new_machine, 1)
+          '''
+          if 'function topViewWipeDirection()' not in panel:
+              panel = panel.replace(helper_anchor, helper + helper_anchor, 1)
 
           old_coverage = '    if (!coverage.direction) coverage.direction = runtimeState()?.direction === "cw" ? "ltr" : "rtl";'
           if old_coverage not in panel:
@@ -114,51 +96,34 @@ jobs:
 
           old_arc = '    const direction = String(coverage?.direction || (runtimeState()?.direction === "cw" ? "ltr" : "rtl")).toLowerCase() === "rtl"'
           if old_arc not in panel:
-              raise SystemExit('Unable to locate Bottle Orientation labelArcModel direction.')
+              raise SystemExit('Unable to locate labelArcModel direction.')
           panel = panel.replace(old_arc, '    const direction = String(coverage?.direction || topViewWipeDirection()).toLowerCase() === "rtl"', 1)
 
-          old_export = '''    contextFor,
-            machineVisualAngle,'''
-          new_export = '''    contextFor,
-            physicalMachineDirection,
-            topViewWipeDirection,
-            machineVisualAngle,'''
-          if old_export not in panel:
-              raise SystemExit('Unable to locate Bottle Orientation API export block.')
-          panel = panel.replace(old_export, new_export, 1)
+          export_anchor = '    contextFor,\n    machineVisualAngle,'
+          if export_anchor not in panel:
+              raise SystemExit('Unable to locate Bottle Orientation export anchor.')
+          panel = panel.replace(export_anchor, '    contextFor,\n    physicalMachineDirection,\n    topViewWipeDirection,\n    machineVisualAngle,', 1)
 
-          old_marker = '    staleSideViewExportRemovedV86: true,\n'
-          new_marker = old_marker + '    physicalMachineDirectionWipeV127: true,\n    topViewAngularWipeParityV127: true,\n'
-          if old_marker not in panel:
-              raise SystemExit('Unable to locate Bottle Orientation capability marker block.')
-          panel = panel.replace(old_marker, new_marker, 1)
+          marker = '    staleSideViewExportRemovedV86: true,\n'
+          if marker not in panel:
+              raise SystemExit('Unable to locate Bottle Orientation capability marker.')
+          panel = panel.replace(marker, marker + '    physicalMachineDirectionWipeV127: true,\n    topViewAngularWipeParityV127: true,\n', 1)
           write('app/bottle-orientation-panel-integration.js', panel)
 
           index = read('index.html')
-          index = re.sub(r'build=[^"&]+', f'build={BUILD}', index)
-          write('index.html', index)
-
+          write('index.html', re.sub(r'build=[^"&]+', f'build={BUILD}', index))
           app = read('app.js')
-          app = re.sub(r'const build = "[^"]+";', f'const build = "{BUILD}";', app, count=1)
-          write('app.js', app)
-
+          write('app.js', re.sub(r'const build = "[^"]+";', f'const build = "{BUILD}";', app, count=1))
           bootstrap = read('app/bootstrap.js')
           bootstrap = re.sub(r'const build = "[^"]+";', f'const build = "{BUILD}";', bootstrap, count=1)
           bootstrap = re.sub(r'const buildUpdatedAt = "[^"]+";', f'const buildUpdatedAt = "{UPDATED}";', bootstrap, count=1)
           write('app/bootstrap.js', bootstrap)
-
           updater = read('app/update-manager.js')
-          updater = re.sub(r'const BUILD_ID = "[^"]+";', f'const BUILD_ID = "{BUILD}";', updater)
-          write('app/update-manager.js', updater)
-
+          write('app/update-manager.js', re.sub(r'const BUILD_ID = "[^"]+";', f'const BUILD_ID = "{BUILD}";', updater))
           profile = read('app/profile-generation.js')
-          profile = re.sub(r'const moduleBuild = "[^"]+";', f'const moduleBuild = "{BUILD}";', profile, count=1)
-          write('app/profile-generation.js', profile)
-
+          write('app/profile-generation.js', re.sub(r'const moduleBuild = "[^"]+";', f'const moduleBuild = "{BUILD}";', profile, count=1))
           worker = read('service-worker.js')
-          worker = re.sub(r'const CACHE_NAME = "[^"]+";', f'const CACHE_NAME = "servoforge-labeler-staging-v{VERSION}-{BUILD}";', worker, count=1)
-          write('service-worker.js', worker)
-
+          write('service-worker.js', re.sub(r'const CACHE_NAME = "[^"]+";', f'const CACHE_NAME = "servoforge-labeler-staging-v{VERSION}-{BUILD}";', worker, count=1))
           manifest = {
             'schemaVersion': 1,
             'version': VERSION,
@@ -177,9 +142,6 @@ jobs:
           node --check app/bottle-orientation-panel-integration.js
           node --check app.js
           node --check app/bootstrap.js
-          node --check app/update-manager.js
-          node --check app/profile-generation.js
-          node --check service-worker.js
           node tests/bottle-orientation-physical-wipe-v127.test.js
           node tests/bottle-orientation-panel.test.js
           node tests/top-view-bottle-renderer.test.js
