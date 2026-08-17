@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "apl-neck-post-wipe-modulo-v143-20260817-1246",
+  "buildId": "apl-neck-post-wipe-modulo-v144-20260817-1252",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v143 preserves the long center-tack neck edge lock and modulo-equivalent post-wipe orientation while making the application bootstrap the sole authority for the visible staging build banner. Feature modules such as Autocol can no longer overwrite the global build marker."
+  "notes": "v144 applies final-stage neck post-wipe modulo continuity after the orientation planners, keeps the long center-tack wipe edge lock, and makes the bootstrap build/timestamp authoritative in the staging banner."
 }
