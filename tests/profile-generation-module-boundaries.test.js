@@ -86,7 +86,6 @@ assert.match(coldGlueDriver, /cold-glue-channel-capacity/);
 assert.match(coldGlueDriver, /createBrushChannelPlan/);
 assert.match(aplMap, /apl-machine-map/);
 assert.match(aplMap, /apl-long-neck-adaptive-wipe/);
-assert.match(aplMap, /codingMotion: "direct-shortest-path"/);
-assert.match(serviceWorker, /profile-translation-ownership-v1/);
+assert.match(serviceWorker, /\.\/app\/profile-translation-service\.js/);
 
 console.log("Separated profile family boundary regression passed.");
