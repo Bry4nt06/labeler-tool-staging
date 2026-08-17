@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "cold-glue-brush-channel-authority-v132-20260816-2250";
+  const build = "cold-glue-map-object-authority-v133-20260816-2320";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -157,7 +157,7 @@
     progress?.set(76, "Aligning printed code-box artwork…");
     await loadScript("app/printed-codebox-left-edge-v121.js", version);
 
-    progress?.set(76.5, "Using canonical Cold Glue center-tack brush-channel planner…");
+    progress?.set(76.5, "Using canonical Cold Glue map and brush planners…");
 
     if (typeof initializeLabelerApp !== "function") {
       throw new Error("initializeLabelerApp is not loaded.");
