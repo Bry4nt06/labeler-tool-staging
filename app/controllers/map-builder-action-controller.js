@@ -21,6 +21,14 @@
     return call("updateBuilderTypeControls");
   }
 
+  function setMachineSlot(kind, slotNumber, enabled) {
+    const slots = global.LabelerMapBuilderSlotService;
+    if (typeof slots?.setEnabled === "function") {
+      return slots.setEnabled(kind, slotNumber, enabled);
+    }
+    return call("setMachineSlotEnabled", kind, slotNumber, enabled);
+  }
+
   function undo() {
     return call("restoreBuilderHistory", "undo");
   }
@@ -70,6 +78,7 @@
     call,
     saveDefinition,
     updateObjectType,
+    setMachineSlot,
     undo,
     redo,
     guidedSetup,
@@ -81,6 +90,7 @@
     deleteActiveMap,
     addObject,
     resetMap,
-    dynamicWorkspaceActionResolutionV134: true
+    dynamicWorkspaceActionResolutionV134: true,
+    machineSlotAuthorityV135: true
   });
 })(window);
