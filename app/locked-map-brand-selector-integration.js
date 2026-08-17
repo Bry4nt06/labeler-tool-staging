@@ -1,10 +1,15 @@
 "use strict";
 
-(function installMachineMapSelectorIntegration() {
+(function installMachineMapSelectorIntegration(global) {
+  if (global.LabelerMachineMapSelectorIntegration?.installed) return;
+
   const RETRY_MS = 50;
   const PREFS_KEY = "servoforge-developer-preferences-v1";
   const RETIRED_MAP_ID = "map-workbook-3-label-apl-reference";
   const RETIRED_ACTIVATION_KEY = "servoforgeWorkbookReferenceMapV1Activated";
+  const VIEWER_ID = "machineMapViewer";
+  const SELECT_ID = "machineMapViewerSelect";
+  const LEGACY_VIEWER_ID = "lockedMapViewer";
   let installed = false;
   let refreshPending = false;
   let observer = null;
@@ -101,17 +106,36 @@
     option.dataset.mapId = id;
     option.dataset.locked = String(lockedIds.has(id));
     option.textContent = `${lockedIds.has(id) ? "🔒 " : ""}${String(map?.name || "Machine Map")}`;
-    option.selected = id === String(state.activeMapId || "");
     return option;
   }
 
-  function updateViewerCopy(viewer, map) {
-    const label = viewer?.querySelector("label");
-    if (label) {
-      const text = [...label.childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
-      if (text && text.textContent !== "Machine Map ") text.textContent = "Machine Map ";
-    }
+  function retireLegacyViewer() {
+    const legacy = document.querySelector(`#${LEGACY_VIEWER_ID}`);
+    if (!legacy) return;
+    legacy.dataset.machineMapSelectorRetired = "true";
+    legacy.setAttribute("aria-hidden", "true");
+  }
 
+  function ensureViewer() {
+    const mapHead = document.querySelector(".map-head");
+    if (!mapHead) return null;
+    retireLegacyViewer();
+
+    let viewer = mapHead.querySelector(`#${VIEWER_ID}`);
+    if (viewer) return viewer;
+
+    viewer = document.createElement("div");
+    viewer.id = VIEWER_ID;
+    viewer.className = "locked-map-viewer machine-map-viewer";
+    viewer.dataset.machineMapSelectorOwner = "v150";
+    viewer.innerHTML = `
+      <label>Machine Map <select id="${SELECT_ID}" aria-label="Machine Map"></select></label>
+      <span class="locked-map-badge" data-state="editable">Map Editable</span>`;
+    mapHead.appendChild(viewer);
+    return viewer;
+  }
+
+  function updateViewerCopy(viewer, map) {
     const badge = viewer?.querySelector(".locked-map-badge");
     if (!badge) return;
     const locked = mapIsLocked(map);
@@ -120,8 +144,10 @@
   }
 
   function renderMapOptions() {
-    const viewer = document.querySelector("#lockedMapViewer");
-    const select = viewer?.querySelector("#lockedMapViewerSelect");
+    refreshPending = false;
+    retireLegacyViewer();
+    const viewer = ensureViewer();
+    const select = viewer?.querySelector(`#${SELECT_ID}`);
     if (!viewer || !select) return;
 
     const library = maps();
@@ -142,41 +168,71 @@
       select.replaceChildren(fragment);
     }
 
-    const selectedId = library.some((map) => String(map?.id || "") === String(state.activeMapId || ""))
-      ? String(state.activeMapId || "")
+    const activeId = String(state.activeMapId || "");
+    const selectedId = library.some((map) => String(map?.id || "") === activeId)
+      ? activeId
       : String(library[0]?.id || "");
     select.value = selectedId;
     updateViewerCopy(viewer, library.find((map) => String(map?.id || "") === selectedId));
   }
 
   function applySelectedMap(mapId) {
-    const map = maps().find((entry) => String(entry?.id || "") === String(mapId || ""));
-    if (!map || String(map.id) === String(state.activeMapId || "")) {
+    const requestedId = String(mapId || "");
+    const map = maps().find((entry) => String(entry?.id || "") === requestedId);
+    if (!map) {
+      console.warn("Machine map selection ignored because the requested map is no longer in the library.", requestedId);
       renderMapOptions();
-      return;
+      return false;
+    }
+    if (String(map.id) === String(state.activeMapId || "")) {
+      renderMapOptions();
+      return true;
     }
 
-    if (typeof loadMachineMapIntoRuntime === "function") loadMachineMapIntoRuntime(map, true);
+    if (typeof clearServoSimulationForSelectedMap === "function") clearServoSimulationForSelectedMap();
+    else if (state.simulation) state.simulation.useCustom = false;
+
+    if (typeof loadMachineMapIntoRuntime === "function") loadMachineMapIntoRuntime(map, false);
     else state.activeMapId = String(map.id);
 
-    if (state.simulation) state.simulation.useCustom = false;
-    if (typeof clearServoSimulationForSelectedMap === "function") clearServoSimulationForSelectedMap();
     if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile();
     if (typeof render === "function") render();
     if (typeof saveCurrentSettings === "function") saveCurrentSettings();
-    scheduleRefresh();
+    renderMapOptions();
+    return String(state.activeMapId || "") === String(map.id);
   }
 
   function bindSelection() {
-    if (document.documentElement.dataset.machineMapSelectorBound === "true") return;
-    document.documentElement.dataset.machineMapSelectorBound = "true";
+    if (document.documentElement.dataset.machineMapSelectorBoundV150 === "true") return;
+    document.documentElement.dataset.machineMapSelectorBoundV150 = "true";
+
+    document.addEventListener("pointerdown", (event) => {
+      if (!event.target.closest?.(`#${SELECT_ID}`)) return;
+      renderMapOptions();
+    }, true);
+
+    document.addEventListener("focusin", (event) => {
+      if (!event.target.closest?.(`#${SELECT_ID}`)) return;
+      renderMapOptions();
+    }, true);
+
     document.addEventListener("change", (event) => {
-      const select = event.target.closest?.("#lockedMapViewerSelect");
+      const select = event.target.closest?.(`#${SELECT_ID}`);
       if (!select) return;
+      const requestedId = String(select.value || select.selectedOptions?.[0]?.dataset?.mapId || "");
       event.preventDefault();
       event.stopImmediatePropagation();
-      applySelectedMap(select.value);
+      applySelectedMap(requestedId);
     }, true);
+
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest?.("#workspaceToggleMapLock")) return;
+      window.setTimeout(scheduleRefresh, 0);
+    }, true);
+
+    window.addEventListener?.("storage", (event) => {
+      if (event.key === PREFS_KEY) scheduleRefresh();
+    });
   }
 
   function installStyles() {
@@ -185,8 +241,9 @@
     const style = document.createElement("style");
     style.id = "machineMapSelectorStyles";
     style.textContent = `
-      #lockedMapViewerSelect option{font-weight:500;color:var(--text)}
-      .locked-map-badge[data-state="editable"]{border-color:var(--green);color:var(--green)}
+      #${LEGACY_VIEWER_ID}[data-machine-map-selector-retired="true"]{display:none!important}
+      #${SELECT_ID} option{font-weight:500;color:var(--text)}
+      .machine-map-viewer .locked-map-badge[data-state="editable"]{border-color:var(--green);color:var(--green)}
       #specs:not(.read-only-surface) input:not(:disabled),
       #specs:not(.read-only-surface) select:not(:disabled),
       #buildInputs:not(.read-only-surface) input:not(:disabled),
@@ -210,12 +267,12 @@
 
   function installObserver() {
     if (observer) return;
+    const mapHead = document.querySelector(".map-head");
+    if (!mapHead) return;
     observer = new MutationObserver(scheduleRefresh);
-    observer.observe(document.documentElement, {
-      subtree: true,
+    observer.observe(mapHead, {
       childList: true,
-      attributes: true,
-      attributeFilter: ["disabled", "class", "hidden"]
+      subtree: false
     });
   }
 
@@ -225,8 +282,9 @@
 
     installed = true;
     const changed = purgeRetiredWorkbookFeature();
-    bindSelection();
     installStyles();
+    ensureViewer();
+    bindSelection();
     installObserver();
     unlockEditableSurfaces();
     renderMapOptions();
@@ -236,10 +294,20 @@
     return true;
   }
 
+  global.LabelerMachineMapSelectorIntegration = Object.freeze({
+    installed: true,
+    VIEWER_ID,
+    SELECT_ID,
+    renderMapOptions,
+    applySelectedMap,
+    scheduleRefresh,
+    selectorOwnershipV150: true
+  });
+
   function wait() {
     if (!install()) window.setTimeout(wait, RETRY_MS);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wait, { once: true });
   else wait();
-})();
+})(typeof window !== "undefined" ? window : globalThis);
