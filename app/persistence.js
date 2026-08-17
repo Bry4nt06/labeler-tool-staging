@@ -275,6 +275,7 @@ function compareApplicationVersions(left, right) {
 
 let updateServiceWorkerRegistration = null;
 let pendingServiceWorker = null;
+let reloadRequestedForServiceWorker = false;
 let reloadingForServiceWorker = false;
 
 function showPendingToolUpdate(worker) {
@@ -295,7 +296,7 @@ async function registerToolUpdateService() {
       });
     });
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (reloadingForServiceWorker) return;
+      if (!reloadRequestedForServiceWorker || reloadingForServiceWorker) return;
       reloadingForServiceWorker = true;
       window.location.reload();
     });
@@ -313,6 +314,7 @@ async function checkForToolUpdates() {
   if (pendingServiceWorker) {
     if (button) button.disabled = true;
     if (status) status.textContent = "Applying update…";
+    reloadRequestedForServiceWorker = true;
     pendingServiceWorker.postMessage({ type: "SKIP_WAITING" });
     return;
   }
