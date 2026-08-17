@@ -6,12 +6,51 @@ function normalizeColdGlueMap(items) {
     .map((item) => ({ ...item, kind: item.kind === "wipe" ? "brush" : item.kind }));
 }
 
+function activeColdGlueMachineMap() {
+  const map = typeof activeMachineMap === "function"
+    ? activeMachineMap()
+    : state.mapLibrary?.find((entry) => entry.id === state.activeMapId) || null;
+  if (!map) return null;
+  const mode = typeof inferredMachineMapApplicationMode === "function"
+    ? inferredMachineMapApplicationMode(map)
+    : map.applicationMode;
+  return mode === "cold-glue" ? map : null;
+}
+
+function normalizeCanonicalColdGlueObjects(items, stationCount = 6) {
+  return normalizeColdGlueMap(items).map((item) => {
+    const source = { ...item, application: "cold-glue" };
+    return typeof normalizeBuilderObject === "function"
+      ? normalizeBuilderObject(source, "cold-glue", stationCount)
+      : source;
+  });
+}
+
 function coldGlueMapObjects() {
-  state.coldGlueMap = normalizeColdGlueMap(state.coldGlueMap);
+  // The saved machine map is the Cold Glue mechanical source of truth. The
+  // state.coldGlueMap array remains only as a compatibility mirror for older
+  // integrations and persistence payloads. Rendering, editing, and profile
+  // generation must never depend on the mirror being current.
+  const machineMap = activeColdGlueMachineMap();
+  if (machineMap) {
+    const normalized = normalizeCanonicalColdGlueObjects(machineMap.objects, machineMap.stationCount || 6);
+    machineMap.objects = normalized;
+    state.coldGlueMap = normalized.map((item) => ({ ...item }));
+    return machineMap.objects;
+  }
+
+  const legacy = normalizeCanonicalColdGlueObjects(state.coldGlueMap, 6);
+  state.coldGlueMap = legacy;
   return state.coldGlueMap;
 }
 
 function resetColdGlueMap() {
+  const machineMap = activeColdGlueMachineMap();
+  if (machineMap) {
+    machineMap.objects = [];
+    machineMap.restoreDefaultObjects = false;
+    machineMap.localStructuralMapOverride = true;
+  }
   state.coldGlueMap = [];
 }
 
@@ -50,3 +89,14 @@ function mapPointAngle(pattern, fallback = 0) {
 function finishAngle(value) {
   return Number.isFinite(value) ? Math.round(value * 2) / 2 : null;
 }
+
+window.LabelerColdGlueMapService = Object.freeze({
+  normalizeColdGlueMap,
+  activeColdGlueMachineMap,
+  normalizeCanonicalColdGlueObjects,
+  coldGlueMapObjects,
+  resetColdGlueMap,
+  coldGlueMapRows,
+  coldGlueMapValue,
+  activeMapAuthorityV133: true
+});
