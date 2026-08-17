@@ -3,11 +3,13 @@
 (function installMapBuilderActionController(global) {
   if (global.LabelerMapBuilderActionController?.installed) return;
 
-  const actions = global.LabelerWorkspaceActionService;
-
   function call(name, ...args) {
     const domainAction = global.LabelerMapBuilderDomainActions?.[name];
     if (typeof domainAction === "function") return domainAction(...args);
+    // Map Builder event ownership may install before the general workspace
+    // action service. Resolve that service at call time so early-bound event
+    // handlers become fully functional once bootstrap finishes.
+    const actions = global.LabelerWorkspaceActionService;
     return actions?.call(name, ...args);
   }
 
@@ -78,6 +80,7 @@
     addMachineType,
     deleteActiveMap,
     addObject,
-    resetMap
+    resetMap,
+    dynamicWorkspaceActionResolutionV134: true
   });
 })(window);
