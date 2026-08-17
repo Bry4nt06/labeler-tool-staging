@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "apl-neck-topmodul-reference-v148-20260817-1345";
-  const buildUpdatedAt = "Aug 17, 2026 1:45 PM ET";
+  const build = "empty-default-specs-v149-20260817-1530";
+  const buildUpdatedAt = "Aug 17, 2026 3:30 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
