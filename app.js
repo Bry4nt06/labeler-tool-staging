@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "cold-glue-map-object-authority-v133-20260816-2320";
+  const build = "map-builder-add-authority-v134-20260816-2340";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
