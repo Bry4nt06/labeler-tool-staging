@@ -17,6 +17,23 @@
     return typeof defaultAplStationAngles === "function" ? defaultAplStationAngles() : {};
   }
 
+  function standardObjectDepths() {
+    const defaults = global.LabelerDefaultObjectDepths || {};
+    return {
+      spender: 12,
+      coding: 14,
+      sensor: 21,
+      gripper: 12,
+      opRoller: 14,
+      nonOpRoller: -18,
+      wipeInner: -4,
+      wipeOuter: 16,
+      brushInner: -4,
+      brushOuter: 16,
+      ...defaults
+    };
+  }
+
   const adapter = {
     uniqueMapName(baseName) {
       return driver.uniqueMapName(baseName, state.mapLibrary || []);
@@ -102,7 +119,10 @@
           servoGearRatio: state?.servoGearRatio,
           zeroAngle: state?.zeroAngle,
           maxMoveRatio: state?.maxMoveRatio,
-          depths: state?.depths
+          // A brand-new map always begins from the machine-standard object
+          // depths. Once the map exists, its saved map.depths remain editable
+          // and are restored normally when that same map is loaded again.
+          depths: standardObjectDepths()
         },
         defaultAplObjects: () => typeof defaultAplMapObjects === "function" ? defaultAplMapObjects() : [],
         defaultAplAggregateAngles: aplAggregateDefaults,
@@ -120,6 +140,7 @@
   global.LabelerMapSchemaAdapter = Object.freeze({
     driver: "map.schema",
     functions: Object.freeze(Object.keys(adapter)),
-    schemaVersion: driver.MACHINE_MAP_SCHEMA_VERSION
+    schemaVersion: driver.MACHINE_MAP_SCHEMA_VERSION,
+    standardObjectDepths
   });
 })(typeof window !== "undefined" ? window : globalThis);
