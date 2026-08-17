@@ -2,7 +2,7 @@
   "use strict";
 
   const RUNTIME_VERSION = "servoforge.3d-runtime.v1";
-  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer.js?v=0.9.10-3d-v01-visual";
+  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer.js?v=0.9.10-3d-v02-physical";
 
   function number(value, fallback = 0) {
     const parsed = Number(value);
@@ -23,6 +23,13 @@
     return global.Labeler3DSceneAdapter;
   }
 
+  function geometryAdapter() {
+    if (!global.Labeler3DPhysicalGeometryAdapter) {
+      throw new Error("ServoForge 3D runtime requires Labeler3DPhysicalGeometryAdapter.");
+    }
+    return global.Labeler3DPhysicalGeometryAdapter;
+  }
+
   function appState() {
     try {
       if (typeof state !== "undefined" && state && typeof state === "object") return state;
@@ -38,7 +45,7 @@
   }
 
   function snapshot(options = {}) {
-    const current = appState();
+    const current = appState() || {};
     const rows = Array.isArray(options.rows) ? options.rows : generatedProgram();
     const tableAngle = number(options.tableAngle, number(current?.previewAngle, 0));
     const frame = frameDriver().snapshot(rows, tableAngle, {
@@ -46,16 +53,24 @@
       plan: options.plan || null,
       preferredHmi: options.preferredHmi
     });
+    const geometry = geometryAdapter().snapshot(current, {
+      worldUnitsPerMm: options.scene?.worldUnitsPerMm
+    });
+    const requestedScene = options.scene || {};
     const sceneOptions = {
       carouselDirection: current?.direction || "ccw",
       zeroAngleDegrees: number(current?.zeroAngle, 0),
-      ...(options.scene || {})
+      ...requestedScene,
+      carouselRadius: Number.isFinite(Number(requestedScene.carouselRadius))
+        ? Number(requestedScene.carouselRadius)
+        : geometry.machine.pitchRadiusWorld
     };
     const scene = sceneAdapter().toSceneState(frame, sceneOptions);
     return Object.freeze({
       runtimeVersion: RUNTIME_VERSION,
       readOnly: true,
       frame,
+      geometry,
       scene
     });
   }
@@ -63,9 +78,15 @@
   function status() {
     return Object.freeze({
       runtimeVersion: RUNTIME_VERSION,
-      ready: Boolean(global.Labeler3DSimulationFrameDriver && global.Labeler3DSceneAdapter && global.LabelerServoReplayDriver),
+      ready: Boolean(
+        global.Labeler3DSimulationFrameDriver
+        && global.Labeler3DSceneAdapter
+        && global.Labeler3DPhysicalGeometryAdapter
+        && global.LabelerServoReplayDriver
+      ),
       readOnly: true,
       source: "generated-servo-program",
+      geometry: "active-bottle-and-machine-specs",
       viewport: Boolean(global.Labeler3DViewport)
     });
   }
@@ -77,7 +98,7 @@
     const script = documentRef.createElement("script");
     script.src = `./${VIEWPORT_SCRIPT}`;
     script.async = true;
-    script.dataset.servoforge3dViewport = "v0.1";
+    script.dataset.servoforge3dViewport = "v0.2";
     script.addEventListener("error", () => {
       console.warn("ServoForge 3D viewport presenter could not be loaded. Core 3D frame runtime remains available.");
     }, { once: true });
