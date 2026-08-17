@@ -96,6 +96,25 @@ assert.equal(map.machineSettings.direction, "ccw", "runtime-to-map sync must pre
 assert.equal(sandbox.activeMachineMap(), map);
 assert.equal(persistenceCount, 1);
 
+// Regression: deleting the final Cold Glue object from Map Builder must also
+// clear the runtime array used by the Mechanical Map renderer. Previously the
+// sync only replaced state.coldGlueMap when at least one object remained,
+// leaving the deleted object visible as a ghost until a full map reload.
+const coldGlueMap = {
+  ...JSON.parse(JSON.stringify(map)),
+  id: "cold-glue-map",
+  applicationMode: "cold-glue",
+  objects: [],
+  enabledAggregates: [true, false, false, false, false, false],
+  enabledStations: [true, false, false, false, false, false]
+};
+state.mapLibrary.push(coldGlueMap);
+state.activeMapId = coldGlueMap.id;
+state.applicationMode = "cold-glue";
+state.coldGlueMap = [{ id: "deleted-brush", name: "Deleted Brush", kind: "brush", application: "cold-glue", station: 1, start: 80, end: 90 }];
+sandbox.syncApplicationMapToLegacyState();
+assert.deepEqual(state.coldGlueMap, [], "removing the final Cold Glue object must clear the Mechanical Map runtime mirror immediately");
+
 sandbox.LabelerMapRuntimeService.invalidateRuntimeMap();
 assert.equal(sandbox.LabelerMapRuntimeService.currentMapId(), null);
 
