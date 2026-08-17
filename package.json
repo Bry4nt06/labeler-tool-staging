@@ -1,0 +1,13 @@
+{
+  "name": "servoforge-labeler-tool",
+  "version": "0.9.10-auth.1",
+  "private": true,
+  "description": "ServoForge Labeler Tool with local account authentication for Railway deployments.",
+  "scripts": {
+    "start": "node server.js",
+    "test:auth": "node --test tests/authentication-server.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
