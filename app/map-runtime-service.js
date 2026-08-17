@@ -74,13 +74,15 @@
     machineMap.depths = { ...state.depths };
     machineMap.objects = (machineMap.objects || []).map((item) => normalizeBuilderObject(item, "apl", 6));
     const coldGlueObjects = machineMap.objects.filter((item) => item.application === "cold-glue");
-    if (coldGlueObjects.length) {
-      state.coldGlueMap = coldGlueObjects.map((item) => ({
-        ...item,
-        kind: item.kind,
-        angle: item.kind === "gripper" ? num(item.angle, item.start) : item.angle
-      }));
-    }
+    // The runtime mirror must be replaced even when the final Cold Glue object
+    // is deleted. Leaving the previous array in place makes a removed brush,
+    // roller, gripper, or sensor remain visible on the mechanical map until the
+    // map is reloaded.
+    state.coldGlueMap = coldGlueObjects.map((item) => ({
+      ...item,
+      kind: item.kind,
+      angle: item.kind === "gripper" ? num(item.angle, item.start) : item.angle
+    }));
     const stationSections = inferAplStationSections(machineMap);
     state.aplMapObjects = machineMap.objects
       .filter((item) => item.application !== "cold-glue")
