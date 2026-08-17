@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-brush-channel-authority-v132-20260816-2250",
+  "buildId": "cold-glue-map-object-authority-v133-20260816-2320",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v132 makes the Cold Glue brush-channel planner the single brush-motion authority. Cold Glue remains center-tack only: bottles pre-spin before first brush contact, hold the brush-facing angle for every inside/outside parallel overlap, and only consume remaining center-out wipe rotation after one brush side opens. The turn ratio is calculated from the available one-sided opening length and physical machine direction. The v128/v131 and earlier center-out/left-right brush wrappers are retired."
+  "notes": "v133 makes the active Cold Glue machine map the source of truth for mechanical objects. Brushes, brush channels, rollers, and grippers added or removed in Map Builder now feed rendering and runtime synchronization from the same saved map.objects collection; state.coldGlueMap is compatibility-only. Cold Glue roller records are explicitly normalized as Cold Glue, and the Map Builder module cache is bumped so the corrected runtime loads immediately. The canonical v132 center-tack brush-channel motion planner remains in place."
 }
