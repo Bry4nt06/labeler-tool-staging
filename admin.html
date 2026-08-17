@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>User Administration — ServoForge</title>
+  <link rel="icon" href="assets/servoforge-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="auth.css">
+</head>
+<body class="auth-page">
+  <main class="auth-admin-shell">
+    <header class="auth-admin-header">
+      <div class="auth-brand">
+        <img src="assets/servoforge-mark.svg" alt="">
+        <div class="auth-brand-copy">
+          <strong>ServoForge</strong>
+          <span>User Administration</span>
+        </div>
+      </div>
+      <div class="auth-admin-actions">
+        <a class="auth-link-button" href="/">Back to Labeler Tool</a>
+        <button id="adminSignOut" class="auth-link-button" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <div id="adminMessage" class="auth-message" role="status" aria-live="polite"></div>
+
+    <section class="auth-grid" aria-label="Authentication totals">
+      <div class="auth-stat"><span>Total users</span><strong id="statUsers">—</strong></div>
+      <div class="auth-stat"><span>Active users</span><strong id="statActive">—</strong></div>
+      <div class="auth-stat"><span>Successful sign-ins</span><strong id="statSuccess">—</strong></div>
+      <div class="auth-stat"><span>Failed sign-ins</span><strong id="statFailed">—</strong></div>
+    </section>
+
+    <section class="auth-panel">
+      <div class="auth-panel-header">
+        <div>
+          <h2>Create account</h2>
+          <div class="auth-muted">Only administrators can create ServoForge accounts.</div>
+        </div>
+      </div>
+      <form id="createUserForm" class="auth-create-grid">
+        <div class="auth-field">
+          <label for="newDisplayName">Display name</label>
+          <input id="newDisplayName" type="text" maxlength="100" required>
+        </div>
+        <div class="auth-field">
+          <label for="newUsername">Username</label>
+          <input id="newUsername" type="text" minlength="3" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._-]{2,63}" required>
+        </div>
+        <div class="auth-field">
+          <label for="newPassword">Temporary password</label>
+          <input id="newPassword" type="password" minlength="10" autocomplete="new-password" required>
+        </div>
+        <div class="auth-field">
+          <label for="newRole">Role</label>
+          <select id="newRole">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <button class="auth-button" type="submit">Create account</button>
+      </form>
+    </section>
+
+    <section class="auth-panel">
+      <div class="auth-panel-header">
+        <h2>Users</h2>
+        <p>Disable accounts immediately or reset passwords.</p>
+      </div>
+      <div class="auth-table-wrap">
+        <table class="auth-table">
+          <thead>
+            <tr><th>User</th><th>Role</th><th>Status</th><th>Last sign-in</th><th>Sign-ins</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="auth-panel">
+      <div class="auth-panel-header">
+        <h2>Sign-in history</h2>
+        <p>Latest 100 attempts, including failures.</p>
+      </div>
+      <div class="auth-table-wrap">
+        <table class="auth-table">
+          <thead>
+            <tr><th>Time</th><th>User</th><th>Result</th><th>Reason</th><th>Network</th><th>Browser / device</th></tr>
+          </thead>
+          <tbody id="signInsBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script src="app/admin-auth.js"></script>
+</body>
+</html>
