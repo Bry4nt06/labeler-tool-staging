@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-map-object-authority-v133-20260816-2320",
+  "buildId": "map-builder-add-authority-v134-20260816-2340",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v133 makes the active Cold Glue machine map the source of truth for mechanical objects. Brushes, brush channels, rollers, and grippers added or removed in Map Builder now feed rendering and runtime synchronization from the same saved map.objects collection; state.coldGlueMap is compatibility-only. Cold Glue roller records are explicitly normalized as Cold Glue, and the Map Builder module cache is bumped so the corrected runtime loads immediately. The canonical v132 center-tack brush-channel motion planner remains in place."
+  "notes": "v134 fixes the Map Builder Add to Map action path. Map Builder action and event controllers now load with the builder itself instead of waiting for the later workspace bootstrap, and action-service fallbacks resolve dynamically at call time. This prevents the Add to Map button from appearing active while having no live click owner in stale or mixed staging runtimes. The v133 Cold Glue active-map object authority and canonical v132 center-tack brush-channel planner remain in place."
 }
