@@ -56,6 +56,15 @@
     return activeMachineMap()?.objects || [];
   }
 
+  function normalizedRuntimeObjects(machineMap) {
+    const mode = inferredMachineMapApplicationMode(machineMap) === "cold-glue" ? "cold-glue" : "apl";
+    return (machineMap?.objects || []).map((item) => normalizeBuilderObject(
+      mode === "cold-glue" ? { ...item, application: "cold-glue" } : item,
+      mode,
+      6
+    ));
+  }
+
   function syncApplicationMapToLegacyState() {
     const machineMap = state.mapLibrary?.find((map) => map.id === state.activeMapId);
     if (!machineMap) return;
@@ -72,12 +81,13 @@
       maxMoveRatio: state.maxMoveRatio
     };
     machineMap.depths = { ...state.depths };
-    machineMap.objects = (machineMap.objects || []).map((item) => normalizeBuilderObject(item, "apl", 6));
-    const coldGlueObjects = machineMap.objects.filter((item) => item.application === "cold-glue");
-    // The runtime mirror must be replaced even when the final Cold Glue object
-    // is deleted. Leaving the previous array in place makes a removed brush,
-    // roller, gripper, or sensor remain visible on the mechanical map until the
-    // map is reloaded.
+    machineMap.objects = normalizedRuntimeObjects(machineMap);
+    const coldGlueObjects = machineMap.applicationMode === "cold-glue"
+      ? machineMap.objects
+      : machineMap.objects.filter((item) => item.application === "cold-glue");
+    // Compatibility mirror only. The active machine map remains the canonical
+    // Cold Glue object store so add/remove/edit operations are rendered from the
+    // same collection that Map Builder mutates.
     state.coldGlueMap = coldGlueObjects.map((item) => ({
       ...item,
       kind: item.kind,
@@ -163,8 +173,11 @@
     state.maxMoveRatio = Math.max(0.1, num(settings.maxMoveRatio, state.maxMoveRatio));
     state.depths = completeObjectDepths(map.depths);
     map.depths = { ...state.depths };
-    const normalizedObjects = (map.objects || []).map((item) => normalizeBuilderObject(item, "apl", 6));
-    const coldGlueObjects = normalizedObjects.filter((item) => item.application === "cold-glue");
+    const normalizedObjects = normalizedRuntimeObjects(map);
+    map.objects = normalizedObjects;
+    const coldGlueObjects = state.applicationMode === "cold-glue"
+      ? normalizedObjects
+      : normalizedObjects.filter((item) => item.application === "cold-glue");
     if (state.applicationMode === "cold-glue") {
       state.coldGlueMap = coldGlueObjects.map((item) => ({ ...item, kind: item.kind }));
       state.coldGlueAggregateSettings = {
@@ -208,6 +221,7 @@
   global.activeMachineMap = activeMachineMap;
   global.editableMachineMap = editableMachineMap;
   global.activeBuilderMap = activeBuilderMap;
+  global.normalizedRuntimeObjects = normalizedRuntimeObjects;
   global.syncApplicationMapToLegacyState = syncApplicationMapToLegacyState;
   global.loadMachineMapIntoRuntime = loadMachineMapIntoRuntime;
   global.LabelerMapRuntimeService = Object.freeze({
@@ -217,7 +231,9 @@
     activeMachineMap,
     editableMachineMap,
     activeBuilderMap,
+    normalizedRuntimeObjects,
     syncApplicationMapToLegacyState,
-    loadMachineMapIntoRuntime
+    loadMachineMapIntoRuntime,
+    coldGlueActiveMapAuthorityV133: true
   });
 })(typeof window !== "undefined" ? window : globalThis);
