@@ -9,10 +9,24 @@ const root = path.join(__dirname, "..");
 const driverSource = fs.readFileSync(path.join(root, "drivers/map/map-schema-driver.js"), "utf8");
 const adapterSource = fs.readFileSync(path.join(root, "app/map-schema-adapter-integration.js"), "utf8");
 
+const standardDepths = {
+  spender: 12,
+  coding: 14,
+  sensor: 21,
+  gripper: 12,
+  opRoller: 14,
+  nonOpRoller: -18,
+  wipeInner: -4,
+  wipeOuter: 16,
+  brushInner: -4,
+  brushOuter: 16
+};
+
 const sandbox = {
   console,
   Date,
   Math,
+  LabelerDefaultObjectDepths: Object.freeze({ ...standardDepths }),
   state: {
     mapLibrary: [{ name: "Map" }],
     headCount: 45,
@@ -22,7 +36,19 @@ const sandbox = {
     servoGearRatio: 1,
     zeroAngle: 0,
     maxMoveRatio: 21,
-    depths: { spender: 20 }
+    // Simulate a user changing the active map before creating another map.
+    depths: {
+      spender: 99,
+      coding: 98,
+      sensor: 97,
+      gripper: 96,
+      opRoller: 95,
+      nonOpRoller: -95,
+      wipeInner: -94,
+      wipeOuter: 94,
+      brushInner: -93,
+      brushOuter: 93
+    }
   },
   defaultAplAggregateAngles: () => ({ "1": 10, "2": 20, "3": 30, "4": 40, "5": 50, "6": 60 }),
   defaultAplStationAngles: () => ({ "1": 10, "2": 20, "3": 30, "4": 40, "5": 50, "6": 60 }),
@@ -48,7 +74,19 @@ const map = sandbox.createMachineMap({ id: "map-1", applicationMode: "apl", obje
 assert.equal(map.schemaVersion, 11);
 assert.equal(map.zone, "Zone");
 assert.equal(map.site, "Site");
+assert.deepEqual(JSON.parse(JSON.stringify(map.depths)), standardDepths,
+  "a new map must start from standard object depths, not the active map's user-edited depths");
+
+const savedMap = sandbox.createMachineMap({
+  id: "saved-map",
+  applicationMode: "apl",
+  objects: [],
+  depths: { ...standardDepths, sensor: 33, brushOuter: 27 }
+});
+assert.equal(savedMap.depths.sensor, 33, "explicit depths stored on an existing/imported map remain loadable");
+assert.equal(savedMap.depths.brushOuter, 27, "user depth overrides remain map-specific");
 assert.equal(sandbox.LabelerMapSchemaAdapter.driver, "map.schema");
 assert.ok(sandbox.LabelerMapSchemaAdapter.functions.includes("inferAplStationSections"));
+assert.deepEqual(JSON.parse(JSON.stringify(sandbox.LabelerMapSchemaAdapter.standardObjectDepths())), standardDepths);
 
 console.log("Map schema adapter regressions passed.");
