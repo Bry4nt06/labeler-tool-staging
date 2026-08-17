@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-physical-geometry-v02-20260817-1937";
-  const buildUpdatedAt = "Aug 17, 2026 7:37 PM ET";
+  const build = "3d-update-loop-guard-v150-20260817-1955";
+  const buildUpdatedAt = "Aug 17, 2026 7:55 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -12,6 +12,7 @@
 
   const modules = Object.freeze([
     "app/staging-build-banner-authority-v2-integration.js",
+    "app/update-loop-guard-integration.js",
     "app/startup-dom-binding-guard-integration.js",
     "app/export-service.js",
     "app/controllers/workspace-action-service.js",
