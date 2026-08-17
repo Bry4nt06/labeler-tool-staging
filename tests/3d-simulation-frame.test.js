@@ -13,6 +13,7 @@ const bootstrap = read("app/bootstrap.js");
   "drivers/simulation/three-d-simulation-frame-driver.js",
   "app/3d/scene-adapter.js",
   "app/3d/physical-geometry-adapter.js",
+  "app/3d/carousel-layout-adapter.js",
   "app/3d/scene-runtime.js"
 ].forEach((modulePath) => {
   assert.ok(bootstrap.includes(modulePath), `${modulePath} must be loaded by the ServoForge bootstrap.`);
@@ -40,6 +41,7 @@ vm.createContext(sandbox);
   "drivers/simulation/three-d-simulation-frame-driver.js",
   "app/3d/scene-adapter.js",
   "app/3d/physical-geometry-adapter.js",
+  "app/3d/carousel-layout-adapter.js",
   "app/3d/scene-runtime.js"
 ].forEach((relative) => vm.runInContext(read(relative), sandbox, { filename: relative }));
 
@@ -54,12 +56,15 @@ const originalRows = JSON.stringify(rows);
 const driver = sandbox.Labeler3DSimulationFrameDriver;
 const adapter = sandbox.Labeler3DSceneAdapter;
 const geometryAdapter = sandbox.Labeler3DPhysicalGeometryAdapter;
+const carouselAdapter = sandbox.Labeler3DCarouselLayoutAdapter;
 
 assert.ok(driver, "3D simulation frame driver must register globally.");
 assert.ok(adapter, "3D scene adapter must register globally.");
 assert.ok(geometryAdapter, "3D physical geometry adapter must register globally.");
+assert.ok(carouselAdapter, "3D carousel layout adapter must register globally.");
 assert.strictEqual(driver.SCHEMA_VERSION, "servoforge.3d-frame.v1");
 assert.strictEqual(geometryAdapter.SCHEMA_VERSION, "servoforge.3d-geometry.v1");
+assert.strictEqual(carouselAdapter.SCHEMA_VERSION, "servoforge.3d-carousel.v1");
 
 let frame = driver.snapshot(rows, 95, { commandDriver: sandbox.LabelerServoCommandDriver });
 assert.strictEqual(frame.flags.hold, true, "CMD 3 must remain a physical hold in the 3D contract.");
@@ -116,6 +121,31 @@ assert.ok(Array.isArray(geometry.bottle.profilePointsMm) && geometry.bottle.prof
 assert.ok(Math.abs(Math.max(...geometry.bottle.profilePointsMm.map((point) => point.radiusMm)) * 2 - 60.7) < 0.000001, "The rendered bottle profile maximum diameter must remain the active ServoForge effective diameter.");
 assert.ok(Math.abs(geometry.bottle.profilePointsMm.at(-1).yMm - 241.5) < 0.000001, "Reference bottle profile must terminate at the supplied 241.5 mm height.");
 
+const carouselScene = adapter.toSceneState(sceneFrame, {
+  carouselRadius: geometry.machine.pitchRadiusWorld,
+  carouselDirection: "ccw",
+  zeroAngleDegrees: 0,
+  tableY: 0.2
+});
+const carouselLayout = carouselAdapter.snapshot(carouselScene, geometry, {
+  carouselDirection: "ccw",
+  zeroAngleDegrees: 0,
+  tableY: 0.2
+});
+assert.strictEqual(carouselLayout.headCount, 45, "Full-carousel layout must use the machine head count.");
+assert.strictEqual(carouselLayout.heads.length, 45, "Full-carousel layout must publish every bottle table.");
+assert.strictEqual(carouselLayout.activeHead, 1, "Head 1 must remain the live servo head in v0.3.");
+assert.ok(Math.abs(carouselLayout.pitchDegrees - 8) < 0.000001, "45-head carousel spacing must equal 8 degrees per bottle table.");
+assert.ok(Math.abs(carouselLayout.heads[0].tableAngleDegrees - 120) < 0.000001, "Head 1 must align with the live preview table angle.");
+assert.ok(Math.abs(carouselLayout.heads[1].tableAngleDegrees - 112) < 0.000001, "Head 2 must trail Head 1 by one table pitch.");
+assert.strictEqual(carouselLayout.heads[0].active, true);
+assert.strictEqual(carouselLayout.heads[1].active, false);
+assert.strictEqual(carouselLayout.passiveServoMode, "neutral-no-invented-motion");
+carouselLayout.heads.forEach((head) => {
+  const radialDistance = Math.hypot(head.position.x, head.position.z);
+  assert.ok(Math.abs(radialDistance - geometry.machine.pitchRadiusWorld) < 0.000001, `Head ${head.head} must remain on the physical pitch circle.`);
+});
+
 sandbox.state = {
   program: rows,
   previewAngle: 110,
@@ -133,12 +163,16 @@ const runtimeSnapshot = sandbox.Labeler3DSceneRuntime.snapshot({ commandDriver: 
 assert.strictEqual(runtimeSnapshot.readOnly, true, "3D runtime must remain read-only.");
 assert.ok(Math.abs(runtimeSnapshot.frame.container.servoAngleUnwrapped - 47.8) < 0.000001, "Runtime must source the generated Servo Program and current preview angle.");
 assert.strictEqual(runtimeSnapshot.geometry.schemaVersion, "servoforge.3d-geometry.v1");
+assert.strictEqual(runtimeSnapshot.carousel.schemaVersion, "servoforge.3d-carousel.v1");
+assert.strictEqual(runtimeSnapshot.carousel.headCount, 45, "Runtime must publish the complete 45-head carousel layout.");
+assert.strictEqual(runtimeSnapshot.carousel.heads.length, 45, "Runtime must expose every bottle-table carrier.");
 assert.ok(Math.abs(runtimeSnapshot.geometry.bottle.effectiveDiameterMm - 60.7) < 0.000001, "Runtime must carry active Bottle Specs into the 3D geometry contract.");
 assert.strictEqual(runtimeSnapshot.geometry.bottle.referenceHeightMm, 241.5, "Runtime must carry the longneck reference height into the 3D viewport contract.");
 assert.ok(Math.abs(runtimeSnapshot.scene.carousel.radius - 2.55) < 0.000001, "Scene orbit radius must default to the physical machine pitch radius.");
 assert.strictEqual(JSON.stringify(rows), originalRows, "3D frame generation must not mutate Servo Program rows.");
 assert.ok(Object.isFrozen(runtimeSnapshot.frame), "Published 3D frames must be immutable.");
 assert.ok(Object.isFrozen(runtimeSnapshot.geometry), "Published 3D geometry must be immutable.");
+assert.ok(Object.isFrozen(runtimeSnapshot.carousel), "Published 3D carousel layouts must be immutable.");
 assert.ok(Object.isFrozen(runtimeSnapshot.scene), "Published 3D scene states must be immutable.");
 
-console.log("ServoForge 3D simulation-frame and longneck-reference geometry parity regression passed.");
+console.log("ServoForge 3D simulation-frame, geometry, and full-carousel parity regression passed.");
