@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "map-builder-add-authority-v134-20260816-2340",
+  "buildId": "apl-neck-post-wipe-modulo-v140-20260817-1025",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v134 fixes the Map Builder Add to Map action path. Map Builder action and event controllers now load with the builder itself instead of waiting for the later workspace bootstrap, and action-service fallbacks resolve dynamically at call time. This prevents the Add to Map button from appearing active while having no live click owner in stale or mixed staging runtimes. The v133 Cold Glue active-map object authority and canonical v132 center-tack brush-channel planner remain in place."
+  "notes": "v140 locks long center-tack neck pad wiping to the developed-label edges and adds modulo-equivalent post-wipe orientation so a completed wipe can continue toward an equivalent 360-degree/zero-degree reference without reversing unnecessarily. The staging banner and update manifest now identify this build explicitly for deployment verification."
 }
