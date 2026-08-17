@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "cold-glue-center-tack-brush-runtime-v131-20260816-2235";
+  const build = "cold-glue-brush-channel-authority-v132-20260816-2250";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -157,11 +157,7 @@
     progress?.set(76, "Aligning printed code-box artwork…");
     await loadScript("app/printed-codebox-left-edge-v121.js", version);
 
-    progress?.set(76.5, "Correcting Cold Glue center-tack brush entry…");
-    await loadScript("app/cold-glue-brush-direction-v128.js", version);
-
-    progress?.set(76.7, "Enforcing Cold Glue pre-brush spin and wipe direction…");
-    await loadScript("app/cold-glue-brush-runtime-v131.js", version);
+    progress?.set(76.5, "Using canonical Cold Glue center-tack brush-channel planner…");
 
     if (typeof initializeLabelerApp !== "function") {
       throw new Error("initializeLabelerApp is not loaded.");

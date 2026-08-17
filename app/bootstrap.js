@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "bottle-orientation-wipe-direction-v127-20260816-0935";
-  const buildUpdatedAt = "Aug 16, 2026 9:35 AM ET";
+  const build = "cold-glue-brush-channel-authority-v132-20260816-2250";
+  const buildUpdatedAt = "Aug 16, 2026 10:50 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "bottle-orientation-wipe-direction-v127-20260816-0935",
+  "buildId": "cold-glue-brush-channel-authority-v132-20260816-2250",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v127 corrects Bottle Orientation label wipe-down direction after the physical machine-direction changes. The top-view label arc now resolves live physical CW/CCW on every render and converts the shared linear wipe convention into the bottle-local angular frame: physical CW wipes high-angle to low-angle and physical CCW mirrors it. Bottle/table transforms, Servo Program commands, coder geometry, v125 physical wipe telemetry, and v126 Community Admin delete are retained. Update navigation is now hosting-neutral so the same staging build can remain on its current origin when served from GitHub Pages or Railway."
+  "notes": "v132 makes the Cold Glue brush-channel planner the single brush-motion authority. Cold Glue remains center-tack only: bottles pre-spin before first brush contact, hold the brush-facing angle for every inside/outside parallel overlap, and only consume remaining center-out wipe rotation after one brush side opens. The turn ratio is calculated from the available one-sided opening length and physical machine direction. The v128/v131 and earlier center-out/left-right brush wrappers are retired."
 }

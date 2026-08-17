@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-object-depth-completeness-v130-20260816-2130";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-cold-glue-brush-channel-authority-v132-20260816-2250";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -132,10 +132,8 @@ const CORE_ASSETS = Object.freeze([
   "./app/motion-profile-regeneration-integration.js",
   "./app/apl-continuous-motion-integration.js",
   "./app/cold-glue-label-geometry-fallback-integration.js",
-  "./app/cold-glue-center-out-brush-integration.js",
   "./app/cold-glue-gripper-channel-integration.js",
   "./app/cold-glue-parameter-editor-integration.js",
-  "./app/cold-glue-neck-left-right-integration.js",
   "./app/cold-glue-gripper-sequence-integration-v2.js",
   "./app/map-builder-station-authority-integration.js",
   "./app/map-object-builder-selection-integration.js",

@@ -2,7 +2,7 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
-  const moduleBuild = "bottle-orientation-wipe-direction-v127-20260816-0935";
+  const moduleBuild = "cold-glue-brush-channel-authority-v132-20260816-2250";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",
