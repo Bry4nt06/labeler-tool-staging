@@ -22,19 +22,34 @@
     return global.Labeler3DSceneAdapter;
   }
 
+  function appState() {
+    try {
+      if (typeof state !== "undefined" && state && typeof state === "object") return state;
+    } catch {
+      // The lexical application state may not be available in isolated tests.
+    }
+    return global.state && typeof global.state === "object" ? global.state : null;
+  }
+
   function generatedProgram() {
-    return Array.isArray(global.state?.program) ? global.state.program : [];
+    const current = appState();
+    return Array.isArray(current?.program) ? current.program : [];
   }
 
   function snapshot(options = {}) {
+    const current = appState();
     const rows = Array.isArray(options.rows) ? options.rows : generatedProgram();
-    const tableAngle = number(options.tableAngle, number(global.state?.previewAngle, 0));
+    const tableAngle = number(options.tableAngle, number(current?.previewAngle, 0));
     const frame = frameDriver().snapshot(rows, tableAngle, {
       commandDriver: options.commandDriver || global.LabelerServoCommandDriver,
       plan: options.plan || null,
       preferredHmi: options.preferredHmi
     });
-    const scene = sceneAdapter().toSceneState(frame, options.scene || {});
+    const sceneOptions = {
+      carouselDirection: current?.direction || "cw",
+      ...(options.scene || {})
+    };
+    const scene = sceneAdapter().toSceneState(frame, sceneOptions);
     return Object.freeze({
       runtimeVersion: RUNTIME_VERSION,
       readOnly: true,
