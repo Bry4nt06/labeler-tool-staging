@@ -66,6 +66,20 @@
     const target = event.target;
     if (!(target instanceof Element)) return;
 
+    const machineSlot = String(target.dataset?.machineSlot || "");
+    const slotNumber = Number(target.dataset?.slotNumber);
+    if ((machineSlot === "aggregate" || machineSlot === "station")
+      && Number.isInteger(slotNumber)
+      && slotNumber >= 1
+      && slotNumber <= 6) {
+      runBuilderAction(
+        `${machineSlot === "aggregate" ? "Aggregate" : "Station"} ${slotNumber}`,
+        () => builder.setMachineSlot(machineSlot, slotNumber, Boolean(target.checked))
+      );
+      consume(event);
+      return;
+    }
+
     if (definitionFields.has(target.id)) saveDefinition("change");
     else if (target.id === "builderObjectType") builder.updateObjectType();
     else if (target.id === "mapMachineType") saveDefinition("change");
@@ -103,6 +117,7 @@
     liveDefinitionFields,
     machineSettingFields,
     directMachineSettingsCommitV87: true,
-    machineSettingsCommitOnChangeV87: true
+    machineSettingsCommitOnChangeV87: true,
+    machineSlotAuthorityV135: true
   });
 })(window);
