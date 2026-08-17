@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "cold-glue-map-object-authority-v133-20260816-2320";
-  const buildUpdatedAt = "Aug 16, 2026 11:20 PM ET";
+  const build = "map-builder-add-authority-v134-20260816-2340";
+  const buildUpdatedAt = "Aug 16, 2026 11:38 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
