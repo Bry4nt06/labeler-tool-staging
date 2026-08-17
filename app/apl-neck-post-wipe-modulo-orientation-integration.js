@@ -61,7 +61,7 @@
 
   function equivalentTarget(target, current, preferredSign) {
     const candidates = [];
-    for (let turn = -4; turn <= 4; turn += 1) candidates.push(target + turn * 360);
+    for (let turn = -6; turn <= 6; turn += 1) candidates.push(target + turn * 360);
 
     const directional = preferredSign
       ? candidates.filter((candidate) => {
@@ -78,6 +78,11 @@
     }, pool[0]);
   }
 
+  function isNeckSensorOrientation(row) {
+    const action = String(row?.action || "").toLowerCase();
+    return action.includes("orient") && action.includes("neck") && action.includes("sensor");
+  }
+
   function rewritePostWipeOrientation(rows, eligibleStations) {
     const rewritten = rows.map((row) => ({ ...row }));
     let changed = false;
@@ -86,11 +91,10 @@
       const start = rewritten[index];
       const end = rewritten[index + 1];
       const station = Number(start?.station);
-      const action = String(start?.action || "");
       if (!eligibleStations.has(station)) continue;
       if (Number(start?.cmd) !== 7 || Number(end?.cmd) !== 3) continue;
       if (start?.section !== "neck" || end?.section !== "neck") continue;
-      if (!action.startsWith("Orient Neck Label for Sensor")) continue;
+      if (!isNeckSensorOrientation(start)) continue;
 
       const current = finite(start.plateAngle, NaN);
       const target = finite(end.plateAngle, NaN);
@@ -102,9 +106,11 @@
       const resolved = equivalentTarget(target, current, preferredSign);
       const originalTravel = target - current;
       const resolvedTravel = resolved - current;
-      if (Math.abs(resolved - target) <= EPS || Math.abs(resolvedTravel) <= EPS) continue;
+      const offset = resolved - target;
+      if (Math.abs(offset) <= EPS || Math.abs(resolvedTravel) <= EPS) continue;
       if (Math.sign(resolvedTravel) !== preferredSign) continue;
-      if (Math.abs(resolvedTravel) > Math.abs(originalTravel) + 360 + EPS) continue;
+      if (Math.abs(resolvedTravel) >= Math.abs(originalTravel) - EPS) continue;
+      if (Math.abs(offset % 360) > EPS) continue;
 
       const physicalReference = normalize360(target);
       rewritten[index] = {
@@ -112,17 +118,31 @@
         moduloEquivalentOrientation: true,
         physicalReferenceAngle: physicalReference,
         preferredRotationSign: preferredSign,
-        postWipeContinuousOrientation: true
+        postWipeContinuousOrientation: true,
+        originalOrientationTravel: originalTravel,
+        resolvedOrientationTravel: resolvedTravel
       };
-      rewritten[index + 1] = {
-        ...end,
-        plateAngle: resolved,
-        moduloEquivalentOrientation: true,
-        physicalReferenceAngle: physicalReference,
-        preferredRotationSign: preferredSign,
-        postWipeContinuousOrientation: true
-      };
+
+      // Carry the full-turn alias forward. -360 deg and 0 deg are the same
+      // physical bottle orientation, but keeping the unwrapped offset prevents
+      // a false +360 deg jump on the next HMI row.
+      for (let downstream = index + 1; downstream < rewritten.length; downstream += 1) {
+        const row = rewritten[downstream];
+        if (!Number.isFinite(Number(row?.plateAngle))) continue;
+        rewritten[downstream] = {
+          ...row,
+          plateAngle: finite(row.plateAngle, 0) + offset,
+          moduloEquivalentOrientation: downstream === index + 1 ? true : row.moduloEquivalentOrientation,
+          physicalReferenceAngle: downstream === index + 1 ? physicalReference : row.physicalReferenceAngle,
+          postWipeContinuousOrientation: downstream === index + 1 ? true : row.postWipeContinuousOrientation
+        };
+      }
+
       changed = true;
+      // One full-turn alias shift is enough for this generated profile. Any
+      // later movements retain their original deltas because all downstream
+      // plate references received the same offset.
+      break;
     }
 
     return { rows: rewritten, changed };
@@ -130,46 +150,33 @@
 
   function install() {
     const original = global.generatedAplMapDrivenProfile;
-    const baseDriver = global.LabelerServoCommandDriver;
-    if (typeof original !== "function" || typeof baseDriver?.finalize !== "function") return false;
-    if (original.aplNeckPostWipeModuloOrientationV1) return true;
+    if (typeof original !== "function") return false;
+    if (original.aplNeckPostWipeModuloOrientationV2) return true;
 
     const wrapped = function generatedAplMapDrivenProfileWithModuloOrientation(machineMap, ...args) {
-      if (!activeLongCenterTackNeck()) return original.call(this, machineMap, ...args);
+      const result = original.call(this, machineMap, ...args);
+      if (!activeLongCenterTackNeck() || !Array.isArray(result)) return result;
+
       const eligibleStations = eligibleNeckPadStations(machineMap);
-      if (!eligibleStations.size) return original.call(this, machineMap, ...args);
+      if (!eligibleStations.size) return result;
 
-      const driver = global.LabelerServoCommandDriver;
-      if (typeof driver?.finalize !== "function") return original.call(this, machineMap, ...args);
-      const proxyDriver = {
-        ...driver,
-        finalize(rows, ...finalizeArgs) {
-          const rewritten = rewritePostWipeOrientation(Array.isArray(rows) ? rows : [], eligibleStations);
-          return driver.finalize.call(driver, rewritten.rows, ...finalizeArgs);
-        }
-      };
-
-      global.LabelerServoCommandDriver = proxyDriver;
-      let result;
-      try {
-        result = original.call(this, machineMap, ...args);
-      } finally {
-        global.LabelerServoCommandDriver = driver;
-      }
+      const rewritten = rewritePostWipeOrientation(result, eligibleStations);
+      if (!rewritten.changed) return result;
 
       try {
         if (typeof state !== "undefined" && state.motionPlan) {
+          state.motionPlan.rows = rewritten.rows;
           state.motionPlan.neckPostWipeModuloOrientation = true;
-          state.motionPlan.profileVariant = `${state.motionPlan.profileVariant || "apl"}+neck-post-wipe-modulo-v1`;
+          state.motionPlan.profileVariant = `${state.motionPlan.profileVariant || "apl"}+neck-post-wipe-modulo-v2`;
         }
       } catch (error) {
         console.warn("Unable to annotate neck post-wipe modulo orientation.", error);
       }
 
-      return result;
+      return rewritten.rows;
     };
 
-    wrapped.aplNeckPostWipeModuloOrientationV1 = true;
+    wrapped.aplNeckPostWipeModuloOrientationV2 = true;
     wrapped.previousGenerator = original;
     global.generatedAplMapDrivenProfile = wrapped;
     global.LabelerAplMapProfileGenerator = Object.freeze({
@@ -178,7 +185,7 @@
     });
     global.LabelerAplNeckPostWipeModuloOrientationIntegration = Object.freeze({
       installed: true,
-      version: 1,
+      version: 2,
       refresh: install
     });
     return true;
