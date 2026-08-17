@@ -6,6 +6,11 @@ on:
     paths:
       - "app/locked-map-brand-selector-integration.js"
       - "tests/map-library-selector.test.js"
+      - "tests/update-build-consistency-v134.test.js"
+      - "app/persistence.js"
+      - "app/bootstrap.js"
+      - "service-worker.js"
+      - "update-manifest.json"
       - ".github/workflows/validate-machine-map-selector-v150.yml"
   workflow_dispatch:
 
@@ -25,9 +30,12 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Validate selector ownership
+      - name: Validate selector and update stability
         run: |
           set -euo pipefail
           node --check app/locked-map-brand-selector-integration.js
+          node --check app/persistence.js
+          node --check service-worker.js
           node tests/map-library-selector.test.js
+          node tests/update-build-consistency-v134.test.js
           git diff --check
