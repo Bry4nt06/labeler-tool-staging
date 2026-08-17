@@ -44,6 +44,7 @@
       const admin = document.createElement("a");
       admin.href = "/admin.html";
       admin.textContent = "Users";
+      admin.setAttribute("aria-label", "Open user administration");
       wrapper.append(admin);
     }
 
@@ -63,7 +64,14 @@
       }
     });
     wrapper.append(signOut);
-    topbar.append(wrapper);
+
+    const brandBlock = topbar.firstElementChild;
+    if (brandBlock && brandBlock !== topbar.querySelector(".top-settings-menu")) {
+      brandBlock.classList.add("servoforge-topbar-brand-block");
+      brandBlock.append(wrapper);
+    } else {
+      topbar.prepend(wrapper);
+    }
   }
 
   mount().catch(() => {});
