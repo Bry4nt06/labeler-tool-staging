@@ -2,14 +2,15 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "apl-neck-post-wipe-modulo-v142-20260817-1230";
-  const buildUpdatedAt = "Aug 17, 2026 12:30 PM ET";
+  const build = "apl-neck-post-wipe-modulo-v143-20260817-1246";
+  const buildUpdatedAt = "Aug 17, 2026 12:46 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
   if (banner) banner.textContent = `STAGING ${version} • BUILD ${build} • UPDATED ${buildUpdatedAt} — NOT PRODUCTION`;
 
   const modules = Object.freeze([
+    "app/staging-build-banner-authority-integration.js",
     "app/startup-dom-binding-guard-integration.js",
     "app/export-service.js",
     "app/controllers/workspace-action-service.js",
