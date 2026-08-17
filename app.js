@@ -157,7 +157,7 @@
     progress?.set(76, "Aligning printed code-box artwork…");
     await loadScript("app/printed-codebox-left-edge-v121.js", version);
 
-    progress?.set(76.5, "Using canonical Cold Glue map and brush planners…");
+    progress?.set(76.5, "Using canonical Cold Glue center-tack brush-channel planner and active map authority…");
 
     if (typeof initializeLabelerApp !== "function") {
       throw new Error("initializeLabelerApp is not loaded.");
