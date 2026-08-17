@@ -46,7 +46,8 @@
       preferredHmi: options.preferredHmi
     });
     const sceneOptions = {
-      carouselDirection: current?.direction || "cw",
+      carouselDirection: current?.direction || "ccw",
+      zeroAngleDegrees: number(current?.zeroAngle, 0),
       ...(options.scene || {})
     };
     const scene = sceneAdapter().toSceneState(frame, sceneOptions);
