@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "apl-neck-wipe-orientation-marriage-v146-20260817-1319";
-  const buildUpdatedAt = "Aug 17, 2026 1:19 PM ET";
+  const build = "apl-neck-wipe-orientation-marriage-v147-20260817-1336";
+  const buildUpdatedAt = "Aug 17, 2026 1:36 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;

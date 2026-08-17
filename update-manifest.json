@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "apl-neck-wipe-orientation-marriage-v146-20260817-1319",
+  "buildId": "apl-neck-wipe-orientation-marriage-v147-20260817-1336",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v146 applies the neck Wipe Turn 2 to orientation marriage against the final initialized servo program, matches the mechanical handoff by row sequence instead of sensor station metadata, and preserves the physical wipe edge while continuing toward an equivalent 360-degree orientation reference in the same direction. Final deployment refresh keeps runtime and manifest on the same v146 build."
+  "notes": "v147 applies the neck Wipe Turn 2 to orientation marriage against ServoForge's live lexical state instead of relying on window.state. The physical wipe edge remains a hard handoff point, and an equivalent 360-degree orientation reference continues in the existing wipe direction when that path is shorter than reversing."
 }
