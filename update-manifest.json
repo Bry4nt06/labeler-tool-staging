@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "empty-default-specs-v149-20260817-1530",
+  "buildId": "3d-update-loop-guard-v150-20260817-1955",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v149 starts fresh and reset ServoForge workspaces with empty Bottle Specs and Label Specs catalogs so users add only the bottle and label records they actually need. It retains the verified TopModul neck wipe behavior from v148."
+  "notes": "v150 preserves the current 3D physical-geometry work and permanently hardens staging update delivery against browser boot loops. Same-version build metadata drift no longer triggers navigation, and real version navigation is protected by a session circuit breaker."
 }
