@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "empty-default-specs-v149-20260817-1530";
-  const buildUpdatedAt = "Aug 17, 2026 3:30 PM ET";
+  const build = "3d-physical-geometry-v02-20260817-1937";
+  const buildUpdatedAt = "Aug 17, 2026 7:37 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -69,6 +69,7 @@
     "app/global-actions.js",
     "drivers/simulation/three-d-simulation-frame-driver.js",
     "app/3d/scene-adapter.js",
+    "app/3d/physical-geometry-adapter.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
     "app/startup-runtime.js"
