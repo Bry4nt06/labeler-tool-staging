@@ -1,218 +1,357 @@
 (function (global) {
   "use strict";
 
+  const EPSILON = 0.001;
+
   function finite(value, fallback = 0) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
   }
 
+  function normalizedDirection(value) {
+    return String(value || "").toLowerCase() === "ccw" ? "ccw" : "cw";
+  }
+
+  function flowFacingTarget(applicationPlateDeg, mapDirection = "cw", labelDeg = 0) {
+    if (finite(labelDeg, 0) >= 330) return 0;
+    void applicationPlateDeg;
+    return normalizedDirection(mapDirection) === "ccw" ? 90 : -90;
+  }
+
+  function channelEntryAngle(mapDirection = "cw", labelDeg = 0) {
+    return flowFacingTarget(0, mapDirection, labelDeg);
+  }
+
+  function wipeDirectionForSide(side, mapDirection = "cw") {
+    const direction = normalizedDirection(mapDirection);
+    const outerDirection = direction === "cw" ? 1 : -1;
+    return side === "inner" ? -outerDirection : outerDirection;
+  }
+
+  function applicationTarget(baseTargetDeg, mapDirection = "cw", labelDeg = 0) {
+    if (finite(labelDeg, 0) >= 330) return normalizedDirection(mapDirection) === "ccw" ? 120 : -120;
+    return finite(baseTargetDeg, 0);
+  }
+
   function normalizeBrush(item, index) {
     const start = finite(item?.start, 0);
-    const end = Math.max(start + 0.001, finite(item?.end, start + 1));
+    const end = Math.max(start + EPSILON, finite(item?.end, start + 1));
     const side = item?.side === "inner" ? "inner" : "outer";
-    const role = ["process", "final", "hold"].includes(item?.role) ? item.role : "process";
     return {
       ...item,
-      index,
+      id: item?.id || `brush-${index + 1}`,
       start,
       end,
       span: end - start,
       side,
-      role,
       holdBottleAngle: Boolean(item?.holdBottleAngle),
-      holdAngle: finite(item?.bottleHoldAngleDeg, 90),
+      holdAngle: finite(item?.bottleHoldAngleDeg, NaN),
       holdCurrent: Boolean(item?.holdCurrentBottleAngle),
-      holdStart: Math.max(start, Math.min(end, finite(item?.bottleHoldStartDeg, start))),
-      direction: side === "inner" ? 1 : -1,
-      coveragePercent: Math.max(0, Math.min(100, finite(item?.coveragePercent, NaN)))
+      holdStart: Math.max(start, Math.min(end, finite(item?.bottleHoldStartDeg, start)))
     };
   }
 
-  function allocateAcrossWindows(required, windows, maxRatio, safetyFactor) {
-    let remaining = Math.max(0, required);
-    const allocations = [];
-    const usable = windows.filter((window) => window.span > 0.001 && window.role !== "hold");
-    const totalWeight = usable.reduce((sum, window) => {
-      const explicit = Number.isFinite(window.coveragePercent) && window.coveragePercent > 0 ? window.coveragePercent : null;
-      return sum + (explicit === null ? window.span : Math.max(0.001, explicit));
-    }, 0);
+  function segmentChannel(channel, mapDirection, labelDeg, channelIndex) {
+    const outerStart = finite(channel?.outerStart, channel?.start);
+    const outerEnd = Math.max(outerStart, finite(channel?.outerEnd, channel?.end));
+    const innerStart = finite(channel?.innerStart, channel?.start);
+    const innerEnd = Math.max(innerStart, finite(channel?.innerEnd, channel?.end));
+    const channelStart = Math.min(outerStart, innerStart);
+    const channelEnd = Math.max(outerEnd, innerEnd);
+    const holdStart = Math.max(channelStart, Math.min(channelEnd, finite(channel?.bottleHoldStartDeg, channelStart)));
+    const entryAngle = channelEntryAngle(mapDirection, labelDeg);
+    const points = [...new Set([
+      outerStart, outerEnd, innerStart, innerEnd,
+      ...(channel?.holdBottleAngle ? [holdStart] : [])
+    ])].sort((a, b) => a - b);
+    const segments = [];
 
-    usable.forEach((window, index) => {
-      const explicit = Number.isFinite(window.coveragePercent) && window.coveragePercent > 0 ? window.coveragePercent : null;
-      const weight = explicit === null ? window.span : Math.max(0.001, explicit);
-      const requested = index === usable.length - 1 ? remaining : required * (weight / Math.max(0.001, totalWeight));
-      const capacity = window.span * maxRatio * safetyFactor;
-      const rotation = Math.min(remaining, requested, capacity);
-      allocations.push({ ...window, rotation, ratio: rotation / window.span });
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const start = points[index];
+      const end = points[index + 1];
+      if (end <= start + EPSILON) continue;
+      const middle = (start + end) / 2;
+      const outerActive = middle >= outerStart - EPSILON && middle <= outerEnd + EPSILON;
+      const innerActive = middle >= innerStart - EPSILON && middle <= innerEnd + EPSILON;
+      const configuredHold = Boolean(channel?.holdBottleAngle) && middle >= holdStart - EPSILON;
+      if (!outerActive && !innerActive) continue;
+
+      if (configuredHold || (outerActive && innerActive)) {
+        segments.push({
+          id: channel?.id || `brush-channel-${channelIndex + 1}`,
+          key: `channel-${channelIndex}-${index}`,
+          stage: "opposed",
+          start,
+          end,
+          span: end - start,
+          rotation: 0,
+          ratio: 0,
+          direction: 0,
+          holdAngle: configuredHold && Number.isFinite(Number(channel?.bottleHoldAngleDeg))
+            ? finite(channel.bottleHoldAngleDeg, entryAngle)
+            : entryAngle,
+          holdCurrent: configuredHold && Boolean(channel?.holdCurrentBottleAngle),
+          configuredHold,
+          parallelBrushHold: outerActive && innerActive
+        });
+      } else {
+        const side = outerActive ? "outer" : "inner";
+        segments.push({
+          id: channel?.id || `brush-channel-${channelIndex + 1}`,
+          key: `channel-${channelIndex}-${index}`,
+          stage: side,
+          side,
+          start,
+          end,
+          span: end - start,
+          direction: wipeDirectionForSide(side, mapDirection),
+          rotation: 0,
+          ratio: 0,
+          singleSideOpening: true
+        });
+      }
+    }
+    return segments;
+  }
+
+  function segmentBrushes(brushes, mapDirection, labelDeg) {
+    const normalized = (Array.isArray(brushes) ? brushes : [])
+      .map(normalizeBrush)
+      .filter((brush) => brush.end > brush.start + EPSILON);
+    const entryAngle = channelEntryAngle(mapDirection, labelDeg);
+    const points = [...new Set(normalized.flatMap((brush) => [
+      brush.start,
+      brush.end,
+      ...(brush.holdBottleAngle ? [brush.holdStart] : [])
+    ]))].sort((a, b) => a - b);
+    const segments = [];
+
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const start = points[index];
+      const end = points[index + 1];
+      if (end <= start + EPSILON) continue;
+      const middle = (start + end) / 2;
+      const active = normalized.filter((brush) => middle >= brush.start - EPSILON && middle <= brush.end + EPSILON);
+      if (!active.length) continue;
+      const outer = active.filter((brush) => brush.side === "outer");
+      const inner = active.filter((brush) => brush.side === "inner");
+      const configuredHoldBrush = active.find((brush) => brush.holdBottleAngle && middle >= brush.holdStart - EPSILON);
+
+      if (configuredHoldBrush || (outer.length && inner.length)) {
+        segments.push({
+          id: active.map((brush) => brush.id).join("+"),
+          key: `brushes-${index}`,
+          stage: "opposed",
+          start,
+          end,
+          span: end - start,
+          rotation: 0,
+          ratio: 0,
+          direction: 0,
+          holdAngle: configuredHoldBrush && Number.isFinite(configuredHoldBrush.holdAngle)
+            ? configuredHoldBrush.holdAngle
+            : entryAngle,
+          holdCurrent: Boolean(configuredHoldBrush?.holdCurrent),
+          configuredHold: Boolean(configuredHoldBrush),
+          parallelBrushHold: Boolean(outer.length && inner.length)
+        });
+      } else {
+        const side = outer.length ? "outer" : "inner";
+        segments.push({
+          id: active.map((brush) => brush.id).join("+"),
+          key: `brushes-${index}`,
+          stage: side,
+          side,
+          start,
+          end,
+          span: end - start,
+          direction: wipeDirectionForSide(side, mapDirection),
+          rotation: 0,
+          ratio: 0,
+          singleSideOpening: true
+        });
+      }
+    }
+    return segments;
+  }
+
+  function allocateAcrossWindows(required, windows, maxRatio, safetyFactor) {
+    let remaining = Math.max(0, finite(required, 0));
+    const allocations = [];
+    const totalSpan = windows.reduce((sum, window) => sum + Math.max(0, finite(window.span, window.end - window.start)), 0);
+    const requestedRatio = totalSpan > EPSILON ? remaining / totalSpan : 0;
+    const safeRatio = Math.max(0.1, finite(maxRatio, 21)) * Math.max(0.25, Math.min(0.98, finite(safetyFactor, 0.9)));
+
+    windows.forEach((window) => {
+      const span = Math.max(EPSILON, finite(window.span, window.end - window.start));
+      const rotation = Math.min(remaining, span * Math.min(requestedRatio, safeRatio));
+      allocations.push({ ...window, rotation, ratio: rotation / span });
       remaining -= rotation;
     });
 
-    if (remaining > 0.001) {
+    if (remaining > EPSILON) {
       for (const allocation of allocations) {
-        const capacity = allocation.span * maxRatio * safetyFactor;
+        const capacity = allocation.span * safeRatio;
         const spare = Math.max(0, capacity - allocation.rotation);
         const added = Math.min(spare, remaining);
         allocation.rotation += added;
         allocation.ratio = allocation.rotation / allocation.span;
         remaining -= added;
-        if (remaining <= 0.001) break;
+        if (remaining <= EPSILON) break;
       }
     }
-    return { allocations, remaining: Math.max(0, remaining) };
+    return { allocations, remaining: Math.max(0, remaining), requestedRatio, safeRatio };
   }
 
-  function collapseSharedOppositeChannels(brushes) {
-    const consumed = new Set();
-    const channels = [];
-    brushes.forEach((brush, index) => {
-      if (consumed.has(index)) return;
-      const oppositeIndex = brushes.findIndex((candidate, candidateIndex) =>
-        candidateIndex !== index &&
-        !consumed.has(candidateIndex) &&
-        candidate.side !== brush.side &&
-        Math.min(candidate.end, brush.end) > Math.max(candidate.start, brush.start) + 0.001
-      );
-      if (oppositeIndex < 0) {
-        channels.push(brush);
-        consumed.add(index);
-        return;
-      }
-      const opposite = brushes[oppositeIndex];
-      consumed.add(index);
-      consumed.add(oppositeIndex);
-      const start = Math.max(brush.start, opposite.start);
-      const end = Math.min(brush.end, opposite.end);
-      channels.push({
-        ...brush,
-        id: `${brush.id || index}+${opposite.id || oppositeIndex}`,
-        start,
-        end,
-        span: end - start,
-        role: brush.role === "final" || opposite.role === "final" ? "final" : "process",
-        coveragePercent: Number.isFinite(brush.coveragePercent) ? brush.coveragePercent : opposite.coveragePercent,
-        pairedOppositeChannel: true
-      });
-    });
-    return channels.sort((a, b) => a.start - b.start || a.end - b.end);
-  }
-
-  function flowFacingTarget(applicationPlateDeg, mapDirection = "cw", labelDeg = 0) {
-    if (finite(labelDeg, 0) >= 330) return 0;
-    // Cold Glue only: the bottle must enter a brush channel with the freshly
-    // tacked label edge pointing downstream. Plate angle is relative to the
-    // rotating table, so the downstream tangent is a fixed quarter-turn from
-    // the radial zero. Do not add the application plate angle here: doing that
-    // carries the pickup/application offset into the channel and can present the
-    // loose label edge upstream, allowing the first brush to peel the label off.
-    //
-    // The map renderer's positive table direction is opposite the plate-axis
-    // sign, therefore CCW bottle flow requires +90 deg plate orientation and CW
-    // bottle flow requires -90 deg.
-    void applicationPlateDeg;
-    return mapDirection === "ccw" ? 90 : -90;
-  }
-
-  function applicationTarget(baseTargetDeg, mapDirection = "cw", labelDeg = 0) {
-    // The proven Autocol full-wrap setup tacks the neck label at 120 degrees.
-    // Mirror the sign when the machine direction is reversed.
-    if (finite(labelDeg, 0) >= 330) return mapDirection === "ccw" ? 120 : -120;
-    return finite(baseTargetDeg, 0);
-  }
-
-  function createPlan(options) {
+  function planSegments(options, rawSegments, source) {
     const labelDeg = Math.max(0, finite(options?.labelDeg, 0));
     const overWipeDeg = Math.max(0, finite(options?.overWipeDeg, 0));
-    const fullWrap = labelDeg >= 330;
-    const mapDirection = options?.mapDirection === "ccw" ? "ccw" : "cw";
+    const mapDirection = normalizedDirection(options?.mapDirection);
     const maxRatio = Math.max(0.1, finite(options?.maxRatio, 21));
     const safetyFactor = Math.max(0.25, Math.min(0.98, finite(options?.safetyFactor, 0.9)));
-    const normalizedBrushes = (Array.isArray(options?.brushes) ? options.brushes : [])
-      .map(normalizeBrush)
-      .filter((brush) => brush.end > brush.start)
-      .sort((a, b) => a.start - b.start || a.end - b.end);
-    const holds = [];
-    const wipeBrushes = normalizedBrushes.flatMap((brush) => {
-      if (brush.role === "hold") {
-        holds.push({ ...brush, start: brush.start, end: brush.end, span: brush.span });
-        return [];
-      }
-      if (!brush.holdBottleAngle) return [brush];
-      if (brush.holdStart < brush.end - 0.001) holds.push({ ...brush, start: brush.holdStart, end: brush.end, span: brush.end - brush.holdStart });
-      return brush.holdStart > brush.start + 0.001 ? [{ ...brush, end: brush.holdStart, span: brush.holdStart - brush.start }] : [];
-    });
-    const hasSharedOppositeChannel = wipeBrushes.some((brush, index) => wipeBrushes.some((candidate, candidateIndex) =>
-      candidateIndex !== index &&
-      candidate.side !== brush.side &&
-      Math.min(candidate.end, brush.end) > Math.max(candidate.start, brush.start) + 0.001
-    ));
-    const brushes = hasSharedOppositeChannel ? collapseSharedOppositeChannels(wipeBrushes) : wipeBrushes;
-    const centerTackTwoSided = fullWrap;
-    const simultaneousOppositeWipe = hasSharedOppositeChannel;
-    // A long center-tack neck label has two loose halves. Each half must be
-    // wiped completely, and the plate must reverse between the outside and
-    // inside brush channels. The center is already attached, so do not add the
-    // leading-edge over-wipe allowance used by body/back labels.
-    const totalRotation = centerTackTwoSided ? labelDeg : simultaneousOppositeWipe ? labelDeg / 2 + overWipeDeg : labelDeg + overWipeDeg * 2;
-    const defaultPartialPercent = Math.max(5, Math.min(95, finite(options?.partialCoveragePercent, 50)));
-    if (simultaneousOppositeWipe) {
-      const direction = mapDirection === "ccw" ? 1 : -1;
-      brushes.forEach((brush) => { brush.direction = direction; });
-    }
-
+    const segments = rawSegments.slice().sort((a, b) => a.start - b.start || a.end - b.end);
+    const openSegments = segments.filter((segment) => segment.stage === "outer" || segment.stage === "inner");
     const issues = [];
-    if (!brushes.length) {
-      return { labelDeg, overWipeDeg, totalRotation, process: [], final: [], holds, issues: holds.length ? [] : [{ level: "bad", code: "cold-glue-no-brushes", message: "No brush windows are assigned to this Cold Glue station." }] };
-    }
+    const allocationByKey = new Map();
+    const phasePlans = [];
 
-    let finalBrushes = brushes.filter((brush) => brush.role === "final");
-    let processBrushes = brushes.filter((brush) => brush.role === "process");
-    if (!finalBrushes.length) {
-      finalBrushes = [brushes[brushes.length - 1]];
-      processBrushes = brushes.slice(0, -1).filter((brush) => brush.role !== "hold");
-    }
-    if (!processBrushes.length && brushes.length > 1) processBrushes = brushes.slice(0, -1);
+    let phase = null;
+    openSegments.forEach((segment) => {
+      if (!phase || phase.side !== segment.side) {
+        phase = { side: segment.side, windows: [] };
+        phasePlans.push(phase);
+      }
+      phase.windows.push(segment);
+    });
 
-    const explicitProcessPercent = processBrushes
-      .filter((brush) => Number.isFinite(brush.coveragePercent))
-      .reduce((sum, brush) => sum + brush.coveragePercent, 0);
-    const partialPercent = centerTackTwoSided ? 50 : explicitProcessPercent > 0 ? Math.max(5, Math.min(95, explicitProcessPercent)) : defaultPartialPercent;
-    const processRequired = totalRotation * partialPercent / 100;
-    const finalRequired = Math.max(0, totalRotation - processRequired);
+    phasePlans.forEach((phasePlan, phaseIndex) => {
+      const requiredRotation = phaseIndex === 0
+        ? Math.max(0, labelDeg / 2 + overWipeDeg)
+        : Math.max(0, labelDeg + overWipeDeg * 2);
+      const allocation = allocateAcrossWindows(requiredRotation, phasePlan.windows, maxRatio, safetyFactor);
+      allocation.allocations.forEach((window) => allocationByKey.set(window.key, {
+        ...window,
+        direction: wipeDirectionForSide(phasePlan.side, mapDirection),
+        centerTackStage: phaseIndex === 0 ? "center-to-first-edge" : "edge-to-opposite-edge",
+        wipeOutward: true,
+        leadingEdgeWipe: false,
+        tackMode: "center"
+      }));
+      phasePlan.requiredRotation = requiredRotation;
+      phasePlan.remaining = allocation.remaining;
+      phasePlan.ratio = allocation.requestedRatio;
+      if (allocation.remaining > EPSILON) {
+        issues.push({
+          level: "bad",
+          code: "cold-glue-channel-capacity",
+          side: phasePlan.side,
+          message: `${phasePlan.side === "outer" ? "Outside" : "Inside"} brush opening is short by ${allocation.remaining.toFixed(1)} deg of bottle rotation.`
+        });
+      }
+    });
 
-    const processPlan = allocateAcrossWindows(processRequired, processBrushes, maxRatio, safetyFactor);
-    const finalPlan = allocateAcrossWindows(finalRequired + processPlan.remaining, finalBrushes, maxRatio, safetyFactor);
+    const channelMoves = segments.map((segment) => {
+      if (segment.stage === "opposed") return {
+        ...segment,
+        rotation: 0,
+        ratio: 0,
+        direction: 0,
+        leadingEdgeWipe: false,
+        tackMode: "center",
+        centerOutFromApplication: true
+      };
+      return allocationByKey.get(segment.key) || {
+        ...segment,
+        rotation: 0,
+        ratio: 0,
+        direction: wipeDirectionForSide(segment.side, mapDirection),
+        leadingEdgeWipe: false,
+        tackMode: "center",
+        centerOutFromApplication: true
+      };
+    });
 
-    if (centerTackTwoSided) {
-      const firstDirection = mapDirection === "ccw" ? 1 : -1;
-      processPlan.allocations.forEach((allocation) => { allocation.direction = firstDirection; });
-      finalPlan.allocations.forEach((allocation) => { allocation.direction = -firstDirection; });
-    }
-
-    if (processPlan.remaining > 0.001 && !finalBrushes.length) {
-      issues.push({ level: "bad", code: "cold-glue-process-capacity", message: `Brush channels are short by ${processPlan.remaining.toFixed(1)} deg of bottle rotation.` });
-    }
-    if (finalPlan.remaining > 0.001) {
-      issues.push({ level: "bad", code: "cold-glue-final-capacity", message: `Final brush is short by ${finalPlan.remaining.toFixed(1)} deg of bottle rotation.` });
-    }
+    const totalRotation = channelMoves.reduce((sum, move) => sum + Math.max(0, finite(move.rotation, 0)), 0);
+    const signedRotation = channelMoves.reduce((sum, move) => sum + finite(move.direction, 0) * Math.max(0, finite(move.rotation, 0)), 0);
+    const opposed = channelMoves.filter((move) => move.stage === "opposed");
+    const process = openSegments.length ? channelMoves.filter((move) => move.stage !== "opposed" && move.side === openSegments[0].side) : [];
+    const final = channelMoves.filter((move) => move.stage !== "opposed" && !process.includes(move));
 
     return {
+      source,
       labelDeg,
       overWipeDeg,
       totalRotation,
-      fullWrap,
-      centerTackTwoSided,
-      simultaneousOppositeWipe,
-      brushEntryLeadDeg: fullWrap ? 10 : 0,
-      finalPlateTravel: centerTackTwoSided ? 0 : (mapDirection === "ccw" ? 1 : -1) * totalRotation,
-      partialCoveragePercent: partialPercent,
-      processRequired,
-      finalRequired,
-      process: processPlan.allocations,
-      final: finalPlan.allocations,
-      holds,
-      issues
+      fullWrap: labelDeg >= 330,
+      centerTackTwoSided: true,
+      simultaneousOppositeWipe: opposed.length > 0,
+      brushEntryLeadDeg: 0,
+      channelEntryAngle: channelEntryAngle(mapDirection, labelDeg),
+      finalPlateTravel: signedRotation,
+      channelMoves,
+      process,
+      final,
+      holds: opposed,
+      phasePlans,
+      issues,
+      leadingEdgeWipe: false,
+      tackMode: "center"
     };
   }
 
-  global.LabelerColdGlueMotionDriver = { createPlan, flowFacingTarget, applicationTarget };
+  function createBrushChannelPlan(options) {
+    const mapDirection = normalizedDirection(options?.mapDirection);
+    const labelDeg = Math.max(0, finite(options?.labelDeg, 0));
+    const channels = Array.isArray(options?.channels) ? options.channels : [];
+    const segments = channels.flatMap((channel, index) => segmentChannel(channel, mapDirection, labelDeg, index));
+    if (!segments.length) {
+      return {
+        labelDeg,
+        overWipeDeg: Math.max(0, finite(options?.overWipeDeg, 0)),
+        totalRotation: 0,
+        channelMoves: [],
+        process: [],
+        final: [],
+        holds: [],
+        issues: [{ level: "bad", code: "cold-glue-no-brushes", message: "No brush channel windows are assigned to this Cold Glue station." }],
+        leadingEdgeWipe: false,
+        tackMode: "center"
+      };
+    }
+    return planSegments(options, segments, "cold-glue-brush-channel");
+  }
+
+  function createPlan(options) {
+    const mapDirection = normalizedDirection(options?.mapDirection);
+    const labelDeg = Math.max(0, finite(options?.labelDeg, 0));
+    const brushes = Array.isArray(options?.brushes) ? options.brushes : [];
+    const segments = segmentBrushes(brushes, mapDirection, labelDeg);
+    if (!segments.length) {
+      return {
+        labelDeg,
+        overWipeDeg: Math.max(0, finite(options?.overWipeDeg, 0)),
+        totalRotation: 0,
+        channelMoves: [],
+        process: [],
+        final: [],
+        holds: [],
+        issues: [{ level: "bad", code: "cold-glue-no-brushes", message: "No brush windows are assigned to this Cold Glue station." }],
+        leadingEdgeWipe: false,
+        tackMode: "center"
+      };
+    }
+    return planSegments(options, segments, "cold-glue-brush-pair");
+  }
+
+  global.LabelerColdGlueMotionDriver = Object.freeze({
+    createPlan,
+    createBrushChannelPlan,
+    flowFacingTarget,
+    channelEntryAngle,
+    wipeDirectionForSide,
+    applicationTarget,
+    centerTackOnly: true,
+    leadingEdgeWipeAllowed: false,
+    parallelOverlapTurnsBottle: false
+  });
 })(window);
