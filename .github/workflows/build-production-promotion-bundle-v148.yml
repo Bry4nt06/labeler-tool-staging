@@ -1,0 +1,52 @@
+name: Build production promotion bundle v148
+
+on:
+  push:
+    branches:
+      - promotion-bundle-v148-auth
+    paths:
+      - ".github/workflows/build-production-promotion-bundle-v148.yml"
+
+permissions:
+  contents: read
+
+env:
+  BASELINE_COMMIT: 5833cf0886073d01733e0bee4b6285ea6dfb14b5
+  SOURCE_RUNTIME_COMMIT: 2ca89df345cad60d9b8ce4bb71daabae787e488e
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out staging promotion snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: promotion-bundle-v148-auth
+          fetch-depth: 0
+
+      - name: Build runtime delta bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .promotion-bundle
+          git diff --name-only --diff-filter=ACMRT "$BASELINE_COMMIT" "$SOURCE_RUNTIME_COMMIT" \
+            | grep -v '^\.github/' \
+            | grep -v '^update-manifest-v145\.tmp$' \
+            > .promotion-bundle/files.txt
+          git diff --name-only --diff-filter=D "$BASELINE_COMMIT" "$SOURCE_RUNTIME_COMMIT" \
+            | grep -v '^\.github/' \
+            > .promotion-bundle/deleted-files.txt || true
+          tar -czf .promotion-bundle/runtime.tar.gz -T .promotion-bundle/files.txt
+          printf '%s\n' "$SOURCE_RUNTIME_COMMIT" > .promotion-bundle/source-runtime-commit.txt
+          sha256sum .promotion-bundle/runtime.tar.gz > .promotion-bundle/runtime.sha256
+          echo "Bundled $(wc -l < .promotion-bundle/files.txt) files."
+          cat .promotion-bundle/deleted-files.txt
+
+      - name: Upload promotion bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-promotion-v148-auth
+          path: .promotion-bundle/
+          if-no-files-found: error
+          retention-days: 3
