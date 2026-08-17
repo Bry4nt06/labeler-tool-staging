@@ -30,12 +30,12 @@ jobs:
           node-version: "22"
 
       - name: Check patch syntax
-        run: node --check .github/patches/apply-object-depth-completeness-v130.js
+        run: node --check .github/patches/apply-object-depth-completeness-v130b.js
 
       - name: Apply complete Object Depth configuration
         run: |
           set -euo pipefail
-          node .github/patches/apply-object-depth-completeness-v130.js
+          node .github/patches/apply-object-depth-completeness-v130b.js
 
       - name: Check affected JavaScript
         run: |
