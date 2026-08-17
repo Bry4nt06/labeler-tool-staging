@@ -25,6 +25,23 @@
     return positive;
   }
 
+  function machineOrbit(tableAngle, options = {}) {
+    const direction = String(options.carouselDirection || "ccw").trim().toLowerCase();
+    const clockwise = direction === "cw" || direction === "clockwise";
+    const signed = clockwise ? -1 : 1;
+    const zeroBase = clockwise ? 180 : 0;
+    const zeroAngle = number(options.zeroAngleDegrees, 0);
+    const bearingDegrees = zeroBase + zeroAngle + signed * number(tableAngle, 0);
+    const radians = degToRad(bearingDegrees);
+    const radius = Math.max(0, number(options.carouselRadius, 1));
+    return Object.freeze({
+      bearingDegrees,
+      radians,
+      x: Math.cos(radians) * radius,
+      z: Math.sin(radians) * radius
+    });
+  }
+
   function toSceneState(frame, options = {}) {
     if (!frame || frame.schemaVersion !== "servoforge.3d-frame.v1") {
       throw new Error("ServoForge 3D scene adapter requires a servoforge.3d-frame.v1 frame.");
@@ -33,13 +50,9 @@
     const radius = Math.max(0, number(options.carouselRadius, 1));
     const tableY = number(options.tableY, 0);
     const bottleLift = number(options.bottleLift, 0.2);
-    const zeroOffset = degToRad(options.zeroOffsetDegrees);
-    const carouselSign = directionSign(options.carouselDirection || "cw", -1);
+    const orbit = machineOrbit(frame.cycle.tableAngle, { ...options, carouselRadius: radius });
     const servoSign = directionSign(options.servoPositiveDirection || "ccw", 1);
-    const orbitRadians = degToRad(frame.cycle.tableAngle) * carouselSign + zeroOffset;
     const servoRadians = degToRad(frame.container.servoAngleUnwrapped) * servoSign;
-    const x = Math.sin(orbitRadians) * radius;
-    const z = Math.cos(orbitRadians) * radius;
 
     return freeze({
       schemaVersion: SCENE_VERSION,
@@ -49,19 +62,21 @@
         handedness: "right-handed",
         upAxis: "y",
         orbitPlane: "xz",
-        unitMode: String(options.unitMode || "normalized")
+        unitMode: String(options.unitMode || "normalized"),
+        mapCoordinateParity: true
       },
       carousel: {
         radius,
         machineAngleDegrees: frame.cycle.tableAngle,
-        rotationY: orbitRadians
+        mapBearingDegrees: orbit.bearingDegrees,
+        rotationY: orbit.radians
       },
       bottleTable: {
-        position: { x, y: tableY, z },
-        rotation: { x: 0, y: orbitRadians, z: 0 }
+        position: { x: orbit.x, y: tableY, z: orbit.z },
+        rotation: { x: 0, y: orbit.radians, z: 0 }
       },
       bottle: {
-        position: { x, y: tableY + bottleLift, z },
+        position: { x: orbit.x, y: tableY + bottleLift, z: orbit.z },
         rotation: { x: 0, y: servoRadians, z: 0 },
         servoAngleDegrees: frame.container.servoAngle,
         servoAngleUnwrappedDegrees: frame.container.servoAngleUnwrapped
@@ -80,6 +95,7 @@
   global.Labeler3DSceneAdapter = Object.freeze({
     SCENE_VERSION,
     degToRad,
+    machineOrbit,
     toSceneState
   });
 })(window);
