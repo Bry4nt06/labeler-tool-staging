@@ -7,10 +7,12 @@ on:
       - "drivers/mechanical/cold-glue-motion-driver.js"
       - "app/cold-glue-profile-generation.js"
       - "app/profile-generation.js"
+      - "app/simulation-collapsible-integration.js"
       - "app.js"
       - "service-worker.js"
       - "tests/cold-glue-brush-channel-authority-v132.test.js"
       - "tests/profile-generation-module-boundaries.test.js"
+      - "tests/feature-integration-readiness.test.js"
       - ".github/workflows/validate-cold-glue-brush-channel-v132.yml"
   workflow_dispatch:
 
@@ -36,14 +38,16 @@ jobs:
           node --check drivers/mechanical/cold-glue-motion-driver.js
           node --check app/cold-glue-profile-generation.js
           node --check app/profile-generation.js
+          node --check app/simulation-collapsible-integration.js
           node --check app.js
           node --check service-worker.js
 
-      - name: Validate canonical brush-channel behavior and retirement
+      - name: Validate canonical brush-channel behavior and startup integrity
         run: |
           set -euo pipefail
           node tests/cold-glue-brush-channel-authority-v132.test.js
           node tests/assembly-drivers.test.js
           node tests/profile-generation-module-boundaries.test.js
+          node tests/feature-integration-readiness.test.js
           node tests/physical-wipe-direction-v125.test.js
           git diff --check
