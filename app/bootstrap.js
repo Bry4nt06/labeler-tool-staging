@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "apl-neck-post-wipe-modulo-v140-20260817-1025";
-  const buildUpdatedAt = "Aug 17, 2026 10:25 AM ET";
+  const build = "apl-neck-post-wipe-modulo-v141-20260817-1052";
+  const buildUpdatedAt = "Aug 17, 2026 10:52 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   const banner = document.querySelector(".staging-environment-banner");
