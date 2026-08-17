@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "apl-neck-post-wipe-modulo-v141-20260817-1052",
+  "buildId": "apl-neck-post-wipe-modulo-v142-20260817-1230",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v141 carries the long center-tack neck pad edge lock and modulo-equivalent post-wipe orientation forward, while aligning the staging update manifest with the visible v141 build marker for deployment verification."
+  "notes": "v142 carries the long center-tack neck pad edge lock and modulo-equivalent post-wipe orientation forward, and aligns the update manifest with the deployed staging build so the update manager does not enter a reload loop."
 }
