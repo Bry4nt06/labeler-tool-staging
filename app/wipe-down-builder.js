@@ -1,7 +1,7 @@
 "use strict";
 
 (function loadServoForgeMapBuilderModules() {
-  const releaseVersion = "0.9.10-cold-glue-map-object-authority-v133";
+  const releaseVersion = "0.9.10-map-builder-add-authority-v134";
   const modulePaths = Object.freeze([
     "drivers/assembly/assembly-model-driver.js",
     "drivers/assembly/assembly-geometry-driver.js",
@@ -17,7 +17,12 @@
     "app/map-builder-controls.js",
     "app/map-builder-history-service.js",
     "app/map-builder-renderer.js",
-    "app/map-builder-controller.js"
+    "app/map-builder-controller.js",
+    // Static Map Builder events must exist as soon as the builder itself is
+    // ready. Waiting for the later workspace bootstrap allowed Add to Map to
+    // render correctly while having no live click owner in stale/mixed builds.
+    "app/controllers/map-builder-action-controller.js",
+    "app/controllers/map-builder-event-controller.js"
   ]);
 
   function matchingScript(path) {
@@ -43,7 +48,7 @@
       }
 
       const script = document.createElement("script");
-      script.src = `./${path}?v=${encodeURIComponent(releaseVersion)}-map-builder-v4`;
+      script.src = `./${path}?v=${encodeURIComponent(releaseVersion)}-map-builder-v5`;
       script.async = false;
       script.dataset.servoforgeMapBuilderModule = path;
       script.addEventListener("load", () => {
