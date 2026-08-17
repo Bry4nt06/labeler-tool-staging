@@ -80,6 +80,9 @@ assert.strictEqual(scene.world.mapCoordinateParity, true);
 assert.ok(Math.abs(scene.bottleTable.position.x - 1) < 0.000001, "Clockwise 120 degree table position must mirror ServoForge angleToXY X coordinates.");
 assert.ok(Math.abs(scene.bottleTable.position.z - Math.sqrt(3)) < 0.000001, "Clockwise 120 degree table position must mirror ServoForge angleToXY Y coordinates on the XZ plane.");
 assert.ok(Math.abs(scene.bottle.servoAngleDegrees - 95.6) < 0.000001, "Scene bottle rotation must use the exact servo angle from the frame contract.");
+const expectedWorldBottleRotation = adapter.degToRad(60 - 95.6);
+assert.ok(Math.abs(scene.bottle.rotation.y - expectedWorldBottleRotation) < 0.000001, "Bottle world orientation must equal ServoForge map bearing plus the signed servo turn.");
+assert.ok(Math.abs(scene.bottleTable.servoPlateRotationY - expectedWorldBottleRotation) < 0.000001, "The visible servo plate must share the bottle's commanded rotational datum.");
 
 sandbox.state = { program: rows, previewAngle: 110, direction: "ccw", zeroAngle: 0 };
 const runtimeSnapshot = sandbox.Labeler3DSceneRuntime.snapshot({ commandDriver: sandbox.LabelerServoCommandDriver });
