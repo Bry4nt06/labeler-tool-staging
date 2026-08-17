@@ -121,6 +121,21 @@ const defaultLabelSpecs = [
   { id: 5, applicationMode: "apl", brand: "12oz Mic Family (T6,41,FO,79,BT,87)", specNumber: "2457-A", bottleType: "SSNR - 12 Oz", bodyLengthMm: 66.7, backLengthMm: 50.8, neckHeightMm: 40.001, neckLengthMm: 51.96, neckBottomCurveMm: 53, neckBottomCircumferenceMm: 105, codeBoxCenterMm: 14 }
 ];
 
+const defaultObjectDepths = Object.freeze({
+  spender: 12,
+  coding: 14,
+  sensor: 21,
+  gripper: 12,
+  opRoller: 14,
+  nonOpRoller: -18,
+  wipeInner: -4,
+  wipeOuter: 16,
+  brushInner: -4,
+  brushOuter: 16
+});
+
+if (typeof window !== "undefined") window.LabelerDefaultObjectDepths = defaultObjectDepths;
+
 const state = {
   themePreset: (() => {
     try {
@@ -170,13 +185,7 @@ const state = {
   coldGlueAggregateSettings: null,
   aplMapObjects: [],
   isPlaying: true,
-  depths: {
-    spender: 12,
-    opRoller: 14,
-    nonOpRoller: -18,
-    wipeInner: -4,
-    wipeOuter: 16
-  },
+  depths: { ...defaultObjectDepths },
   selectedBrand: "12oz Bud Light Lime (9F)",
   selectedBottle: "LNNR - 12 Oz",
   buildInputs: {
@@ -283,10 +292,15 @@ const els = {
   animationStepReadout: document.querySelector("#animationStepReadout"),
   importFaultConfig: document.querySelector("#importFaultConfig"),
   spenderDepth: document.querySelector("#spenderDepth"),
+  codingDepth: document.querySelector("#codingDepth"),
+  sensorDepth: document.querySelector("#sensorDepth"),
+  gripperDepth: document.querySelector("#gripperDepth"),
   opRollerDepth: document.querySelector("#opRollerDepth"),
   nonOpRollerDepth: document.querySelector("#nonOpRollerDepth"),
   wipeInnerDepth: document.querySelector("#wipeInnerDepth"),
   wipeOuterDepth: document.querySelector("#wipeOuterDepth"),
+  brushInnerDepth: document.querySelector("#brushInnerDepth"),
+  brushOuterDepth: document.querySelector("#brushOuterDepth"),
   pitchReadout: document.querySelector("#pitchReadout"),
   mapSvg: document.querySelector("#mapSvg"),
   mapLockToggle: document.querySelector("#mapLockToggle"),

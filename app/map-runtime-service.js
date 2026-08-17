@@ -11,6 +11,38 @@
     runtimeMapId = null;
   }
 
+  function completeObjectDepths(rawDepths = {}) {
+    const defaults = global.LabelerDefaultObjectDepths || {
+      spender: 12, coding: 14, sensor: 21, gripper: 12,
+      opRoller: 14, nonOpRoller: -18, wipeInner: -4, wipeOuter: 16,
+      brushInner: -4, brushOuter: 16
+    };
+    const source = rawDepths && typeof rawDepths === "object" ? rawDepths : {};
+    const finite = (value, fallback) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    };
+    const spender = finite(source.spender, defaults.spender);
+    const opRoller = finite(source.opRoller, defaults.opRoller);
+    const nonOpRoller = finite(source.nonOpRoller, defaults.nonOpRoller);
+    const wipeInner = finite(source.wipeInner, defaults.wipeInner);
+    const wipeOuter = finite(source.wipeOuter, defaults.wipeOuter);
+    return {
+      ...defaults,
+      ...source,
+      spender,
+      coding: finite(source.coding, opRoller),
+      sensor: finite(source.sensor, opRoller + 7),
+      gripper: finite(source.gripper, spender),
+      opRoller,
+      nonOpRoller,
+      wipeInner,
+      wipeOuter,
+      brushInner: finite(source.brushInner, wipeInner),
+      brushOuter: finite(source.brushOuter, wipeOuter)
+    };
+  }
+
   function activeMachineMap() {
     if (typeof ensurePersistentApplicationMaps === "function") ensurePersistentApplicationMaps();
     return state.mapLibrary?.find((map) => map.id === state.activeMapId) || state.mapLibrary?.[0] || null;
@@ -127,7 +159,8 @@
     state.autoScaleTableMap = settings.autoScaleTableMap !== false;
     state.zeroAngle = norm(num(settings.zeroAngle, state.zeroAngle));
     state.maxMoveRatio = Math.max(0.1, num(settings.maxMoveRatio, state.maxMoveRatio));
-    state.depths = { ...state.depths, ...map.depths };
+    state.depths = completeObjectDepths(map.depths);
+    map.depths = { ...state.depths };
     const normalizedObjects = (map.objects || []).map((item) => normalizeBuilderObject(item, "apl", 6));
     const coldGlueObjects = normalizedObjects.filter((item) => item.application === "cold-glue");
     if (state.applicationMode === "cold-glue") {
@@ -154,16 +187,22 @@
     if (els.autoScaleTableMap) els.autoScaleTableMap.checked = Boolean(state.autoScaleTableMap);
     Object.entries({
       spenderDepth: "spender",
+      codingDepth: "coding",
+      sensorDepth: "sensor",
+      gripperDepth: "gripper",
       opRollerDepth: "opRoller",
       nonOpRollerDepth: "nonOpRoller",
       wipeInnerDepth: "wipeInner",
-      wipeOuterDepth: "wipeOuter"
+      wipeOuterDepth: "wipeOuter",
+      brushInnerDepth: "brushInner",
+      brushOuterDepth: "brushOuter"
     }).forEach(([elementKey, depthKey]) => {
       if (els[elementKey]) els[elementKey].value = state.depths[depthKey];
     });
     if (shouldRender) render();
   }
 
+  global.completeObjectDepths = completeObjectDepths;
   global.activeMachineMap = activeMachineMap;
   global.editableMachineMap = editableMachineMap;
   global.activeBuilderMap = activeBuilderMap;
@@ -172,6 +211,7 @@
   global.LabelerMapRuntimeService = Object.freeze({
     currentMapId,
     invalidateRuntimeMap,
+    completeObjectDepths,
     activeMachineMap,
     editableMachineMap,
     activeBuilderMap,

@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "bottle-orientation-wipe-direction-v127-20260816-0935";
+  const build = "object-depth-completeness-v130-20260816-2130";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

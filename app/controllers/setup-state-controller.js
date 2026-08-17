@@ -35,10 +35,15 @@
     setValue(els.animationSpeed, state.animationSpeed);
     setValue(els.maxMoveRatio, state.maxMoveRatio);
     setValue(els.spenderDepth, state.depths?.spender);
+    setValue(els.codingDepth, state.depths?.coding);
+    setValue(els.sensorDepth, state.depths?.sensor);
+    setValue(els.gripperDepth, state.depths?.gripper);
     setValue(els.opRollerDepth, state.depths?.opRoller);
     setValue(els.nonOpRollerDepth, state.depths?.nonOpRoller);
     setValue(els.wipeInnerDepth, state.depths?.wipeInner);
     setValue(els.wipeOuterDepth, state.depths?.wipeOuter);
+    setValue(els.brushInnerDepth, state.depths?.brushInner);
+    setValue(els.brushOuterDepth, state.depths?.brushOuter);
     setValue(els.direction, state.direction);
     setValue(els.tablePitchRadiusMm, state.tablePitchRadiusMm);
     setValue(els.padClearanceMm, state.padClearanceMm);

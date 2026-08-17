@@ -238,13 +238,13 @@ function drawConfiguredAssemblies(add, layer) {
       const objectLayer = add("g", { "data-map-object-id": item.id, class: state.selectedMapObjectId === item.id ? "map-object selected-map-object" : "map-object" }, layer);
       if (item.kind === "sensor") {
         const placement = num(item.angle, item.start);
-        const centerRadius = state.radius + state.depths.opRoller + 7;
+        const centerRadius = state.radius + state.depths.sensor;
         add("path", { d: arcPath(placement - 1.5, placement + 1.5, centerRadius - 8, centerRadius + 8), fill: labelSensorMapColor(item), "fill-opacity": 0.62, stroke: "none", "data-label-sensor": item.id, "data-sensor-station": item.station }, objectLayer);
         drawMapObjectLabel(add, objectLayer, item, placement, centerRadius, 20);
         return;
       }
       if (item.kind === "coding") {
-        const centerRadius = state.radius + state.depths.opRoller;
+        const centerRadius = state.radius + state.depths.coding;
         add("path", { d: arcPath(num(item.start), num(item.end), centerRadius - 7, centerRadius + 7), fill: "#8f7a48", "fill-opacity": 0.62, stroke: "none", "data-coding-object": item.id }, objectLayer);
         drawMapObjectLabel(add, objectLayer, item, (num(item.start) + num(item.end)) / 2, centerRadius, 18);
         return;
@@ -254,11 +254,11 @@ function drawConfiguredAssemblies(add, layer) {
         if (!Number.isFinite(angle)) return;
         const duplicateAggregate = activeAggregateDefinitions().some((aggregate) => Math.abs(((aggregate.angle - angle + 540) % 360) - 180) < 0.25);
         if (duplicateAggregate) return;
-        const xy = angleToXY(angle, state.radius + state.depths.spender);
+        const xy = angleToXY(angle, state.radius + state.depths.gripper);
         const rotation = angleToSvgRotation(angle) + 90;
         const group = add("g", { transform: `translate(${xy.x} ${xy.y}) rotate(${rotation})` }, objectLayer);
         add("line", { x1: -gripperHalfLength, y1: 0, x2: gripperHalfLength, y2: 0, stroke: "#9b5558", "stroke-width": 2.5, "stroke-linecap": "round", "data-cold-glue-gripper": item.id }, group);
-        drawMapObjectLabel(add, objectLayer, item, angle, state.radius + state.depths.spender, 18);
+        drawMapObjectLabel(add, objectLayer, item, angle, state.radius + state.depths.gripper, 18);
         return;
       }
       if (item.kind === "roller") {
@@ -272,8 +272,8 @@ function drawConfiguredAssemblies(add, layer) {
       }
       if (item.kind === "brush-channel") {
         const brushHalfWidth = Math.max(4, Math.min(7, num(item.extension, 20) / 4));
-        const outerRadius = state.radius + state.depths.wipeOuter;
-        const innerRadius = state.radius + state.depths.wipeInner;
+        const outerRadius = state.radius + state.depths.brushOuter;
+        const innerRadius = state.radius + state.depths.brushInner;
         add("path", { d: arcPath(num(item.outerStart, item.start), num(item.outerEnd, item.end), outerRadius - brushHalfWidth, outerRadius + brushHalfWidth), fill: brushFill, "fill-opacity": 0.46, stroke: "none", "data-cold-glue-brush-channel": item.id, "data-channel-side": "outer" }, objectLayer);
         add("path", { d: arcPath(num(item.innerStart, item.start), num(item.innerEnd, item.end), innerRadius - brushHalfWidth, innerRadius + brushHalfWidth), fill: brushFill, "fill-opacity": 0.46, stroke: "none", "data-cold-glue-brush-channel": item.id, "data-channel-side": "inner" }, objectLayer);
         const labelAngle = (Math.min(num(item.outerStart, item.start), num(item.innerStart, item.start)) + Math.max(num(item.outerEnd, item.end), num(item.innerEnd, item.end))) / 2;
@@ -281,7 +281,7 @@ function drawConfiguredAssemblies(add, layer) {
         return;
       }
       if (item.kind !== "brush") return;
-      const depth = item.side === "inner" ? state.depths.wipeInner : state.depths.wipeOuter;
+      const depth = item.side === "inner" ? state.depths.brushInner : state.depths.brushOuter;
       const brushCenterRadius = state.radius + depth;
       // Brush extension is a physical setup value, not a literal SVG radial
       // thickness. Scale and cap the drawing so inside/outside brush channels
@@ -298,7 +298,7 @@ function drawConfiguredAssemblies(add, layer) {
     const objectLayer = add("g", { "data-map-object-id": item.id, class: state.selectedMapObjectId === item.id ? "map-object selected-map-object" : "map-object" }, layer);
     const isInner = item.side === "inner";
     if (item.kind === "sensor") {
-      const centerRadius = state.radius + state.depths.opRoller + 7;
+      const centerRadius = state.radius + state.depths.sensor;
       const placement = num(item.angle, item.start);
       add("path", {
         d: arcPath(placement - 1.5, placement + 1.5, centerRadius - 8, centerRadius + 8),
@@ -309,7 +309,7 @@ function drawConfiguredAssemblies(add, layer) {
       return;
     }
     if (item.kind === "coding") {
-      const centerRadius = state.radius + state.depths.opRoller;
+      const centerRadius = state.radius + state.depths.coding;
       add("path", { d: arcPath(num(item.start), num(item.end), centerRadius - 7, centerRadius + 7), fill: "#8f7a48", "fill-opacity": 0.62, stroke: "none", "data-coding-object": item.id }, objectLayer);
       drawMapObjectLabel(add, objectLayer, item, (num(item.start) + num(item.end)) / 2, centerRadius, 18);
       return;

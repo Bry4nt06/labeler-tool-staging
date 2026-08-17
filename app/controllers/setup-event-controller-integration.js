@@ -51,10 +51,15 @@
   ]);
   const depthKeys = Object.freeze({
     spenderDepth: "spender",
+    codingDepth: "coding",
+    sensorDepth: "sensor",
+    gripperDepth: "gripper",
     opRollerDepth: "opRoller",
     nonOpRollerDepth: "nonOpRoller",
     wipeInnerDepth: "wipeInner",
-    wipeOuterDepth: "wipeOuter"
+    wipeOuterDepth: "wipeOuter",
+    brushInnerDepth: "brushInner",
+    brushOuterDepth: "brushOuter"
   });
 
   let pendingBottleRenderTimer = 0;
