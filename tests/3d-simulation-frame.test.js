@@ -74,13 +74,14 @@ assert.ok(Math.abs(frame.container.servoAngleUnwrapped - 137.8) < 0.000001, "The
 assert.ok(Math.abs(frame.container.cumulativeNetRotation - 137.8) < 0.000001, "Cumulative net rotation must be deterministic.");
 
 const sceneFrame = driver.snapshot(rows, 120, { commandDriver: sandbox.LabelerServoCommandDriver });
-const scene = adapter.toSceneState(sceneFrame, { carouselRadius: 2, carouselDirection: "cw" });
+const scene = adapter.toSceneState(sceneFrame, { carouselRadius: 2, carouselDirection: "cw", zeroAngleDegrees: 0 });
 assert.strictEqual(scene.schemaVersion, "servoforge.3d-scene.v1");
-assert.ok(Math.abs(scene.bottleTable.position.x + Math.sqrt(3)) < 0.000001, "120 degree clockwise table position must map into the XZ orbit consistently.");
-assert.ok(Math.abs(scene.bottleTable.position.z + 1) < 0.000001, "120 degree clockwise table position must map into the XZ orbit consistently.");
+assert.strictEqual(scene.world.mapCoordinateParity, true);
+assert.ok(Math.abs(scene.bottleTable.position.x - 1) < 0.000001, "Clockwise 120 degree table position must mirror ServoForge angleToXY X coordinates.");
+assert.ok(Math.abs(scene.bottleTable.position.z - Math.sqrt(3)) < 0.000001, "Clockwise 120 degree table position must mirror ServoForge angleToXY Y coordinates on the XZ plane.");
 assert.ok(Math.abs(scene.bottle.servoAngleDegrees - 95.6) < 0.000001, "Scene bottle rotation must use the exact servo angle from the frame contract.");
 
-sandbox.state = { program: rows, previewAngle: 110, direction: "ccw" };
+sandbox.state = { program: rows, previewAngle: 110, direction: "ccw", zeroAngle: 0 };
 const runtimeSnapshot = sandbox.Labeler3DSceneRuntime.snapshot({ commandDriver: sandbox.LabelerServoCommandDriver });
 assert.strictEqual(runtimeSnapshot.readOnly, true, "3D runtime must remain read-only.");
 assert.ok(Math.abs(runtimeSnapshot.frame.container.servoAngleUnwrapped - 47.8) < 0.000001, "Runtime must source the generated Servo Program and current preview angle.");
