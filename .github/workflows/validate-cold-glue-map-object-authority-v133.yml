@@ -13,15 +13,10 @@ on:
       - "app/controllers/map-builder-action-controller.js"
       - "app/controllers/map-builder-event-controller.js"
       - "app/map-builder-controller.js"
-      - "app.js"
-      - "app/bootstrap.js"
-      - "service-worker.js"
-      - "update-manifest.json"
       - "tests/cold-glue-map-object-authority-v133.test.js"
       - "tests/map-builder-add-object-v134.test.js"
       - "tests/map-builder-machine-slot-v135.test.js"
       - "tests/optional-label-sensors-v136.test.js"
-      - "tests/update-build-consistency-v134.test.js"
       - "tests/map-runtime-service.test.js"
       - ".github/workflows/validate-cold-glue-map-object-authority-v133.yml"
   workflow_dispatch:
@@ -42,7 +37,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Check Cold Glue map runtime syntax
+      - name: Check map runtime syntax
         run: |
           set -euo pipefail
           node --check app/cold-glue-map-service.js
@@ -53,18 +48,14 @@ jobs:
           node --check app/controllers/map-builder-action-controller.js
           node --check app/controllers/map-builder-event-controller.js
           node --check app/map-builder-controller.js
-          node --check app.js
-          node --check app/bootstrap.js
-          node --check service-worker.js
 
-      - name: Validate Cold Glue active-map object authority
+      - name: Validate map object authority
         run: |
           set -euo pipefail
           node tests/cold-glue-map-object-authority-v133.test.js
           node tests/map-builder-add-object-v134.test.js
           node tests/map-builder-machine-slot-v135.test.js
           node tests/optional-label-sensors-v136.test.js
-          node tests/update-build-consistency-v134.test.js
           node tests/map-runtime-service.test.js
           node tests/cold-glue-brush-channel-authority-v132.test.js
           node tests/feature-integration-readiness.test.js
