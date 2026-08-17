@@ -77,8 +77,8 @@ assert.equal(objects.find((item) => item.id === "roller-1")?.application, "cold-
 machineMap.objects = [];
 state.coldGlueMap = [{ id: "ghost", kind: "brush", application: "cold-glue", start: 1, end: 2 }];
 objects = sandbox.coldGlueMapObjects();
-assert.deepEqual(objects, [], "deleted active-map objects must not be resurrected from a stale legacy mirror");
-assert.deepEqual(state.coldGlueMap, [], "legacy mirror must clear when the canonical map is empty");
+assert.equal(objects.length, 0, "deleted active-map objects must not be resurrected from a stale legacy mirror");
+assert.equal(state.coldGlueMap.length, 0, "legacy mirror must clear when the canonical map is empty");
 
 machineMap.objects = [{
   id: "channel-1",
@@ -96,8 +96,8 @@ rows[1].update(101.5);
 assert.equal(machineMap.objects[0].outerEnd, 101.5, "legacy map-point editing must mutate the canonical machine-map object");
 
 sandbox.resetColdGlueMap();
-assert.deepEqual(machineMap.objects, [], "reset must clear the canonical Cold Glue map");
-assert.deepEqual(state.coldGlueMap, [], "reset must clear the compatibility mirror");
+assert.equal(machineMap.objects.length, 0, "reset must clear the canonical Cold Glue map");
+assert.equal(state.coldGlueMap.length, 0, "reset must clear the compatibility mirror");
 assert.equal(sandbox.LabelerColdGlueMapService.activeMapAuthorityV133, true);
 
 console.log("Cold Glue map object authority v133 regression passed.");
