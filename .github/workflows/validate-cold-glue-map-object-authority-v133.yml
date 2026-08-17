@@ -7,10 +7,14 @@ on:
       - "app/cold-glue-map-service.js"
       - "app/map-runtime-service.js"
       - "app/wipe-down-builder.js"
+      - "app/controllers/map-builder-action-controller.js"
+      - "app/controllers/map-builder-event-controller.js"
+      - "app/map-builder-controller.js"
       - "app.js"
       - "app/bootstrap.js"
       - "update-manifest.json"
       - "tests/cold-glue-map-object-authority-v133.test.js"
+      - "tests/map-builder-add-object-v134.test.js"
       - "tests/map-runtime-service.test.js"
       - ".github/workflows/validate-cold-glue-map-object-authority-v133.yml"
   workflow_dispatch:
@@ -37,6 +41,9 @@ jobs:
           node --check app/cold-glue-map-service.js
           node --check app/map-runtime-service.js
           node --check app/wipe-down-builder.js
+          node --check app/controllers/map-builder-action-controller.js
+          node --check app/controllers/map-builder-event-controller.js
+          node --check app/map-builder-controller.js
           node --check app.js
           node --check app/bootstrap.js
 
@@ -44,6 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           node tests/cold-glue-map-object-authority-v133.test.js
+          node tests/map-builder-add-object-v134.test.js
           node tests/map-runtime-service.test.js
           node tests/cold-glue-brush-channel-authority-v132.test.js
           node tests/feature-integration-readiness.test.js
