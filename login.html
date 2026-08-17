@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Sign in — ServoForge</title>
+  <link rel="icon" href="assets/servoforge-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="auth.css">
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <section class="auth-card" aria-labelledby="authTitle">
+      <div class="auth-brand">
+        <img src="assets/servoforge-mark.svg" alt="">
+        <div class="auth-brand-copy">
+          <strong>ServoForge</strong>
+          <span>Labeler Tool</span>
+        </div>
+      </div>
+
+      <h1 id="authTitle">Sign in</h1>
+      <p id="authSubtitle" class="auth-muted">Use the ServoForge account created for you.</p>
+
+      <form id="authForm" class="auth-form" autocomplete="on">
+        <div id="displayNameField" class="auth-field" hidden>
+          <label for="displayName">Display name</label>
+          <input id="displayName" name="displayName" type="text" maxlength="100" autocomplete="name">
+        </div>
+
+        <div class="auth-field">
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text" minlength="3" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._-]{2,63}" autocomplete="username" required autofocus>
+        </div>
+
+        <div class="auth-field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" minlength="10" autocomplete="current-password" required>
+        </div>
+
+        <div id="authMessage" class="auth-message" role="status" aria-live="polite"></div>
+        <button id="authSubmit" class="auth-button" type="submit">Sign in</button>
+      </form>
+
+      <div id="authHelp" class="auth-help">Accounts are managed locally by the ServoForge administrator. There is no public account registration.</div>
+    </section>
+  </main>
+  <script src="app/login-auth.js"></script>
+</body>
+</html>
