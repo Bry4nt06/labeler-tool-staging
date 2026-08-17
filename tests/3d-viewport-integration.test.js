@@ -23,7 +23,7 @@ assert.match(viewport, /new THREE\.PerspectiveCamera/, "Viewport must expose a p
 assert.match(viewport, /new THREE\.LatheGeometry/, "v0.1 must include a physical bottle mesh rather than only debug primitives.");
 assert.match(viewport, /servoPlateRotationY/, "Servo plate rendering must consume the shared scene rotation datum.");
 assert.match(viewport, /requestAnimationFrame/, "Viewport must track live ServoForge preview motion.");
-assert.match(viewport, />3D View</);
+assert.match(viewport, /textContent = "3D View"/);
 assert.match(viewport, /Drag to orbit • Wheel to zoom/);
 assert.match(viewport, /Generated Servo Program • read only/);
 
