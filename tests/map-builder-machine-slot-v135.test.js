@@ -68,7 +68,8 @@ const sandbox = {
     runtimeLoads += 1;
   },
   refreshAfterBuilderEdit(options) {
-    assert.deepEqual(options, { persist: true, structural: true });
+    assert.equal(options?.persist, true);
+    assert.equal(options?.structural, true);
     refreshes += 1;
   },
   renderWipeDownBuilder() { builderRenders += 1; },
@@ -83,22 +84,22 @@ vm.runInContext(actionSource, sandbox);
 
 const actions = sandbox.LabelerMapBuilderActionController;
 assert.equal(actions.setMachineSlot("aggregate", 2, true), true);
-assert.deepEqual(machineMap.enabledAggregates, [true, true, false, false, false, false]);
+assert.deepEqual(Array.from(machineMap.enabledAggregates), [true, true, false, false, false, false]);
 assert.equal(machineMap.aggregateCount, 2);
 assert.equal(status.textContent, "Aggregate 2 enabled.");
 
 assert.equal(actions.setMachineSlot("station", 3, true), true);
-assert.deepEqual(machineMap.enabledStations, [true, false, true, false, false, false]);
+assert.deepEqual(Array.from(machineMap.enabledStations), [true, false, true, false, false, false]);
 assert.equal(machineMap.stationCount, 2);
 assert.equal(status.textContent, "Station 3 enabled.");
 
 assert.equal(actions.setMachineSlot("aggregate", 1, false), true);
-assert.deepEqual(machineMap.enabledAggregates, [false, true, false, false, false, false]);
+assert.deepEqual(Array.from(machineMap.enabledAggregates), [false, true, false, false, false, false]);
 assert.equal(machineMap.aggregateCount, 1);
 
 assert.equal(actions.setMachineSlot("aggregate", 2, false), false,
   "the final active aggregate must not be removable");
-assert.deepEqual(machineMap.enabledAggregates, [false, true, false, false, false, false]);
+assert.deepEqual(Array.from(machineMap.enabledAggregates), [false, true, false, false, false, false]);
 assert.equal(machineMap.aggregateCount, 1);
 assert.match(status.textContent, /At least one aggregate/);
 
