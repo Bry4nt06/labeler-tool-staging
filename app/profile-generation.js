@@ -2,7 +2,7 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
-  const moduleBuild = "apl-neck-post-wipe-modulo-v136-20260817-1005";
+  const moduleBuild = "apl-neck-post-wipe-modulo-v137-20260817-1012";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",
