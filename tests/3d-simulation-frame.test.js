@@ -100,8 +100,21 @@ assert.ok(Math.abs(geometry.bottle.effectiveDiameterMm - 60.7) < 0.000001, "3D b
 assert.ok(Math.abs(geometry.machine.pitchRadiusWorld - 2.55) < 0.000001, "Default TopModul pitch radius must map to the v0.2 physical world scale.");
 assert.ok(Math.abs(geometry.machine.headPitchMm - 80.00002860513337) < 0.000001, "Head pitch must derive from physical pitch radius and head count.");
 assert.strictEqual(geometry.authority.bottleDiameter, true);
-assert.strictEqual(geometry.authority.bottleHeight, false, "Bottle height must not be presented as CAD-authoritative before the spec exists.");
-assert.strictEqual(geometry.bottle.verticalShapeSource, "reference-proportion-until-bottle-cad-dimensions-exist");
+assert.strictEqual(geometry.authority.bottleHeight, false, "Reference drawing height must not be misrepresented as bottle-specific CAD authority.");
+assert.strictEqual(geometry.authority.bottleVerticalProfile, "reference-drawing");
+assert.strictEqual(geometry.bottle.verticalShapeSource, "user-provided-330ml-longneck-reference");
+assert.strictEqual(geometry.bottle.referenceDrawingBodyDiameterIgnored, true, "The supplied drawing body diameter must not override ServoForge Bottle Specs.");
+assert.strictEqual(geometry.bottle.referenceHeightMm, 241.5);
+assert.strictEqual(geometry.bottle.finishOuterDiameterMm, 26.6);
+assert.strictEqual(geometry.bottle.mouthInnerDiameterMm, 17.5);
+assert.strictEqual(geometry.bottle.shoulderNeckDiameterMm, 37);
+assert.strictEqual(geometry.bottle.bodyStraightHeightMm, 92);
+assert.strictEqual(geometry.bottle.shoulderTransitionHeightMm, 41.5);
+assert.strictEqual(geometry.bottle.finishHeightMm, 17);
+assert.strictEqual(geometry.bottle.shoulderRadiusMm, 108);
+assert.ok(Array.isArray(geometry.bottle.profilePointsMm) && geometry.bottle.profilePointsMm.length > 15, "Reference drawing must generate a detailed lathe profile.");
+assert.ok(Math.abs(Math.max(...geometry.bottle.profilePointsMm.map((point) => point.radiusMm)) * 2 - 60.7) < 0.000001, "The rendered bottle profile maximum diameter must remain the active ServoForge effective diameter.");
+assert.ok(Math.abs(geometry.bottle.profilePointsMm.at(-1).yMm - 241.5) < 0.000001, "Reference bottle profile must terminate at the supplied 241.5 mm height.");
 
 sandbox.state = {
   program: rows,
@@ -121,10 +134,11 @@ assert.strictEqual(runtimeSnapshot.readOnly, true, "3D runtime must remain read-
 assert.ok(Math.abs(runtimeSnapshot.frame.container.servoAngleUnwrapped - 47.8) < 0.000001, "Runtime must source the generated Servo Program and current preview angle.");
 assert.strictEqual(runtimeSnapshot.geometry.schemaVersion, "servoforge.3d-geometry.v1");
 assert.ok(Math.abs(runtimeSnapshot.geometry.bottle.effectiveDiameterMm - 60.7) < 0.000001, "Runtime must carry active Bottle Specs into the 3D geometry contract.");
+assert.strictEqual(runtimeSnapshot.geometry.bottle.referenceHeightMm, 241.5, "Runtime must carry the longneck reference height into the 3D viewport contract.");
 assert.ok(Math.abs(runtimeSnapshot.scene.carousel.radius - 2.55) < 0.000001, "Scene orbit radius must default to the physical machine pitch radius.");
 assert.strictEqual(JSON.stringify(rows), originalRows, "3D frame generation must not mutate Servo Program rows.");
 assert.ok(Object.isFrozen(runtimeSnapshot.frame), "Published 3D frames must be immutable.");
 assert.ok(Object.isFrozen(runtimeSnapshot.geometry), "Published 3D geometry must be immutable.");
 assert.ok(Object.isFrozen(runtimeSnapshot.scene), "Published 3D scene states must be immutable.");
 
-console.log("ServoForge 3D simulation-frame and physical-geometry parity regression passed.");
+console.log("ServoForge 3D simulation-frame and longneck-reference geometry parity regression passed.");
