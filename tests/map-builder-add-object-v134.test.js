@@ -42,6 +42,7 @@ let rendered = 0;
 
 const sandbox = {
   console,
+  builderExpandedStation: null,
   state: {
     applicationMode: "cold-glue",
     coldGlueMap: []
