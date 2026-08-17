@@ -71,6 +71,7 @@
     "drivers/simulation/three-d-simulation-frame-driver.js",
     "app/3d/scene-adapter.js",
     "app/3d/physical-geometry-adapter.js",
+    "app/3d/carousel-layout-adapter.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
     "app/startup-runtime.js"
