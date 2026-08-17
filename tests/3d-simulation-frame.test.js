@@ -7,6 +7,15 @@ const vm = require("vm");
 
 const root = path.resolve(__dirname, "..");
 const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
+const bootstrap = read("app/bootstrap.js");
+
+[
+  "drivers/simulation/three-d-simulation-frame-driver.js",
+  "app/3d/scene-adapter.js",
+  "app/3d/scene-runtime.js"
+].forEach((modulePath) => {
+  assert.ok(bootstrap.includes(modulePath), `${modulePath} must be loaded by the ServoForge bootstrap.`);
+});
 
 const sandbox = {
   window: {},
@@ -71,7 +80,7 @@ assert.ok(Math.abs(scene.bottleTable.position.x + Math.sqrt(3)) < 0.000001, "120
 assert.ok(Math.abs(scene.bottleTable.position.z + 1) < 0.000001, "120 degree clockwise table position must map into the XZ orbit consistently.");
 assert.ok(Math.abs(scene.bottle.servoAngleDegrees - 95.6) < 0.000001, "Scene bottle rotation must use the exact servo angle from the frame contract.");
 
-sandbox.state = { program: rows, previewAngle: 110 };
+sandbox.state = { program: rows, previewAngle: 110, direction: "ccw" };
 const runtimeSnapshot = sandbox.Labeler3DSceneRuntime.snapshot({ commandDriver: sandbox.LabelerServoCommandDriver });
 assert.strictEqual(runtimeSnapshot.readOnly, true, "3D runtime must remain read-only.");
 assert.ok(Math.abs(runtimeSnapshot.frame.container.servoAngleUnwrapped - 47.8) < 0.000001, "Runtime must source the generated Servo Program and current preview angle.");
