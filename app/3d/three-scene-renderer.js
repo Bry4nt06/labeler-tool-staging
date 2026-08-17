@@ -1,11 +1,10 @@
 (function installServoForge3DViewport(global) {
   "use strict";
 
-  const VIEWPORT_VERSION = "servoforge.3d-viewport.v0.2";
+  const VIEWPORT_VERSION = "servoforge.3d-viewport.v0.2.1";
   const THREE_VERSION = "0.185.1";
   const THREE_MODULE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
   const REFERENCE_PITCH_RADIUS_WORLD = 2.55;
-  const REFERENCE_BOTTLE_DIAMETER_WORLD = 0.62;
   const REFERENCE_TABLE_BASE_DIAMETER_WORLD = 0.98;
   const REFERENCE_SERVO_PLATE_DIAMETER_WORLD = 0.72;
   const TABLE_Y = 0.2;
@@ -51,6 +50,11 @@
     return Math.max(min, Math.min(max, value));
   }
 
+  function number(value, fallback = 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
   function formatDegrees(value, decimals = 1) {
     const numeric = Number(value);
     return Number.isFinite(numeric) ? `${numeric.toFixed(decimals)}°` : "—";
@@ -76,9 +80,9 @@
       .servoforge-3d-stage{position:relative;min-height:0;background:radial-gradient(circle at 50% 38%,#18313d 0,#09171e 50%,#050c11 100%);overflow:hidden}.servoforge-3d-canvas{width:100%;height:100%;display:block;touch-action:none;cursor:grab}.servoforge-3d-canvas:active{cursor:grabbing}
       .servoforge-3d-telemetry{position:absolute;left:14px;bottom:14px;display:grid;grid-template-columns:repeat(4,minmax(115px,1fr));gap:8px;width:min(920px,calc(100% - 28px));pointer-events:none}.servoforge-3d-metric{background:rgba(5,15,20,.82);border:1px solid rgba(137,174,190,.2);border-radius:10px;padding:9px 10px;box-shadow:0 8px 24px rgba(0,0,0,.2);min-width:0}.servoforge-3d-metric span{display:block;color:#829ba7;font-size:9px;text-transform:uppercase;letter-spacing:.08em}.servoforge-3d-metric strong{display:block;margin-top:3px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.servoforge-3d-metric.action{grid-column:span 2}.servoforge-3d-metric.physical strong{color:#b9f4d8}.servoforge-3d-metric.reference strong{color:#ffd6a7}
       .servoforge-3d-help{position:absolute;right:14px;bottom:14px;background:rgba(5,15,20,.72);border:1px solid rgba(137,174,190,.16);border-radius:9px;padding:8px 10px;color:#8ca3ad;font-size:10px;pointer-events:none}
-      .servoforge-3d-physical-note{position:absolute;right:14px;top:14px;max-width:290px;background:rgba(5,15,20,.76);border:1px solid rgba(137,174,190,.16);border-radius:9px;padding:8px 10px;color:#9db2bb;font-size:10px;line-height:1.35;pointer-events:none}.servoforge-3d-physical-note strong{color:#d9f7e9}
+      .servoforge-3d-physical-note{position:absolute;right:14px;top:14px;max-width:320px;background:rgba(5,15,20,.76);border:1px solid rgba(137,174,190,.16);border-radius:9px;padding:8px 10px;color:#9db2bb;font-size:10px;line-height:1.35;pointer-events:none}.servoforge-3d-physical-note strong{color:#d9f7e9}
       .servoforge-3d-error{position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);max-width:560px;background:rgba(75,22,18,.94);border:1px solid rgba(255,120,77,.55);border-radius:12px;padding:14px 16px;color:#ffe7df;font-size:12px;line-height:1.45;text-align:center}
-      @media(max-width:760px){.servoforge-3d-backdrop{padding:8px}.servoforge-3d-panel{width:100%;height:94vh;min-height:480px;border-radius:12px}.servoforge-3d-head{align-items:flex-start;flex-direction:column}.servoforge-3d-controls{justify-content:flex-start}.servoforge-3d-telemetry{grid-template-columns:repeat(2,minmax(100px,1fr));width:calc(100% - 28px);bottom:46px}.servoforge-3d-metric.action{grid-column:span 2}.servoforge-3d-help{left:14px;right:auto}.servoforge-3d-physical-note{top:8px;right:8px;max-width:220px}}
+      @media(max-width:760px){.servoforge-3d-backdrop{padding:8px}.servoforge-3d-panel{width:100%;height:94vh;min-height:480px;border-radius:12px}.servoforge-3d-head{align-items:flex-start;flex-direction:column}.servoforge-3d-controls{justify-content:flex-start}.servoforge-3d-telemetry{grid-template-columns:repeat(2,minmax(100px,1fr));width:calc(100% - 28px);bottom:46px}.servoforge-3d-metric.action{grid-column:span 2}.servoforge-3d-help{left:14px;right:auto}.servoforge-3d-physical-note{top:8px;right:8px;max-width:230px}}
     `;
     document.head.appendChild(style);
   }
@@ -107,7 +111,7 @@
     backdrop.innerHTML = `
       <section class="servoforge-3d-panel" role="dialog" aria-modal="true" aria-labelledby="servoforge3dTitle">
         <header class="servoforge-3d-head">
-          <div class="servoforge-3d-title"><span class="servoforge-3d-live" aria-hidden="true"></span><div><h2 id="servoforge3dTitle">ServoForge 3D • Physical Scale Preview</h2><small>Generated Servo Program • active Bottle Specs • read only • Three.js ${THREE_VERSION}</small></div></div>
+          <div class="servoforge-3d-title"><span class="servoforge-3d-live" aria-hidden="true"></span><div><h2 id="servoforge3dTitle">ServoForge 3D • Longneck Reference Profile</h2><small>Generated Servo Program • active Bottle Specs • read only • Three.js ${THREE_VERSION}</small></div></div>
           <div class="servoforge-3d-controls">
             <button type="button" data-3d-camera="operator">Operator</button>
             <button type="button" data-3d-camera="top">Top</button>
@@ -117,8 +121,8 @@
           </div>
         </header>
         <div class="servoforge-3d-stage" id="servoforge3dStage">
-          <canvas class="servoforge-3d-canvas" id="servoforge3dCanvas" aria-label="Live physically scaled 3D ServoForge bottle table simulation"></canvas>
-          <div class="servoforge-3d-physical-note" id="servoforge3dPhysicalNote"><strong>Physical scale:</strong> bottle diameter + table pitch radius are recipe/map driven. Bottle height remains reference proportion until CAD dimensions are stored.</div>
+          <canvas class="servoforge-3d-canvas" id="servoforge3dCanvas" aria-label="Live 3D ServoForge longneck bottle table simulation"></canvas>
+          <div class="servoforge-3d-physical-note"><strong>Geometry:</strong> body diameter stays recipe-driven. The 241.5 mm height, crown finish and longneck/shoulder silhouette use the supplied 330 ml reference drawing.</div>
           <div class="servoforge-3d-telemetry" aria-live="polite">
             <div class="servoforge-3d-metric"><span>Machine angle</span><strong id="servoforge3dMachineAngle">—</strong></div>
             <div class="servoforge-3d-metric"><span>Bottle servo</span><strong id="servoforge3dServoAngle">—</strong></div>
@@ -127,7 +131,7 @@
             <div class="servoforge-3d-metric physical"><span>Active bottle</span><strong id="servoforge3dBottleName">—</strong></div>
             <div class="servoforge-3d-metric physical"><span>Effective diameter</span><strong id="servoforge3dBottleDiameter">—</strong></div>
             <div class="servoforge-3d-metric physical"><span>Pitch radius</span><strong id="servoforge3dPitchRadius">—</strong></div>
-            <div class="servoforge-3d-metric reference"><span>Bottle height</span><strong id="servoforge3dBottleHeight">Reference only</strong></div>
+            <div class="servoforge-3d-metric reference"><span>Reference height</span><strong id="servoforge3dBottleHeight">—</strong></div>
             <div class="servoforge-3d-metric action"><span>Action</span><strong id="servoforge3dAction">Waiting for Servo Program</strong></div>
             <div class="servoforge-3d-metric"><span>Stage</span><strong id="servoforge3dStageName">—</strong></div>
             <div class="servoforge-3d-metric"><span>Motion</span><strong id="servoforge3dMotion">—</strong></div>
@@ -135,8 +139,7 @@
           <div class="servoforge-3d-help">Drag to orbit • Wheel to zoom</div>
           <div id="servoforge3dError" class="servoforge-3d-error" hidden></div>
         </div>
-      </section>
-    `;
+      </section>`;
     document.body.appendChild(backdrop);
 
     ui = {
@@ -194,47 +197,85 @@
     return new THREE.MeshStandardMaterial(options);
   }
 
-  function createBottleModel() {
-    const group = new THREE.Group();
-    group.name = "ServoForgeBottle";
-    const profile = [
+  function fallbackBottlePoints() {
+    return [
       [0.27, 0.00], [0.30, 0.05], [0.31, 0.18], [0.31, 1.02],
       [0.30, 1.14], [0.26, 1.26], [0.18, 1.37], [0.12, 1.44],
       [0.115, 1.85], [0.13, 1.90]
     ].map(([radius, y]) => new THREE.Vector2(radius, y));
+  }
+
+  function createBottleModel(geometry = null) {
+    const group = new THREE.Group();
+    group.name = "ServoForgeBottle";
+    const supplied = geometry?.bottle?.profilePointsWorld;
+    const profile = Array.isArray(supplied) && supplied.length >= 4
+      ? supplied.map((point) => new THREE.Vector2(number(point.radius), number(point.y)))
+      : fallbackBottlePoints();
+    const unitsPerMm = number(geometry?.renderScale?.worldUnitsPerMm, 0.00445);
+    const bodyRadius = number(geometry?.bottle?.radiusWorld, profile.reduce((max, point) => Math.max(max, point.x), 0.30));
+    const height = number(geometry?.bottle?.visualHeightWorld, profile[profile.length - 1]?.y || 1.90);
+    const finishRadius = number(geometry?.bottle?.finishOuterDiameterMm, 26.6) * unitsPerMm / 2;
 
     const glass = new THREE.Mesh(
-      new THREE.LatheGeometry(profile, 64),
-      material({ color: 0x70401f, roughness: 0.28, metalness: 0.02 })
+      new THREE.LatheGeometry(profile, 72),
+      material({ color: 0x70401f, roughness: 0.27, metalness: 0.02 })
     );
     glass.castShadow = true;
     glass.receiveShadow = true;
     group.add(glass);
 
+    const capHeight = Math.max(0.024, 6 * unitsPerMm);
+    const capRadius = Math.max(finishRadius * 1.08, bodyRadius * 0.20);
     const cap = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.135, 0.135, 0.10, 40),
+      new THREE.CylinderGeometry(capRadius, capRadius * 1.01, capHeight, 40),
       material({ color: 0x3387c8, roughness: 0.32, metalness: 0.42 })
     );
-    cap.position.y = 1.95;
+    cap.position.y = height + capHeight / 2;
     cap.castShadow = true;
     group.add(cap);
 
+    const markerHeight = Math.max(0.30, Math.min(height * 0.46, number(geometry?.bottle?.bodyStraightHeightMm, 92) * unitsPerMm * 0.88));
+    const markerThickness = Math.max(0.010, bodyRadius * 0.08);
     const frontMarker = new THREE.Mesh(
-      new THREE.BoxGeometry(0.035, 1.05, 0.12),
+      new THREE.BoxGeometry(markerThickness, markerHeight, Math.max(0.025, bodyRadius * 0.24)),
       new THREE.MeshStandardMaterial({ color: 0xff6a3d, emissive: 0x421308, emissiveIntensity: 0.42, roughness: 0.35 })
     );
-    frontMarker.position.set(0.32, 0.76, 0);
+    frontMarker.position.set(bodyRadius + markerThickness * 0.45, Math.max(markerHeight / 2 + 0.04, height * 0.25), 0);
     frontMarker.castShadow = true;
     group.add(frontMarker);
 
     const datum = new THREE.Mesh(
-      new THREE.ConeGeometry(0.075, 0.22, 24),
+      new THREE.ConeGeometry(Math.max(0.028, bodyRadius * 0.20), Math.max(0.10, bodyRadius * 0.70), 24),
       new THREE.MeshStandardMaterial({ color: 0xffd3c4, emissive: 0x5b1709, emissiveIntensity: 0.25 })
     );
     datum.rotation.z = -Math.PI / 2;
-    datum.position.set(0.43, 1.20, 0);
+    datum.position.set(bodyRadius + Math.max(0.05, bodyRadius * 0.35), Math.min(height * 0.55, 125 * unitsPerMm), 0);
     group.add(datum);
+
     return group;
+  }
+
+  function disposeObject3D(object) {
+    if (!object) return;
+    object.traverse((child) => {
+      child.geometry?.dispose?.();
+      if (Array.isArray(child.material)) child.material.forEach((item) => item?.dispose?.());
+      else child.material?.dispose?.();
+    });
+  }
+
+  function replaceBottleModel(geometry) {
+    const previous = bottleModel;
+    const next = createBottleModel(geometry);
+    if (previous) {
+      next.position.copy(previous.position);
+      next.rotation.copy(previous.rotation);
+      scene.remove(previous);
+      disposeObject3D(previous);
+    }
+    bottleModel = next;
+    scene.add(bottleModel);
   }
 
   function createMachineScene() {
@@ -365,6 +406,9 @@
     return [
       geometry?.bottle?.bottleType,
       geometry?.bottle?.effectiveDiameterMm,
+      geometry?.bottle?.referenceHeightMm,
+      geometry?.bottle?.finishOuterDiameterMm,
+      geometry?.bottle?.verticalShapeSource,
       geometry?.machine?.pitchRadiusMm,
       geometry?.machine?.headCount,
       geometry?.bottleTable?.plateDiameterMm,
@@ -373,16 +417,15 @@
   }
 
   function syncPhysicalGeometry(geometry) {
-    if (!geometry || !bottleModel || !bottleTableBase || !servoPlate) return;
+    if (!geometry || !bottleTableBase || !servoPlate) return;
     const signature = geometrySignature(geometry);
     if (signature === lastGeometrySignature) return;
     lastGeometrySignature = signature;
 
-    const pitchWorld = Number(geometry.machine?.pitchRadiusWorld) || REFERENCE_PITCH_RADIUS_WORLD;
-    const outerWorld = Number(geometry.machine?.carouselOuterRadiusWorld) || 3.18;
-    const bottleDiameterWorld = Number(geometry.bottle?.diameterWorld) || REFERENCE_BOTTLE_DIAMETER_WORLD;
-    const baseDiameterWorld = Number(geometry.bottleTable?.baseDiameterWorld) || REFERENCE_TABLE_BASE_DIAMETER_WORLD;
-    const plateDiameterWorld = Number(geometry.bottleTable?.plateDiameterWorld) || REFERENCE_SERVO_PLATE_DIAMETER_WORLD;
+    const pitchWorld = number(geometry.machine?.pitchRadiusWorld, REFERENCE_PITCH_RADIUS_WORLD);
+    const outerWorld = number(geometry.machine?.carouselOuterRadiusWorld, 3.18);
+    const baseDiameterWorld = number(geometry.bottleTable?.baseDiameterWorld, REFERENCE_TABLE_BASE_DIAMETER_WORLD);
+    const plateDiameterWorld = number(geometry.bottleTable?.plateDiameterWorld, REFERENCE_SERVO_PLATE_DIAMETER_WORLD);
 
     const pitchScale = pitchWorld / REFERENCE_PITCH_RADIUS_WORLD;
     const outerScale = outerWorld / 3.18;
@@ -391,16 +434,13 @@
     pathRing.scale.set(pitchScale, 1, pitchScale);
     hub.scale.set(pitchScale, 1, pitchScale);
 
-    const bottleScale = bottleDiameterWorld / REFERENCE_BOTTLE_DIAMETER_WORLD;
-    bottleModel.scale.setScalar(bottleScale);
-
     const baseScale = baseDiameterWorld / REFERENCE_TABLE_BASE_DIAMETER_WORLD;
     bottleTableBase.scale.set(baseScale, 1, baseScale);
     const desiredPlateToBase = plateDiameterWorld / baseDiameterWorld;
     const referencePlateToBase = REFERENCE_SERVO_PLATE_DIAMETER_WORLD / REFERENCE_TABLE_BASE_DIAMETER_WORLD;
-    const plateRelativeScale = desiredPlateToBase / referencePlateToBase;
-    servoPlate.scale.set(plateRelativeScale, 1, plateRelativeScale);
+    servoPlate.scale.set(desiredPlateToBase / referencePlateToBase, 1, desiredPlateToBase / referencePlateToBase);
 
+    replaceBottleModel(geometry);
     if (referencePost) referencePost.position.x = outerWorld + 0.30;
   }
 
@@ -421,7 +461,7 @@
       cameraState.lastX = event.clientX;
       cameraState.lastY = event.clientY;
       cameraState.azimuth -= dx * 0.006;
-      cameraState.polar = clamp(cameraState.polar + dy * 0.006, 0.12, Math.PI * 0.48);
+      cameraState.polar = clamp(cameraState.polar + dy * 0.006, 0.08, Math.PI * 0.49);
       applyCamera();
     });
     const release = (event) => {
@@ -455,7 +495,7 @@
     if (name === "top") {
       cameraState.target.set(0, 0.35, 0);
       cameraState.azimuth = Math.PI * 0.5;
-      cameraState.polar = 0.12;
+      cameraState.polar = 0.08;
       cameraState.distance = 8.4;
     } else if (name === "reset" || name === "operator") {
       cameraState.target.set(0, 0.72, 0);
@@ -471,7 +511,7 @@
   function focusTable(snapshot = lastSnapshot) {
     const position = snapshot?.scene?.bottleTable?.position;
     if (!position || !cameraState.target) return;
-    cameraState.target.set(Number(position.x) || 0, 0.82, Number(position.z) || 0);
+    cameraState.target.set(number(position.x), 0.72, number(position.z));
     cameraState.distance = Math.min(cameraState.distance, 4.2);
     applyCamera();
   }
@@ -500,22 +540,23 @@
     ui.bottleName.textContent = geometry.bottle?.bottleType || "—";
     ui.bottleDiameter.textContent = formatMillimeters(geometry.bottle?.effectiveDiameterMm, 2);
     ui.pitchRadius.textContent = formatMillimeters(geometry.machine?.pitchRadiusMm, 3);
-    ui.bottleHeight.textContent = geometry.authority?.bottleHeight
-      ? formatMillimeters(geometry.bottle?.physicalHeightMm, 1)
-      : "Reference proportion";
+    ui.bottleHeight.textContent = Number.isFinite(Number(geometry.bottle?.referenceHeightMm))
+      ? `${formatMillimeters(geometry.bottle.referenceHeightMm, 1)} ref`
+      : "—";
   }
 
   function applySnapshot(snapshot) {
     const state3d = snapshot?.scene;
-    if (!state3d || !bottleTableBase || !servoPlate || !bottleModel) return;
+    if (!state3d || !bottleTableBase || !servoPlate) return;
     syncPhysicalGeometry(snapshot.geometry);
+    if (!bottleModel) return;
     const tablePosition = state3d.bottleTable.position;
     bottleTableBase.position.set(tablePosition.x, tablePosition.y, tablePosition.z);
-    servoPlate.rotation.y = Number(state3d.bottleTable.servoPlateRotationY) || 0;
+    servoPlate.rotation.y = number(state3d.bottleTable.servoPlateRotationY);
     bottleModel.position.set(state3d.bottle.position.x, state3d.bottle.position.y, state3d.bottle.position.z);
-    bottleModel.rotation.y = Number(state3d.bottle.rotation.y) || 0;
+    bottleModel.rotation.y = number(state3d.bottle.rotation.y);
     if (followTable) {
-      cameraState.target.set(tablePosition.x, 0.82, tablePosition.z);
+      cameraState.target.set(tablePosition.x, 0.72, tablePosition.z);
       applyCamera();
     }
     updateTelemetry(snapshot);
@@ -530,7 +571,7 @@
         scene: {
           tableY: TABLE_Y,
           bottleLift: BOTTLE_LIFT,
-          unitMode: "physical-mm-scaled-v0.2"
+          unitMode: "physical-mm-longneck-reference-v0.2.1"
         }
       });
       applySnapshot(lastSnapshot);
@@ -582,6 +623,8 @@
       physicalGeometry: Boolean(lastSnapshot?.geometry),
       bottleDiameterAuthority: Boolean(lastSnapshot?.geometry?.authority?.bottleDiameter),
       bottleHeightAuthority: Boolean(lastSnapshot?.geometry?.authority?.bottleHeight),
+      bottleVerticalProfile: lastSnapshot?.geometry?.authority?.bottleVerticalProfile || "reference-drawing",
+      referenceHeightMm: lastSnapshot?.geometry?.bottle?.referenceHeightMm || null,
       source: "Labeler3DSceneRuntime.snapshot",
       readOnly: true
     });
