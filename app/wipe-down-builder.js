@@ -1,7 +1,7 @@
 "use strict";
 
 (function loadServoForgeMapBuilderModules() {
-  const releaseVersion = "0.9.10-map-builder-add-authority-v134";
+  const releaseVersion = "0.9.10-map-builder-slot-authority-v135";
   const modulePaths = Object.freeze([
     "drivers/assembly/assembly-model-driver.js",
     "drivers/assembly/assembly-geometry-driver.js",
@@ -18,9 +18,10 @@
     "app/map-builder-history-service.js",
     "app/map-builder-renderer.js",
     "app/map-builder-controller.js",
+    "app/map-builder-slot-service.js",
     // Static Map Builder events must exist as soon as the builder itself is
-    // ready. Waiting for the later workspace bootstrap allowed Add to Map to
-    // render correctly while having no live click owner in stale/mixed builds.
+    // ready. Waiting for the later workspace bootstrap allowed controls to
+    // render correctly while having no live mutation owner.
     "app/controllers/map-builder-action-controller.js",
     "app/controllers/map-builder-event-controller.js"
   ]);
@@ -48,7 +49,7 @@
       }
 
       const script = document.createElement("script");
-      script.src = `./${path}?v=${encodeURIComponent(releaseVersion)}-map-builder-v5`;
+      script.src = `./${path}?v=${encodeURIComponent(releaseVersion)}-map-builder-v6`;
       script.async = false;
       script.dataset.servoforgeMapBuilderModule = path;
       script.addEventListener("load", () => {
