@@ -209,8 +209,8 @@
     const listing = form?.elements?.name?.closest?.(".sf-community-field");
     if (!form || !grid || !listing) return true;
 
-    addField(grid, listing, "communityUploadZoneField", "Zone (required, max 3)", '<input id="communityUploadZone" name="communityZone" maxlength="3" required placeholder="XXX" autocomplete="off" />');
-    addField(grid, listing, "communityUploadSiteField", "Site (required, max 3)", '<input id="communityUploadSite" name="communitySite" maxlength="3" required placeholder="XXX" autocomplete="off" />');
+    addField(grid, listing, "communityUploadZoneField", "Zone (required, max 3)", '<input id="communityUploadZone" name="communityZone" maxlength="3" required placeholder="e.g., ABC" autocomplete="off" />');
+    addField(grid, listing, "communityUploadSiteField", "Site (required, max 3)", '<input id="communityUploadSite" name="communitySite" maxlength="3" required placeholder="e.g., ABC" autocomplete="off" />');
     addField(grid, listing, "communityUploadMapField", "Machine Map", '<select id="communityUploadMapSelect" name="communityMapIndex"></select>');
     addField(grid, listing, "communityUploadBottleField", "Bottle spec", '<div class="sf-community-fallback-row"><select id="communityUploadBottleSelect" name="communityBottleIndex"></select><input id="communityUploadBottleSpecNumber" name="communityBottleSpecNumber" maxlength="80" placeholder="Spec #" aria-label="Bottle Spec number" /></div>');
     addField(grid, listing, "communityUploadBrandField", "Brand / Label spec", '<div class="sf-community-fallback-row"><select id="communityUploadBrandSelect" name="communityBrandIndex"></select><input id="communityUploadBrandSpecNumber" name="communityBrandSpecNumber" maxlength="80" placeholder="Spec #" aria-label="Brand or Label Spec number" /></div>');
