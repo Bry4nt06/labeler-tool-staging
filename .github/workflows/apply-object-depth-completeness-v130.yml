@@ -49,14 +49,20 @@ jobs:
           node --check service-worker.js
           node --check tests/object-depth-completeness-v130.test.js
 
-      - name: Run object-depth and neighboring regressions
-        run: |
-          set -euo pipefail
-          node tests/object-depth-completeness-v130.test.js
-          node tests/map-builder-lifecycle.test.js
-          node tests/map-builder-object-add-v123.test.js
-          node tests/physical-wipe-direction-v125.test.js
-          git diff --check
+      - name: Run Object Depth v130 regression
+        run: node tests/object-depth-completeness-v130.test.js
+
+      - name: Run Map Builder lifecycle regression
+        run: node tests/map-builder-lifecycle.test.js
+
+      - name: Run Map Builder object-add regression
+        run: node tests/map-builder-object-add-v123.test.js
+
+      - name: Run physical wipe regression
+        run: node tests/physical-wipe-direction-v125.test.js
+
+      - name: Check diff formatting
+        run: git diff --check
 
       - name: Commit staging v130
         run: |
