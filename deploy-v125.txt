@@ -1,3 +1,0 @@
-ServoForge staging physical wipe direction v125
-Build: physical-wipe-direction-v125-20260816-0905
-Published: 2026-08-16 09:02 ET

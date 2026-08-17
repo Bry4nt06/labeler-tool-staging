@@ -158,8 +158,8 @@
       label.innerHTML = html;
       grid.insertBefore(label, listing);
     };
-    add("communityUploadZoneField", '<span>Zone <small>(optional, max 3)</small></span><input id="communityUploadZone" name="communityZone" maxlength="3" autocomplete="off" placeholder="XXX" />');
-    add("communityUploadSiteField", '<span>Site <small>(optional, max 3)</small></span><input id="communityUploadSite" name="communitySite" maxlength="3" autocomplete="off" placeholder="XXX" />');
+    add("communityUploadZoneField", '<span>Zone <small>(optional, max 3)</small></span><input id="communityUploadZone" name="communityZone" maxlength="3" autocomplete="off" placeholder="e.g., ABC" />');
+    add("communityUploadSiteField", '<span>Site <small>(optional, max 3)</small></span><input id="communityUploadSite" name="communitySite" maxlength="3" autocomplete="off" placeholder="e.g., ABC" />');
     add("communityUploadMapField", '<span>Machine Map</span><select id="communityUploadMapSelect" name="communityMapIndex"></select>');
     add("communityUploadBottleField", '<span>Bottle spec</span><select id="communityUploadBottleSelect" name="communityBottleIndex"></select>');
     add("communityUploadBrandField", '<span>Brand / Label spec</span><select id="communityUploadBrandSelect" name="communityBrandIndex"></select>');
