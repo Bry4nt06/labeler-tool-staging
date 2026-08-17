@@ -2,7 +2,7 @@
   "use strict";
 
   const RUNTIME_VERSION = "servoforge.3d-runtime.v1";
-  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer.js?v=0.9.10-3d-v02-physical";
+  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer.js?v=0.9.10-3d-v021-longneck-reference";
 
   function number(value, fallback = 0) {
     const parsed = Number(value);
@@ -86,7 +86,7 @@
       ),
       readOnly: true,
       source: "generated-servo-program",
-      geometry: "active-bottle-and-machine-specs",
+      geometry: "active-bottle-diameter-plus-longneck-reference-profile",
       viewport: Boolean(global.Labeler3DViewport)
     });
   }
@@ -98,7 +98,7 @@
     const script = documentRef.createElement("script");
     script.src = `./${VIEWPORT_SCRIPT}`;
     script.async = true;
-    script.dataset.servoforge3dViewport = "v0.2";
+    script.dataset.servoforge3dViewport = "v0.2.1";
     script.addEventListener("error", () => {
       console.warn("ServoForge 3D viewport presenter could not be loaded. Core 3D frame runtime remains available.");
     }, { once: true });
