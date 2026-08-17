@@ -86,7 +86,11 @@ async function run() {
   assert.ok(appended.length > 30, "the complete feature manifest should load");
   assert.equal(appended.length, sandbox.LabelerIntegrationFeatureManifest.orderedModules.length);
   assert.match(appended[0], /drivers\/core\/driver-registry\.js/);
-  assert.match(appended.at(-1), /optimizer-brush-channel-expansion-integration\.js/);
+  assert.ok(
+    appended.some((entry) => /optimizer-brush-channel-expansion-integration\.js/.test(entry)),
+    "optimizer brush-channel integration must remain in the manifest"
+  );
+  assert.match(appended.at(-1), /validation-diagnostics-integration\.js/);
 
   sandbox.LabelerIntegrationFeatureManifest.orderedModules.forEach((moduleSource) => {
     const modulePath = String(moduleSource).split("?")[0];
