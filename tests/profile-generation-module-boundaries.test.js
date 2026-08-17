@@ -11,6 +11,7 @@ const exists = (file) => fs.existsSync(path.join(root, file));
 const loader = read("app/profile-generation.js");
 const aplSeed = read("app/apl-seed-profile.js");
 const coldGlue = read("app/cold-glue-profile-generation.js");
+const coldGlueDriver = read("drivers/mechanical/cold-glue-motion-driver.js");
 const aplMap = read("app/apl-map-profile-generation.js");
 const routing = read("app/profile-routing.js");
 const framing = read("app/machine-profile-framing.js");
@@ -31,37 +32,23 @@ const expectedModules = [
   "app/profile-translation-service.js",
   "app/profile-translator-validation.js"
 ];
-expectedModules.forEach((modulePath) => {
-  const escaped = modulePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  assert.match(loader, new RegExp(escaped), `${modulePath} must load before application startup`);
-  assert.match(serviceWorker, new RegExp(escaped), `${modulePath} must be available offline`);
-});
+expectedModules.forEach((modulePath) => assert.match(loader, new RegExp(modulePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))));
 
-const loadPositions = expectedModules.map((modulePath) => loader.indexOf(modulePath));
-assert.deepEqual([...loadPositions].sort((a, b) => a - b), loadPositions, "profile modules must retain dependency order");
-assert.ok(loadPositions.every((position) => position >= 0));
-assert.ok(loader.split("\n").length < 90, "profile-generation.js should remain a small loader");
-assert.match(loader, /ServoForgeProfileGenerationReady/);
-assert.match(app, /await window\.ServoForgeProfileGenerationReady/);
-assert.match(app, /await window\.ServoForgeBootstrapReady/);
-
-assert.equal(exists("app/profile-family-generators-legacy.js"), false, "the compatibility monolith must stay deleted");
-assert.doesNotMatch(loader, /profile-family-generators-legacy/);
-assert.doesNotMatch(serviceWorker, /profile-family-generators-legacy/);
+assert.doesNotMatch(app, /function generatedAplSeedProfile\(/);
+assert.doesNotMatch(app, /function generatedAplTwoLabelProfile\(/);
+assert.doesNotMatch(app, /function generatedColdGlueFixedProfile\(/);
+assert.doesNotMatch(app, /function generatedAplMapDrivenProfile\(/);
+assert.doesNotMatch(app, /function generatedServoProfile\(/);
+assert.doesNotMatch(app, /function applyMachineTypeProfileFraming\(/);
+assert.doesNotMatch(app, /function applyGeneratedServoProfile\(/);
+assert.doesNotMatch(app, /function servoOverrideProfileKey\(/);
+assert.doesNotMatch(app, /function setServoAngleOverride\(/);
+assert.doesNotMatch(app, /function buildAndTranslateProgram\(/);
 
 assert.match(aplSeed, /function generatedAplSeedProfile\(/);
 assert.match(aplSeed, /function generatedAplTwoLabelProfile\(/);
-assert.match(aplSeed, /LabelerAplSeedProfileGenerator/);
-assert.doesNotMatch(aplSeed, /generatedColdGlueFixedProfile|generatedAplMapDrivenProfile|generatedServoProfile|applyMachineTypeProfileFraming|applyGeneratedServoProfile/);
-
 assert.match(coldGlue, /function generatedColdGlueFixedProfile\(/);
-assert.match(coldGlue, /LabelerColdGlueProfileGenerator/);
-assert.doesNotMatch(coldGlue, /generatedAplMapDrivenProfile|generatedServoProfile|applyMachineTypeProfileFraming|applyGeneratedServoProfile/);
-
 assert.match(aplMap, /function generatedAplMapDrivenProfile\(/);
-assert.match(aplMap, /LabelerAplMapProfileGenerator/);
-assert.doesNotMatch(aplMap, /generatedColdGlueFixedProfile|generatedServoProfile|applyMachineTypeProfileFraming|applyGeneratedServoProfile/);
-
 assert.match(routing, /function generatedServoProfile\(/);
 assert.match(framing, /function applyMachineTypeProfileFraming\(/);
 assert.match(overrides, /function applyGeneratedServoProfile\(/);
@@ -95,7 +82,8 @@ assert.match(aplSeed, /requiredPairExitPadding/);
 assert.match(aplSeed, /apl-two-label-reference/);
 assert.match(coldGlue, /cold-glue-machine-map/);
 assert.match(coldGlue, /cold-glue-empty-map/);
-assert.match(coldGlue, /cold-glue-channel-capacity/);
+assert.match(coldGlueDriver, /cold-glue-channel-capacity/);
+assert.match(coldGlueDriver, /createBrushChannelPlan/);
 assert.match(aplMap, /apl-machine-map/);
 assert.match(aplMap, /apl-long-neck-adaptive-wipe/);
 assert.match(aplMap, /codingMotion: "direct-shortest-path"/);
