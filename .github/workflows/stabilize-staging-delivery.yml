@@ -1,0 +1,199 @@
+name: Stabilize staging delivery
+
+on:
+  push:
+    branches: [staging-delivery-stability]
+    paths:
+      - ".github/workflows/stabilize-staging-delivery.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  stabilize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out stability branch
+        uses: actions/checkout@v4
+        with:
+          ref: staging-delivery-stability
+          fetch-depth: 0
+
+      - name: Apply one-shot delivery stabilization
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          BUILD = "empty-default-specs-v149-20260817-1530"
+          OLD_BUILD = "cold-glue-brush-channel-authority-v132-20260816-2250"
+
+          app = Path("app.js")
+          text = app.read_text(encoding="utf-8")
+          text = text.replace(
+              'const build = window.ServoForgeBootstrapBuild || "apl-neck-wipe-orientation-marriage-v146-20260817-1319";',
+              f'const build = window.ServoForgeBootstrapBuild || "{BUILD}";'
+          )
+          app.write_text(text, encoding="utf-8")
+
+          sw = Path("service-worker.js")
+          text = sw.read_text(encoding="utf-8")
+          text = text.replace(
+              'const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-map-builder-add-authority-v134-20260816-2340";',
+              f'const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-{BUILD}";'
+          )
+          old_install = '''self.addEventListener("install", (event) => {
+            event.waitUntil(self.skipWaiting());
+          });'''
+          new_install = '''self.addEventListener("install", () => {
+            // Keep the active ServoForge session stable. A newly installed worker stays
+            // waiting until the user explicitly applies it from Check for Updates.
+          });'''
+          if old_install not in text:
+              raise SystemExit("Expected automatic service-worker install block was not found")
+          text = text.replace(old_install, new_install)
+          sw.write_text(text, encoding="utf-8")
+
+          persistence = Path("app/persistence.js")
+          text = persistence.read_text(encoding="utf-8")
+          text = text.replace(
+              "let reloadingForServiceWorker = false;",
+              "let reloadRequestedForServiceWorker = false;\nlet reloadingForServiceWorker = false;"
+          )
+          old_controller = '''    navigator.serviceWorker.addEventListener("controllerchange", () => {
+                if (reloadingForServiceWorker) return;
+                reloadingForServiceWorker = true;
+                window.location.reload();
+              });'''
+          new_controller = '''    navigator.serviceWorker.addEventListener("controllerchange", () => {
+                if (!reloadRequestedForServiceWorker || reloadingForServiceWorker) return;
+                reloadingForServiceWorker = true;
+                window.location.reload();
+              });'''
+          if old_controller not in text:
+              raise SystemExit("Expected controllerchange reload block was not found")
+          text = text.replace(old_controller, new_controller)
+          old_apply = '''  if (pendingServiceWorker) {
+            if (button) button.disabled = true;
+            if (status) status.textContent = "Applying update…";
+            pendingServiceWorker.postMessage({ type: "SKIP_WAITING" });
+            return;
+          }'''
+          new_apply = '''  if (pendingServiceWorker) {
+            if (button) button.disabled = true;
+            if (status) status.textContent = "Applying update…";
+            reloadRequestedForServiceWorker = true;
+            pendingServiceWorker.postMessage({ type: "SKIP_WAITING" });
+            return;
+          }'''
+          if old_apply not in text:
+              raise SystemExit("Expected pending service-worker apply block was not found")
+          text = text.replace(old_apply, new_apply)
+          persistence.write_text(text, encoding="utf-8")
+
+          index = Path("index.html")
+          text = index.read_text(encoding="utf-8").replace(OLD_BUILD, BUILD)
+          index.write_text(text, encoding="utf-8")
+
+          test = Path("tests/update-build-consistency-v134.test.js")
+          test.write_text(r'''"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const root = path.join(__dirname, "..");
+const manifest = JSON.parse(fs.readFileSync(path.join(root, "update-manifest.json"), "utf8"));
+const bootstrap = fs.readFileSync(path.join(root, "app/bootstrap.js"), "utf8");
+const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const serviceWorker = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
+const persistence = fs.readFileSync(path.join(root, "app/persistence.js"), "utf8");
+const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+
+const build = String(manifest.buildId || "").trim();
+assert.ok(build, "update manifest must publish a buildId");
+const escapedBuild = build.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+assert.match(
+  bootstrap,
+  new RegExp(`const build = [\\"']${escapedBuild}[\\"']`),
+  "bootstrap build must match the update manifest buildId"
+);
+assert.match(
+  app,
+  new RegExp(`ServoForgeBootstrapBuild \\|\\| [\\"']${escapedBuild}[\\"']`),
+  "app fallback build must match the published buildId"
+);
+assert.match(
+  serviceWorker,
+  new RegExp(escapedBuild),
+  "service-worker cache boundary must include the published buildId"
+);
+
+const scriptBuilds = [...index.matchAll(/(?:[?&])build=([^\"&]+)/g)].map((match) => match[1]);
+assert.ok(scriptBuilds.length > 0, "index must build-tag the static runtime scripts");
+assert.deepEqual(
+  [...new Set(scriptBuilds)],
+  [build],
+  "all static runtime script tags must use the same buildId as the manifest"
+);
+
+const installBlock = serviceWorker.match(/self\.addEventListener\("install",[\s\S]*?\n\}\);/)?.[0] || "";
+assert.doesNotMatch(
+  installBlock,
+  /skipWaiting\s*\(/,
+  "install must not activate a new service worker while a user session is running"
+);
+assert.match(serviceWorker, /type === "SKIP_WAITING"[\s\S]*?self\.skipWaiting\(\)/,
+  "explicit update activation must remain available");
+assert.match(persistence, /let reloadRequestedForServiceWorker = false;/,
+  "update runtime must track whether the user requested a restart");
+assert.match(persistence, /if \(!reloadRequestedForServiceWorker \|\| reloadingForServiceWorker\) return;/,
+  "controller changes must not reload an active session unless the user requested it");
+assert.match(persistence, /reloadRequestedForServiceWorker = true;\s*pendingServiceWorker\.postMessage\(\{ type: "SKIP_WAITING" \}\)/,
+  "Restart to Update must opt in to the one controller-change reload");
+
+console.log("Update delivery stability regression passed.");
+''', encoding="utf-8")
+
+          workflow = Path(".github/workflows/validate-machine-map-selector-v150.yml")
+          text = workflow.read_text(encoding="utf-8")
+          text = text.replace(
+              '      - "tests/map-library-selector.test.js"\n      - ".github/workflows/validate-machine-map-selector-v150.yml"',
+              '      - "tests/map-library-selector.test.js"\n      - "tests/update-build-consistency-v134.test.js"\n      - "app.js"\n      - "app/persistence.js"\n      - "app/bootstrap.js"\n      - "service-worker.js"\n      - "index.html"\n      - "update-manifest.json"\n      - ".github/workflows/validate-machine-map-selector-v150.yml"'
+          )
+          text = text.replace(
+              '          node --check app/locked-map-brand-selector-integration.js\n          node tests/map-library-selector.test.js\n          git diff --check',
+              '          node --check app/locked-map-brand-selector-integration.js\n          node --check app.js\n          node --check app/persistence.js\n          node --check service-worker.js\n          node tests/map-library-selector.test.js\n          node tests/update-build-consistency-v134.test.js\n          git diff --check'
+          )
+          workflow.write_text(text, encoding="utf-8")
+
+          # This was a one-off self-modifying migration workflow. Keeping it in main
+          # risks creating extra commits/deployments if it is touched again.
+          Path(".github/workflows/fix-panel-visibility-map-builder.yml").unlink(missing_ok=True)
+
+          # Remove this temporary branch-only patch workflow before the final commit.
+          Path(".github/workflows/stabilize-staging-delivery.yml").unlink(missing_ok=True)
+          PY
+
+      - name: Validate stabilized runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node --check app/persistence.js
+          node --check service-worker.js
+          node tests/map-library-selector.test.js
+          node tests/update-build-consistency-v134.test.js
+          git diff --check
+
+      - name: Commit stabilized branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "ServoForge Staging Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Stabilize staging update lifecycle"
+          git push origin HEAD:staging-delivery-stability
