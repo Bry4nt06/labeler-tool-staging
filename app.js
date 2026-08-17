@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "object-depth-completeness-v130-20260816-2130";
+  const build = "cold-glue-center-tack-brush-runtime-v131-20260816-2235";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -159,6 +159,9 @@
 
     progress?.set(76.5, "Correcting Cold Glue center-tack brush entry…");
     await loadScript("app/cold-glue-brush-direction-v128.js", version);
+
+    progress?.set(76.7, "Enforcing Cold Glue pre-brush spin and wipe direction…");
+    await loadScript("app/cold-glue-brush-runtime-v131.js", version);
 
     if (typeof initializeLabelerApp !== "function") {
       throw new Error("initializeLabelerApp is not loaded.");
