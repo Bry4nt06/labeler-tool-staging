@@ -2,13 +2,14 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
-  const moduleBuild = "cold-glue-brush-channel-authority-v132-20260816-2250";
+  const moduleBuild = "apl-neck-pad-edge-lock-v135-20260817-0917";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",
     "app/apl-seed-profile.js",
     "app/cold-glue-profile-generation.js",
     "app/apl-map-profile-generation.js",
+    "app/apl-neck-pad-edge-lock-integration.js",
     "app/apl-overlapping-pad-handoff-integration.js",
     "drivers/profile/coder-orientation-driver.js",
     "app/autocol-coder-codebox-generation-v122.js",
