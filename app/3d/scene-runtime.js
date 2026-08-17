@@ -2,7 +2,7 @@
   "use strict";
 
   const RUNTIME_VERSION = "servoforge.3d-runtime.v1";
-  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer.js?v=0.9.10-3d-v021-longneck-reference";
+  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v03.js?v=0.9.10-3d-v03-full-carousel";
 
   function number(value, fallback = 0) {
     const parsed = Number(value);
@@ -28,6 +28,13 @@
       throw new Error("ServoForge 3D runtime requires Labeler3DPhysicalGeometryAdapter.");
     }
     return global.Labeler3DPhysicalGeometryAdapter;
+  }
+
+  function carouselAdapter() {
+    if (!global.Labeler3DCarouselLayoutAdapter) {
+      throw new Error("ServoForge 3D runtime requires Labeler3DCarouselLayoutAdapter.");
+    }
+    return global.Labeler3DCarouselLayoutAdapter;
   }
 
   function appState() {
@@ -57,20 +64,28 @@
       worldUnitsPerMm: options.scene?.worldUnitsPerMm
     });
     const requestedScene = options.scene || {};
+    const carouselDirection = current?.direction || "ccw";
+    const zeroAngleDegrees = number(current?.zeroAngle, 0);
     const sceneOptions = {
-      carouselDirection: current?.direction || "ccw",
-      zeroAngleDegrees: number(current?.zeroAngle, 0),
+      carouselDirection,
+      zeroAngleDegrees,
       ...requestedScene,
       carouselRadius: Number.isFinite(Number(requestedScene.carouselRadius))
         ? Number(requestedScene.carouselRadius)
         : geometry.machine.pitchRadiusWorld
     };
     const scene = sceneAdapter().toSceneState(frame, sceneOptions);
+    const carousel = carouselAdapter().snapshot(scene, geometry, {
+      carouselDirection,
+      zeroAngleDegrees,
+      tableY: number(requestedScene.tableY, 0)
+    });
     return Object.freeze({
       runtimeVersion: RUNTIME_VERSION,
       readOnly: true,
       frame,
       geometry,
+      carousel,
       scene
     });
   }
@@ -82,11 +97,14 @@
         global.Labeler3DSimulationFrameDriver
         && global.Labeler3DSceneAdapter
         && global.Labeler3DPhysicalGeometryAdapter
+        && global.Labeler3DCarouselLayoutAdapter
         && global.LabelerServoReplayDriver
       ),
       readOnly: true,
       source: "generated-servo-program",
       geometry: "active-bottle-diameter-plus-longneck-reference-profile",
+      carousel: "machine-head-count-and-pitch-radius",
+      passiveServoMode: "neutral-no-invented-motion",
       viewport: Boolean(global.Labeler3DViewport)
     });
   }
@@ -98,7 +116,7 @@
     const script = documentRef.createElement("script");
     script.src = `./${VIEWPORT_SCRIPT}`;
     script.async = true;
-    script.dataset.servoforge3dViewport = "v0.2.1";
+    script.dataset.servoforge3dViewport = "v0.3";
     script.addEventListener("error", () => {
       console.warn("ServoForge 3D viewport presenter could not be loaded. Core 3D frame runtime remains available.");
     }, { once: true });
