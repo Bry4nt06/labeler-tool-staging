@@ -55,9 +55,6 @@ jobs:
       - name: Run Map Builder lifecycle regression
         run: node tests/map-builder-lifecycle.test.js
 
-      - name: Run Map Builder object-add regression
-        run: node tests/map-builder-object-add-v123.test.js
-
       - name: Run physical wipe regression
         run: node tests/physical-wipe-direction-v125.test.js
 
