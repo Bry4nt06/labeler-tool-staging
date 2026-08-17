@@ -50,3 +50,4 @@ jobs:
           path: .promotion-bundle/
           if-no-files-found: error
           retention-days: 3
+          include-hidden-files: true
