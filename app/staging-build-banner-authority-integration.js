@@ -10,7 +10,7 @@
   }
 
   function updatedAt() {
-    return String(global.SERVOFORGE_BUILD_UPDATED_AT || "").trim();
+    return String(global.ServoForgeBootstrapUpdatedAt || global.SERVOFORGE_BUILD_UPDATED_AT || "").trim();
   }
 
   function version() {
@@ -35,6 +35,7 @@
     enforcing = true;
     try {
       global.SERVOFORGE_BUILD_ID = build;
+      if (global.ServoForgeBootstrapUpdatedAt) global.SERVOFORGE_BUILD_UPDATED_AT = global.ServoForgeBootstrapUpdatedAt;
       const banner = global.document?.querySelector?.(".staging-environment-banner");
       const text = expectedBanner();
       if (banner && text && banner.textContent !== text) banner.textContent = text;
