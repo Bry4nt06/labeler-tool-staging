@@ -3,10 +3,22 @@
 (function installDefaultBottleSpecRetirement(global) {
   if (global.LabelerDefaultBottleSpecRetirement?.installed) return;
 
+  // Bottle Specs are user/workspace data now. ServoForge may ship machine maps,
+  // but a new or reset workspace should not start with a pre-populated bottle
+  // catalog while the Label Specs table is empty. Retire every bottle that has
+  // been distributed as a packaged/default record; user-created bottles with
+  // different geometry remain untouched.
   const RETIRED_DEFAULTS = Object.freeze([
     Object.freeze({ id: 1, bottleType: "LNNR - 7 Oz", diameterTargetMm: 53.57, radiusReductionMm: 0.25 }),
+    Object.freeze({ id: 2, bottleType: "SSNR - 12 Oz", diameterTargetMm: 60.68, radiusReductionMm: 0.3 }),
+    Object.freeze({ id: 3, bottleType: "LNNR - 12 Oz", diameterTargetMm: 61.52, radiusReductionMm: 0.41 }),
     Object.freeze({ id: 4, bottleType: "S1NR - 11.2OZ", diameterTargetMm: 60, radiusReductionMm: 0.3 }),
-    Object.freeze({ id: 5, bottleType: "HLNR - 12Oz", diameterTargetMm: 61.52, radiusReductionMm: 0.312 })
+    Object.freeze({ id: 5, bottleType: "HLNR - 12Oz", diameterTargetMm: 61.52, radiusReductionMm: 0.312 }),
+    Object.freeze({ id: 6, bottleType: "HLNR - 660ml", diameterTargetMm: 90.5, radiusReductionMm: 0.95 }),
+    Object.freeze({ id: 7, bottleType: "STDL - 330ml camden", diameterTargetMm: 60.7, radiusReductionMm: 0.3 }),
+    Object.freeze({ id: 8, bottleType: "660cl camden ", diameterTargetMm: 74.8, radiusReductionMm: 6.6 }),
+    Object.freeze({ id: 9, bottleType: "660ms OWGreen", diameterTargetMm: 74.8, radiusReductionMm: 2.1 }),
+    Object.freeze({ id: 10, bottleType: "Stella OW Green 330ml", diameterTargetMm: 60, radiusReductionMm: 0.3 })
   ]);
   const RETRY_MS = 50;
   const key = (value) => String(value ?? "").trim().toLowerCase();
@@ -53,7 +65,7 @@
   function wrapCompanyDefaults() {
     const service = global.LabelerCompanyDefaultsService;
     if (!service?.reconcile) return false;
-    if (service.defaultBottleSpecRetirementV1) return true;
+    if (service.emptyDefaultBottleCatalogV2) return true;
 
     const baseReconcile = service.reconcile.bind(service);
     global.LabelerCompanyDefaultsService = Object.freeze({
@@ -72,7 +84,8 @@
           retiredDefaultBottleTypes: retirement.removedBottleTypes || []
         };
       },
-      defaultBottleSpecRetirementV1: true
+      defaultBottleSpecRetirementV1: true,
+      emptyDefaultBottleCatalogV2: true
     });
     return true;
   }
@@ -83,11 +96,13 @@
     if (!wrapCompanyDefaults()) return false;
     global.LabelerDefaultBottleSpecRetirement = Object.freeze({
       installed: true,
+      version: 2,
       RETIRED_DEFAULTS,
       matchingRetiredDefault,
       shouldRetire,
       prune,
-      apply
+      apply,
+      emptyDefaultBottleCatalogV2: true
     });
     return true;
   }
