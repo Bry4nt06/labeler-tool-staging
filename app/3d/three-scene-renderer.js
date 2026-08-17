@@ -1,12 +1,15 @@
 (function installServoForge3DViewport(global) {
   "use strict";
 
-  const VIEWPORT_VERSION = "servoforge.3d-viewport.v0.1";
+  const VIEWPORT_VERSION = "servoforge.3d-viewport.v0.2";
   const THREE_VERSION = "0.185.1";
   const THREE_MODULE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
-  const CAROUSEL_RADIUS = 2.55;
+  const REFERENCE_PITCH_RADIUS_WORLD = 2.55;
+  const REFERENCE_BOTTLE_DIAMETER_WORLD = 0.62;
+  const REFERENCE_TABLE_BASE_DIAMETER_WORLD = 0.98;
+  const REFERENCE_SERVO_PLATE_DIAMETER_WORLD = 0.72;
   const TABLE_Y = 0.2;
-  const BOTTLE_LIFT = 0.2;
+  const BOTTLE_LIFT = 0.155;
 
   let THREE = null;
   let enginePromise = null;
@@ -18,9 +21,15 @@
   let viewportOpen = false;
   let followTable = false;
   let lastSnapshot = null;
+  let lastGeometrySignature = "";
   let bottleTableBase = null;
   let servoPlate = null;
   let bottleModel = null;
+  let carouselBody = null;
+  let carouselTop = null;
+  let pathRing = null;
+  let hub = null;
+  let referencePost = null;
   let ui = null;
 
   const cameraState = {
@@ -47,6 +56,11 @@
     return Number.isFinite(numeric) ? `${numeric.toFixed(decimals)}°` : "—";
   }
 
+  function formatMillimeters(value, decimals = 1) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? `${numeric.toFixed(decimals)} mm` : "—";
+  }
+
   function installStyles() {
     if (document.querySelector("#servoforge3dViewportStyles")) return;
     const style = document.createElement("style");
@@ -60,10 +74,11 @@
       .servoforge-3d-live{width:9px;height:9px;border-radius:50%;background:#35d18a;box-shadow:0 0 12px rgba(53,209,138,.7);flex:0 0 auto}
       .servoforge-3d-controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}.servoforge-3d-controls button{border:1px solid rgba(150,183,197,.28);background:#122833;color:#eef7fa;border-radius:8px;padding:7px 10px;font:inherit;font-size:11px;font-weight:700;cursor:pointer}.servoforge-3d-controls button:hover{background:#193846}.servoforge-3d-controls button[aria-pressed="true"]{border-color:#ff784d;color:#ffb095;background:#2d1d18}
       .servoforge-3d-stage{position:relative;min-height:0;background:radial-gradient(circle at 50% 38%,#18313d 0,#09171e 50%,#050c11 100%);overflow:hidden}.servoforge-3d-canvas{width:100%;height:100%;display:block;touch-action:none;cursor:grab}.servoforge-3d-canvas:active{cursor:grabbing}
-      .servoforge-3d-telemetry{position:absolute;left:14px;bottom:14px;display:grid;grid-template-columns:repeat(4,minmax(115px,1fr));gap:8px;width:min(760px,calc(100% - 28px));pointer-events:none}.servoforge-3d-metric{background:rgba(5,15,20,.82);border:1px solid rgba(137,174,190,.2);border-radius:10px;padding:9px 10px;box-shadow:0 8px 24px rgba(0,0,0,.2);min-width:0}.servoforge-3d-metric span{display:block;color:#829ba7;font-size:9px;text-transform:uppercase;letter-spacing:.08em}.servoforge-3d-metric strong{display:block;margin-top:3px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.servoforge-3d-metric.action{grid-column:span 2}
+      .servoforge-3d-telemetry{position:absolute;left:14px;bottom:14px;display:grid;grid-template-columns:repeat(4,minmax(115px,1fr));gap:8px;width:min(920px,calc(100% - 28px));pointer-events:none}.servoforge-3d-metric{background:rgba(5,15,20,.82);border:1px solid rgba(137,174,190,.2);border-radius:10px;padding:9px 10px;box-shadow:0 8px 24px rgba(0,0,0,.2);min-width:0}.servoforge-3d-metric span{display:block;color:#829ba7;font-size:9px;text-transform:uppercase;letter-spacing:.08em}.servoforge-3d-metric strong{display:block;margin-top:3px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.servoforge-3d-metric.action{grid-column:span 2}.servoforge-3d-metric.physical strong{color:#b9f4d8}.servoforge-3d-metric.reference strong{color:#ffd6a7}
       .servoforge-3d-help{position:absolute;right:14px;bottom:14px;background:rgba(5,15,20,.72);border:1px solid rgba(137,174,190,.16);border-radius:9px;padding:8px 10px;color:#8ca3ad;font-size:10px;pointer-events:none}
+      .servoforge-3d-physical-note{position:absolute;right:14px;top:14px;max-width:290px;background:rgba(5,15,20,.76);border:1px solid rgba(137,174,190,.16);border-radius:9px;padding:8px 10px;color:#9db2bb;font-size:10px;line-height:1.35;pointer-events:none}.servoforge-3d-physical-note strong{color:#d9f7e9}
       .servoforge-3d-error{position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);max-width:560px;background:rgba(75,22,18,.94);border:1px solid rgba(255,120,77,.55);border-radius:12px;padding:14px 16px;color:#ffe7df;font-size:12px;line-height:1.45;text-align:center}
-      @media(max-width:760px){.servoforge-3d-backdrop{padding:8px}.servoforge-3d-panel{width:100%;height:94vh;min-height:480px;border-radius:12px}.servoforge-3d-head{align-items:flex-start;flex-direction:column}.servoforge-3d-controls{justify-content:flex-start}.servoforge-3d-telemetry{grid-template-columns:repeat(2,minmax(100px,1fr));width:calc(100% - 28px);bottom:46px}.servoforge-3d-metric.action{grid-column:span 2}.servoforge-3d-help{left:14px;right:auto}}
+      @media(max-width:760px){.servoforge-3d-backdrop{padding:8px}.servoforge-3d-panel{width:100%;height:94vh;min-height:480px;border-radius:12px}.servoforge-3d-head{align-items:flex-start;flex-direction:column}.servoforge-3d-controls{justify-content:flex-start}.servoforge-3d-telemetry{grid-template-columns:repeat(2,minmax(100px,1fr));width:calc(100% - 28px);bottom:46px}.servoforge-3d-metric.action{grid-column:span 2}.servoforge-3d-help{left:14px;right:auto}.servoforge-3d-physical-note{top:8px;right:8px;max-width:220px}}
     `;
     document.head.appendChild(style);
   }
@@ -71,7 +86,6 @@
   function installUi() {
     if (ui) return ui;
     installStyles();
-
     const toolbar = document.querySelector(".map-toolbar");
     if (!toolbar) return null;
 
@@ -93,7 +107,7 @@
     backdrop.innerHTML = `
       <section class="servoforge-3d-panel" role="dialog" aria-modal="true" aria-labelledby="servoforge3dTitle">
         <header class="servoforge-3d-head">
-          <div class="servoforge-3d-title"><span class="servoforge-3d-live" aria-hidden="true"></span><div><h2 id="servoforge3dTitle">ServoForge 3D • Servo Motion Proof</h2><small>Generated Servo Program • read only • Three.js ${THREE_VERSION}</small></div></div>
+          <div class="servoforge-3d-title"><span class="servoforge-3d-live" aria-hidden="true"></span><div><h2 id="servoforge3dTitle">ServoForge 3D • Physical Scale Preview</h2><small>Generated Servo Program • active Bottle Specs • read only • Three.js ${THREE_VERSION}</small></div></div>
           <div class="servoforge-3d-controls">
             <button type="button" data-3d-camera="operator">Operator</button>
             <button type="button" data-3d-camera="top">Top</button>
@@ -103,12 +117,17 @@
           </div>
         </header>
         <div class="servoforge-3d-stage" id="servoforge3dStage">
-          <canvas class="servoforge-3d-canvas" id="servoforge3dCanvas" aria-label="Live 3D ServoForge bottle table simulation"></canvas>
+          <canvas class="servoforge-3d-canvas" id="servoforge3dCanvas" aria-label="Live physically scaled 3D ServoForge bottle table simulation"></canvas>
+          <div class="servoforge-3d-physical-note" id="servoforge3dPhysicalNote"><strong>Physical scale:</strong> bottle diameter + table pitch radius are recipe/map driven. Bottle height remains reference proportion until CAD dimensions are stored.</div>
           <div class="servoforge-3d-telemetry" aria-live="polite">
             <div class="servoforge-3d-metric"><span>Machine angle</span><strong id="servoforge3dMachineAngle">—</strong></div>
             <div class="servoforge-3d-metric"><span>Bottle servo</span><strong id="servoforge3dServoAngle">—</strong></div>
             <div class="servoforge-3d-metric"><span>Active command</span><strong id="servoforge3dCommand">—</strong></div>
             <div class="servoforge-3d-metric"><span>Event</span><strong id="servoforge3dEvent">—</strong></div>
+            <div class="servoforge-3d-metric physical"><span>Active bottle</span><strong id="servoforge3dBottleName">—</strong></div>
+            <div class="servoforge-3d-metric physical"><span>Effective diameter</span><strong id="servoforge3dBottleDiameter">—</strong></div>
+            <div class="servoforge-3d-metric physical"><span>Pitch radius</span><strong id="servoforge3dPitchRadius">—</strong></div>
+            <div class="servoforge-3d-metric reference"><span>Bottle height</span><strong id="servoforge3dBottleHeight">Reference only</strong></div>
             <div class="servoforge-3d-metric action"><span>Action</span><strong id="servoforge3dAction">Waiting for Servo Program</strong></div>
             <div class="servoforge-3d-metric"><span>Stage</span><strong id="servoforge3dStageName">—</strong></div>
             <div class="servoforge-3d-metric"><span>Motion</span><strong id="servoforge3dMotion">—</strong></div>
@@ -134,7 +153,11 @@
       event: backdrop.querySelector("#servoforge3dEvent"),
       action: backdrop.querySelector("#servoforge3dAction"),
       stageName: backdrop.querySelector("#servoforge3dStageName"),
-      motion: backdrop.querySelector("#servoforge3dMotion")
+      motion: backdrop.querySelector("#servoforge3dMotion"),
+      bottleName: backdrop.querySelector("#servoforge3dBottleName"),
+      bottleDiameter: backdrop.querySelector("#servoforge3dBottleDiameter"),
+      pitchRadius: backdrop.querySelector("#servoforge3dPitchRadius"),
+      bottleHeight: backdrop.querySelector("#servoforge3dBottleHeight")
     };
 
     openButton.addEventListener("click", openViewport);
@@ -145,7 +168,7 @@
       if (followTable && lastSnapshot) focusTable(lastSnapshot);
     });
     backdrop.querySelectorAll("[data-3d-camera]").forEach((button) => {
-      button.addEventListener("click", () => setCameraPreset(button.dataset.threeDCamera || button.getAttribute("data-3d-camera")));
+      button.addEventListener("click", () => setCameraPreset(button.getAttribute("data-3d-camera")));
     });
     backdrop.addEventListener("click", (event) => {
       if (event.target === backdrop) closeViewport();
@@ -153,7 +176,6 @@
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && viewportOpen) closeViewport();
     });
-
     return ui;
   }
 
@@ -175,7 +197,6 @@
   function createBottleModel() {
     const group = new THREE.Group();
     group.name = "ServoForgeBottle";
-
     const profile = [
       [0.27, 0.00], [0.30, 0.05], [0.31, 0.18], [0.31, 1.02],
       [0.30, 1.14], [0.26, 1.26], [0.18, 1.37], [0.12, 1.44],
@@ -213,7 +234,6 @@
     datum.rotation.z = -Math.PI / 2;
     datum.position.set(0.43, 1.20, 0);
     group.add(datum);
-
     return group;
   }
 
@@ -221,7 +241,6 @@
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x071117);
     scene.fog = new THREE.Fog(0x071117, 9, 18);
-
     camera = new THREE.PerspectiveCamera(42, 1, 0.05, 50);
     cameraState.target = new THREE.Vector3(0, 0.72, 0);
 
@@ -249,37 +268,36 @@
     floor.position.y = -0.02;
     floor.receiveShadow = true;
     scene.add(floor);
-
     const grid = new THREE.GridHelper(12, 24, 0x36505b, 0x1e3038);
     grid.position.y = 0.002;
     scene.add(grid);
 
-    const carousel = new THREE.Mesh(
+    carouselBody = new THREE.Mesh(
       new THREE.CylinderGeometry(3.18, 3.30, 0.20, 96),
       material({ color: 0x202b31, roughness: 0.42, metalness: 0.72 })
     );
-    carousel.position.y = 0.10;
-    carousel.receiveShadow = true;
-    carousel.castShadow = true;
-    scene.add(carousel);
+    carouselBody.position.y = 0.10;
+    carouselBody.receiveShadow = true;
+    carouselBody.castShadow = true;
+    scene.add(carouselBody);
 
-    const topPlate = new THREE.Mesh(
+    carouselTop = new THREE.Mesh(
       new THREE.CylinderGeometry(2.95, 2.95, 0.035, 96),
       material({ color: 0x35434a, roughness: 0.34, metalness: 0.78 })
     );
-    topPlate.position.y = 0.218;
-    topPlate.receiveShadow = true;
-    scene.add(topPlate);
+    carouselTop.position.y = 0.218;
+    carouselTop.receiveShadow = true;
+    scene.add(carouselTop);
 
-    const pathRing = new THREE.Mesh(
-      new THREE.TorusGeometry(CAROUSEL_RADIUS, 0.025, 12, 160),
+    pathRing = new THREE.Mesh(
+      new THREE.TorusGeometry(REFERENCE_PITCH_RADIUS_WORLD, 0.025, 12, 160),
       new THREE.MeshStandardMaterial({ color: 0xff6a3d, emissive: 0x4a1408, emissiveIntensity: 0.45, roughness: 0.35 })
     );
     pathRing.rotation.x = Math.PI / 2;
     pathRing.position.y = 0.245;
     scene.add(pathRing);
 
-    const hub = new THREE.Mesh(
+    hub = new THREE.Mesh(
       new THREE.CylinderGeometry(0.72, 0.82, 0.34, 64),
       material({ color: 0x10191e, roughness: 0.3, metalness: 0.82 })
     );
@@ -317,7 +335,7 @@
     bottleModel = createBottleModel();
     scene.add(bottleModel);
 
-    const referencePost = new THREE.Group();
+    referencePost = new THREE.Group();
     const post = new THREE.Mesh(
       new THREE.BoxGeometry(0.22, 1.20, 0.22),
       material({ color: 0x31434b, roughness: 0.36, metalness: 0.62 })
@@ -336,13 +354,54 @@
     const axes = new THREE.AxesHelper(0.72);
     axes.position.y = 0.24;
     scene.add(axes);
-
     bindCameraControls();
     setCameraPreset("operator");
-
     resizeObserver = new ResizeObserver(resizeRenderer);
     resizeObserver.observe(ui.stage);
     resizeRenderer();
+  }
+
+  function geometrySignature(geometry) {
+    return [
+      geometry?.bottle?.bottleType,
+      geometry?.bottle?.effectiveDiameterMm,
+      geometry?.machine?.pitchRadiusMm,
+      geometry?.machine?.headCount,
+      geometry?.bottleTable?.plateDiameterMm,
+      geometry?.bottleTable?.baseDiameterMm
+    ].join("|");
+  }
+
+  function syncPhysicalGeometry(geometry) {
+    if (!geometry || !bottleModel || !bottleTableBase || !servoPlate) return;
+    const signature = geometrySignature(geometry);
+    if (signature === lastGeometrySignature) return;
+    lastGeometrySignature = signature;
+
+    const pitchWorld = Number(geometry.machine?.pitchRadiusWorld) || REFERENCE_PITCH_RADIUS_WORLD;
+    const outerWorld = Number(geometry.machine?.carouselOuterRadiusWorld) || 3.18;
+    const bottleDiameterWorld = Number(geometry.bottle?.diameterWorld) || REFERENCE_BOTTLE_DIAMETER_WORLD;
+    const baseDiameterWorld = Number(geometry.bottleTable?.baseDiameterWorld) || REFERENCE_TABLE_BASE_DIAMETER_WORLD;
+    const plateDiameterWorld = Number(geometry.bottleTable?.plateDiameterWorld) || REFERENCE_SERVO_PLATE_DIAMETER_WORLD;
+
+    const pitchScale = pitchWorld / REFERENCE_PITCH_RADIUS_WORLD;
+    const outerScale = outerWorld / 3.18;
+    carouselBody.scale.set(outerScale, 1, outerScale);
+    carouselTop.scale.set(outerScale, 1, outerScale);
+    pathRing.scale.set(pitchScale, 1, pitchScale);
+    hub.scale.set(pitchScale, 1, pitchScale);
+
+    const bottleScale = bottleDiameterWorld / REFERENCE_BOTTLE_DIAMETER_WORLD;
+    bottleModel.scale.setScalar(bottleScale);
+
+    const baseScale = baseDiameterWorld / REFERENCE_TABLE_BASE_DIAMETER_WORLD;
+    bottleTableBase.scale.set(baseScale, 1, baseScale);
+    const desiredPlateToBase = plateDiameterWorld / baseDiameterWorld;
+    const referencePlateToBase = REFERENCE_SERVO_PLATE_DIAMETER_WORLD / REFERENCE_TABLE_BASE_DIAMETER_WORLD;
+    const plateRelativeScale = desiredPlateToBase / referencePlateToBase;
+    servoPlate.scale.set(plateRelativeScale, 1, plateRelativeScale);
+
+    if (referencePost) referencePost.position.x = outerWorld + 0.30;
   }
 
   function bindCameraControls() {
@@ -375,8 +434,7 @@
     canvas.addEventListener("pointercancel", release);
     canvas.addEventListener("wheel", (event) => {
       event.preventDefault();
-      const factor = Math.exp(event.deltaY * 0.0011);
-      cameraState.distance = clamp(cameraState.distance * factor, 2.0, 14);
+      cameraState.distance = clamp(cameraState.distance * Math.exp(event.deltaY * 0.0011), 2.0, 14);
       applyCamera();
     }, { passive: false });
   }
@@ -431,6 +489,7 @@
     const active = snapshot?.scene?.activeServo;
     const activity = snapshot?.scene?.activity || {};
     const flags = snapshot?.scene?.flags || {};
+    const geometry = snapshot?.geometry || {};
     ui.machineAngle.textContent = formatDegrees(snapshot?.scene?.carousel?.machineAngleDegrees);
     ui.servoAngle.textContent = formatDegrees(snapshot?.scene?.bottle?.servoAngleDegrees);
     ui.command.textContent = active ? `HMI ${active.hmi} • CMD ${active.command}` : "No active row";
@@ -438,18 +497,23 @@
     ui.action.textContent = active?.action || "Waiting for Servo Program";
     ui.stageName.textContent = [activity.section, activity.stage].filter(Boolean).join(" / ") || "—";
     ui.motion.textContent = flags.executesRotation ? "Rotating" : flags.hold ? "Holding" : "Idle";
+    ui.bottleName.textContent = geometry.bottle?.bottleType || "—";
+    ui.bottleDiameter.textContent = formatMillimeters(geometry.bottle?.effectiveDiameterMm, 2);
+    ui.pitchRadius.textContent = formatMillimeters(geometry.machine?.pitchRadiusMm, 3);
+    ui.bottleHeight.textContent = geometry.authority?.bottleHeight
+      ? formatMillimeters(geometry.bottle?.physicalHeightMm, 1)
+      : "Reference proportion";
   }
 
   function applySnapshot(snapshot) {
     const state3d = snapshot?.scene;
     if (!state3d || !bottleTableBase || !servoPlate || !bottleModel) return;
+    syncPhysicalGeometry(snapshot.geometry);
     const tablePosition = state3d.bottleTable.position;
     bottleTableBase.position.set(tablePosition.x, tablePosition.y, tablePosition.z);
     servoPlate.rotation.y = Number(state3d.bottleTable.servoPlateRotationY) || 0;
-
     bottleModel.position.set(state3d.bottle.position.x, state3d.bottle.position.y, state3d.bottle.position.z);
     bottleModel.rotation.y = Number(state3d.bottle.rotation.y) || 0;
-
     if (followTable) {
       cameraState.target.set(tablePosition.x, 0.82, tablePosition.z);
       applyCamera();
@@ -464,10 +528,9 @@
       if (!activeRuntime?.snapshot) throw new Error("3D scene runtime is unavailable.");
       lastSnapshot = activeRuntime.snapshot({
         scene: {
-          carouselRadius: CAROUSEL_RADIUS,
           tableY: TABLE_Y,
           bottleLift: BOTTLE_LIFT,
-          unitMode: "normalized-v0.1"
+          unitMode: "physical-mm-scaled-v0.2"
         }
       });
       applySnapshot(lastSnapshot);
@@ -516,6 +579,9 @@
       engineReady: Boolean(THREE && renderer),
       open: viewportOpen,
       followTable,
+      physicalGeometry: Boolean(lastSnapshot?.geometry),
+      bottleDiameterAuthority: Boolean(lastSnapshot?.geometry?.authority?.bottleDiameter),
+      bottleHeightAuthority: Boolean(lastSnapshot?.geometry?.authority?.bottleHeight),
       source: "Labeler3DSceneRuntime.snapshot",
       readOnly: true
     });
