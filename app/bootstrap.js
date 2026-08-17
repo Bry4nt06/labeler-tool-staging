@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "apl-neck-wipe-orientation-marriage-v147-20260817-1336";
-  const buildUpdatedAt = "Aug 17, 2026 1:36 PM ET";
+  const build = "apl-neck-topmodul-reference-v148-20260817-1345";
+  const buildUpdatedAt = "Aug 17, 2026 1:45 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -66,7 +66,6 @@
     "app/apl-final-aggregate-terminal-integration.js",
     "app/apl-section-handoff-continuity-integration.js",
     "app/topmodul-allowed-correction-diagnostics-integration.js",
-    "app/apl-neck-wipe-orientation-marriage-integration.js",
     "app/global-actions.js",
     "app/animation-runtime.js",
     "app/startup-runtime.js"
