@@ -1,0 +1,49 @@
+name: Validate map depth and object sync v131
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/map-runtime-service.js"
+      - "app/map-schema-adapter-integration.js"
+      - "app/map-builder-controller.js"
+      - "app/wipe-down-builder.js"
+      - "tests/map-runtime-service.test.js"
+      - "tests/map-schema-adapter.test.js"
+      - "tests/map-builder-delete-actions.test.js"
+      - ".github/workflows/validate-map-depth-object-sync-v131.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out staging main
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check affected JavaScript syntax
+        run: |
+          node --check app/map-runtime-service.js
+          node --check app/map-schema-adapter-integration.js
+          node --check app/map-builder-controller.js
+          node --check app/wipe-down-builder.js
+
+      - name: Validate standard new-map depths
+        run: node tests/map-schema-adapter.test.js
+
+      - name: Validate Cold Glue runtime object removal
+        run: node tests/map-runtime-service.test.js
+
+      - name: Validate Map Builder deletion actions
+        run: node tests/map-builder-delete-actions.test.js
+
+      - name: Check diff formatting
+        run: git diff --check
