@@ -2,6 +2,7 @@
   "use strict";
 
   const RUNTIME_VERSION = "servoforge.3d-runtime.v1";
+  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer.js?v=0.9.10-3d-v01-visual";
 
   function number(value, fallback = 0) {
     const parsed = Number(value);
@@ -64,13 +65,32 @@
       runtimeVersion: RUNTIME_VERSION,
       ready: Boolean(global.Labeler3DSimulationFrameDriver && global.Labeler3DSceneAdapter && global.LabelerServoReplayDriver),
       readOnly: true,
-      source: "generated-servo-program"
+      source: "generated-servo-program",
+      viewport: Boolean(global.Labeler3DViewport)
     });
+  }
+
+  function loadViewportRenderer() {
+    const documentRef = global.document;
+    if (!documentRef?.createElement) return false;
+    if (documentRef.querySelector("script[data-servoforge-3d-viewport]")) return false;
+    const script = documentRef.createElement("script");
+    script.src = `./${VIEWPORT_SCRIPT}`;
+    script.async = true;
+    script.dataset.servoforge3dViewport = "v0.1";
+    script.addEventListener("error", () => {
+      console.warn("ServoForge 3D viewport presenter could not be loaded. Core 3D frame runtime remains available.");
+    }, { once: true });
+    (documentRef.body || documentRef.head || documentRef.documentElement).appendChild(script);
+    return true;
   }
 
   global.Labeler3DSceneRuntime = Object.freeze({
     RUNTIME_VERSION,
     snapshot,
-    status
+    status,
+    loadViewport: loadViewportRenderer
   });
+
+  loadViewportRenderer();
 })(window);
