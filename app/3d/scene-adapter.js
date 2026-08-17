@@ -50,9 +50,11 @@
     const radius = Math.max(0, number(options.carouselRadius, 1));
     const tableY = number(options.tableY, 0);
     const bottleLift = number(options.bottleLift, 0.2);
+    const carouselDirection = String(options.carouselDirection || "ccw");
     const orbit = machineOrbit(frame.cycle.tableAngle, { ...options, carouselRadius: radius });
-    const servoSign = directionSign(options.servoPositiveDirection || "ccw", 1);
+    const servoSign = directionSign(options.servoPositiveDirection || carouselDirection, 1);
     const servoRadians = degToRad(frame.container.servoAngleUnwrapped) * servoSign;
+    const bottleAbsoluteRotationY = orbit.radians + servoRadians;
 
     return freeze({
       schemaVersion: SCENE_VERSION,
@@ -73,11 +75,15 @@
       },
       bottleTable: {
         position: { x: orbit.x, y: tableY, z: orbit.z },
-        rotation: { x: 0, y: orbit.radians, z: 0 }
+        rotation: { x: 0, y: orbit.radians, z: 0 },
+        servoPlateRotationY: bottleAbsoluteRotationY,
+        servoRotationY: servoRadians
       },
       bottle: {
         position: { x: orbit.x, y: tableY + bottleLift, z: orbit.z },
-        rotation: { x: 0, y: servoRadians, z: 0 },
+        rotation: { x: 0, y: bottleAbsoluteRotationY, z: 0 },
+        mapRotationY: orbit.radians,
+        servoRotationY: servoRadians,
         servoAngleDegrees: frame.container.servoAngle,
         servoAngleUnwrappedDegrees: frame.container.servoAngleUnwrapped
       },
