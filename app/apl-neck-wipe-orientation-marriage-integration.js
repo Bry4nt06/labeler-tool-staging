@@ -1,9 +1,9 @@
 "use strict";
 
 (function installAplNeckWipeOrientationMarriage(global) {
-  if (global.LabelerAplNeckWipeOrientationMarriage?.version >= 3) return;
+  if (global.LabelerAplNeckWipeOrientationMarriage?.version >= 4) return;
 
-  const VERSION = 3;
+  const VERSION = 4;
   const EPS = 0.001;
   const RETRY_MS = 25;
 
@@ -15,6 +15,18 @@
   const done = (value) => typeof global.finishAngle === "function"
     ? global.finishAngle(value)
     : Math.round(finite(value, 0) * 10) / 10;
+
+  function resolveState() {
+    try {
+      if (typeof state !== "undefined" && state && typeof state === "object") {
+        return { current: state, source: "lexical-state" };
+      }
+    } catch { }
+    if (global.state && typeof global.state === "object") {
+      return { current: global.state, source: "window-state" };
+    }
+    return { current: null, source: "unavailable" };
+  }
 
   function isNeck(row) {
     return text(row?.section).toLowerCase() === "neck" || /\bneck\b/i.test(text(row?.action));
@@ -157,9 +169,20 @@
   }
 
   function applyMarriageToState() {
-    const current = global.state;
-    if (!current || !Array.isArray(current.program) || !current.program.length) return false;
+    const resolved = resolveState();
+    const current = resolved.current;
+    global.ServoForgeNeckWipeMarriageStateSource = resolved.source;
+    if (!current || !Array.isArray(current.program) || !current.program.length) {
+      global.ServoForgeNeckWipeMarriageLastResult = { applied: false, reason: "program-unavailable", stateSource: resolved.source };
+      return false;
+    }
+
     const result = marryRows(current.program);
+    global.ServoForgeNeckWipeMarriageLastResult = {
+      applied: result.changes.length > 0,
+      stateSource: resolved.source,
+      changes: result.changes
+    };
     current.neckWipeOrientationMarriageLastResult = result;
     if (!result.changes.length) return false;
 
@@ -186,14 +209,14 @@
     try { base = applyGeneratedServoProfile; }
     catch { base = global.applyGeneratedServoProfile; }
     if (typeof base !== "function") return false;
-    if (base.aplNeckWipeOrientationMarriageV3 === true) return true;
+    if (base.aplNeckWipeOrientationMarriageV4 === true) return true;
 
     const wrapped = function applyGeneratedServoProfileWithNeckWipeMarriage(...args) {
       const output = base.apply(this, args);
       applyMarriageToState();
       return output;
     };
-    wrapped.aplNeckWipeOrientationMarriageV3 = true;
+    wrapped.aplNeckWipeOrientationMarriageV4 = true;
     wrapped.previousApplyGeneratedServoProfile = base;
 
     try { applyGeneratedServoProfile = wrapped; } catch { }
@@ -203,7 +226,8 @@
       installed: true,
       version: VERSION,
       marryRows,
-      applyMarriageToState
+      applyMarriageToState,
+      resolveState
     });
 
     return true;
