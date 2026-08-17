@@ -31,6 +31,8 @@ assert.match(
   /loadMachineMapIntoRuntime\(map, false\)/,
   "Selecting a map must load it into runtime as a single transaction before rendering."
 );
+assert.match(source, /selectorOwnershipV150: true/,
+  "The selector must publish its v150 ownership boundary for diagnostics and future integrations.");
 assert.match(source, /Machine Map/,
   "The control must be labeled as a map selector.");
 assert.match(source, /Map Locked • Specs & Inputs Editable/,
