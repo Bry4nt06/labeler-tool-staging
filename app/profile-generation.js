@@ -2,7 +2,7 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
-  const moduleBuild = "apl-neck-post-wipe-modulo-v139-20260817-1018";
+  const moduleBuild = "apl-neck-topmodul-reference-v148-20260817-1345";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",
@@ -10,7 +10,7 @@
     "app/cold-glue-profile-generation.js",
     "app/apl-map-profile-generation.js",
     "app/apl-neck-pad-edge-lock-integration.js",
-    "app/apl-neck-post-wipe-modulo-orientation-integration.js",
+    "app/apl-neck-topmodul-wipe-reference-integration.js",
     "app/apl-overlapping-pad-handoff-integration.js",
     "drivers/profile/coder-orientation-driver.js",
     "app/autocol-coder-codebox-generation-v122.js",
