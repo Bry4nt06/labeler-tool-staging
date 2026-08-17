@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "apl-neck-post-wipe-modulo-v144-20260817-1252";
+  const build = window.ServoForgeBootstrapBuild || "apl-neck-wipe-orientation-marriage-v146-20260817-1319";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -123,6 +123,21 @@
     }
   }
 
+  function applyFinalNeckWipeOrientationMarriage() {
+    const marriage = window.LabelerAplNeckWipeOrientationMarriage;
+    if (typeof marriage?.applyMarriageToState !== "function") return false;
+    const changed = marriage.applyMarriageToState();
+    if (!changed) return false;
+
+    try { if (typeof renderProgram === "function") renderProgram(); }
+    catch { window.renderProgram?.(); }
+    try { if (typeof renderValidation === "function") renderValidation(); }
+    catch { window.renderValidation?.(); }
+    try { if (typeof renderAnimationFrame === "function") renderAnimationFrame(); }
+    catch { window.renderAnimationFrame?.(); }
+    return true;
+  }
+
   try {
     progress?.set(12, "Loading profile engine…");
     if (window.ServoForgeProfileGenerationReady) await window.ServoForgeProfileGenerationReady;
@@ -166,6 +181,10 @@
 
     const initialized = await initializeLabelerApp();
     if (initialized === false) return;
+
+    progress?.set(98, "Marrying neck wipe and orientation direction…");
+    applyFinalNeckWipeOrientationMarriage();
+
     progress?.complete("ServoForge ready");
   } catch (error) {
     progress?.fail(error);
