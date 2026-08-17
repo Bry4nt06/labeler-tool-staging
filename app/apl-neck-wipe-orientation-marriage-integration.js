@@ -1,9 +1,9 @@
 "use strict";
 
 (function installAplNeckWipeOrientationMarriage(global) {
-  if (global.LabelerAplNeckWipeOrientationMarriage?.version >= 1) return;
+  if (global.LabelerAplNeckWipeOrientationMarriage?.version >= 2) return;
 
-  const VERSION = 1;
+  const VERSION = 2;
   const EPS = 0.001;
   const RETRY_MS = 25;
 
@@ -27,15 +27,9 @@
   }
 
   function isOrientationTurn(row) {
-    if (Number(row?.cmd) !== 7) return false;
+    if (Number(row?.cmd) !== 7 || !isNeck(row)) return false;
     if (row?.postWipeSensorSetup || row?.orientationConstraintContinuation || row?.mapObjectOrientation) return true;
     return /orient|sensor|inspection|reference/i.test(text(row?.action));
-  }
-
-  function sameStation(a, b) {
-    const left = finite(a?.station, NaN);
-    const right = finite(b?.station, NaN);
-    return !Number.isFinite(left) || !Number.isFinite(right) || left === right;
   }
 
   function equivalentInDirection(target, current, direction) {
@@ -100,7 +94,7 @@
       if (Number(wipeEdge?.cmd) !== 3) continue;
       if (!isOrientationTurn(orientationTurn)) continue;
       if (Number(orientationReference?.cmd) !== 3) continue;
-      if (!sameStation(wipeTurn, orientationTurn)) continue;
+      if (!isNeck(wipeEdge) || !isNeck(orientationReference)) continue;
 
       const wipeStart = finite(wipeTurn.plateAngle, NaN);
       const edgeAngle = finite(wipeEdge.plateAngle, NaN);
@@ -167,6 +161,7 @@
     const current = global.state;
     if (!current || !Array.isArray(current.program) || !current.program.length) return false;
     const result = marryRows(current.program);
+    current.neckWipeOrientationMarriageLastResult = result;
     if (!result.changes.length) return false;
 
     current.program = result.rows;
@@ -192,14 +187,14 @@
     try { base = applyGeneratedServoProfile; }
     catch { base = global.applyGeneratedServoProfile; }
     if (typeof base !== "function") return false;
-    if (base.aplNeckWipeOrientationMarriageV1 === true) return true;
+    if (base.aplNeckWipeOrientationMarriageV2 === true) return true;
 
     const wrapped = function applyGeneratedServoProfileWithNeckWipeMarriage(...args) {
       const output = base.apply(this, args);
       applyMarriageToState();
       return output;
     };
-    wrapped.aplNeckWipeOrientationMarriageV1 = true;
+    wrapped.aplNeckWipeOrientationMarriageV2 = true;
     wrapped.previousApplyGeneratedServoProfile = base;
 
     try { applyGeneratedServoProfile = wrapped; } catch { }
@@ -212,15 +207,6 @@
       applyMarriageToState
     });
 
-    try {
-      if (applyMarriageToState()) {
-        global.renderProgram?.();
-        global.renderValidation?.();
-        global.renderAnimationFrame?.();
-      }
-    } catch (error) {
-      console.error("Unable to marry neck wipe and orientation direction.", error);
-    }
     return true;
   }
 
