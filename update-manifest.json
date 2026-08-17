@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "apl-neck-wipe-orientation-marriage-v147-20260817-1336",
+  "buildId": "apl-neck-topmodul-reference-v148-20260817-1345",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v147 applies the neck Wipe Turn 2 to orientation marriage against ServoForge's live lexical state instead of relying on window.state. The physical wipe edge remains a hard handoff point, and an equivalent 360-degree orientation reference continues in the existing wipe direction when that path is shorter than reversing. Runtime trace exposes the resolved state source and marriage result for verification."
+  "notes": "v148 replaces the long-neck pad full-developed-label reverse wipe with the known working TopModul center-tack pattern: center to first edge, then reverse through center by the configured neck over-wipe. The older modulo/marriage workarounds are not loaded for this corrected wipe geometry."
 }
