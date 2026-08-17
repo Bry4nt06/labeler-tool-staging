@@ -16,8 +16,9 @@ function deferred() {
 }
 
 async function run() {
-  const source = fs.readFileSync(path.join(__dirname, "../app/simulation-collapsible-integration.js"), "utf8");
-  const appSource = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
+  const root = path.join(__dirname, "..");
+  const source = fs.readFileSync(path.join(root, "app/simulation-collapsible-integration.js"), "utf8");
+  const appSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
   const geometry = deferred();
   const profile = deferred();
   const mapBuilder = deferred();
@@ -86,6 +87,19 @@ async function run() {
   assert.equal(appended.length, sandbox.LabelerIntegrationFeatureManifest.orderedModules.length);
   assert.match(appended[0], /drivers\/core\/driver-registry\.js/);
   assert.match(appended.at(-1), /optimizer-brush-channel-expansion-integration\.js/);
+
+  sandbox.LabelerIntegrationFeatureManifest.orderedModules.forEach((moduleSource) => {
+    const modulePath = String(moduleSource).split("?")[0];
+    assert.ok(
+      fs.existsSync(path.join(root, modulePath)),
+      `feature integration manifest references a missing runtime module: ${modulePath}`
+    );
+  });
+
+  assert.doesNotMatch(source, /cold-glue-center-out-brush-integration\.js/);
+  assert.doesNotMatch(source, /cold-glue-neck-left-right-integration\.js/);
+  assert.doesNotMatch(source, /cold-glue-brush-direction-v128\.js/);
+  assert.doesNotMatch(source, /cold-glue-brush-runtime-v131\.js/);
 
   const featureIndex = appSource.indexOf("ServoForgeFeatureIntegrationsReady");
   const mapIndex = appSource.indexOf("ServoForgeMapBuilderReady");
