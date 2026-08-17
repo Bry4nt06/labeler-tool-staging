@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "apl-neck-topmodul-reference-v148-20260817-1345",
+  "buildId": "empty-default-specs-v149-20260817-1530",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v148 replaces the long-neck pad full-developed-label reverse wipe with the known working TopModul center-tack pattern: center to first edge, then reverse through center by the configured neck over-wipe. The older modulo/marriage workarounds are not loaded for this corrected wipe geometry."
+  "notes": "v149 starts fresh and reset ServoForge workspaces with empty Bottle Specs and Label Specs catalogs so users add only the bottle and label records they actually need. It retains the verified TopModul neck wipe behavior from v148."
 }
