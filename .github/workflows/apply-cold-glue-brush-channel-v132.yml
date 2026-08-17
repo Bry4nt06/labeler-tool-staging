@@ -1,4 +1,5 @@
 name: Apply canonical Cold Glue brush channel v132
+# Retry after moving capacity ownership to the mechanical driver boundary.
 
 on:
   push:
