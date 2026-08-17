@@ -143,13 +143,20 @@ function createMachineMapFromCurrent() {
   const base = activeMachineMap();
   if (!base) return null;
   const location = mapLibraryLocation();
+  const standardDepths = typeof window.LabelerMapSchemaAdapter?.standardObjectDepths === "function"
+    ? window.LabelerMapSchemaAdapter.standardObjectDepths()
+    : { ...(window.LabelerDefaultObjectDepths || {}) };
   const copy = createMachineMap({
     ...deepClone(base),
     id: uniqueMapId("machine-map"),
     name: uniqueMapName(`${base.name} Copy`),
     zone: location.zone,
     site: location.site,
-    isTemplate: false
+    isTemplate: false,
+    // A new map gets the machine-standard geometry even if the source map's
+    // user has temporarily customized object depths. The copied map can then
+    // be adjusted independently without carrying those temporary offsets over.
+    depths: standardDepths
   });
   state.mapLibrary.push(copy);
   clearServoSimulationForSelectedMap();
