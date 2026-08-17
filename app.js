@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = "map-builder-add-authority-v134-20260816-2340";
+  const build = window.ServoForgeBootstrapBuild || "apl-neck-post-wipe-modulo-v144-20260817-1252";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -113,6 +113,7 @@
 
     await loadScript("app/sensor-editor-compact-interaction-integration.js", version);
     await loadScript("app/sensor-direction-live-status-integration.js", version);
+    await loadScript("app/apl-neck-final-post-wipe-continuity-integration.js", version);
     const ready = window.ServoForgeOrientationConstraintPlannerReady;
     if (ready && typeof ready.then === "function") {
       await Promise.race([
