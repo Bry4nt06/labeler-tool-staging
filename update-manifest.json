@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "apl-neck-wipe-orientation-marriage-v145-20260817-1312",
+  "buildId": "apl-neck-wipe-orientation-marriage-v146-20260817-1319",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v145 marries neck Wipe Turn 2 to the following orientation when the same physical sensor target can be reached by continuing the wipe direction through an equivalent 360-degree reference, while preserving the physical wipe edge as a hard handoff point."
+  "notes": "v146 applies the neck Wipe Turn 2 to orientation marriage against the final initialized servo program, matches the mechanical handoff by row sequence instead of sensor station metadata, and preserves the physical wipe edge while continuing toward an equivalent 360-degree orientation reference in the same direction."
 }
