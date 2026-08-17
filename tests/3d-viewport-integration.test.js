@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
@@ -36,5 +37,18 @@ assert.match(viewport, /Generated Servo Program • read only/);
 ].forEach((pattern) => {
   assert.doesNotMatch(viewport, pattern, `3D viewport must not mutate ServoForge program state: ${pattern}`);
 });
+
+const syntaxSandbox = {
+  window: {},
+  console,
+  setTimeout() { return 0; }
+};
+syntaxSandbox.window = syntaxSandbox;
+syntaxSandbox.globalThis = syntaxSandbox;
+vm.createContext(syntaxSandbox);
+assert.doesNotThrow(
+  () => vm.runInContext(viewport, syntaxSandbox, { filename: "app/3d/three-scene-renderer.js" }),
+  "The browser viewport presenter must remain valid JavaScript."
+);
 
 console.log("ServoForge visible 3D viewport boundary regression passed.");
