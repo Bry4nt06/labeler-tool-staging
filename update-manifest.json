@@ -4,5 +4,5 @@
   "buildId": "apl-neck-wipe-orientation-marriage-v146-20260817-1319",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v146 applies the neck Wipe Turn 2 to orientation marriage against the final initialized servo program, matches the mechanical handoff by row sequence instead of sensor station metadata, and preserves the physical wipe edge while continuing toward an equivalent 360-degree orientation reference in the same direction."
+  "notes": "v146 applies the neck Wipe Turn 2 to orientation marriage against the final initialized servo program, matches the mechanical handoff by row sequence instead of sensor station metadata, and preserves the physical wipe edge while continuing toward an equivalent 360-degree orientation reference in the same direction. Final deployment refresh keeps runtime and manifest on the same v146 build."
 }
