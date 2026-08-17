@@ -51,12 +51,6 @@
       "app/multi-map-lock-import-integration-v2.js?v=0.9.3-map-import-router"
     ]),
 
-    threeD: Object.freeze([
-      "drivers/simulation/three-d-simulation-frame-driver.js?v=0.9.10-3d-v01",
-      "app/3d/scene-adapter.js?v=0.9.10-3d-v01",
-      "app/3d/scene-runtime.js?v=0.9.10-3d-v01"
-    ]),
-
     aplGeneration: Object.freeze([
       "app/map-object-wipe-definition-integration.js?v=0.9.3-object-wipes",
       "app/apl-neck-pad-center-tack-integration.js?v=0.9.3-neck-pad-center-tack-v1",
