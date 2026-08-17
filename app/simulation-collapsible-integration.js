@@ -68,10 +68,8 @@
 
     coldGlue: Object.freeze([
       "app/cold-glue-label-geometry-fallback-integration.js?v=0.9.3-cold-glue-shared-geometry",
-      "app/cold-glue-center-out-brush-integration.js?v=0.9.3-cold-glue-channel-90",
       "app/cold-glue-gripper-channel-integration.js?v=0.9.3-gripper-label-length",
       "app/cold-glue-parameter-editor-integration.js?v=0.9.3-cold-glue-parameters",
-      "app/cold-glue-neck-left-right-integration.js?v=0.9.3-neck-parameter-driven-v2",
       "app/cold-glue-gripper-sequence-integration-v2.js?v=0.9.3-station-safe-grippers-v2"
     ]),
 
