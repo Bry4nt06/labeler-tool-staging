@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-bottle-labels-v156-20260817-2100";
-  const buildUpdatedAt = "Aug 17, 2026 9:00 PM ET";
+  const build = "3d-rotation-parity-v157-20260817-2112";
+  const buildUpdatedAt = "Aug 17, 2026 9:12 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
