@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-spender-linkage-v165-20260818-0955";
-  const buildUpdatedAt = "Aug 18, 2026 9:55 AM ET";
+  const build = "3d-purpose-view-v166-20260818-1012";
+  const buildUpdatedAt = "Aug 18, 2026 10:12 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -83,7 +83,9 @@
     "app/3d/spender-manual-assembly-integration.js",
     "app/3d/spender-knuckle-correction-integration.js",
     "app/3d/spender-knuckle-linkage-refinement-integration.js",
+    "app/3d/purpose-view-simplification-integration.js",
     "app/3d/equipment-layout-adapter.js",
+    "app/3d/bottle-path-shape-correction-integration.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
     "app/startup-runtime.js"
