@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-purpose-view-v166-20260818-1012";
-  const buildUpdatedAt = "Aug 18, 2026 10:12 AM ET";
+  const build = "apl-roller-handoff-v167-20260818-1108";
+  const buildUpdatedAt = "Aug 18, 2026 11:08 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -66,6 +66,7 @@
     "app/application-reference-build-input-integration.js",
     "app/apl-final-aggregate-terminal-integration.js",
     "app/apl-section-handoff-continuity-integration.js",
+    "app/apl-roller-section-handoff-integration.js",
     "app/topmodul-allowed-correction-diagnostics-integration.js",
     "app/global-actions.js",
     "drivers/simulation/three-d-simulation-frame-driver.js",
