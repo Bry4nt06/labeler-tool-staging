@@ -40,6 +40,7 @@
     "app/controllers/specification-sensor-guidance-controller.js",
     "app/controllers/specification-required-fields-controller.js",
     "app/controllers/sensor-activation-controller.js",
+    "app/sensor-map-visibility-color-integration.js",
     "app/controllers/build-inputs-controller.js",
     "app/controllers/transfer-controller.js",
     "app/controllers/simulation-controller.js",
