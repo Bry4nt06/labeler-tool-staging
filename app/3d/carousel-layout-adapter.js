@@ -53,7 +53,8 @@
         active: index === 0,
         tableAngleDegrees,
         mapBearingDegrees: orbit.bearingDegrees,
-        rotationY: orbit.radians,
+        mapBearingRadians: orbit.radians,
+        rotationY: number(orbit.threeRotationY, -orbit.radians),
         position: {
           x: orbit.x,
           y: tableY,
@@ -75,6 +76,7 @@
       plateClearanceMm: number(geometry?.bottleTable?.clearanceMm, 0),
       plateDiameterMm: number(geometry?.bottleTable?.plateDiameterMm, 0),
       source: "scene-machine-angle-and-measured-bottle-table-geometry",
+      rotationConvention: "three-y-negates-servoforge-map-bearing",
       passiveServoMode: "neutral-no-invented-motion",
       heads
     });
