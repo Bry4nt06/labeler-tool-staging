@@ -17,12 +17,12 @@ const pathIndex = bootstrap.indexOf("app/3d/bottle-path-shape-correction-integra
 const runtimeIndex = bootstrap.indexOf("app/3d/scene-runtime.js");
 
 assert.ok(linkageIndex >= 0);
-assert.ok(simplifyIndex > linkageIndex, "Purpose-view simplification must consume the final approved spender linkage.");
-assert.ok(equipmentIndex > simplifyIndex, "Equipment generation must use the simplified hardware factory.");
+assert.ok(simplifyIndex > linkageIndex, "Purpose-view layer must consume the final approved spender linkage.");
+assert.ok(equipmentIndex > simplifyIndex, "Equipment generation must use the purpose-view hardware factory.");
 assert.ok(pathIndex > equipmentIndex, "Bottle-path correction should install after equipment contracts are loaded.");
 assert.ok(runtimeIndex > pathIndex, "Bottle-path correction must install before the 3D viewport runtime is injected.");
 
-assert.match(purposeView, /v9-functional-heights/);
+assert.match(purposeView, /v10-mounted-roller-system/);
 assert.match(purposeView, /functional-placement-reference/);
 assert.match(purposeView, /ServoForgeSpenderPlate/);
 assert.match(purposeView, /ServoForgeSpenderRefined/);
@@ -30,17 +30,40 @@ assert.match(purposeView, /mountingArmVisible:\s*false/);
 assert.match(purposeView, /supportHardwareVisible:\s*false/);
 assert.match(purposeView, /guideRollerVisible:\s*false/);
 assert.match(purposeView, /labelWebVisible:\s*false/);
+
+// Roller stations intentionally reverse the earlier "roller body only" simplification.
+// Only roller items present in the active machine map are generated, but each active
+// roller now carries the drawing-backed support hierarchy.
 assert.match(purposeView, /ServoForgePurposeViewRoller/);
-assert.match(purposeView, /shaftVisible:\s*false/);
-assert.match(purposeView, /hubVisible:\s*false/);
-assert.match(purposeView, /supportPostVisible:\s*false/);
-assert.match(purposeView, /mountingPostsVisible:\s*false/);
-assert.match(purposeView, /crossbarVisible:\s*false/);
+assert.match(purposeView, /ServoForgeRollerSpindleShaft/);
+assert.match(purposeView, /ServoForgeRollerHubLower/);
+assert.match(purposeView, /ServoForgeRollerHubUpper/);
+assert.match(purposeView, /ServoForgeRollerCurvedMountRail/);
+assert.match(purposeView, /ServoForgeRollerVerticalSupportPost/);
+assert.match(purposeView, /ServoForgeRollerSupportFoot/);
+assert.match(purposeView, /ServoForgeRollerRailClamp/);
+assert.match(purposeView, /ServoForgeRollerCarrierArm/);
+assert.match(purposeView, /ServoForgeRollerRailKnuckle/);
+assert.match(purposeView, /ServoForgeRollerHeadKnuckle/);
+assert.match(purposeView, /ServoForgeRollerForkLeft/);
+assert.match(purposeView, /ServoForgeRollerForkRight/);
+assert.match(purposeView, /ServoForgeRollerAdjustmentStem/);
+assert.match(purposeView, /ServoForgeRollerAdjustmentKnob/);
+assert.match(purposeView, /shaftVisible:\s*true/);
+assert.match(purposeView, /hubVisible:\s*true/);
+assert.match(purposeView, /mountingArmVisible:\s*true/);
+assert.match(purposeView, /supportPostVisible:\s*true/);
+assert.match(purposeView, /curvedRailVisible:\s*true/);
+assert.match(purposeView, /activeStationAuthority:\s*"active-machine-map-only"/);
+assert.match(purposeView, /extraInactiveRollersCreated:\s*false/);
+assert.match(purposeView, /activeRollerCountAuthority:\s*"active-machine-map"/);
+assert.match(purposeView, /user-supplied-topmodul-sponge-roller-support-bracket-drawing/);
+assert.match(purposeView, /mountingDimensionsAuthority:\s*"drawing-proportional-until-measured"/);
 assert.match(purposeView, /positionAuthority:\s*"servoforge-machine-map"/);
 
-// Functional vertical references: roller contact follows the midpoint/tangent of
-// the reference bottle neck slope. Wipe-pad bottom is user-specified at 28 mm
-// with the measured 70 mm pad height preserved.
+// Functional vertical/contact references remain unchanged: the roller body follows
+// the bottle neck midpoint/tangent and the later neck-contact correction can still
+// find ServoForgePurposeViewRoller to apply its outside/inside tilt rule.
 assert.match(purposeView, /const WIPE_PAD_BOTTOM_MM = 28/);
 assert.match(purposeView, /const WIPE_PAD_HEIGHT_MM = 70/);
 assert.match(purposeView, /function neckSlopeReference\(/);
@@ -73,4 +96,4 @@ assert.match(pathCorrection, /followsBottleTableCenters:\s*true/);
   assert.doesNotMatch(pathCorrection, pattern, `Path correction must remain read-only: ${pattern}`);
 });
 
-console.log("ServoForge 3D purpose-view heights, simplification, and table-path correction regression passed.");
+console.log("ServoForge 3D mounted roller system, purpose-view heights, and table-path correction regression passed.");
