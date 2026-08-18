@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-spender-shape-v160-20260818-0902";
-  const buildUpdatedAt = "Aug 18, 2026 9:02 AM ET";
+  const build = "3d-topmodul-parts-reference-v161-20260818-0920";
+  const buildUpdatedAt = "Aug 18, 2026 9:20 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -76,6 +76,7 @@
     "app/3d/label-mesh-factory.js",
     "app/3d/wipe-pad-geometry-adapter.js",
     "app/3d/wipe-pad-mesh-factory.js",
+    "app/3d/topmodul-parts-reference.js",
     "app/3d/hardware-reference-catalog.js",
     "app/3d/hardware-mesh-factory.js",
     "app/3d/spender-plate-placement-integration.js",
