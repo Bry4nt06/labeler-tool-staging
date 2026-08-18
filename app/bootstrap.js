@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-spender-engagement-wipe-bevel-v186-20260818-1725";
-  const buildUpdatedAt = "Aug 18, 2026 5:25 PM ET";
+  const build = "3d-ui-transparency-alternate-v187-20260818-1727";
+  const buildUpdatedAt = "Aug 18, 2026 5:27 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
