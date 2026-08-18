@@ -1,7 +1,9 @@
 (function installServoForge3DEquipmentLayoutAdapter(global) {
   "use strict";
 
-  const SCHEMA_VERSION = "servoforge.3d-equipment.v1";
+  const SCHEMA_VERSION = "servoforge.3d-equipment.v2";
+  const SPENDER_BOTTLE_CLEARANCE_MM = 2;
+  const FLOW_SAMPLE_DEGREES = 0.1;
 
   function number(value, fallback = 0) {
     const parsed = Number(value);
@@ -80,6 +82,58 @@
     });
   }
 
+  // Local +X is defined as downstream bottle flow. Sampling the actual
+  // ServoForge orbit rather than assuming +90/-90 keeps the plate tangent
+  // correct for both CW and CCW machines and for non-zero map datums.
+  function flowTangent(angle, radius, options = {}) {
+    const origin = machineOrbit(angle, radius, options);
+    const downstream = machineOrbit(angle + FLOW_SAMPLE_DEGREES, radius, options);
+    let dx = downstream.x - origin.x;
+    let dz = downstream.z - origin.z;
+    const magnitude = Math.hypot(dx, dz) || 1;
+    dx /= magnitude;
+    dz /= magnitude;
+    const rotationY = Math.atan2(-dz, dx);
+
+    const radialMagnitude = Math.hypot(origin.x, origin.z) || 1;
+    const radialX = origin.x / radialMagnitude;
+    const radialZ = origin.z / radialMagnitude;
+    const localZWorldX = Math.sin(rotationY);
+    const localZWorldZ = Math.cos(rotationY);
+    const radialOutSign = (localZWorldX * radialX + localZWorldZ * radialZ) >= 0 ? 1 : -1;
+
+    return freeze({
+      rotationY,
+      direction: { x: dx, z: dz },
+      radialOutSign,
+      sampleDegrees: FLOW_SAMPLE_DEGREES
+    });
+  }
+
+  function bottleApplicationZones(geometry = {}, options = {}) {
+    const unitsPerMm = Math.max(0.000001, number(geometry?.renderScale?.worldUnitsPerMm, 0.00445));
+    const bottle = geometry?.bottle || {};
+    const bodyBottomMm = 10;
+    const bodyTopMm = bodyBottomMm + Math.max(1, number(bottle.bodyStraightHeightMm, 92));
+    const shoulderTopMm = bodyTopMm + Math.max(1, number(bottle.shoulderTransitionHeightMm, 41.5));
+    const finishStartMm = Math.max(shoulderTopMm + 1, number(bottle.referenceHeightMm, 241.5) - Math.max(1, number(bottle.finishHeightMm, 17)));
+    const bodyCenterMm = (bodyBottomMm + bodyTopMm) / 2;
+    const neckCenterMm = (shoulderTopMm + finishStartMm) / 2;
+    const bottleBaseYWorld = number(
+      options.bottleBaseYWorld,
+      number(options.tableY, 0.20) + number(options.bottleLift, 0.155)
+    );
+
+    return freeze({
+      bottleBaseYWorld,
+      bodyCenterMm,
+      neckCenterMm,
+      bodyCenterWorld: bottleBaseYWorld + bodyCenterMm * unitsPerMm,
+      neckCenterWorld: bottleBaseYWorld + neckCenterMm * unitsPerMm,
+      verticalAuthority: "reference-bottle-profile-until-bottle-specific-cad-height-is-stored"
+    });
+  }
+
   function snapshot(machineMap, stateLike, geometry, options = {}) {
     const map = machineMap && typeof machineMap === "object" ? machineMap : {};
     const state = stateLike && typeof stateLike === "object" ? stateLike : {};
@@ -91,6 +145,7 @@
     const zeroAngleDegrees = number(options.zeroAngleDegrees, number(map?.machineSettings?.zeroAngle, state.zeroAngle));
     const scaleFromMapRadius = physicalRadiusWorld / mapRadius;
     const objects = Array.isArray(map?.objects) ? map.objects : [];
+    const applicationZones = bottleApplicationZones(geometry, options);
 
     const equipment = objects.map((item, index) => {
       const angle = placementAngle(item);
@@ -148,23 +203,43 @@
     const aggregateEnabled = enabledSlots(map?.enabledAggregates, aggregateCount);
     const stationEnabled = enabledSlots(map?.enabledStations, number(map?.stationCount, aggregateCount));
     const aggregates = [];
+    const bottleRadiusWorld = Math.max(0.001, number(geometry?.bottle?.radiusWorld, number(geometry?.bottle?.diameterWorld, 0.27) / 2));
+    const applicationClearanceWorld = SPENDER_BOTTLE_CLEARANCE_MM * worldUnitsPerMm;
+
     for (let aggregate = 1; aggregate <= 6; aggregate += 1) {
       if (!aggregateEnabled[aggregate - 1]) continue;
       const angle = normalizeAngle(number(
         map?.aggregateAngles?.[String(aggregate)],
         map?.stationAngles?.[String(aggregate)]
       ));
-      const radialWorld = physicalRadiusWorld + number(depths.spender, 12) * scaleFromMapRadius + 0.32;
-      const orbit = machineOrbit(angle, radialWorld, { carouselDirection, zeroAngleDegrees });
+      const orbit = machineOrbit(angle, physicalRadiusWorld, { carouselDirection, zeroAngleDegrees });
+      const tangent = flowTangent(angle, physicalRadiusWorld, { carouselDirection, zeroAngleDegrees });
+      const applicationZone = aggregate <= 2 ? "neck" : "body";
+      const applicationHeightWorld = applicationZone === "neck"
+        ? applicationZones.neckCenterWorld
+        : applicationZones.bodyCenterWorld;
+
       aggregates.push(freeze({
         aggregate,
         station: aggregate,
         stationEnabled: Boolean(stationEnabled[aggregate - 1]),
         angleDegrees: angle,
-        section: String(map?.stationSections?.[String(aggregate)] || "auto"),
+        section: String(map?.stationSections?.[String(aggregate)] || (applicationZone === "neck" ? "neck" : "body")),
+        applicationZone,
+        applicationHeightWorld,
+        applicationHeightAuthority: applicationZones.verticalAuthority,
+        bottlePathRadiusWorld: physicalRadiusWorld,
+        bottleRadiusWorld,
+        applicationClearanceMm: SPENDER_BOTTLE_CLEARANCE_MM,
+        applicationClearanceWorld,
+        clearanceAuthority: "user-specified-2mm",
         position: { x: orbit.x, y: 0, z: orbit.z },
-        rotationY: orbit.radians + Math.PI / 2,
-        placementAuthority: "machine-map-aggregate-centerline",
+        rotationY: tangent.rotationY,
+        flowRotationY: tangent.rotationY,
+        flowDirection: tangent.direction,
+        radialOutSign: tangent.radialOutSign,
+        flowDirectionAuthority: true,
+        placementAuthority: "machine-map-angle-plus-bottle-flow-tangent-plus-user-specified-2mm-bottle-clearance",
         radialCadAuthority: false
       }));
     }
@@ -184,6 +259,10 @@
         ? "measured-wipe-contact-plus-map-derived-other-equipment"
         : "derived-from-map-depth-ratio-not-cad",
       wipePadAuthority: measuredPads.length ? "user-measured" : "none",
+      spenderPlacementAuthority: "bottle-flow-tangent-plus-2mm-bottle-face-clearance",
+      spenderClearanceMm: SPENDER_BOTTLE_CLEARANCE_MM,
+      spenderNeckAggregates: [1, 2],
+      applicationZones,
       aggregates,
       objects: equipment,
       counts: {
@@ -200,11 +279,15 @@
 
   global.Labeler3DEquipmentLayoutAdapter = Object.freeze({
     SCHEMA_VERSION,
+    SPENDER_BOTTLE_CLEARANCE_MM,
+    FLOW_SAMPLE_DEGREES,
     normalizeAngle,
     midpointAngle,
     spanDegrees,
     placementAngle,
     depthForObject,
+    flowTangent,
+    bottleApplicationZones,
     snapshot
   });
 })(window);
