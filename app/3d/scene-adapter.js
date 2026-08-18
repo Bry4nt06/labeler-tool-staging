@@ -25,6 +25,16 @@
     return positive;
   }
 
+  // ServoForge's Mechanical Map/SVG convention places a mathematical bearing
+  // at x = cos(angle), y/z = sin(angle). Three.js uses a right-handed Y-up
+  // world where a positive rotation about +Y turns local +X toward -Z. To make
+  // a Three.js object visually point at the same bearing as the authoritative
+  // ServoForge top view, every map-plane angle must therefore be negated when
+  // converted into Object3D.rotation.y.
+  function mapRadiansToThreeRotationY(mapRadians) {
+    return -number(mapRadians, 0);
+  }
+
   function machineOrbit(tableAngle, options = {}) {
     const direction = String(options.carouselDirection || "ccw").trim().toLowerCase();
     const clockwise = direction === "cw" || direction === "clockwise";
@@ -37,6 +47,7 @@
     return Object.freeze({
       bearingDegrees,
       radians,
+      threeRotationY: mapRadiansToThreeRotationY(radians),
       x: Math.cos(radians) * radius,
       z: Math.sin(radians) * radius
     });
@@ -52,9 +63,16 @@
     const bottleLift = number(options.bottleLift, 0.2);
     const carouselDirection = String(options.carouselDirection || "ccw");
     const orbit = machineOrbit(frame.cycle.tableAngle, { ...options, carouselRadius: radius });
+
+    // Match the exact ServoForge 2D formula:
+    //   referenceRotation = mapBearing + servoSign * padAngle
+    // The signed servo angle remains a ServoForge/map-plane value first. Only
+    // after that do we convert it into Three.js' opposite Y-rotation convention.
     const servoSign = directionSign(options.servoPositiveDirection || carouselDirection, 1);
-    const servoRadians = degToRad(frame.container.servoAngleUnwrapped) * servoSign;
-    const bottleAbsoluteRotationY = orbit.radians + servoRadians;
+    const servoMapRadians = degToRad(frame.container.servoAngleUnwrapped) * servoSign;
+    const servoThreeRotationY = mapRadiansToThreeRotationY(servoMapRadians);
+    const bottleAbsoluteMapRadians = orbit.radians + servoMapRadians;
+    const bottleAbsoluteRotationY = mapRadiansToThreeRotationY(bottleAbsoluteMapRadians);
 
     return freeze({
       schemaVersion: SCENE_VERSION,
@@ -65,25 +83,30 @@
         upAxis: "y",
         orbitPlane: "xz",
         unitMode: String(options.unitMode || "normalized"),
-        mapCoordinateParity: true
+        mapCoordinateParity: true,
+        mapToThreeRotationY: "negate-map-plane-radians"
       },
       carousel: {
         radius,
         machineAngleDegrees: frame.cycle.tableAngle,
         mapBearingDegrees: orbit.bearingDegrees,
-        rotationY: orbit.radians
+        mapRotationRadians: orbit.radians,
+        rotationY: orbit.threeRotationY
       },
       bottleTable: {
         position: { x: orbit.x, y: tableY, z: orbit.z },
-        rotation: { x: 0, y: orbit.radians, z: 0 },
+        rotation: { x: 0, y: orbit.threeRotationY, z: 0 },
         servoPlateRotationY: bottleAbsoluteRotationY,
-        servoRotationY: servoRadians
+        servoRotationY: servoThreeRotationY,
+        servoMapRotationRadians: servoMapRadians
       },
       bottle: {
         position: { x: orbit.x, y: tableY + bottleLift, z: orbit.z },
         rotation: { x: 0, y: bottleAbsoluteRotationY, z: 0 },
-        mapRotationY: orbit.radians,
-        servoRotationY: servoRadians,
+        mapRotationY: orbit.threeRotationY,
+        mapBearingRadians: orbit.radians,
+        servoRotationY: servoThreeRotationY,
+        servoMapRotationRadians: servoMapRadians,
         servoAngleDegrees: frame.container.servoAngle,
         servoAngleUnwrappedDegrees: frame.container.servoAngleUnwrapped
       },
@@ -101,6 +124,7 @@
   global.Labeler3DSceneAdapter = Object.freeze({
     SCENE_VERSION,
     degToRad,
+    mapRadiansToThreeRotationY,
     machineOrbit,
     toSceneState
   });
