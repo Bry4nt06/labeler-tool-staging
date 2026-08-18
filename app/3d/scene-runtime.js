@@ -2,7 +2,7 @@
   "use strict";
 
   const RUNTIME_VERSION = "servoforge.3d-runtime.v1";
-  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v05.js?v=0.9.10-3d-v05-curved-wipe-pad";
+  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v06.js?v=0.9.10-3d-v06-spender-plates";
   const SPACING_OVERLAY_SCRIPT = "app/3d/measured-spacing-overlay.js?v=0.9.10-3d-v04-machine-map-equipment";
 
   function number(value, fallback = 0) {
@@ -158,6 +158,12 @@
       wipePadTotalThicknessMm: 22,
       wipePadBottlePenetrationMm: 2,
       wipePadVerticalMountAuthority: false,
+      spenderPlateMechanicalHierarchyAuthority: true,
+      spenderPlateDimensionalAuthority: false,
+      spenderPlateAdjustmentAuthority: false,
+      spenderPlateAdjustmentPivots: Object.freeze(["forward-angle", "side-angle", "engagement-angle"]),
+      sensorsRenderedIn3D: false,
+      sensorRuntimeDataPreserved: true,
       passiveServoMode: "neutral-no-invented-motion",
       plannerPitchGeometryUntouched: true,
       viewport: Boolean(global.Labeler3DViewport),
@@ -191,7 +197,7 @@
     const script = documentRef.createElement("script");
     script.src = `./${VIEWPORT_SCRIPT}`;
     script.async = true;
-    script.dataset.servoforge3dViewport = "v0.5";
+    script.dataset.servoforge3dViewport = "v0.6";
     script.addEventListener("load", loadMeasuredSpacingOverlay, { once: true });
     script.addEventListener("error", () => {
       console.warn("ServoForge 3D viewport presenter could not be loaded. Core 3D frame runtime remains available.");
