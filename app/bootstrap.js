@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-spender-placement-v159-20260818-0752";
-  const buildUpdatedAt = "Aug 18, 2026 7:52 AM ET";
+  const build = "3d-spender-shape-v160-20260818-0902";
+  const buildUpdatedAt = "Aug 18, 2026 9:02 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
