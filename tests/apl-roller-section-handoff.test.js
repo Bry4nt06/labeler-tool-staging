@@ -23,13 +23,11 @@ function fixture(maxMoveRatio = 21) {
     },
     {
       hmi: 10, plc: 9, cmd: 7, tableAngle: 148, plateAngle: 0,
-      action: "Orient Body to Tack Reference", station: 3, section: "body",
-      applicationTransition: true
+      action: "Servo Correction"
     },
     {
       hmi: 11, plc: 10, cmd: 3, tableAngle: 148.5, plateAngle: -112,
-      action: "Hold for Body Application - Agg 3", station: 3, section: "body",
-      applicationReference: true
+      action: "Reference"
     },
     {
       hmi: 12, plc: 11, cmd: 7, tableAngle: 149, plateAngle: -112,
@@ -38,6 +36,7 @@ function fixture(maxMoveRatio = 21) {
   ];
 
   const state = {
+    applicationMode: "apl",
     maxMoveRatio,
     program: program.map((row) => ({ ...row })),
     motionPlan: { rows: program.map((row) => ({ ...row })) }
@@ -53,26 +52,40 @@ function fixture(maxMoveRatio = 21) {
     ]
   };
 
+  const stages = new Map();
+  const pipeline = {
+    registerStage(stage) { stages.set(stage.id, stage); return stage; },
+    getStage(id) { return stages.get(id) || null; }
+  };
+
   const context = {
     console,
     state,
     activeMachineMap: () => map,
     finishAngle: (value) => Math.round(Number(value) * 10) / 10,
-    applyGeneratedServoProfile: () => state.program,
-    setTimeout: () => 0,
-    clearTimeout: () => {}
+    LabelerProfilePipelineDriver: pipeline,
+    setTimeout(callback) { callback(); return 0; },
+    clearTimeout() {}
   };
   context.window = context;
   context.globalThis = context;
   vm.runInNewContext(integrationSource, context, { filename: "apl-roller-section-handoff-integration.js" });
-  return { context, state };
+  return { context, state, map, pipeline };
 }
 
-test("merges faulting Neck roller to Body application handoff when the roller span is safe", () => {
-  const { context, state } = fixture(21);
-  const rows = context.applyGeneratedServoProfile();
+test("registers the roller handoff as a late authoritative profile pipeline stage", () => {
+  const { pipeline } = fixture(21);
+  const stage = pipeline.getStage("apl.roller-section-handoff");
+  assert.ok(stage);
+  assert.equal(stage.order, 9000);
+});
 
-  assert.equal(rows.length, 3, "the separate 0.5 degree application turn/reference pair should be removed");
+test("merges the real metadata-free 224:1 Neck roller to Body handoff when the combined move is safe", () => {
+  const { context, state, map, pipeline } = fixture(21);
+  const stage = pipeline.getStage("apl.roller-section-handoff");
+  const rows = stage.process(state.program, { state, map, applicationMode: "apl" });
+
+  assert.equal(rows.length, 3, "the separate 0.5 degree correction/reference pair should be removed");
   assert.equal(rows[0].cmd, 7);
   assert.equal(rows[0].tableAngle, 129.5);
   assert.equal(rows[0].plateAngle, 162.5);
@@ -95,15 +108,17 @@ test("merges faulting Neck roller to Body application handoff when the roller sp
   assert.equal(state.motionPlan.aplRollerSectionHandoff.applied, true);
   assert.equal(state.motionPlan.aplRollerSectionHandoff.changes[0].originalTransitionRatio, 224);
   assert.equal(state.motionPlan.aplRollerSectionHandoff.changes[0].mergedRatio, 15.3);
+  assert.equal(context.ServoForgeAplRollerSectionHandoffLastResult.applied, true);
 });
 
 test("keeps the original faulting transition when the roller cannot absorb it under the configured limit", () => {
-  const { context, state } = fixture(10);
-  const rows = context.applyGeneratedServoProfile();
+  const { state, map, pipeline } = fixture(10);
+  const stage = pipeline.getStage("apl.roller-section-handoff");
+  const rows = stage.process(state.program, { state, map, applicationMode: "apl" });
 
   assert.equal(rows.length, 5);
   assert.equal(rows[1].plateAngle, 0);
   assert.equal(rows[2].tableAngle, 148);
   assert.equal(rows[3].plateAngle, -112);
-  assert.equal(state.motionPlan.aplRollerSectionHandoff, undefined);
+  assert.equal(state.motionPlan.aplRollerSectionHandoff.applied, false);
 });
