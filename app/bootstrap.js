@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "apl-roller-handoff-v167-20260818-1108";
-  const buildUpdatedAt = "Aug 18, 2026 11:08 AM ET";
+  const build = "3d-bottle-handling-v168-20260818-1113";
+  const buildUpdatedAt = "Aug 18, 2026 11:13 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -87,6 +87,8 @@
     "app/3d/purpose-view-simplification-integration.js",
     "app/3d/equipment-layout-adapter.js",
     "app/3d/bottle-path-shape-correction-integration.js",
+    "app/3d/bottle-handling-adapter.js",
+    "app/3d/bottle-handling-viewport-integration.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
     "app/startup-runtime.js"
