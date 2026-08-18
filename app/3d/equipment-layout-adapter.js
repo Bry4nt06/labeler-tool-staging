@@ -23,6 +23,10 @@
     return Object.freeze(value);
   }
 
+  function wipePadAdapter() {
+    return global.Labeler3DWipePadGeometryAdapter || null;
+  }
+
   function midpointAngle(start, end) {
     const a = number(start, 0);
     let b = number(end, a);
@@ -91,13 +95,21 @@
     const equipment = objects.map((item, index) => {
       const angle = placementAngle(item);
       const depthMapUnits = depthForObject(item, depths);
-      const radialWorld = Math.max(0.1, physicalRadiusWorld + depthMapUnits * scaleFromMapRadius);
+      const kind = String(item?.kind || "unknown");
+      const wipePad = kind === "pad" && wipePadAdapter()?.snapshot
+        ? wipePadAdapter().snapshot({ ...item, spanDegrees: spanDegrees(item) }, geometry)
+        : null;
+      const fallbackRadialWorld = Math.max(0.1, physicalRadiusWorld + depthMapUnits * scaleFromMapRadius);
+      const radialWorld = Number.isFinite(Number(wipePad?.assemblyCenterRadiusWorld))
+        ? Number(wipePad.assemblyCenterRadiusWorld)
+        : fallbackRadialWorld;
       const orbit = machineOrbit(angle, radialWorld, { carouselDirection, zeroAngleDegrees });
       const span = spanDegrees(item);
-      const tangentLengthWorld = Math.max(0.08, radialWorld * (span * Math.PI / 180));
+      const tangentLengthWorld = Number.isFinite(Number(wipePad?.contactFaceArcLengthWorld))
+        ? Number(wipePad.contactFaceArcLengthWorld)
+        : Math.max(0.08, radialWorld * (span * Math.PI / 180));
       const extensionMapUnits = Math.max(4, number(item?.extension, 20));
       const extensionWorld = extensionMapUnits * scaleFromMapRadius;
-      const kind = String(item?.kind || "unknown");
       const section = String(item?.labelSection || map?.stationSections?.[String(item?.station)] || "auto");
       return freeze({
         id: String(item?.id || `equipment-${index + 1}`),
@@ -124,8 +136,11 @@
         sensorFieldOfViewDegrees: kind === "sensor" ? clamp(number(item?.sensorFieldOfViewDeg, 18), 4, 60) : null,
         servoAssist: kind === "sensor" ? Boolean(item?.servoAssist) : false,
         orientationTarget: kind === "coding" ? String(item?.orientationTarget || "") : "",
-        placementAuthority: "machine-map-angle-plus-derived-radial-depth",
-        radialCadAuthority: false
+        wipePad,
+        placementAuthority: wipePad
+          ? "machine-map-angle-plus-user-measured-wipe-contact-geometry"
+          : "machine-map-angle-plus-derived-radial-depth",
+        radialCadAuthority: Boolean(wipePad?.contactAuthority)
       });
     });
 
@@ -154,6 +169,7 @@
       }));
     }
 
+    const measuredPads = equipment.filter((item) => item.kind === "pad" && item.wipePad?.dimensionalAuthority === "user-measured");
     return freeze({
       schemaVersion: SCHEMA_VERSION,
       mapId: String(map?.id || state.activeMapId || ""),
@@ -164,12 +180,16 @@
       mapRadius,
       mapToWorldScale: scaleFromMapRadius,
       angularAuthority: "active-machine-map",
-      radialAuthority: "derived-from-map-depth-ratio-not-cad",
+      radialAuthority: measuredPads.length
+        ? "measured-wipe-contact-plus-map-derived-other-equipment"
+        : "derived-from-map-depth-ratio-not-cad",
+      wipePadAuthority: measuredPads.length ? "user-measured" : "none",
       aggregates,
       objects: equipment,
       counts: {
         aggregates: aggregates.length,
         pads: equipment.filter((item) => item.kind === "pad").length,
+        measuredPads: measuredPads.length,
         rollers: equipment.filter((item) => item.kind === "roller").length,
         sensors: equipment.filter((item) => item.kind === "sensor").length,
         coding: equipment.filter((item) => item.kind === "coding").length,
