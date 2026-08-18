@@ -1,16 +1,18 @@
 (function installServoForge3DViewportUiControls(global) {
   "use strict";
 
-  const INTEGRATION_VERSION = "servoforge.3d-viewport-ui-controls.v2";
+  const INTEGRATION_VERSION = "servoforge.3d-viewport-ui-controls.v3";
   const THREE_VERSION = "0.185.1";
   const THREE_MODULE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
   const BOTTLE_MODES = new Set(["all", "alternate", "none", "head1"]);
+  const TRANSPARENT_OBJECT_OPACITY = 0.50;
 
   let THREE = null;
   let uiInstalled = false;
   let objectHooksInstalled = false;
   let bottleMode = "all";
   let telemetryHidden = false;
+  let machineTransparent = false;
   let freeRoam = false;
   let lastCamera = null;
   let lastFrameTime = 0;
@@ -24,10 +26,68 @@
   let freePosition = null;
   let freeQuaternion = null;
   let fallbackHandlingBottleIndex = 0;
+  let alternateLastAngle = null;
+  let alternateContinuousPitch = 0;
+  let alternateHeadCount = null;
+  let alternatePitchParity = 0;
   const pressedKeys = new Set();
+  const materialRecords = new Map();
 
   function clamp(value, minimum, maximum) {
     return Math.max(minimum, Math.min(maximum, value));
+  }
+
+  function normalizeAngle(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return null;
+    const normalized = numeric % 360;
+    return normalized < 0 ? normalized + 360 : normalized;
+  }
+
+  function currentMachineAngle() {
+    const fromState = normalizeAngle(global.state?.previewAngle);
+    if (fromState !== null) return fromState;
+    const text = document.querySelector("#servoforge3dMachineAngle")?.textContent || "";
+    const parsed = normalizeAngle(parseFloat(text));
+    return parsed;
+  }
+
+  function currentHeadCount() {
+    const stateCount = Number(global.state?.headCount);
+    if (Number.isFinite(stateCount) && stateCount >= 2) return Math.round(stateCount);
+    try {
+      const runtimeSnapshot = global.Labeler3DSceneRuntime?.snapshot?.();
+      const runtimeCount = Number(runtimeSnapshot?.geometry?.machine?.headCount);
+      if (Number.isFinite(runtimeCount) && runtimeCount >= 2) return Math.round(runtimeCount);
+    } catch {
+      // The state value is normally available. Keep the previous count if runtime is busy.
+    }
+    return Number.isFinite(alternateHeadCount) ? alternateHeadCount : 45;
+  }
+
+  function updateAlternatePitchParity() {
+    const angle = currentMachineAngle();
+    const headCount = currentHeadCount();
+    if (angle === null || !Number.isFinite(headCount) || headCount < 2) return alternatePitchParity;
+    const pitchDegrees = 360 / headCount;
+
+    if (alternateHeadCount !== headCount || alternateLastAngle === null) {
+      alternateHeadCount = headCount;
+      alternateLastAngle = angle;
+      alternateContinuousPitch = angle / pitchDegrees;
+      alternatePitchParity = ((Math.floor(alternateContinuousPitch + 1e-7) % 2) + 2) % 2;
+      return alternatePitchParity;
+    }
+
+    let delta = angle - alternateLastAngle;
+    if (delta > 180) delta -= 360;
+    else if (delta < -180) delta += 360;
+    if (Math.abs(delta) > 1e-9) {
+      alternateContinuousPitch += delta / pitchDegrees;
+      alternateLastAngle = angle;
+      alternatePitchParity = ((Math.floor(alternateContinuousPitch + 1e-7) % 2) + 2) % 2;
+    }
+    return alternatePitchParity;
   }
 
   function handlingBottleIndex(object) {
@@ -39,7 +99,7 @@
   }
 
   function installBottleVisibilityProxy(object) {
-    if (!object || object.__servoforgeBottleVisibilityProxyV2) return;
+    if (!object || object.__servoforgeBottleVisibilityProxyV3) return;
     const isHandlingBottle = Boolean(object?.userData?.handlingBottle);
     const isHeadOneBottle = object?.name === "ServoForgeLiveBottle";
     if (!isHandlingBottle && !isHeadOneBottle) return;
@@ -60,17 +120,19 @@
             if (bottleMode === "all") return record.baseVisible;
             return false;
           }
-
           if (!record.baseVisible) return false;
           if (bottleMode === "all") return true;
-          if (bottleMode === "alternate") return record.index % 2 === 0;
+          if (bottleMode === "alternate") {
+            const parity = updateAlternatePitchParity();
+            return (record.index + parity) % 2 === 0;
+          }
           return false;
         },
         set(value) {
           record.baseVisible = Boolean(value);
         }
       });
-      Object.defineProperty(object, "__servoforgeBottleVisibilityProxyV2", {
+      Object.defineProperty(object, "__servoforgeBottleVisibilityProxyV3", {
         configurable: false,
         enumerable: false,
         writable: false,
@@ -81,19 +143,86 @@
     }
   }
 
+  function hasBottleAncestor(object) {
+    let current = object;
+    while (current) {
+      if (current?.userData?.handlingBottle || current?.name === "ServoForgeLiveBottle") return true;
+      current = current.parent;
+    }
+    return false;
+  }
+
+  function hasServoForgeAncestor(object) {
+    let current = object;
+    while (current) {
+      if (String(current?.name || "").startsWith("ServoForge")) return true;
+      current = current.parent;
+    }
+    return false;
+  }
+
+  function isMachineMesh(mesh) {
+    if (!mesh?.isMesh || hasBottleAncestor(mesh)) return false;
+    // The unnamed CircleGeometry is the viewport floor, not labeler hardware.
+    if (mesh.geometry?.type === "CircleGeometry" && !hasServoForgeAncestor(mesh)) return false;
+    return true;
+  }
+
+  function applyMaterialTransparency(record) {
+    const material = record?.material;
+    if (!material) return;
+    if (machineTransparent) {
+      material.opacity = clamp(record.opacity * TRANSPARENT_OBJECT_OPACITY, 0, 1);
+      material.transparent = true;
+      material.depthWrite = false;
+    } else {
+      material.opacity = record.opacity;
+      material.transparent = record.transparent;
+      material.depthWrite = record.depthWrite;
+    }
+    material.needsUpdate = true;
+  }
+
+  function registerMaterial(material) {
+    if (!material || materialRecords.has(material)) return;
+    const record = {
+      material,
+      opacity: Number.isFinite(Number(material.opacity)) ? Number(material.opacity) : 1,
+      transparent: Boolean(material.transparent),
+      depthWrite: material.depthWrite !== false
+    };
+    materialRecords.set(material, record);
+    applyMaterialTransparency(record);
+  }
+
+  function registerMachineMaterials(object) {
+    object?.traverse?.((child) => {
+      if (!isMachineMesh(child)) return;
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      materials.forEach(registerMaterial);
+    });
+  }
+
+  function applyAllMachineTransparency() {
+    materialRecords.forEach(applyMaterialTransparency);
+  }
+
   function installThreeObjectHooks() {
     if (!THREE || objectHooksInstalled) return;
     const prototype = THREE.Object3D?.prototype;
     if (!prototype) return;
 
-    if (!prototype.__servoforgeViewportUiAddHookV2) {
+    if (!prototype.__servoforgeViewportUiAddHookV3) {
       const nativeAdd = prototype.add;
       prototype.add = function servoforgeViewportUiAdd(...objects) {
         const result = nativeAdd.apply(this, objects);
-        objects.forEach(installBottleVisibilityProxy);
+        objects.forEach((object) => {
+          installBottleVisibilityProxy(object);
+          registerMachineMaterials(object);
+        });
         return result;
       };
-      Object.defineProperty(prototype, "__servoforgeViewportUiAddHookV2", {
+      Object.defineProperty(prototype, "__servoforgeViewportUiAddHookV3", {
         configurable: false,
         enumerable: false,
         writable: false,
@@ -101,13 +230,13 @@
       });
     }
 
-    if (!prototype.__servoforgeViewportUiLookAtHookV2) {
+    if (!prototype.__servoforgeViewportUiLookAtHookV3) {
       const nativeLookAt = prototype.lookAt;
       prototype.lookAt = function servoforgeViewportUiLookAt(...args) {
         if (this?.isCamera) lastCamera = this;
         return nativeLookAt.apply(this, args);
       };
-      Object.defineProperty(prototype, "__servoforgeViewportUiLookAtHookV2", {
+      Object.defineProperty(prototype, "__servoforgeViewportUiLookAtHookV3", {
         configurable: false,
         enumerable: false,
         writable: false,
@@ -197,6 +326,7 @@
       .servoforge-3d-controls .servoforge-3d-bottle-control select{border:0;background:#122833;color:#eef7fa;border-radius:6px;padding:4px 6px;font:inherit;font-size:10px;font-weight:700;outline:none;cursor:pointer}
       .servoforge-3d-controls #servoforge3dFreeRoam[aria-pressed="true"]{border-color:#55c2ff;color:#bde8ff;background:#102b3a}
       .servoforge-3d-controls #servoforge3dTelemetryToggle[aria-pressed="true"]{border-color:#7b8b92;color:#c5d1d6;background:#172127}
+      .servoforge-3d-controls #servoforge3dTransparentObjects[aria-pressed="true"]{border-color:#70d9c0;color:#bdf6e8;background:#12332e}
       .servoforge-3d-free-roam-pad{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:8;display:grid;grid-template-columns:auto auto;gap:8px;align-items:center;background:rgba(5,15,20,.90);border:1px solid rgba(85,194,255,.42);border-radius:10px;padding:7px 9px;box-shadow:0 8px 24px rgba(0,0,0,.30);pointer-events:auto}
       .servoforge-3d-free-roam-pad[hidden]{display:none!important}.servoforge-3d-free-roam-copy{display:flex;flex-direction:column;gap:2px;min-width:118px}.servoforge-3d-free-roam-copy strong{font-size:10px;color:#bde8ff}.servoforge-3d-free-roam-copy small{font-size:8px;color:#8fa8b3;line-height:1.3}
       .servoforge-3d-free-roam-buttons{display:grid;grid-template-columns:repeat(3,30px);grid-template-rows:repeat(2,27px);gap:3px}.servoforge-3d-free-roam-buttons button{border:1px solid rgba(150,183,197,.28);background:#122833;color:#eef7fa;border-radius:6px;padding:0;font-size:9px;font-weight:800;cursor:pointer;touch-action:none}.servoforge-3d-free-roam-buttons button:active,.servoforge-3d-free-roam-buttons button[data-active="true"]{border-color:#55c2ff;background:#173a4b;color:#c8efff}
@@ -259,6 +389,7 @@
   function setBottleMode(mode) {
     const next = BOTTLE_MODES.has(String(mode)) ? String(mode) : "all";
     bottleMode = next;
+    alternateLastAngle = null;
     const select = document.querySelector("#servoforge3dBottleMode");
     if (select && select.value !== next) select.value = next;
   }
@@ -271,6 +402,18 @@
     if (button) {
       button.setAttribute("aria-pressed", String(telemetryHidden));
       button.textContent = telemetryHidden ? "Show Data" : "Hide Data";
+    }
+  }
+
+  function setMachineTransparent(enabled) {
+    machineTransparent = Boolean(enabled);
+    applyAllMachineTransparency();
+    const button = document.querySelector("#servoforge3dTransparentObjects");
+    if (button) {
+      button.setAttribute("aria-pressed", String(machineTransparent));
+      button.title = machineTransparent
+        ? "Labeler objects are at 50% opacity. Click for 100%."
+        : "Labeler objects are at 100% opacity. Click for 50%.";
     }
   }
 
@@ -325,6 +468,17 @@
       const closeButton = controls.querySelector("#servoforge3dClose");
       controls.insertBefore(label, closeButton || null);
       label.querySelector("select")?.addEventListener("change", (event) => setBottleMode(event.target.value));
+    }
+
+    if (!document.querySelector("#servoforge3dTransparentObjects")) {
+      const button = document.createElement("button");
+      button.id = "servoforge3dTransparentObjects";
+      button.type = "button";
+      button.textContent = "Transparent Objects";
+      button.setAttribute("aria-pressed", "false");
+      const closeButton = controls.querySelector("#servoforge3dClose");
+      controls.insertBefore(button, closeButton || null);
+      button.addEventListener("click", () => setMachineTransparent(!machineTransparent));
     }
 
     if (!document.querySelector("#servoforge3dFreeRoam")) {
@@ -442,6 +596,7 @@
     });
 
     setBottleMode(bottleMode);
+    setMachineTransparent(machineTransparent);
     setTelemetryHidden(telemetryHidden);
     updateFreeRoamUi();
     uiInstalled = true;
@@ -461,8 +616,12 @@
       objectHooksInstalled,
       cameraCaptured: Boolean(lastCamera),
       bottleMode,
+      alternatePitchParity,
       telemetryHidden,
+      machineTransparent,
+      machineOpacity: machineTransparent ? TRANSPARENT_OBJECT_OPACITY : 1,
       freeRoam,
+      trackedMachineMaterials: materialRecords.size,
       geometryUntouched: true,
       plannerUntouched: true,
       servoRuntimeUntouched: true
@@ -472,8 +631,10 @@
   global.Labeler3DViewportUiControls = Object.freeze({
     INTEGRATION_VERSION,
     THREE_VERSION,
+    TRANSPARENT_OBJECT_OPACITY,
     setBottleMode,
     setTelemetryHidden,
+    setMachineTransparent,
     setFreeRoam,
     status
   });
