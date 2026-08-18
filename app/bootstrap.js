@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-spender-knuckle-v163-20260818-0938";
-  const buildUpdatedAt = "Aug 18, 2026 9:38 AM ET";
+  const build = "3d-spender-knuckle-v164-20260818-0945";
+  const buildUpdatedAt = "Aug 18, 2026 9:45 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
