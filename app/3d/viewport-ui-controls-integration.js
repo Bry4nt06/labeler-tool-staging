@@ -1,20 +1,20 @@
 (function installServoForge3DViewportUiControls(global) {
   "use strict";
 
-  const INTEGRATION_VERSION = "servoforge.3d-viewport-ui-controls.v1";
+  const INTEGRATION_VERSION = "servoforge.3d-viewport-ui-controls.v2";
   const THREE_VERSION = "0.185.1";
   const THREE_MODULE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
   const BOTTLE_MODES = new Set(["all", "alternate", "none", "head1"]);
 
   let THREE = null;
-  let patchedRenderer = false;
   let uiInstalled = false;
+  let objectHooksInstalled = false;
   let bottleMode = "all";
   let telemetryHidden = false;
   let freeRoam = false;
-  let lastScene = null;
   let lastCamera = null;
   let lastFrameTime = 0;
+  let freeRoamFrameId = null;
   let lookDragging = false;
   let lookPointerId = null;
   let lastPointerX = 0;
@@ -23,43 +23,105 @@
   let freePitch = 0;
   let freePosition = null;
   let freeQuaternion = null;
+  let fallbackHandlingBottleIndex = 0;
   const pressedKeys = new Set();
 
   function clamp(value, minimum, maximum) {
     return Math.max(minimum, Math.min(maximum, value));
   }
 
-  function activeViewportScene(scene) {
-    if (!scene?.getObjectByName) return false;
-    return Boolean(
-      scene.getObjectByName("ServoForgeBottleTablePopulation")
-      || scene.getObjectByName("ServoForgeBottleHandlingSystem")
-    );
+  function handlingBottleIndex(object) {
+    const match = String(object?.name || "").match(/ServoForgeHandlingBottle(\d+)/);
+    if (match) return Math.max(0, Number(match[1]) - 1);
+    const next = fallbackHandlingBottleIndex;
+    fallbackHandlingBottleIndex += 1;
+    return next;
   }
 
-  function applyBottleVisibility(scene) {
-    if (!scene?.traverse || !activeViewportScene(scene)) return;
-    let handlingIndex = 0;
-    scene.traverse((object) => {
-      if (object?.userData?.handlingBottle) {
-        const visible = bottleMode === "all"
-          || (bottleMode === "alternate" && handlingIndex % 2 === 0);
-        object.visible = visible;
-        handlingIndex += 1;
-        return;
-      }
-      if (object?.name === "ServoForgeLiveBottle") {
-        object.visible = bottleMode === "head1";
-      }
-    });
+  function installBottleVisibilityProxy(object) {
+    if (!object || object.__servoforgeBottleVisibilityProxyV2) return;
+    const isHandlingBottle = Boolean(object?.userData?.handlingBottle);
+    const isHeadOneBottle = object?.name === "ServoForgeLiveBottle";
+    if (!isHandlingBottle && !isHeadOneBottle) return;
+
+    const record = {
+      kind: isHandlingBottle ? "handling" : "head1",
+      index: isHandlingBottle ? handlingBottleIndex(object) : 0,
+      baseVisible: Boolean(object.visible)
+    };
+
+    try {
+      Object.defineProperty(object, "visible", {
+        configurable: true,
+        enumerable: true,
+        get() {
+          if (record.kind === "head1") {
+            if (bottleMode === "head1") return true;
+            if (bottleMode === "all") return record.baseVisible;
+            return false;
+          }
+
+          if (!record.baseVisible) return false;
+          if (bottleMode === "all") return true;
+          if (bottleMode === "alternate") return record.index % 2 === 0;
+          return false;
+        },
+        set(value) {
+          record.baseVisible = Boolean(value);
+        }
+      });
+      Object.defineProperty(object, "__servoforgeBottleVisibilityProxyV2", {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: record
+      });
+    } catch (error) {
+      console.warn("ServoForge 3D bottle visibility proxy could not be installed", error);
+    }
+  }
+
+  function installThreeObjectHooks() {
+    if (!THREE || objectHooksInstalled) return;
+    const prototype = THREE.Object3D?.prototype;
+    if (!prototype) return;
+
+    if (!prototype.__servoforgeViewportUiAddHookV2) {
+      const nativeAdd = prototype.add;
+      prototype.add = function servoforgeViewportUiAdd(...objects) {
+        const result = nativeAdd.apply(this, objects);
+        objects.forEach(installBottleVisibilityProxy);
+        return result;
+      };
+      Object.defineProperty(prototype, "__servoforgeViewportUiAddHookV2", {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: true
+      });
+    }
+
+    if (!prototype.__servoforgeViewportUiLookAtHookV2) {
+      const nativeLookAt = prototype.lookAt;
+      prototype.lookAt = function servoforgeViewportUiLookAt(...args) {
+        if (this?.isCamera) lastCamera = this;
+        return nativeLookAt.apply(this, args);
+      };
+      Object.defineProperty(prototype, "__servoforgeViewportUiLookAtHookV2", {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: true
+      });
+    }
+
+    objectHooksInstalled = true;
   }
 
   function initializeFreePose(camera) {
     if (!THREE || !camera) return false;
-    freePosition = freePosition || new THREE.Vector3();
-    freeQuaternion = freeQuaternion || new THREE.Quaternion();
-    freePosition.copy(camera.position);
-    freeQuaternion.copy(camera.quaternion);
+    freePosition = new THREE.Vector3().copy(camera.position);
+    freeQuaternion = new THREE.Quaternion().copy(camera.quaternion);
     const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, "YXZ");
     freePitch = euler.x;
     freeYaw = euler.y;
@@ -69,19 +131,19 @@
 
   function updateFreeQuaternion() {
     if (!THREE || !freeQuaternion) return;
-    const euler = new THREE.Euler(freePitch, freeYaw, 0, "YXZ");
-    freeQuaternion.setFromEuler(euler);
+    freeQuaternion.setFromEuler(new THREE.Euler(freePitch, freeYaw, 0, "YXZ"));
   }
 
-  function applyFreeMovement(camera) {
+  function applyFreeMovement(camera, now) {
     if (!freeRoam || !THREE || !camera) return;
     if (!freePosition || !freeQuaternion) initializeFreePose(camera);
     if (!freePosition || !freeQuaternion) return;
 
-    const now = global.performance?.now?.() || Date.now();
-    const deltaSeconds = clamp((now - lastFrameTime) / 1000, 0, 0.05);
-    lastFrameTime = now;
+    const currentTime = Number.isFinite(Number(now)) ? Number(now) : (global.performance?.now?.() || Date.now());
+    const deltaSeconds = clamp((currentTime - lastFrameTime) / 1000, 0, 0.05);
+    lastFrameTime = currentTime;
     const speed = pressedKeys.has("shift") ? 8.5 : 3.6;
+    const step = speed * deltaSeconds;
 
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(freeQuaternion);
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(freeQuaternion);
@@ -90,7 +152,6 @@
     if (forward.lengthSq() > 1e-8) forward.normalize();
     if (right.lengthSq() > 1e-8) right.normalize();
 
-    const step = speed * deltaSeconds;
     if (pressedKeys.has("w")) freePosition.addScaledVector(forward, step);
     if (pressedKeys.has("s")) freePosition.addScaledVector(forward, -step);
     if (pressedKeys.has("d")) freePosition.addScaledVector(right, step);
@@ -102,27 +163,24 @@
     camera.quaternion.copy(freeQuaternion);
   }
 
-  function patchThreeRenderer() {
-    if (!THREE || patchedRenderer) return;
-    const prototype = THREE.WebGLRenderer?.prototype;
-    if (!prototype?.render || prototype.__servoforgeViewportUiControlsV1) return;
-    const nativeRender = prototype.render;
-    prototype.render = function servoforgeViewportUiRender(scene, camera) {
-      if (activeViewportScene(scene)) {
-        lastScene = scene;
-        lastCamera = camera;
-        applyBottleVisibility(scene);
-        applyFreeMovement(camera);
-      }
-      return nativeRender.call(this, scene, camera);
-    };
-    Object.defineProperty(prototype, "__servoforgeViewportUiControlsV1", {
-      configurable: false,
-      enumerable: false,
-      writable: false,
-      value: true
-    });
-    patchedRenderer = true;
+  function freeRoamFrame(now) {
+    freeRoamFrameId = null;
+    if (!freeRoam) return;
+    if (lastCamera) applyFreeMovement(lastCamera, now);
+    freeRoamFrameId = global.requestAnimationFrame(freeRoamFrame);
+  }
+
+  function startFreeRoamLoop() {
+    if (freeRoamFrameId !== null) return;
+    lastFrameTime = global.performance?.now?.() || Date.now();
+    freeRoamFrameId = global.requestAnimationFrame(freeRoamFrame);
+  }
+
+  function stopFreeRoamLoop() {
+    if (freeRoamFrameId !== null) {
+      global.cancelAnimationFrame?.(freeRoamFrameId);
+      freeRoamFrameId = null;
+    }
   }
 
   function installStyles() {
@@ -139,8 +197,11 @@
       .servoforge-3d-controls .servoforge-3d-bottle-control select{border:0;background:#122833;color:#eef7fa;border-radius:6px;padding:4px 6px;font:inherit;font-size:10px;font-weight:700;outline:none;cursor:pointer}
       .servoforge-3d-controls #servoforge3dFreeRoam[aria-pressed="true"]{border-color:#55c2ff;color:#bde8ff;background:#102b3a}
       .servoforge-3d-controls #servoforge3dTelemetryToggle[aria-pressed="true"]{border-color:#7b8b92;color:#c5d1d6;background:#172127}
+      .servoforge-3d-free-roam-pad{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:8;display:grid;grid-template-columns:auto auto;gap:8px;align-items:center;background:rgba(5,15,20,.90);border:1px solid rgba(85,194,255,.42);border-radius:10px;padding:7px 9px;box-shadow:0 8px 24px rgba(0,0,0,.30);pointer-events:auto}
+      .servoforge-3d-free-roam-pad[hidden]{display:none!important}.servoforge-3d-free-roam-copy{display:flex;flex-direction:column;gap:2px;min-width:118px}.servoforge-3d-free-roam-copy strong{font-size:10px;color:#bde8ff}.servoforge-3d-free-roam-copy small{font-size:8px;color:#8fa8b3;line-height:1.3}
+      .servoforge-3d-free-roam-buttons{display:grid;grid-template-columns:repeat(3,30px);grid-template-rows:repeat(2,27px);gap:3px}.servoforge-3d-free-roam-buttons button{border:1px solid rgba(150,183,197,.28);background:#122833;color:#eef7fa;border-radius:6px;padding:0;font-size:9px;font-weight:800;cursor:pointer;touch-action:none}.servoforge-3d-free-roam-buttons button:active,.servoforge-3d-free-roam-buttons button[data-active="true"]{border-color:#55c2ff;background:#173a4b;color:#c8efff}
       @media(max-width:1100px){.servoforge-3d-telemetry{grid-template-columns:repeat(6,minmax(82px,1fr))!important;width:min(900px,calc(100% - 24px))!important}}
-      @media(max-width:850px){.servoforge-3d-telemetry{grid-template-columns:repeat(3,minmax(92px,1fr))!important;width:calc(100% - 20px)!important;left:10px!important;bottom:42px!important}.servoforge-3d-metric.action{grid-column:span 2!important}.servoforge-3d-controls .servoforge-3d-bottle-control{max-width:100%}}
+      @media(max-width:850px){.servoforge-3d-telemetry{grid-template-columns:repeat(3,minmax(92px,1fr))!important;width:calc(100% - 20px)!important;left:10px!important;bottom:42px!important}.servoforge-3d-metric.action{grid-column:span 2!important}.servoforge-3d-controls .servoforge-3d-bottle-control{max-width:100%}.servoforge-3d-free-roam-pad{top:8px;max-width:calc(100% - 16px)}.servoforge-3d-free-roam-copy{min-width:100px}}
     `;
     document.head.appendChild(style);
   }
@@ -153,19 +214,29 @@
     const help = helpElement();
     if (!help) return;
     help.textContent = freeRoam
-      ? "Free roam • Drag to look • WASD move • Q/E vertical • Wheel forward/back"
+      ? "Free roam active • Drag to look • WASD move • Q/E vertical • Shift = faster"
       : "Drag to orbit • Wheel to zoom";
   }
 
-  function updateFreeRoamButton() {
+  function updateFreeRoamUi() {
     const button = document.querySelector("#servoforge3dFreeRoam");
-    if (!button) return;
-    button.setAttribute("aria-pressed", String(freeRoam));
-    button.textContent = freeRoam ? "Exit Free Roam" : "Free Roam";
+    if (button) {
+      button.setAttribute("aria-pressed", String(freeRoam));
+      button.textContent = "Free Roam";
+    }
+    const pad = document.querySelector("#servoforge3dFreeRoamPad");
+    if (pad) pad.hidden = !freeRoam;
+    updateHelpCopy();
   }
 
-  function setFreeRoam(enabled) {
-    freeRoam = Boolean(enabled);
+  function setFreeRoam(enabled, options = {}) {
+    const next = Boolean(enabled);
+    if (next === freeRoam && !(next && !freePosition)) {
+      updateFreeRoamUi();
+      return;
+    }
+
+    freeRoam = next;
     pressedKeys.clear();
     lookDragging = false;
     lookPointerId = null;
@@ -174,14 +245,15 @@
       const follow = document.querySelector("#servoforge3dFollow");
       if (follow?.getAttribute("aria-pressed") === "true") follow.click();
       if (lastCamera) initializeFreePose(lastCamera);
+      startFreeRoamLoop();
     } else {
+      stopFreeRoamLoop();
       freePosition = null;
       freeQuaternion = null;
-      global.Labeler3DViewport?.resetCamera?.();
+      if (options.resetCamera !== false) global.Labeler3DViewport?.resetCamera?.();
     }
 
-    updateFreeRoamButton();
-    updateHelpCopy();
+    updateFreeRoamUi();
   }
 
   function setBottleMode(mode) {
@@ -189,7 +261,6 @@
     bottleMode = next;
     const select = document.querySelector("#servoforge3dBottleMode");
     if (select && select.value !== next) select.value = next;
-    if (lastScene) applyBottleVisibility(lastScene);
   }
 
   function setTelemetryHidden(hidden) {
@@ -203,12 +274,47 @@
     }
   }
 
+  function keyFromKeyboardEvent(event) {
+    const codeMap = {
+      KeyW: "w",
+      KeyA: "a",
+      KeyS: "s",
+      KeyD: "d",
+      KeyQ: "q",
+      KeyE: "e",
+      ShiftLeft: "shift",
+      ShiftRight: "shift"
+    };
+    return codeMap[event?.code] || null;
+  }
+
+  function bindFreeRoamPad(pad) {
+    pad.querySelectorAll("button[data-free-key]").forEach((button) => {
+      const key = String(button.dataset.freeKey || "");
+      const release = () => {
+        pressedKeys.delete(key);
+        button.dataset.active = "false";
+      };
+      button.addEventListener("pointerdown", (event) => {
+        if (!freeRoam) return;
+        event.preventDefault();
+        pressedKeys.add(key);
+        button.dataset.active = "true";
+        button.setPointerCapture?.(event.pointerId);
+      });
+      button.addEventListener("pointerup", release);
+      button.addEventListener("pointercancel", release);
+      button.addEventListener("lostpointercapture", release);
+    });
+  }
+
   function installViewportControls() {
     if (uiInstalled) return true;
     const backdrop = document.querySelector("#servoforge3dBackdrop");
     const controls = backdrop?.querySelector(".servoforge-3d-controls");
+    const stage = backdrop?.querySelector("#servoforge3dStage");
     const canvas = backdrop?.querySelector("#servoforge3dCanvas");
-    if (!backdrop || !controls || !canvas) return false;
+    if (!backdrop || !controls || !stage || !canvas) return false;
 
     installStyles();
 
@@ -243,6 +349,21 @@
       button.addEventListener("click", () => setTelemetryHidden(!telemetryHidden));
     }
 
+    if (!document.querySelector("#servoforge3dFreeRoamPad")) {
+      const pad = document.createElement("div");
+      pad.id = "servoforge3dFreeRoamPad";
+      pad.className = "servoforge-3d-free-roam-pad";
+      pad.hidden = true;
+      pad.innerHTML = `
+        <div class="servoforge-3d-free-roam-copy"><strong>Free Roam Controls</strong><small>Drag scene to look. Keyboard: WASD + Q/E. Hold Shift for faster travel.</small></div>
+        <div class="servoforge-3d-free-roam-buttons" aria-label="Free roam movement controls">
+          <button type="button" data-free-key="q" aria-label="Move down">Q ↓</button><button type="button" data-free-key="w" aria-label="Move forward">W</button><button type="button" data-free-key="e" aria-label="Move up">E ↑</button>
+          <button type="button" data-free-key="a" aria-label="Move left">A</button><button type="button" data-free-key="s" aria-label="Move backward">S</button><button type="button" data-free-key="d" aria-label="Move right">D</button>
+        </div>`;
+      stage.appendChild(pad);
+      bindFreeRoamPad(pad);
+    }
+
     canvas.addEventListener("pointerdown", (event) => {
       if (!freeRoam || event.button !== 0) return;
       event.preventDefault();
@@ -265,6 +386,7 @@
       freeYaw -= dx * 0.0045;
       freePitch = clamp(freePitch - dy * 0.0045, -Math.PI * 0.49, Math.PI * 0.49);
       updateFreeQuaternion();
+      if (lastCamera && freeQuaternion) lastCamera.quaternion.copy(freeQuaternion);
     }, true);
 
     const releaseLook = (event) => {
@@ -285,14 +407,15 @@
       const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(freeQuaternion).normalize();
       const amount = clamp(-event.deltaY * 0.0025, -1.25, 1.25);
       freePosition.addScaledVector(forward, amount);
+      if (lastCamera) lastCamera.position.copy(freePosition);
     }, { capture: true, passive: false });
 
     document.addEventListener("keydown", (event) => {
       if (!freeRoam) return;
       const tag = String(event.target?.tagName || "").toLowerCase();
       if (tag === "input" || tag === "select" || tag === "textarea") return;
-      const key = String(event.key || "").toLowerCase();
-      if (!["w", "a", "s", "d", "q", "e", "shift"].includes(key)) return;
+      const key = keyFromKeyboardEvent(event);
+      if (!key) return;
       event.preventDefault();
       event.stopPropagation();
       pressedKeys.add(key);
@@ -300,19 +423,27 @@
 
     document.addEventListener("keyup", (event) => {
       if (!freeRoam) return;
-      const key = String(event.key || "").toLowerCase();
+      const key = keyFromKeyboardEvent(event);
+      if (!key) return;
       pressedKeys.delete(key);
     }, true);
 
-    const closeButton = backdrop.querySelector("#servoforge3dClose");
-    closeButton?.addEventListener("click", () => {
-      if (freeRoam) setFreeRoam(false);
+    global.addEventListener?.("blur", () => pressedKeys.clear());
+
+    controls.addEventListener("click", (event) => {
+      if (!freeRoam) return;
+      const target = event.target?.closest?.("[data-3d-camera], #servoforge3dFollow");
+      if (!target) return;
+      setFreeRoam(false, { resetCamera: false });
+    }, true);
+
+    backdrop.querySelector("#servoforge3dClose")?.addEventListener("click", () => {
+      if (freeRoam) setFreeRoam(false, { resetCamera: false });
     });
 
     setBottleMode(bottleMode);
     setTelemetryHidden(telemetryHidden);
-    updateFreeRoamButton();
-    updateHelpCopy();
+    updateFreeRoamUi();
     uiInstalled = true;
     return true;
   }
@@ -327,7 +458,8 @@
       integrationVersion: INTEGRATION_VERSION,
       threeVersion: THREE_VERSION,
       installed: uiInstalled,
-      rendererPatched: patchedRenderer,
+      objectHooksInstalled,
+      cameraCaptured: Boolean(lastCamera),
       bottleMode,
       telemetryHidden,
       freeRoam,
@@ -349,7 +481,7 @@
   import(THREE_MODULE_URL)
     .then((module) => {
       THREE = module;
-      patchThreeRenderer();
+      installThreeObjectHooks();
       installWhenReady();
     })
     .catch((error) => console.error("ServoForge 3D viewport UI controls failed", error));
