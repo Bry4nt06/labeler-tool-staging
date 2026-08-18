@@ -2,7 +2,7 @@
   "use strict";
 
   const RUNTIME_VERSION = "servoforge.3d-runtime.v1";
-  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v07.js?v=0.9.10-3d-v07-bottle-labels";
+  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v08.js?v=0.9.10-3d-v08-hardware-reference";
   const SPACING_OVERLAY_SCRIPT = "app/3d/measured-spacing-overlay.js?v=0.9.10-3d-v04-machine-map-equipment";
 
   function number(value, fallback = 0) {
@@ -48,6 +48,16 @@
   function wipePadMeshFactory() {
     if (!global.Labeler3DWipePadMeshFactory) throw new Error("ServoForge 3D runtime requires Labeler3DWipePadMeshFactory.");
     return global.Labeler3DWipePadMeshFactory;
+  }
+
+  function hardwareReferenceCatalog() {
+    if (!global.Labeler3DHardwareReferenceCatalog) throw new Error("ServoForge 3D runtime requires Labeler3DHardwareReferenceCatalog.");
+    return global.Labeler3DHardwareReferenceCatalog;
+  }
+
+  function hardwareMeshFactory() {
+    if (!global.Labeler3DHardwareMeshFactory) throw new Error("ServoForge 3D runtime requires Labeler3DHardwareMeshFactory.");
+    return global.Labeler3DHardwareMeshFactory;
   }
 
   function equipmentAdapter() {
@@ -96,6 +106,8 @@
     labelMeshFactory();
     wipePadGeometryAdapter();
     wipePadMeshFactory();
+    hardwareReferenceCatalog();
+    hardwareMeshFactory();
 
     const requestedScene = options.scene || {};
     const carouselDirection = current?.direction || "ccw";
@@ -134,6 +146,7 @@
   }
 
   function status() {
+    const hardwareStatus = global.Labeler3DHardwareReferenceCatalog?.status?.() || null;
     return Object.freeze({
       runtimeVersion: RUNTIME_VERSION,
       ready: Boolean(
@@ -145,6 +158,8 @@
         && global.Labeler3DLabelMeshFactory
         && global.Labeler3DWipePadGeometryAdapter
         && global.Labeler3DWipePadMeshFactory
+        && global.Labeler3DHardwareReferenceCatalog
+        && global.Labeler3DHardwareMeshFactory
         && global.Labeler3DEquipmentLayoutAdapter
         && global.LabelerServoReplayDriver
       ),
@@ -157,8 +172,11 @@
       labelArtworkAuthority: false,
       labelBodyBackVerticalAuthority: false,
       labelNeckHeightSource: "active-label-spec-neckHeightMm",
-      equipment: "active-machine-map-angles-with-measured-wipe-contact-geometry",
+      equipment: "active-machine-map-angles-plus-hardware-reference-catalog",
       equipmentCadAuthority: false,
+      hardwareReferenceCatalog: hardwareStatus?.catalogVersion || null,
+      hardwareReferenceSource: hardwareStatus?.referenceSource || null,
+      hardwareReferenceProfiles: hardwareStatus?.profileCount || 0,
       wipePadGeometryAuthority: "user-measured",
       wipePadRenderAuthority: "measured-annular-sponge-and-steel",
       wipePadHeightMm: 70,
@@ -169,10 +187,18 @@
       wipePadVerticalMountAuthority: false,
       spenderPlateMechanicalHierarchyAuthority: true,
       spenderPlateDimensionalAuthority: false,
+      spenderPlateReferenceAuthority: "user-supplied-machine-photos",
       spenderPlateAdjustmentAuthority: false,
       spenderPlateAdjustmentPivots: Object.freeze(["forward-angle", "side-angle", "engagement-angle"]),
-      sensorsRenderedIn3D: false,
+      rollersRenderedIn3D: true,
+      rollerDimensionalAuthority: false,
+      coderRenderedIn3D: true,
+      coderDimensionalAuthority: false,
+      coderTimingLogicUntouched: true,
+      sensorsRenderedIn3D: true,
+      sensorDimensionalAuthority: false,
       sensorRuntimeDataPreserved: true,
+      sensorFovAuthority: "servoforge-runtime-data",
       passiveServoMode: "neutral-no-invented-motion",
       plannerPitchGeometryUntouched: true,
       viewport: Boolean(global.Labeler3DViewport),
@@ -204,9 +230,9 @@
     const script = documentRef.createElement("script");
     script.src = `./${VIEWPORT_SCRIPT}`;
     script.async = true;
-    script.dataset.servoforge3dViewport = "v0.7";
+    script.dataset.servoforge3dViewport = "v0.8";
     script.addEventListener("load", loadMeasuredSpacingOverlay, { once: true });
-    script.addEventListener("error", () => console.warn("ServoForge 3D viewport presenter could not be loaded. Core 3D frame runtime remains available."), { once: true });
+    script.addEventListener("error", () => console.warn("ServoForge 3D hardware-reference viewport could not be loaded. Core 3D frame runtime remains available."), { once: true });
     (documentRef.body || documentRef.head || documentRef.documentElement).appendChild(script);
     return true;
   }
