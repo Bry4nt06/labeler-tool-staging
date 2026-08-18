@@ -103,6 +103,7 @@ function verifyDirection(direction) {
 verifyDirection("ccw");
 verifyDirection("cw");
 
+assert.match(placementSource, /servoforge\.3d-hardware-mesh\.v3-spender-hardware-shape/);
 assert.match(placementSource, /metrics\.radius \+ clearanceWorld/, "Plate contact plane must derive from bottle radius plus clearance.");
 assert.match(placementSource, /plateCenterX = -plateLength \/ 2/, "Spender plate must extend upstream from the application edge.");
 assert.match(placementSource, /bottleClearanceMm:\s*clearanceMm/);
@@ -110,10 +111,30 @@ assert.match(placementSource, /flowAligned:\s*true/);
 assert.match(placementSource, /downstreamLocalAxis:\s*"\+X"/);
 assert.match(placementSource, /group\.rotation\.y = number\(item\?\.flowRotationY/);
 
+// Photo-reference hardware hierarchy: these are presentation details only and
+// must never replace the authoritative placement/clearance calculations above.
+assert.match(placementSource, /ServoForgeSpenderSupportPost/);
+assert.match(placementSource, /ServoForgeSpenderMountTube/);
+assert.match(placementSource, /ServoForgeSpenderClamp/);
+assert.match(placementSource, /ServoForgeSpenderBackbone/);
+assert.match(placementSource, /ServoForgeSpenderPlateMountBlade/);
+assert.match(placementSource, /ServoForgeSpenderGuideRoller/);
+assert.match(placementSource, /ServoForgeSpenderGuideRollerAxle/);
+assert.match(placementSource, /ServoForgeSpenderGuideRollerCap/);
+assert.match(placementSource, /ServoForgeSpenderPlateFastener/);
+assert.match(placementSource, /ServoForgeSpenderPlateLabelWeb/);
+assert.match(placementSource, /ServoForgeSpenderFeederLabelWeb/);
+assert.match(placementSource, /photoDetailLevel:\s*"spender-hardware-v3"/);
+assert.match(placementSource, /hardwareShapeAuthority:\s*"photo-referenced-provisional-dimensions"/);
+assert.match(placementSource, /guideRollerRendered:\s*true/);
+assert.match(placementSource, /clampCollarsRendered:\s*3/);
+assert.match(placementSource, /backingSpineRendered:\s*true/);
+assert.match(placementSource, /labelWebRendered:\s*true/);
+
 [
   /saveCurrentSettings\s*\(/,
   /state\.program\s*=/,
   /setServoAngleOverride\s*\(/
 ].forEach((pattern) => assert.doesNotMatch(placementSource, pattern, `Spender presentation must remain read-only: ${pattern}`));
 
-console.log("ServoForge 3D spender placement regression passed.");
+console.log("ServoForge 3D spender placement and hardware-shape regression passed.");
