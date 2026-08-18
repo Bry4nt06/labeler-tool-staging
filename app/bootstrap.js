@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-spender-knuckle-v164-20260818-0945";
-  const buildUpdatedAt = "Aug 18, 2026 9:45 AM ET";
+  const build = "3d-spender-linkage-v165-20260818-0955";
+  const buildUpdatedAt = "Aug 18, 2026 9:55 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -82,6 +82,7 @@
     "app/3d/spender-plate-placement-integration.js",
     "app/3d/spender-manual-assembly-integration.js",
     "app/3d/spender-knuckle-correction-integration.js",
+    "app/3d/spender-knuckle-linkage-refinement-integration.js",
     "app/3d/equipment-layout-adapter.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
