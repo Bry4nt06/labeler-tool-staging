@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-transfer-phase-sync-v180-20260818-1419";
-  const buildUpdatedAt = "Aug 18, 2026 2:19 PM ET";
+  const build = "3d-star-pocket-label-restore-v181-20260818-1433";
+  const buildUpdatedAt = "Aug 18, 2026 2:33 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -101,6 +101,7 @@
     "app/3d/bottle-handling-measured-star-presentation-integration.js",
     "app/3d/bottle-handling-photo-presentation-integration.js",
     "app/3d/bottle-handling-pocket-phase-presentation-integration.js",
+    "app/3d/bottle-handling-pocket-clearance-label-restore-integration.js",
     "app/3d/three-d-direction-parity-presentation-integration.js",
     "app/3d/dashboard-top-view-parity-integration.js",
     "app/3d/scene-runtime.js",
