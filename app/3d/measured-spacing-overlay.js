@@ -40,7 +40,7 @@
 
     const note = backdrop.querySelector(".servoforge-3d-note");
     if (note) {
-      note.innerHTML = "<strong>Measured bottle-table geometry:</strong> 110.00 mm plate centers and 16.00 mm edge clearance. The 3D physical pitch circle is derived from those measurements; ServoForge planner/map radius remains unchanged. Head 1 is the live servo head.";
+      note.innerHTML = "<strong>Geometry authority:</strong> bottle-table centers (110.00 mm) and edge clearance (16.00 mm) are measured. Equipment angular locations come from the active machine map; equipment radial stand-off and housing dimensions remain map-derived approximations until measured/CAD values are supplied.";
     }
     return backdrop;
   }
