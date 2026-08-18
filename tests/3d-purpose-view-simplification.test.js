@@ -22,7 +22,7 @@ assert.ok(equipmentIndex > simplifyIndex, "Equipment generation must use the sim
 assert.ok(pathIndex > equipmentIndex, "Bottle-path correction should install after equipment contracts are loaded.");
 assert.ok(runtimeIndex > pathIndex, "Bottle-path correction must install before the 3D viewport runtime is injected.");
 
-assert.match(purposeView, /v8-purpose-view-simplified/);
+assert.match(purposeView, /v9-functional-heights/);
 assert.match(purposeView, /functional-placement-reference/);
 assert.match(purposeView, /ServoForgeSpenderPlate/);
 assert.match(purposeView, /ServoForgeSpenderRefined/);
@@ -37,6 +37,23 @@ assert.match(purposeView, /supportPostVisible:\s*false/);
 assert.match(purposeView, /mountingPostsVisible:\s*false/);
 assert.match(purposeView, /crossbarVisible:\s*false/);
 assert.match(purposeView, /positionAuthority:\s*"servoforge-machine-map"/);
+
+// Functional vertical references: roller contact follows the midpoint/tangent of
+// the reference bottle neck slope. Wipe-pad bottom is user-specified at 28 mm
+// with the measured 70 mm pad height preserved.
+assert.match(purposeView, /const WIPE_PAD_BOTTOM_MM = 28/);
+assert.match(purposeView, /const WIPE_PAD_HEIGHT_MM = 70/);
+assert.match(purposeView, /function neckSlopeReference\(/);
+assert.match(purposeView, /const targetYmm = \(shoulderTopMm \+ finishStartMm\) \/ 2/);
+assert.match(purposeView, /profilePointsMm/);
+assert.match(purposeView, /radialSlope/);
+assert.match(purposeView, /setFromUnitVectors/);
+assert.match(purposeView, /surfaceParallelContact:\s*true/);
+assert.match(purposeView, /verticalAuthority:\s*neck\.authority/);
+assert.match(purposeView, /function wipePadCenterYWorld\(/);
+assert.match(purposeView, /WIPE_PAD_BOTTOM_MM \+ padHeightMm \/ 2/);
+assert.match(purposeView, /bodyPanelBottomMm:\s*WIPE_PAD_BOTTOM_MM/);
+assert.match(purposeView, /user-specified-body-panel-bottom-28mm-plus-measured-70mm-pad-height/);
 
 assert.match(pathCorrection, /servoforge\.3d-bottle-path\.v1-table-orbit/);
 assert.match(pathCorrection, /ServoForgeBottleTableOrbitPath/);
@@ -56,4 +73,4 @@ assert.match(pathCorrection, /followsBottleTableCenters:\s*true/);
   assert.doesNotMatch(pathCorrection, pattern, `Path correction must remain read-only: ${pattern}`);
 });
 
-console.log("ServoForge 3D purpose-view simplification and table-path correction regression passed.");
+console.log("ServoForge 3D purpose-view heights, simplification, and table-path correction regression passed.");
