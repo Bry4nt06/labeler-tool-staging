@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-functional-heights-v169-20260818-1119";
-  const buildUpdatedAt = "Aug 18, 2026 11:19 AM ET";
+  const build = "apl-roller-handoff-v170-20260818-1122";
+  const buildUpdatedAt = "Aug 18, 2026 11:22 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
