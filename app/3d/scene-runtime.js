@@ -2,7 +2,7 @@
   "use strict";
 
   const RUNTIME_VERSION = "servoforge.3d-runtime.v1";
-  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v04.js?v=0.9.10-3d-v04-machine-map-equipment";
+  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v04.js?v=0.9.10-3d-v04-measured-wipe-v1";
   const SPACING_OVERLAY_SCRIPT = "app/3d/measured-spacing-overlay.js?v=0.9.10-3d-v04-machine-map-equipment";
 
   function number(value, fallback = 0) {
@@ -36,6 +36,13 @@
       throw new Error("ServoForge 3D runtime requires Labeler3DCarouselLayoutAdapter.");
     }
     return global.Labeler3DCarouselLayoutAdapter;
+  }
+
+  function wipePadGeometryAdapter() {
+    if (!global.Labeler3DWipePadGeometryAdapter) {
+      throw new Error("ServoForge 3D runtime requires Labeler3DWipePadGeometryAdapter.");
+    }
+    return global.Labeler3DWipePadGeometryAdapter;
   }
 
   function equipmentAdapter() {
@@ -82,6 +89,7 @@
     const geometry = geometryAdapter().snapshot(current, {
       worldUnitsPerMm: options.scene?.worldUnitsPerMm
     });
+    wipePadGeometryAdapter();
     const requestedScene = options.scene || {};
     const carouselDirection = current?.direction || "ccw";
     const zeroAngleDegrees = number(current?.zeroAngle, 0);
@@ -123,6 +131,7 @@
         && global.Labeler3DSceneAdapter
         && global.Labeler3DPhysicalGeometryAdapter
         && global.Labeler3DCarouselLayoutAdapter
+        && global.Labeler3DWipePadGeometryAdapter
         && global.Labeler3DEquipmentLayoutAdapter
         && global.LabelerServoReplayDriver
       ),
@@ -130,8 +139,14 @@
       source: "generated-servo-program",
       geometry: "measured-plate-spacing-plus-active-bottle-profile",
       carousel: "machine-head-count-and-user-measured-plate-spacing",
-      equipment: "active-machine-map-angles-with-derived-radial-depth",
+      equipment: "active-machine-map-angles-with-measured-wipe-contact-geometry",
       equipmentCadAuthority: false,
+      wipePadGeometryAuthority: "user-measured",
+      wipePadHeightMm: 70,
+      wipePadSpongeThicknessMm: 18,
+      wipePadBackingPlateThicknessMm: 4,
+      wipePadTotalThicknessMm: 22,
+      wipePadBottlePenetrationMm: 2,
       passiveServoMode: "neutral-no-invented-motion",
       plannerPitchGeometryUntouched: true,
       viewport: Boolean(global.Labeler3DViewport),
