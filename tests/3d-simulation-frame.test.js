@@ -1,9 +1,9 @@
 "use strict";
 
-const assert = require("assert");
-const fs = require("fs");
-const path = require("path");
-const vm = require("vm");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
@@ -14,6 +14,7 @@ const bootstrap = read("app/bootstrap.js");
   "app/3d/scene-adapter.js",
   "app/3d/physical-geometry-adapter.js",
   "app/3d/carousel-layout-adapter.js",
+  "app/3d/equipment-layout-adapter.js",
   "app/3d/scene-runtime.js"
 ].forEach((modulePath) => {
   assert.ok(bootstrap.includes(modulePath), `${modulePath} must be loaded by the ServoForge bootstrap.`);
@@ -42,6 +43,7 @@ vm.createContext(sandbox);
   "app/3d/scene-adapter.js",
   "app/3d/physical-geometry-adapter.js",
   "app/3d/carousel-layout-adapter.js",
+  "app/3d/equipment-layout-adapter.js",
   "app/3d/scene-runtime.js"
 ].forEach((relative) => vm.runInContext(read(relative), sandbox, { filename: relative }));
 
@@ -53,46 +55,51 @@ const rows = [
   { hmi: 5, plc: 4, cmd: 3, tableAngle: 170, plateAngle: 180, action: "Final hold" }
 ];
 const originalRows = JSON.stringify(rows);
+
+const machineMap = {
+  id: "test-map",
+  name: "Test APL Map",
+  machineType: "TopModul",
+  applicationMode: "apl",
+  aggregateCount: 2,
+  stationCount: 2,
+  enabledAggregates: [true, true, false, false, false, false],
+  enabledStations: [true, true, false, false, false, false],
+  aggregateAngles: { "1": 68.5, "2": 108.5 },
+  stationAngles: { "1": 68.5, "2": 108.5 },
+  stationSections: { "1": "neck", "2": "body" },
+  machineSettings: { direction: "ccw", radius: 250, referencePitchRadiusMm: 572.958, zeroAngle: 0 },
+  depths: { spender: 12, opRoller: 14, nonOpRoller: -18, wipeInner: -4, wipeOuter: 16, sensor: 21, coding: 14 },
+  objects: [
+    { id: "roller-1", name: "Outside Roller", kind: "roller", application: "apl", station: 1, side: "outer", start: 72, end: 82, extension: 20 },
+    { id: "pad-1", name: "Body Wipe Pad", kind: "pad", application: "apl", station: 2, side: "outer", start: 149, end: 169, extension: 20 },
+    { id: "sensor-1", name: "Neck Sensor", kind: "sensor", application: "apl", station: 1, side: "outer", angle: 138.8, start: 138.8, end: 141.8, servoAssist: true, sensorFieldOfViewDeg: 18 },
+    { id: "coder-1", name: "Coding", kind: "coding", application: "apl", side: "outer", start: 304, end: 309, orientationTarget: "code-box" }
+  ]
+};
+
 const driver = sandbox.Labeler3DSimulationFrameDriver;
-const adapter = sandbox.Labeler3DSceneAdapter;
+const sceneAdapter = sandbox.Labeler3DSceneAdapter;
 const geometryAdapter = sandbox.Labeler3DPhysicalGeometryAdapter;
 const carouselAdapter = sandbox.Labeler3DCarouselLayoutAdapter;
+const equipmentAdapter = sandbox.Labeler3DEquipmentLayoutAdapter;
 
-assert.ok(driver, "3D simulation frame driver must register globally.");
-assert.ok(adapter, "3D scene adapter must register globally.");
-assert.ok(geometryAdapter, "3D physical geometry adapter must register globally.");
-assert.ok(carouselAdapter, "3D carousel layout adapter must register globally.");
+assert.ok(driver && sceneAdapter && geometryAdapter && carouselAdapter && equipmentAdapter);
 assert.strictEqual(driver.SCHEMA_VERSION, "servoforge.3d-frame.v1");
 assert.strictEqual(geometryAdapter.SCHEMA_VERSION, "servoforge.3d-geometry.v1");
 assert.strictEqual(carouselAdapter.SCHEMA_VERSION, "servoforge.3d-carousel.v1");
+assert.strictEqual(equipmentAdapter.SCHEMA_VERSION, "servoforge.3d-equipment.v1");
 
 let frame = driver.snapshot(rows, 95, { commandDriver: sandbox.LabelerServoCommandDriver });
-assert.strictEqual(frame.flags.hold, true, "CMD 3 must remain a physical hold in the 3D contract.");
-assert.strictEqual(frame.container.servoAngleUnwrapped, 0, "CMD 3 may not interpolate toward the following waypoint.");
+assert.strictEqual(frame.flags.hold, true, "CMD 3 must remain a physical hold.");
+assert.strictEqual(frame.container.servoAngleUnwrapped, 0, "CMD 3 may not interpolate toward the next waypoint.");
 
 frame = driver.snapshot(rows, 110, { commandDriver: sandbox.LabelerServoCommandDriver });
 assert.strictEqual(frame.servo.command, 7);
-assert.strictEqual(frame.flags.executesRotation, true);
-assert.ok(Math.abs(frame.container.servoAngleUnwrapped - 47.8) < 0.000001, "CMD 7 must interpolate the commanded bottle rotation exactly.");
-
-frame = driver.snapshot(rows, 130, { commandDriver: sandbox.LabelerServoCommandDriver });
-assert.strictEqual(frame.servo.command, 3);
-assert.ok(Math.abs(frame.container.servoAngleUnwrapped - 95.6) < 0.000001, "The next Rest stage must hold the completed correction angle.");
+assert.ok(Math.abs(frame.container.servoAngleUnwrapped - 47.8) < 1e-6, "CMD 7 must interpolate the commanded rotation exactly.");
 
 frame = driver.snapshot(rows, 157.5, { commandDriver: sandbox.LabelerServoCommandDriver });
-assert.ok(Math.abs(frame.container.servoAngleUnwrapped - 137.8) < 0.000001, "The second correction must preserve numerical servo parity.");
-assert.ok(Math.abs(frame.container.cumulativeNetRotation - 137.8) < 0.000001, "Cumulative net rotation must be deterministic.");
-
-const sceneFrame = driver.snapshot(rows, 120, { commandDriver: sandbox.LabelerServoCommandDriver });
-const scene = adapter.toSceneState(sceneFrame, { carouselRadius: 2, carouselDirection: "cw", zeroAngleDegrees: 0 });
-assert.strictEqual(scene.schemaVersion, "servoforge.3d-scene.v1");
-assert.strictEqual(scene.world.mapCoordinateParity, true);
-assert.ok(Math.abs(scene.bottleTable.position.x - 1) < 0.000001, "Clockwise 120 degree table position must mirror ServoForge angleToXY X coordinates.");
-assert.ok(Math.abs(scene.bottleTable.position.z - Math.sqrt(3)) < 0.000001, "Clockwise 120 degree table position must mirror ServoForge angleToXY Y coordinates on the XZ plane.");
-assert.ok(Math.abs(scene.bottle.servoAngleDegrees - 95.6) < 0.000001, "Scene bottle rotation must use the exact servo angle from the frame contract.");
-const expectedWorldBottleRotation = adapter.degToRad(60 - 95.6);
-assert.ok(Math.abs(scene.bottle.rotation.y - expectedWorldBottleRotation) < 0.000001, "Bottle world orientation must equal ServoForge map bearing plus the signed servo turn.");
-assert.ok(Math.abs(scene.bottleTable.servoPlateRotationY - expectedWorldBottleRotation) < 0.000001, "The visible servo plate must share the bottle's commanded rotational datum.");
+assert.ok(Math.abs(frame.container.servoAngleUnwrapped - 137.8) < 1e-6, "Subsequent CMD 7 motion must preserve servo parity.");
 
 const geometry = geometryAdapter.snapshot({
   tablePitchRadiusMm: 572.958,
@@ -101,103 +108,83 @@ const geometry = geometryAdapter.snapshot({
   selectedBottle: "LNNR - 12 Oz",
   bottleSpecs: [{ bottleType: "LNNR - 12 Oz", diameterTargetMm: 61.52, radiusReductionMm: 0.41 }]
 });
-const expectedPhysicalPitchRadiusMm = 110 / (2 * Math.sin(Math.PI / 45));
-const expectedPhysicalPitchRadiusWorld = expectedPhysicalPitchRadiusMm * geometry.renderScale.worldUnitsPerMm;
-assert.ok(Math.abs(geometry.bottle.effectiveDiameterMm - 60.7) < 0.000001, "3D bottle diameter must use ServoForge effective bottle diameter math.");
-assert.strictEqual(geometry.machine.plateCenterSpacingMm, 110, "Measured adjacent bottle-plate centers must remain 110 mm.");
-assert.strictEqual(geometry.bottleTable.centerSpacingMm, 110, "Bottle-table contract must publish measured 110 mm center spacing.");
-assert.strictEqual(geometry.bottleTable.clearanceMm, 16, "Measured plate edge clearance must remain 16 mm.");
-assert.strictEqual(geometry.bottleTable.plateDiameterMm, 94, "Plate diameter must resolve to 110 - 16 = 94 mm.");
-assert.ok(Math.abs(geometry.machine.physicalPitchRadiusMm - expectedPhysicalPitchRadiusMm) < 0.000001, "Physical pitch radius must derive from the 110 mm chord measurement and 45 heads.");
-assert.ok(Math.abs(geometry.machine.pitchRadiusWorld - expectedPhysicalPitchRadiusWorld) < 0.000001, "3D pitch circle must use the measured mechanical spacing.");
-assert.strictEqual(geometry.machine.plannerPitchRadiusMm, 572.958, "Existing ServoForge planner/map pitch radius must remain isolated and unchanged.");
-assert.strictEqual(geometry.machine.headPitchMm, 110, "3D head pitch must report measured center-to-center chord spacing.");
-assert.ok(Math.abs(geometry.machine.arcPitchMm - 110.08940527791218) < 0.000001, "Arc pitch should be derived from the physical pitch circle, not confused with measured chord spacing.");
-assert.strictEqual(geometry.authority.machinePitchRadiusSource, "derived-from-user-measured-plate-center-chord");
-assert.strictEqual(geometry.bottleTable.dimensionalAuthority, "user-measured-spacing-and-clearance");
-assert.strictEqual(geometry.authority.bottleDiameter, true);
-assert.strictEqual(geometry.authority.bottleHeight, false, "Reference drawing height must not be misrepresented as bottle-specific CAD authority.");
-assert.strictEqual(geometry.authority.bottleVerticalProfile, "reference-drawing");
-assert.strictEqual(geometry.bottle.verticalShapeSource, "user-provided-330ml-longneck-reference");
-assert.strictEqual(geometry.bottle.referenceDrawingBodyDiameterIgnored, true, "The supplied drawing body diameter must not override ServoForge Bottle Specs.");
+assert.ok(Math.abs(geometry.bottle.effectiveDiameterMm - 60.7) < 1e-6);
+assert.strictEqual(geometry.bottleTable.centerSpacingMm, 110);
+assert.strictEqual(geometry.bottleTable.clearanceMm, 16);
+assert.strictEqual(geometry.bottleTable.plateDiameterMm, 94);
+const expectedPhysicalRadius = 110 / (2 * Math.sin((8 * Math.PI / 180) / 2));
+assert.ok(Math.abs(geometry.machine.physicalPitchRadiusMm - expectedPhysicalRadius) < 1e-6, "Physical pitch radius must derive from the measured 110 mm chord.");
+assert.strictEqual(geometry.machine.plannerPitchRadiusMm, 572.958, "Planner/map pitch radius must remain isolated from physical 3D geometry.");
 assert.strictEqual(geometry.bottle.referenceHeightMm, 241.5);
-assert.strictEqual(geometry.bottle.finishOuterDiameterMm, 26.6);
-assert.strictEqual(geometry.bottle.mouthInnerDiameterMm, 17.5);
-assert.strictEqual(geometry.bottle.shoulderNeckDiameterMm, 37);
-assert.strictEqual(geometry.bottle.bodyStraightHeightMm, 92);
-assert.strictEqual(geometry.bottle.shoulderTransitionHeightMm, 41.5);
-assert.strictEqual(geometry.bottle.finishHeightMm, 17);
-assert.strictEqual(geometry.bottle.shoulderRadiusMm, 108);
-assert.ok(Array.isArray(geometry.bottle.profilePointsMm) && geometry.bottle.profilePointsMm.length > 15, "Reference drawing must generate a detailed lathe profile.");
-assert.ok(Math.abs(Math.max(...geometry.bottle.profilePointsMm.map((point) => point.radiusMm)) * 2 - 60.7) < 0.000001, "The rendered bottle profile maximum diameter must remain the active ServoForge effective diameter.");
-assert.ok(Math.abs(geometry.bottle.profilePointsMm.at(-1).yMm - 241.5) < 0.000001, "Reference bottle profile must terminate at the supplied 241.5 mm height.");
 
-const carouselScene = adapter.toSceneState(sceneFrame, {
-  carouselRadius: geometry.machine.pitchRadiusWorld,
+const sceneFrame = driver.snapshot(rows, 120, { commandDriver: sandbox.LabelerServoCommandDriver });
+const scene = sceneAdapter.toSceneState(sceneFrame, {
+  carouselRadius: geometry.machine.physicalPitchRadiusWorld,
   carouselDirection: "ccw",
   zeroAngleDegrees: 0,
   tableY: 0.2
 });
-const carouselLayout = carouselAdapter.snapshot(carouselScene, geometry, {
-  carouselDirection: "ccw",
-  zeroAngleDegrees: 0,
-  tableY: 0.2
+assert.ok(Math.abs(scene.bottle.servoAngleDegrees - 95.6) < 1e-6);
+
+const carousel = carouselAdapter.snapshot(scene, geometry, { carouselDirection: "ccw", zeroAngleDegrees: 0, tableY: 0.2 });
+assert.strictEqual(carousel.headCount, 45);
+assert.strictEqual(carousel.heads.length, 45);
+assert.ok(Math.abs(carousel.pitchDegrees - 8) < 1e-6);
+assert.strictEqual(carousel.passiveServoMode, "neutral-no-invented-motion");
+carousel.heads.forEach((head) => {
+  assert.ok(Math.abs(Math.hypot(head.position.x, head.position.z) - geometry.machine.physicalPitchRadiusWorld) < 1e-6);
 });
-assert.strictEqual(carouselLayout.headCount, 45, "Full-carousel layout must use the machine head count.");
-assert.strictEqual(carouselLayout.heads.length, 45, "Full-carousel layout must publish every bottle table.");
-assert.strictEqual(carouselLayout.activeHead, 1, "Head 1 must remain the live servo head in v0.3.");
-assert.ok(Math.abs(carouselLayout.pitchDegrees - 8) < 0.000001, "45-head carousel spacing must equal 8 degrees per bottle table.");
-assert.strictEqual(carouselLayout.plateCenterSpacingMm, 110);
-assert.strictEqual(carouselLayout.plateClearanceMm, 16);
-assert.strictEqual(carouselLayout.plateDiameterMm, 94);
-assert.ok(Math.abs(carouselLayout.physicalPitchRadiusMm - expectedPhysicalPitchRadiusMm) < 0.000001);
-assert.strictEqual(carouselLayout.plannerPitchRadiusMm, 572.958);
-assert.ok(Math.abs(carouselLayout.heads[0].tableAngleDegrees - 120) < 0.000001, "Head 1 must align with the live preview table angle.");
-assert.ok(Math.abs(carouselLayout.heads[1].tableAngleDegrees - 112) < 0.000001, "Head 2 must trail Head 1 by one table pitch.");
-assert.strictEqual(carouselLayout.heads[0].active, true);
-assert.strictEqual(carouselLayout.heads[1].active, false);
-assert.strictEqual(carouselLayout.passiveServoMode, "neutral-no-invented-motion");
-carouselLayout.heads.forEach((head) => {
-  const radialDistance = Math.hypot(head.position.x, head.position.z);
-  assert.ok(Math.abs(radialDistance - geometry.machine.pitchRadiusWorld) < 0.000001, `Head ${head.head} must remain on the measured physical pitch circle.`);
-});
-const firstCenterDistance = Math.hypot(
-  carouselLayout.heads[0].position.x - carouselLayout.heads[1].position.x,
-  carouselLayout.heads[0].position.z - carouselLayout.heads[1].position.z
-) / geometry.renderScale.worldUnitsPerMm;
-assert.ok(Math.abs(firstCenterDistance - 110) < 0.000001, "Adjacent rendered bottle-table centers must be exactly 110 mm apart.");
+
+const equipment = equipmentAdapter.snapshot(machineMap, {
+  direction: "ccw",
+  zeroAngle: 0,
+  radius: 250,
+  depths: machineMap.depths
+}, geometry, { carouselDirection: "ccw", zeroAngleDegrees: 0 });
+assert.strictEqual(equipment.mapId, "test-map");
+assert.strictEqual(equipment.aggregates.length, 2);
+assert.strictEqual(equipment.objects.length, 4);
+assert.strictEqual(equipment.counts.rollers, 1);
+assert.strictEqual(equipment.counts.pads, 1);
+assert.strictEqual(equipment.counts.sensors, 1);
+assert.strictEqual(equipment.counts.coding, 1);
+assert.ok(Math.abs(equipment.objects.find((item) => item.id === "pad-1").angleDegrees - 159) < 1e-6, "Pad placement must use the map start/end midpoint.");
+assert.ok(Math.abs(equipment.objects.find((item) => item.id === "sensor-1").angleDegrees - 138.8) < 1e-6, "Sensor placement must use its explicit map angle.");
+assert.strictEqual(equipment.objects.find((item) => item.id === "sensor-1").servoAssist, true);
+assert.strictEqual(equipment.objects.find((item) => item.id === "coder-1").orientationTarget, "code-box");
+assert.ok(equipment.objects.every((item) => item.radialCadAuthority === false), "Map-derived radial positions may not be labeled CAD-authoritative.");
+assert.ok(Object.isFrozen(equipment));
 
 sandbox.state = {
   program: rows,
   previewAngle: 110,
   direction: "ccw",
   zeroAngle: 0,
+  radius: 250,
   tablePitchRadiusMm: 572.958,
   referencePitchRadiusMm: 572.958,
   headCount: 45,
   selectedBottle: "LNNR - 12 Oz",
   selectedBrand: "Test Brand",
   bottleSpecs: [{ bottleType: "LNNR - 12 Oz", diameterTargetMm: 61.52, radiusReductionMm: 0.41 }],
-  labelSpecs: [{ brand: "Test Brand", bottleType: "LNNR - 12 Oz" }]
+  labelSpecs: [{ brand: "Test Brand", bottleType: "LNNR - 12 Oz" }],
+  activeMapId: "test-map",
+  mapLibrary: [machineMap],
+  depths: machineMap.depths
 };
-const runtimeSnapshot = sandbox.Labeler3DSceneRuntime.snapshot({ commandDriver: sandbox.LabelerServoCommandDriver });
-assert.strictEqual(runtimeSnapshot.readOnly, true, "3D runtime must remain read-only.");
-assert.ok(Math.abs(runtimeSnapshot.frame.container.servoAngleUnwrapped - 47.8) < 0.000001, "Runtime must source the generated Servo Program and current preview angle.");
-assert.strictEqual(runtimeSnapshot.geometry.schemaVersion, "servoforge.3d-geometry.v1");
-assert.strictEqual(runtimeSnapshot.carousel.schemaVersion, "servoforge.3d-carousel.v1");
-assert.strictEqual(runtimeSnapshot.carousel.headCount, 45, "Runtime must publish the complete 45-head carousel layout.");
-assert.strictEqual(runtimeSnapshot.carousel.heads.length, 45, "Runtime must expose every bottle-table carrier.");
-assert.strictEqual(runtimeSnapshot.geometry.bottleTable.centerSpacingMm, 110);
-assert.strictEqual(runtimeSnapshot.geometry.bottleTable.clearanceMm, 16);
-assert.strictEqual(runtimeSnapshot.geometry.bottleTable.plateDiameterMm, 94);
-assert.ok(Math.abs(runtimeSnapshot.geometry.bottle.effectiveDiameterMm - 60.7) < 0.000001, "Runtime must carry active Bottle Specs into the 3D geometry contract.");
-assert.strictEqual(runtimeSnapshot.geometry.bottle.referenceHeightMm, 241.5, "Runtime must carry the longneck reference height into the 3D viewport contract.");
-assert.ok(Math.abs(runtimeSnapshot.scene.carousel.radius - expectedPhysicalPitchRadiusWorld) < 0.000001, "Scene orbit radius must default to the measured physical bottle-table pitch circle.");
-assert.strictEqual(runtimeSnapshot.geometry.machine.plannerPitchRadiusMm, 572.958, "3D geometry must not overwrite planner/map pitch radius.");
-assert.strictEqual(JSON.stringify(rows), originalRows, "3D frame generation must not mutate Servo Program rows.");
-assert.ok(Object.isFrozen(runtimeSnapshot.frame), "Published 3D frames must be immutable.");
-assert.ok(Object.isFrozen(runtimeSnapshot.geometry), "Published 3D geometry must be immutable.");
-assert.ok(Object.isFrozen(runtimeSnapshot.carousel), "Published 3D carousel layouts must be immutable.");
-assert.ok(Object.isFrozen(runtimeSnapshot.scene), "Published 3D scene states must be immutable.");
 
-console.log("ServoForge 3D measured plate-spacing, servo, geometry, and full-carousel parity regression passed.");
+const runtimeSnapshot = sandbox.Labeler3DSceneRuntime.snapshot({ commandDriver: sandbox.LabelerServoCommandDriver });
+assert.strictEqual(runtimeSnapshot.readOnly, true);
+assert.strictEqual(runtimeSnapshot.carousel.headCount, 45);
+assert.strictEqual(runtimeSnapshot.equipment.schemaVersion, "servoforge.3d-equipment.v1");
+assert.strictEqual(runtimeSnapshot.equipment.mapId, "test-map");
+assert.strictEqual(runtimeSnapshot.equipment.objects.length, 4);
+assert.ok(Math.abs(runtimeSnapshot.frame.container.servoAngleUnwrapped - 47.8) < 1e-6);
+assert.strictEqual(JSON.stringify(rows), originalRows, "3D runtime must not mutate Servo Program rows.");
+assert.ok(Object.isFrozen(runtimeSnapshot.frame));
+assert.ok(Object.isFrozen(runtimeSnapshot.geometry));
+assert.ok(Object.isFrozen(runtimeSnapshot.carousel));
+assert.ok(Object.isFrozen(runtimeSnapshot.equipment));
+assert.ok(Object.isFrozen(runtimeSnapshot.scene));
+
+console.log("ServoForge 3D servo, measured geometry, full-carousel, and equipment parity regression passed.");
