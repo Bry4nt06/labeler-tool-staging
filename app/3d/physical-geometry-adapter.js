@@ -234,7 +234,7 @@
         machinePitchRadius: true,
         machinePitchRadiusSource: "derived-from-user-measured-plate-center-chord",
         plannerPitchRadius: Boolean(positive(stateLike.tablePitchRadiusMm) || positive(stateLike.referencePitchRadiusMm)),
-        bottleTableCad: true,
+        bottleTableCad: false,
         bottleTableMeasurement: "user-measured"
       }
     });
