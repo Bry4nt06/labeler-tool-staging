@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-bottle-handling-zero-datum-v172-20260818-1158";
-  const buildUpdatedAt = "Aug 18, 2026 11:58 AM ET";
+  const build = "3d-bottle-handling-photo-layout-v173-20260818-1223";
+  const buildUpdatedAt = "Aug 18, 2026 12:23 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -90,7 +90,9 @@
     "app/3d/bottle-handling-adapter.js",
     "app/3d/bottle-handling-video-reference-integration.js",
     "app/3d/bottle-handling-zero-datum-integration.js",
+    "app/3d/bottle-handling-photo-layout-integration.js",
     "app/3d/bottle-handling-viewport-integration.js",
+    "app/3d/bottle-handling-photo-presentation-integration.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
     "app/startup-runtime.js"
