@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-bottle-handling-dead-zone-v174-20260818-1237";
-  const buildUpdatedAt = "Aug 18, 2026 12:37 PM ET";
+  const build = "3d-bottle-handling-16-pocket-v175-20260818-1247";
+  const buildUpdatedAt = "Aug 18, 2026 12:47 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -92,6 +92,7 @@
     "app/3d/bottle-handling-zero-datum-integration.js",
     "app/3d/bottle-handling-photo-layout-integration.js",
     "app/3d/bottle-handling-dead-zone-anchor-integration.js",
+    "app/3d/bottle-handling-16-pocket-integration.js",
     "app/3d/bottle-handling-viewport-integration.js",
     "app/3d/bottle-handling-photo-presentation-integration.js",
     "app/3d/bottle-handling-pocket-phase-presentation-integration.js",
