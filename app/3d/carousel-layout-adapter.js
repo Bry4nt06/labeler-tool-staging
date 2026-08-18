@@ -42,8 +42,6 @@
     const orbitAdapter = sceneAdapter();
 
     const heads = Array.from({ length: headCount }, (_, index) => {
-      // Head 1 is the live preview head. Higher-numbered heads trail it by one
-      // bottle-table pitch, matching ServoForge's single-cycle table-angle view.
       const tableAngleDegrees = normalizeAngle(primaryTableAngle - index * pitchDegrees);
       const orbit = orbitAdapter.machineOrbit(tableAngleDegrees, {
         carouselRadius: radius,
@@ -71,7 +69,12 @@
       pitchDegrees,
       primaryTableAngle,
       radius,
-      source: "scene-machine-angle-and-machine-head-count",
+      physicalPitchRadiusMm: number(geometry?.machine?.physicalPitchRadiusMm, number(geometry?.machine?.pitchRadiusMm, 0)),
+      plannerPitchRadiusMm: number(geometry?.machine?.plannerPitchRadiusMm, 0),
+      plateCenterSpacingMm: number(geometry?.bottleTable?.centerSpacingMm, number(geometry?.machine?.plateCenterSpacingMm, 0)),
+      plateClearanceMm: number(geometry?.bottleTable?.clearanceMm, 0),
+      plateDiameterMm: number(geometry?.bottleTable?.plateDiameterMm, 0),
+      source: "scene-machine-angle-and-measured-bottle-table-geometry",
       passiveServoMode: "neutral-no-invented-motion",
       heads
     });
