@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-machine-map-equipment-v152-20260817-2014";
-  const buildUpdatedAt = "Aug 17, 2026 8:14 PM ET";
+  const build = "3d-measured-wipe-pad-v153-20260817-2030";
+  const buildUpdatedAt = "Aug 17, 2026 8:30 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -72,6 +72,7 @@
     "app/3d/scene-adapter.js",
     "app/3d/physical-geometry-adapter.js",
     "app/3d/carousel-layout-adapter.js",
+    "app/3d/wipe-pad-geometry-adapter.js",
     "app/3d/equipment-layout-adapter.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
