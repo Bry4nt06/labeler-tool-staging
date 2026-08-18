@@ -3,6 +3,7 @@
 
   const RUNTIME_VERSION = "servoforge.3d-runtime.v1";
   const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v03.js?v=0.9.10-3d-v031-measured-plate-spacing";
+  const SPACING_OVERLAY_SCRIPT = "app/3d/measured-spacing-overlay.js?v=0.9.10-3d-v031-measured-plate-spacing";
 
   function number(value, fallback = 0) {
     const parsed = Number(value);
@@ -106,18 +107,39 @@
       carousel: "machine-head-count-and-user-measured-plate-spacing",
       passiveServoMode: "neutral-no-invented-motion",
       plannerPitchGeometryUntouched: true,
-      viewport: Boolean(global.Labeler3DViewport)
+      viewport: Boolean(global.Labeler3DViewport),
+      measuredSpacingTelemetry: Boolean(global.Labeler3DMeasuredSpacingOverlay)
     });
+  }
+
+  function loadMeasuredSpacingOverlay() {
+    const documentRef = global.document;
+    if (!documentRef?.createElement) return false;
+    if (documentRef.querySelector("script[data-servoforge-3d-spacing-overlay]")) return false;
+    const script = documentRef.createElement("script");
+    script.src = `./${SPACING_OVERLAY_SCRIPT}`;
+    script.async = true;
+    script.dataset.servoforge3dSpacingOverlay = "v1";
+    script.addEventListener("error", () => {
+      console.warn("ServoForge measured bottle-plate spacing telemetry could not be loaded.");
+    }, { once: true });
+    (documentRef.body || documentRef.head || documentRef.documentElement).appendChild(script);
+    return true;
   }
 
   function loadViewportRenderer() {
     const documentRef = global.document;
     if (!documentRef?.createElement) return false;
-    if (documentRef.querySelector("script[data-servoforge-3d-viewport]")) return false;
+    const existing = documentRef.querySelector("script[data-servoforge-3d-viewport]");
+    if (existing) {
+      loadMeasuredSpacingOverlay();
+      return false;
+    }
     const script = documentRef.createElement("script");
     script.src = `./${VIEWPORT_SCRIPT}`;
     script.async = true;
     script.dataset.servoforge3dViewport = "v0.3.1";
+    script.addEventListener("load", loadMeasuredSpacingOverlay, { once: true });
     script.addEventListener("error", () => {
       console.warn("ServoForge 3D viewport presenter could not be loaded. Core 3D frame runtime remains available.");
     }, { once: true });
@@ -129,7 +151,8 @@
     RUNTIME_VERSION,
     snapshot,
     status,
-    loadViewport: loadViewportRenderer
+    loadViewport: loadViewportRenderer,
+    loadMeasuredSpacingTelemetry: loadMeasuredSpacingOverlay
   });
 
   loadViewportRenderer();
