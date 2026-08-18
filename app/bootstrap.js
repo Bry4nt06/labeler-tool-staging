@@ -107,6 +107,7 @@
     "app/3d/bottle-handling-unified-star-height-thickness-integration.js",
     "app/3d/bottle-handling-rounded-pocket-inner-hub-integration.js",
     "app/3d/bottle-handling-visible-inner-hub-integration.js",
+    "app/3d/viewport-ui-controls-integration.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
     "app/startup-runtime.js"
