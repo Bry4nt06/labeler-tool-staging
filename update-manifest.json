@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "3d-update-loop-guard-v150-20260817-1955",
+  "buildId": "apl-roller-handoff-v167-20260818-1108",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v150 preserves the current 3D physical-geometry work and permanently hardens staging update delivery against browser boot loops. Same-version build metadata drift no longer triggers navigation, and real version navigation is protected by a session circuit breaker."
+  "notes": "v167 fixes the APL 6-Aggregate Neck-to-Body roller handoff. A faulting late Body application correction is merged into the preceding Neck Turn 2 roller motion only when the real roller span can carry the combined bottle rotation below the configured maximum move ratio. Pads remain excluded, and unsafe handoffs remain visible as faults."
 }
