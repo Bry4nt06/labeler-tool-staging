@@ -2,8 +2,8 @@
   "use strict";
 
   const RUNTIME_VERSION = "servoforge.3d-runtime.v1";
-  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v03.js?v=0.9.10-3d-v031-measured-plate-spacing";
-  const SPACING_OVERLAY_SCRIPT = "app/3d/measured-spacing-overlay.js?v=0.9.10-3d-v031-measured-plate-spacing";
+  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v04.js?v=0.9.10-3d-v04-machine-map-equipment";
+  const SPACING_OVERLAY_SCRIPT = "app/3d/measured-spacing-overlay.js?v=0.9.10-3d-v04-machine-map-equipment";
 
   function number(value, fallback = 0) {
     const parsed = Number(value);
@@ -38,6 +38,13 @@
     return global.Labeler3DCarouselLayoutAdapter;
   }
 
+  function equipmentAdapter() {
+    if (!global.Labeler3DEquipmentLayoutAdapter) {
+      throw new Error("ServoForge 3D runtime requires Labeler3DEquipmentLayoutAdapter.");
+    }
+    return global.Labeler3DEquipmentLayoutAdapter;
+  }
+
   function appState() {
     try {
       if (typeof state !== "undefined" && state && typeof state === "object") return state;
@@ -50,6 +57,17 @@
   function generatedProgram() {
     const current = appState();
     return Array.isArray(current?.program) ? current.program : [];
+  }
+
+  function activeMachineMap(current) {
+    try {
+      const fromService = global.LabelerMapRuntimeService?.activeMachineMap?.();
+      if (fromService) return fromService;
+    } catch {
+      // Fall through to the state mirror in isolated/runtime-transition cases.
+    }
+    const maps = Array.isArray(current?.mapLibrary) ? current.mapLibrary : [];
+    return maps.find((map) => map?.id === current?.activeMapId) || maps[0] || null;
   }
 
   function snapshot(options = {}) {
@@ -81,12 +99,18 @@
       zeroAngleDegrees,
       tableY: number(requestedScene.tableY, 0)
     });
+    const machineMap = options.machineMap || activeMachineMap(current);
+    const equipment = equipmentAdapter().snapshot(machineMap, current, geometry, {
+      carouselDirection,
+      zeroAngleDegrees
+    });
     return Object.freeze({
       runtimeVersion: RUNTIME_VERSION,
       readOnly: true,
       frame,
       geometry,
       carousel,
+      equipment,
       scene
     });
   }
@@ -99,12 +123,15 @@
         && global.Labeler3DSceneAdapter
         && global.Labeler3DPhysicalGeometryAdapter
         && global.Labeler3DCarouselLayoutAdapter
+        && global.Labeler3DEquipmentLayoutAdapter
         && global.LabelerServoReplayDriver
       ),
       readOnly: true,
       source: "generated-servo-program",
       geometry: "measured-plate-spacing-plus-active-bottle-profile",
       carousel: "machine-head-count-and-user-measured-plate-spacing",
+      equipment: "active-machine-map-angles-with-derived-radial-depth",
+      equipmentCadAuthority: false,
       passiveServoMode: "neutral-no-invented-motion",
       plannerPitchGeometryUntouched: true,
       viewport: Boolean(global.Labeler3DViewport),
@@ -138,7 +165,7 @@
     const script = documentRef.createElement("script");
     script.src = `./${VIEWPORT_SCRIPT}`;
     script.async = true;
-    script.dataset.servoforge3dViewport = "v0.3.1";
+    script.dataset.servoforge3dViewport = "v0.4";
     script.addEventListener("load", loadMeasuredSpacingOverlay, { once: true });
     script.addEventListener("error", () => {
       console.warn("ServoForge 3D viewport presenter could not be loaded. Core 3D frame runtime remains available.");
