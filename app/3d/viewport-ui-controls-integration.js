@@ -1,10 +1,10 @@
 (function installServoForge3DViewportUiControls(global) {
   "use strict";
 
-  const INTEGRATION_VERSION = "servoforge.3d-viewport-ui-controls.v3";
+  const INTEGRATION_VERSION = "servoforge.3d-viewport-ui-controls.v4";
   const THREE_VERSION = "0.185.1";
   const THREE_MODULE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
-  const BOTTLE_MODES = new Set(["all", "alternate", "none", "head1"]);
+  const BOTTLE_MODES = new Set(["all", "none", "head1"]);
   const TRANSPARENT_OBJECT_OPACITY = 0.50;
 
   let THREE = null;
@@ -25,11 +25,6 @@
   let freePitch = 0;
   let freePosition = null;
   let freeQuaternion = null;
-  let fallbackHandlingBottleIndex = 0;
-  let alternateLastAngle = null;
-  let alternateContinuousPitch = 0;
-  let alternateHeadCount = null;
-  let alternatePitchParity = 0;
   const pressedKeys = new Set();
   const materialRecords = new Map();
 
@@ -37,76 +32,14 @@
     return Math.max(minimum, Math.min(maximum, value));
   }
 
-  function normalizeAngle(value) {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return null;
-    const normalized = numeric % 360;
-    return normalized < 0 ? normalized + 360 : normalized;
-  }
-
-  function currentMachineAngle() {
-    const fromState = normalizeAngle(global.state?.previewAngle);
-    if (fromState !== null) return fromState;
-    const text = document.querySelector("#servoforge3dMachineAngle")?.textContent || "";
-    const parsed = normalizeAngle(parseFloat(text));
-    return parsed;
-  }
-
-  function currentHeadCount() {
-    const stateCount = Number(global.state?.headCount);
-    if (Number.isFinite(stateCount) && stateCount >= 2) return Math.round(stateCount);
-    try {
-      const runtimeSnapshot = global.Labeler3DSceneRuntime?.snapshot?.();
-      const runtimeCount = Number(runtimeSnapshot?.geometry?.machine?.headCount);
-      if (Number.isFinite(runtimeCount) && runtimeCount >= 2) return Math.round(runtimeCount);
-    } catch {
-      // The state value is normally available. Keep the previous count if runtime is busy.
-    }
-    return Number.isFinite(alternateHeadCount) ? alternateHeadCount : 45;
-  }
-
-  function updateAlternatePitchParity() {
-    const angle = currentMachineAngle();
-    const headCount = currentHeadCount();
-    if (angle === null || !Number.isFinite(headCount) || headCount < 2) return alternatePitchParity;
-    const pitchDegrees = 360 / headCount;
-
-    if (alternateHeadCount !== headCount || alternateLastAngle === null) {
-      alternateHeadCount = headCount;
-      alternateLastAngle = angle;
-      alternateContinuousPitch = angle / pitchDegrees;
-      alternatePitchParity = ((Math.floor(alternateContinuousPitch + 1e-7) % 2) + 2) % 2;
-      return alternatePitchParity;
-    }
-
-    let delta = angle - alternateLastAngle;
-    if (delta > 180) delta -= 360;
-    else if (delta < -180) delta += 360;
-    if (Math.abs(delta) > 1e-9) {
-      alternateContinuousPitch += delta / pitchDegrees;
-      alternateLastAngle = angle;
-      alternatePitchParity = ((Math.floor(alternateContinuousPitch + 1e-7) % 2) + 2) % 2;
-    }
-    return alternatePitchParity;
-  }
-
-  function handlingBottleIndex(object) {
-    const match = String(object?.name || "").match(/ServoForgeHandlingBottle(\d+)/);
-    if (match) return Math.max(0, Number(match[1]) - 1);
-    const next = fallbackHandlingBottleIndex;
-    fallbackHandlingBottleIndex += 1;
-    return next;
-  }
-
   function installBottleVisibilityProxy(object) {
-    if (!object || object.__servoforgeBottleVisibilityProxyV3) return;
+    if (!object || object.__servoforgeBottleVisibilityProxyV4) return;
     const isHandlingBottle = Boolean(object?.userData?.handlingBottle);
     const isHeadOneBottle = object?.name === "ServoForgeLiveBottle";
     if (!isHandlingBottle && !isHeadOneBottle) return;
 
     const record = {
       kind: isHandlingBottle ? "handling" : "head1",
-      index: isHandlingBottle ? handlingBottleIndex(object) : 0,
       baseVisible: Boolean(object.visible)
     };
 
@@ -121,18 +54,13 @@
             return false;
           }
           if (!record.baseVisible) return false;
-          if (bottleMode === "all") return true;
-          if (bottleMode === "alternate") {
-            const parity = updateAlternatePitchParity();
-            return (record.index + parity) % 2 === 0;
-          }
-          return false;
+          return bottleMode === "all";
         },
         set(value) {
           record.baseVisible = Boolean(value);
         }
       });
-      Object.defineProperty(object, "__servoforgeBottleVisibilityProxyV3", {
+      Object.defineProperty(object, "__servoforgeBottleVisibilityProxyV4", {
         configurable: false,
         enumerable: false,
         writable: false,
@@ -212,7 +140,7 @@
     const prototype = THREE.Object3D?.prototype;
     if (!prototype) return;
 
-    if (!prototype.__servoforgeViewportUiAddHookV3) {
+    if (!prototype.__servoforgeViewportUiAddHookV4) {
       const nativeAdd = prototype.add;
       prototype.add = function servoforgeViewportUiAdd(...objects) {
         const result = nativeAdd.apply(this, objects);
@@ -222,7 +150,7 @@
         });
         return result;
       };
-      Object.defineProperty(prototype, "__servoforgeViewportUiAddHookV3", {
+      Object.defineProperty(prototype, "__servoforgeViewportUiAddHookV4", {
         configurable: false,
         enumerable: false,
         writable: false,
@@ -230,13 +158,13 @@
       });
     }
 
-    if (!prototype.__servoforgeViewportUiLookAtHookV3) {
+    if (!prototype.__servoforgeViewportUiLookAtHookV4) {
       const nativeLookAt = prototype.lookAt;
       prototype.lookAt = function servoforgeViewportUiLookAt(...args) {
         if (this?.isCamera) lastCamera = this;
         return nativeLookAt.apply(this, args);
       };
-      Object.defineProperty(prototype, "__servoforgeViewportUiLookAtHookV3", {
+      Object.defineProperty(prototype, "__servoforgeViewportUiLookAtHookV4", {
         configurable: false,
         enumerable: false,
         writable: false,
@@ -389,7 +317,6 @@
   function setBottleMode(mode) {
     const next = BOTTLE_MODES.has(String(mode)) ? String(mode) : "all";
     bottleMode = next;
-    alternateLastAngle = null;
     const select = document.querySelector("#servoforge3dBottleMode");
     if (select && select.value !== next) select.value = next;
   }
@@ -464,7 +391,7 @@
     if (!document.querySelector("#servoforge3dBottleMode")) {
       const label = document.createElement("label");
       label.className = "servoforge-3d-bottle-control";
-      label.innerHTML = `Bottles <select id="servoforge3dBottleMode" aria-label="Bottle visibility"><option value="all">All</option><option value="alternate">Every other</option><option value="none">Hide all</option><option value="head1">Head 1 only</option></select>`;
+      label.innerHTML = `Bottles <select id="servoforge3dBottleMode" aria-label="Bottle visibility"><option value="all">All</option><option value="none">Hide all</option><option value="head1">Head 1 only</option></select>`;
       const closeButton = controls.querySelector("#servoforge3dClose");
       controls.insertBefore(label, closeButton || null);
       label.querySelector("select")?.addEventListener("change", (event) => setBottleMode(event.target.value));
@@ -616,7 +543,6 @@
       objectHooksInstalled,
       cameraCaptured: Boolean(lastCamera),
       bottleMode,
-      alternatePitchParity,
       telemetryHidden,
       machineTransparent,
       machineOpacity: machineTransparent ? TRANSPARENT_OBJECT_OPACITY : 1,
