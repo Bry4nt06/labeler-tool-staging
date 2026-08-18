@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-visible-star-hubs-v184-20260818-1629";
-  const buildUpdatedAt = "Aug 18, 2026 4:29 PM ET";
+  const build = "3d-neck-contact-coder-v185-20260818-1656";
+  const buildUpdatedAt = "Aug 18, 2026 4:56 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -86,6 +86,7 @@
     "app/3d/spender-knuckle-linkage-refinement-integration.js",
     "app/3d/purpose-view-simplification-integration.js",
     "app/3d/equipment-layout-adapter.js",
+    "app/3d/neck-contact-coder-correction-integration.js",
     "app/3d/bottle-path-shape-correction-integration.js",
     "app/3d/bottle-handling-adapter.js",
     "app/3d/bottle-handling-video-reference-integration.js",
