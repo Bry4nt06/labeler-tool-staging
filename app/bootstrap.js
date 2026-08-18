@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-dashboard-map-parity-v179-20260818-1355";
-  const buildUpdatedAt = "Aug 18, 2026 1:55 PM ET";
+  const build = "3d-transfer-phase-sync-v180-20260818-1419";
+  const buildUpdatedAt = "Aug 18, 2026 2:19 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -96,6 +96,7 @@
     "app/3d/bottle-handling-measured-star-layout-integration.js",
     "app/3d/bottle-handling-direction-authority-integration.js",
     "app/3d/bottle-handling-carousel-table-center-integration.js",
+    "app/3d/bottle-handling-transfer-synchronization-integration.js",
     "app/3d/bottle-handling-viewport-integration.js",
     "app/3d/bottle-handling-measured-star-presentation-integration.js",
     "app/3d/bottle-handling-photo-presentation-integration.js",
