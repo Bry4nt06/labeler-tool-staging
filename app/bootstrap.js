@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-ui-free-roam-render-authority-v193-20260818-1912";
-  const buildUpdatedAt = "Aug 18, 2026 7:12 PM ET";
+  const build = "3d-coder-housing-v194-20260818-1913";
+  const buildUpdatedAt = "Aug 18, 2026 7:13 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -102,6 +102,7 @@
     "app/3d/bottle-handling-transfer-synchronization-integration.js",
     "app/3d/bottle-handling-viewport-integration.js",
     "app/3d/bottle-label-coder-visual-polish-integration.js",
+    "app/3d/coder-housing-dimension-refinement-integration.js",
     "app/3d/bottle-handling-measured-star-presentation-integration.js",
     "app/3d/bottle-handling-photo-presentation-integration.js",
     "app/3d/bottle-handling-pocket-phase-presentation-integration.js",
