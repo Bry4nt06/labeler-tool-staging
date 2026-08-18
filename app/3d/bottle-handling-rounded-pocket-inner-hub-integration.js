@@ -91,10 +91,10 @@
     const pocketDiameterMm = bottleDiameterMm(snapshot) + POCKET_DIAMETRAL_CLEARANCE_MM;
     const pocketRadius = pocketDiameterMm * scale / 2;
 
-    // The bottle center follows the star pitch circle.  Intersect the true
+    // The bottle center follows the star pitch circle. Intersect the true
     // bottle-clearance circle with the measured star outer circle, then trace
-    // the *inward* circular arc between those intersections.  This produces a
-    // genuine bottle-shaped pocket rather than the old wave/scallop profile.
+    // the inward circular arc between those intersections. This produces a
+    // genuine bottle-shaped cradle rather than the old wave/scallop profile.
     const denominator = Math.max(1e-12, 2 * pitchRadius * pocketRadius);
     const cosGamma = clamp(
       (pitchRadius * pitchRadius + pocketRadius * pocketRadius - outerRadius * outerRadius) / denominator,
@@ -111,7 +111,7 @@
     ));
     const mouthHalfAngle = Math.min(intersectionHalfAngle, pocketPitch * 0.47);
     const points = [];
-    const pocketSamples = 22;
+    const pocketSamples = 24;
     const outerSamples = 8;
 
     for (let pocket = 0; pocket < pocketCount; pocket += 1) {
@@ -122,11 +122,13 @@
 
       if (pocket === 0) pushPoint(points, polar(outerRadius, mouthStart));
 
-      // Start at the first outer-circle intersection and travel around the
-      // pocket circle through its inward-most point (centerAngle + PI).
+      // Travel from the lower outer-circle intersection, through the inward
+      // cradle point, to the upper intersection. The decreasing pocket-circle
+      // angle is intentional; the opposite direction wraps around the outside
+      // of the clearance circle and creates the blocky/incorrect tooth shape.
       for (let step = 1; step <= pocketSamples; step += 1) {
         const t = step / pocketSamples;
-        const beta = centerAngle + Math.PI - gamma + (2 * gamma * t);
+        const beta = centerAngle + Math.PI + gamma - (2 * gamma * t);
         pushPoint(points, {
           x: pocketCenter.x + Math.cos(beta) * pocketRadius,
           y: pocketCenter.y + Math.sin(beta) * pocketRadius
@@ -254,6 +256,8 @@
     innerGroup.userData.dimensionalAuthority = false;
     innerGroup.userData.visualHierarchyAuthority = true;
 
+    // Ratios are taken from the supplied plan-view drawing. They are visual
+    // hierarchy references only until actual inner-hub dimensions are measured.
     const ringOuter = outer * INNER_RING_OUTER_RADIUS_RATIO;
     const ringInner = outer * INNER_RING_INNER_RADIUS_RATIO;
     const ringThickness = 18 * scale;
