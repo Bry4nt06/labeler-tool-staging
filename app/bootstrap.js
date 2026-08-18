@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-rounded-star-pockets-v183-20260818-1625";
-  const buildUpdatedAt = "Aug 18, 2026 4:25 PM ET";
+  const build = "3d-visible-star-hubs-v184-20260818-1629";
+  const buildUpdatedAt = "Aug 18, 2026 4:29 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -106,6 +106,7 @@
     "app/3d/dashboard-top-view-parity-integration.js",
     "app/3d/bottle-handling-unified-star-height-thickness-integration.js",
     "app/3d/bottle-handling-rounded-pocket-inner-hub-integration.js",
+    "app/3d/bottle-handling-visible-inner-hub-integration.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
     "app/startup-runtime.js"
