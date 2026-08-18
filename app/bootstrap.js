@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-ui-remove-alternate-bottle-v189-20260818-1830";
-  const buildUpdatedAt = "Aug 18, 2026 6:30 PM ET";
+  const build = "3d-ui-free-roam-camera-fix-v190-20260818-1839";
+  const buildUpdatedAt = "Aug 18, 2026 6:39 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -111,6 +111,7 @@
     "app/3d/bottle-handling-rounded-pocket-inner-hub-integration.js",
     "app/3d/bottle-handling-visible-inner-hub-integration.js",
     "app/3d/viewport-ui-controls-integration.js",
+    "app/3d/free-roam-camera-capture-integration.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
     "app/startup-runtime.js"
