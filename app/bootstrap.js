@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-spender-root-outset-v188-20260818-1736";
-  const buildUpdatedAt = "Aug 18, 2026 5:36 PM ET";
+  const build = "3d-ui-remove-alternate-bottle-v189-20260818-1830";
+  const buildUpdatedAt = "Aug 18, 2026 6:30 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
