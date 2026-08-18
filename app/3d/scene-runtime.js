@@ -2,7 +2,7 @@
   "use strict";
 
   const RUNTIME_VERSION = "servoforge.3d-runtime.v1";
-  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v06.js?v=0.9.10-3d-v06-spender-plates";
+  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v07.js?v=0.9.10-3d-v07-bottle-labels";
   const SPACING_OVERLAY_SCRIPT = "app/3d/measured-spacing-overlay.js?v=0.9.10-3d-v04-machine-map-equipment";
 
   function number(value, fallback = 0) {
@@ -11,51 +11,47 @@
   }
 
   function frameDriver() {
-    if (!global.Labeler3DSimulationFrameDriver) {
-      throw new Error("ServoForge 3D runtime requires Labeler3DSimulationFrameDriver.");
-    }
+    if (!global.Labeler3DSimulationFrameDriver) throw new Error("ServoForge 3D runtime requires Labeler3DSimulationFrameDriver.");
     return global.Labeler3DSimulationFrameDriver;
   }
 
   function sceneAdapter() {
-    if (!global.Labeler3DSceneAdapter) {
-      throw new Error("ServoForge 3D runtime requires Labeler3DSceneAdapter.");
-    }
+    if (!global.Labeler3DSceneAdapter) throw new Error("ServoForge 3D runtime requires Labeler3DSceneAdapter.");
     return global.Labeler3DSceneAdapter;
   }
 
   function geometryAdapter() {
-    if (!global.Labeler3DPhysicalGeometryAdapter) {
-      throw new Error("ServoForge 3D runtime requires Labeler3DPhysicalGeometryAdapter.");
-    }
+    if (!global.Labeler3DPhysicalGeometryAdapter) throw new Error("ServoForge 3D runtime requires Labeler3DPhysicalGeometryAdapter.");
     return global.Labeler3DPhysicalGeometryAdapter;
   }
 
   function carouselAdapter() {
-    if (!global.Labeler3DCarouselLayoutAdapter) {
-      throw new Error("ServoForge 3D runtime requires Labeler3DCarouselLayoutAdapter.");
-    }
+    if (!global.Labeler3DCarouselLayoutAdapter) throw new Error("ServoForge 3D runtime requires Labeler3DCarouselLayoutAdapter.");
     return global.Labeler3DCarouselLayoutAdapter;
   }
 
+  function labelGeometryAdapter() {
+    if (!global.Labeler3DLabelGeometryAdapter) throw new Error("ServoForge 3D runtime requires Labeler3DLabelGeometryAdapter.");
+    return global.Labeler3DLabelGeometryAdapter;
+  }
+
+  function labelMeshFactory() {
+    if (!global.Labeler3DLabelMeshFactory) throw new Error("ServoForge 3D runtime requires Labeler3DLabelMeshFactory.");
+    return global.Labeler3DLabelMeshFactory;
+  }
+
   function wipePadGeometryAdapter() {
-    if (!global.Labeler3DWipePadGeometryAdapter) {
-      throw new Error("ServoForge 3D runtime requires Labeler3DWipePadGeometryAdapter.");
-    }
+    if (!global.Labeler3DWipePadGeometryAdapter) throw new Error("ServoForge 3D runtime requires Labeler3DWipePadGeometryAdapter.");
     return global.Labeler3DWipePadGeometryAdapter;
   }
 
   function wipePadMeshFactory() {
-    if (!global.Labeler3DWipePadMeshFactory) {
-      throw new Error("ServoForge 3D runtime requires Labeler3DWipePadMeshFactory.");
-    }
+    if (!global.Labeler3DWipePadMeshFactory) throw new Error("ServoForge 3D runtime requires Labeler3DWipePadMeshFactory.");
     return global.Labeler3DWipePadMeshFactory;
   }
 
   function equipmentAdapter() {
-    if (!global.Labeler3DEquipmentLayoutAdapter) {
-      throw new Error("ServoForge 3D runtime requires Labeler3DEquipmentLayoutAdapter.");
-    }
+    if (!global.Labeler3DEquipmentLayoutAdapter) throw new Error("ServoForge 3D runtime requires Labeler3DEquipmentLayoutAdapter.");
     return global.Labeler3DEquipmentLayoutAdapter;
   }
 
@@ -78,7 +74,7 @@
       const fromService = global.LabelerMapRuntimeService?.activeMachineMap?.();
       if (fromService) return fromService;
     } catch {
-      // Fall through to the state mirror in isolated/runtime-transition cases.
+      // Fall through to state mirror.
     }
     const maps = Array.isArray(current?.mapLibrary) ? current.mapLibrary : [];
     return maps.find((map) => map?.id === current?.activeMapId) || maps[0] || null;
@@ -96,8 +92,11 @@
     const geometry = geometryAdapter().snapshot(current, {
       worldUnitsPerMm: options.scene?.worldUnitsPerMm
     });
+    labelGeometryAdapter();
+    labelMeshFactory();
     wipePadGeometryAdapter();
     wipePadMeshFactory();
+
     const requestedScene = options.scene || {};
     const carouselDirection = current?.direction || "ccw";
     const zeroAngleDegrees = number(current?.zeroAngle, 0);
@@ -116,16 +115,19 @@
       tableY: number(requestedScene.tableY, 0)
     });
     const machineMap = options.machineMap || activeMachineMap(current);
+    const labels = labelGeometryAdapter().snapshot(current, geometry, machineMap, tableAngle);
     const equipment = equipmentAdapter().snapshot(machineMap, current, geometry, {
       carouselDirection,
       zeroAngleDegrees
     });
+
     return Object.freeze({
       runtimeVersion: RUNTIME_VERSION,
       readOnly: true,
       frame,
       geometry,
       carousel,
+      labels,
       equipment,
       scene
     });
@@ -139,6 +141,8 @@
         && global.Labeler3DSceneAdapter
         && global.Labeler3DPhysicalGeometryAdapter
         && global.Labeler3DCarouselLayoutAdapter
+        && global.Labeler3DLabelGeometryAdapter
+        && global.Labeler3DLabelMeshFactory
         && global.Labeler3DWipePadGeometryAdapter
         && global.Labeler3DWipePadMeshFactory
         && global.Labeler3DEquipmentLayoutAdapter
@@ -148,6 +152,11 @@
       source: "generated-servo-program",
       geometry: "measured-plate-spacing-plus-active-bottle-profile",
       carousel: "machine-head-count-and-user-measured-plate-spacing",
+      labels: "active-label-spec-wraps-with-reference-artwork",
+      labelWrapAuthority: "active-servoforge-label-spec",
+      labelArtworkAuthority: false,
+      labelBodyBackVerticalAuthority: false,
+      labelNeckHeightSource: "active-label-spec-neckHeightMm",
       equipment: "active-machine-map-angles-with-measured-wipe-contact-geometry",
       equipmentCadAuthority: false,
       wipePadGeometryAuthority: "user-measured",
@@ -179,9 +188,7 @@
     script.src = `./${SPACING_OVERLAY_SCRIPT}`;
     script.async = true;
     script.dataset.servoforge3dSpacingOverlay = "v1";
-    script.addEventListener("error", () => {
-      console.warn("ServoForge measured bottle-plate spacing telemetry could not be loaded.");
-    }, { once: true });
+    script.addEventListener("error", () => console.warn("ServoForge measured bottle-plate spacing telemetry could not be loaded."), { once: true });
     (documentRef.body || documentRef.head || documentRef.documentElement).appendChild(script);
     return true;
   }
@@ -197,11 +204,9 @@
     const script = documentRef.createElement("script");
     script.src = `./${VIEWPORT_SCRIPT}`;
     script.async = true;
-    script.dataset.servoforge3dViewport = "v0.6";
+    script.dataset.servoforge3dViewport = "v0.7";
     script.addEventListener("load", loadMeasuredSpacingOverlay, { once: true });
-    script.addEventListener("error", () => {
-      console.warn("ServoForge 3D viewport presenter could not be loaded. Core 3D frame runtime remains available.");
-    }, { once: true });
+    script.addEventListener("error", () => console.warn("ServoForge 3D viewport presenter could not be loaded. Core 3D frame runtime remains available."), { once: true });
     (documentRef.body || documentRef.head || documentRef.documentElement).appendChild(script);
     return true;
   }
