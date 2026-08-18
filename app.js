@@ -123,18 +123,29 @@
     }
   }
 
-  function applyFinalNeckWipeOrientationMarriage() {
-    const marriage = window.LabelerAplNeckWipeOrientationMarriage;
-    if (typeof marriage?.applyMarriageToState !== "function") return false;
-    const changed = marriage.applyMarriageToState();
-    if (!changed) return false;
-
+  function rerenderServoState() {
     try { if (typeof renderProgram === "function") renderProgram(); }
     catch { window.renderProgram?.(); }
     try { if (typeof renderValidation === "function") renderValidation(); }
     catch { window.renderValidation?.(); }
     try { if (typeof renderAnimationFrame === "function") renderAnimationFrame(); }
     catch { window.renderAnimationFrame?.(); }
+  }
+
+  function applyFinalRollerSectionHandoff() {
+    const handoff = window.LabelerAplRollerSectionHandoff;
+    if (typeof handoff?.applyToState !== "function") return false;
+    const changed = handoff.applyToState();
+    if (changed) rerenderServoState();
+    return changed;
+  }
+
+  function applyFinalNeckWipeOrientationMarriage() {
+    const marriage = window.LabelerAplNeckWipeOrientationMarriage;
+    if (typeof marriage?.applyMarriageToState !== "function") return false;
+    const changed = marriage.applyMarriageToState();
+    if (!changed) return false;
+    rerenderServoState();
     return true;
   }
 
@@ -181,6 +192,9 @@
 
     const initialized = await initializeLabelerApp();
     if (initialized === false) return;
+
+    progress?.set(97.5, "Resolving APL roller section handoffs…");
+    applyFinalRollerSectionHandoff();
 
     progress?.set(98, "Marrying neck wipe and orientation direction…");
     applyFinalNeckWipeOrientationMarriage();
