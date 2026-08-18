@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-coder-housing-v194-20260818-1913";
-  const buildUpdatedAt = "Aug 18, 2026 7:13 PM ET";
+  const build = "3d-mounted-roller-system-v195-20260818-1916";
+  const buildUpdatedAt = "Aug 18, 2026 7:16 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
