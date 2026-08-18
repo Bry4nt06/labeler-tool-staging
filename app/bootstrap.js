@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-curved-wipe-pad-v154-20260817-2037";
-  const buildUpdatedAt = "Aug 17, 2026 8:37 PM ET";
+  const build = "3d-spender-plates-v155-20260817-2046";
+  const buildUpdatedAt = "Aug 17, 2026 8:46 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
