@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-bottle-table-centering-v178-20260818-1339";
-  const buildUpdatedAt = "Aug 18, 2026 1:39 PM ET";
+  const build = "3d-dashboard-map-parity-v179-20260818-1355";
+  const buildUpdatedAt = "Aug 18, 2026 1:55 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -101,6 +101,7 @@
     "app/3d/bottle-handling-photo-presentation-integration.js",
     "app/3d/bottle-handling-pocket-phase-presentation-integration.js",
     "app/3d/three-d-direction-parity-presentation-integration.js",
+    "app/3d/dashboard-top-view-parity-integration.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
     "app/startup-runtime.js"
