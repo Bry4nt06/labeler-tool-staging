@@ -2,7 +2,7 @@
   "use strict";
 
   const RUNTIME_VERSION = "servoforge.3d-runtime.v1";
-  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v03.js?v=0.9.10-3d-v03-full-carousel";
+  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v03.js?v=0.9.10-3d-v031-measured-plate-spacing";
 
   function number(value, fallback = 0) {
     const parsed = Number(value);
@@ -102,9 +102,10 @@
       ),
       readOnly: true,
       source: "generated-servo-program",
-      geometry: "active-bottle-diameter-plus-longneck-reference-profile",
-      carousel: "machine-head-count-and-pitch-radius",
+      geometry: "measured-plate-spacing-plus-active-bottle-profile",
+      carousel: "machine-head-count-and-user-measured-plate-spacing",
       passiveServoMode: "neutral-no-invented-motion",
+      plannerPitchGeometryUntouched: true,
       viewport: Boolean(global.Labeler3DViewport)
     });
   }
@@ -116,7 +117,7 @@
     const script = documentRef.createElement("script");
     script.src = `./${VIEWPORT_SCRIPT}`;
     script.async = true;
-    script.dataset.servoforge3dViewport = "v0.3";
+    script.dataset.servoforge3dViewport = "v0.3.1";
     script.addEventListener("error", () => {
       console.warn("ServoForge 3D viewport presenter could not be loaded. Core 3D frame runtime remains available.");
     }, { once: true });
