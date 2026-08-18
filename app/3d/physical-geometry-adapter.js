@@ -4,6 +4,15 @@
   const SCHEMA_VERSION = "servoforge.3d-geometry.v1";
   const DEFAULT_WORLD_UNITS_PER_MM = 2.55 / 572.958;
 
+  // User-measured bottle-table geometry. These dimensions are intentionally
+  // isolated to the 3D mechanical model so existing planner/map pitch-radius
+  // calculations remain unchanged.
+  const MEASURED_BOTTLE_TABLE = Object.freeze({
+    source: "user-measured-machine-2026-08-17",
+    centerSpacingMm: 110,
+    edgeClearanceMm: 16
+  });
+
   // User-supplied 330 ml longneck drawing. The body diameter from this drawing
   // is intentionally NOT authoritative: ServoForge's active Bottle Spec remains
   // the source of truth for body diameter. These dimensions only fill the
@@ -59,6 +68,13 @@
     return Math.max(1, target - Math.max(0, number(spec?.radiusReductionMm, 0)) * 2);
   }
 
+  function pitchRadiusFromChordSpacing(centerSpacingMm, headCount) {
+    const chord = positive(centerSpacingMm);
+    const count = Math.max(2, Math.round(positive(headCount, 2)));
+    if (!chord) return null;
+    return chord / (2 * Math.sin(Math.PI / count));
+  }
+
   function referenceProfilePointsMm(bodyDiameterMm) {
     const bodyRadius = positive(bodyDiameterMm, LONGNECK_REFERENCE.drawingBodyDiameterMm) / 2;
     const finishRadius = LONGNECK_REFERENCE.finishOuterDiameterMm / 2;
@@ -74,9 +90,6 @@
       { radiusMm: bodyRadius, yMm: bodyTop }
     ];
 
-    // Smooth R108-style shoulder approximation. We preserve the drawing's
-    // shoulder span and neck datum diameter while the active ServoForge body
-    // diameter remains unchanged.
     const shoulderSteps = 8;
     for (let index = 1; index <= shoulderSteps; index += 1) {
       const t = index / shoulderSteps;
@@ -87,7 +100,6 @@
       });
     }
 
-    // Long neck taper from the ø37 shoulder datum to the ø26.6 crown finish.
     const neckSteps = 7;
     for (let index = 1; index <= neckSteps; index += 1) {
       const t = index / neckSteps;
@@ -98,8 +110,6 @@
       });
     }
 
-    // Crown finish rings. Small radial changes make the finish readable in 3D
-    // without asserting a complete factory thread/bead profile.
     points.push(
       { radiusMm: finishRadius, yMm: finishStart },
       { radiusMm: finishRadius * 1.035, yMm: finishStart + 2.4 },
@@ -115,9 +125,16 @@
 
   function snapshot(stateLike = {}, options = {}) {
     const worldUnitsPerMm = positive(options.worldUnitsPerMm, DEFAULT_WORLD_UNITS_PER_MM);
-    const pitchRadiusMm = positive(stateLike.tablePitchRadiusMm, positive(stateLike.referencePitchRadiusMm, 572.958));
-    const headCount = Math.max(1, Math.round(positive(stateLike.headCount, 1)));
-    const headPitchMm = (2 * Math.PI * pitchRadiusMm) / headCount;
+    const plannerPitchRadiusMm = positive(stateLike.tablePitchRadiusMm, positive(stateLike.referencePitchRadiusMm, 572.958));
+    const headCount = Math.max(2, Math.round(positive(stateLike.headCount, 2)));
+    const angularPitchDegrees = 360 / headCount;
+
+    const centerSpacingMm = positive(stateLike.bottlePlateCenterSpacingMm, MEASURED_BOTTLE_TABLE.centerSpacingMm);
+    const plateClearanceMm = Math.max(0, number(stateLike.bottlePlateClearanceMm, MEASURED_BOTTLE_TABLE.edgeClearanceMm));
+    const plateDiameterMm = Math.max(1, centerSpacingMm - plateClearanceMm);
+    const physicalPitchRadiusMm = pitchRadiusFromChordSpacing(centerSpacingMm, headCount);
+    const arcPitchMm = (2 * Math.PI * physicalPitchRadiusMm) / headCount;
+
     const bottleSpec = selectedBottleSpec(stateLike);
     const diameterMm = effectiveDiameterMm(bottleSpec);
     const profilePointsMm = referenceProfilePointsMm(diameterMm);
@@ -155,10 +172,12 @@
       referenceDrawingBodyDiameterIgnored: true
     };
 
-    const minimumPlateDiameterMm = diameterMm ? diameterMm + 4 : headPitchMm * 0.70;
-    const plateDiameterMm = Math.min(headPitchMm * 0.86, Math.max(headPitchMm * 0.70, minimumPlateDiameterMm));
-    const baseDiameterMm = Math.min(headPitchMm * 0.94, Math.max(plateDiameterMm + 5, headPitchMm * 0.82));
-    const carouselOuterRadiusMm = pitchRadiusMm + headPitchMm * 0.88;
+    // The user supplied the true adjacent plate-center spacing and edge gap.
+    // Plate diameter is therefore a direct geometric consequence: 110 - 16 = 94 mm.
+    // The physical pitch-circle radius is derived from the measured chord spacing,
+    // while plannerPitchRadiusMm remains untouched for existing ServoForge math.
+    const baseDiameterMm = plateDiameterMm;
+    const carouselOuterRadiusMm = physicalPitchRadiusMm + plateDiameterMm / 2 + 20;
 
     return freeze({
       schemaVersion: SCHEMA_VERSION,
@@ -169,33 +188,54 @@
       },
       machine: {
         headCount,
-        pitchRadiusMm,
-        pitchRadiusWorld: pitchRadiusMm * worldUnitsPerMm,
-        headPitchMm,
-        headPitchWorld: headPitchMm * worldUnitsPerMm,
+        angularPitchDegrees,
+        pitchRadiusMm: physicalPitchRadiusMm,
+        pitchRadiusWorld: physicalPitchRadiusMm * worldUnitsPerMm,
+        physicalPitchRadiusMm,
+        physicalPitchRadiusWorld: physicalPitchRadiusMm * worldUnitsPerMm,
+        plannerPitchRadiusMm,
+        plannerPitchRadiusWorld: plannerPitchRadiusMm * worldUnitsPerMm,
+        plateCenterSpacingMm: centerSpacingMm,
+        plateCenterSpacingWorld: centerSpacingMm * worldUnitsPerMm,
+        headPitchMm: centerSpacingMm,
+        headPitchWorld: centerSpacingMm * worldUnitsPerMm,
+        chordPitchMm: centerSpacingMm,
+        arcPitchMm,
+        arcPitchWorld: arcPitchMm * worldUnitsPerMm,
         carouselOuterRadiusMm,
         carouselOuterRadiusWorld: carouselOuterRadiusMm * worldUnitsPerMm,
-        pitchRadiusAuthority: Boolean(positive(stateLike.tablePitchRadiusMm) || positive(stateLike.referencePitchRadiusMm)),
+        pitchRadiusAuthority: true,
+        pitchRadiusSource: "derived-from-user-measured-plate-center-chord",
+        plannerPitchRadiusAuthority: Boolean(positive(stateLike.tablePitchRadiusMm) || positive(stateLike.referencePitchRadiusMm)),
         carouselOuterRadiusAuthority: false
       },
       bottle,
       bottleTable: {
+        centerSpacingMm,
+        centerSpacingWorld: centerSpacingMm * worldUnitsPerMm,
+        clearanceMm: plateClearanceMm,
+        clearanceWorld: plateClearanceMm * worldUnitsPerMm,
         plateDiameterMm,
         plateDiameterWorld: plateDiameterMm * worldUnitsPerMm,
         baseDiameterMm,
         baseDiameterWorld: baseDiameterMm * worldUnitsPerMm,
-        dimensionalAuthority: "derived-layout-envelope",
-        derivedFromHeadPitch: true
+        dimensionalAuthority: "user-measured-spacing-and-clearance",
+        plateDiameterAuthority: "derived-from-measured-center-spacing-minus-clearance",
+        derivedFromHeadPitch: false
       },
       reference: {
-        longneck: LONGNECK_REFERENCE
+        longneck: LONGNECK_REFERENCE,
+        bottleTableMeasurement: MEASURED_BOTTLE_TABLE
       },
       authority: {
         bottleDiameter: Boolean(diameterMm),
         bottleHeight: false,
         bottleVerticalProfile: "reference-drawing",
-        machinePitchRadius: Boolean(positive(stateLike.tablePitchRadiusMm) || positive(stateLike.referencePitchRadiusMm)),
-        bottleTableCad: false
+        machinePitchRadius: true,
+        machinePitchRadiusSource: "derived-from-user-measured-plate-center-chord",
+        plannerPitchRadius: Boolean(positive(stateLike.tablePitchRadiusMm) || positive(stateLike.referencePitchRadiusMm)),
+        bottleTableCad: true,
+        bottleTableMeasurement: "user-measured"
       }
     });
   }
@@ -203,9 +243,11 @@
   global.Labeler3DPhysicalGeometryAdapter = Object.freeze({
     SCHEMA_VERSION,
     DEFAULT_WORLD_UNITS_PER_MM,
+    MEASURED_BOTTLE_TABLE,
     LONGNECK_REFERENCE,
     selectedBottleSpec,
     effectiveDiameterMm,
+    pitchRadiusFromChordSpacing,
     referenceProfilePointsMm,
     snapshot
   });
