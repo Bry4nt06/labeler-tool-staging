@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-spender-plates-v155-20260817-2046";
-  const buildUpdatedAt = "Aug 17, 2026 8:46 PM ET";
+  const build = "3d-bottle-labels-v156-20260817-2100";
+  const buildUpdatedAt = "Aug 17, 2026 9:00 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -72,6 +72,8 @@
     "app/3d/scene-adapter.js",
     "app/3d/physical-geometry-adapter.js",
     "app/3d/carousel-layout-adapter.js",
+    "app/3d/label-geometry-adapter.js",
+    "app/3d/label-mesh-factory.js",
     "app/3d/wipe-pad-geometry-adapter.js",
     "app/3d/wipe-pad-mesh-factory.js",
     "app/3d/equipment-layout-adapter.js",
