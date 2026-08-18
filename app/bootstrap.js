@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-measured-star-geometry-v177-20260818-1307";
-  const buildUpdatedAt = "Aug 18, 2026 1:07 PM ET";
+  const build = "3d-bottle-table-centering-v178-20260818-1339";
+  const buildUpdatedAt = "Aug 18, 2026 1:39 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -95,6 +95,7 @@
     "app/3d/bottle-handling-16-pocket-integration.js",
     "app/3d/bottle-handling-measured-star-layout-integration.js",
     "app/3d/bottle-handling-direction-authority-integration.js",
+    "app/3d/bottle-handling-carousel-table-center-integration.js",
     "app/3d/bottle-handling-viewport-integration.js",
     "app/3d/bottle-handling-measured-star-presentation-integration.js",
     "app/3d/bottle-handling-photo-presentation-integration.js",
