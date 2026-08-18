@@ -101,9 +101,20 @@ const geometry = geometryAdapter.snapshot({
   selectedBottle: "LNNR - 12 Oz",
   bottleSpecs: [{ bottleType: "LNNR - 12 Oz", diameterTargetMm: 61.52, radiusReductionMm: 0.41 }]
 });
+const expectedPhysicalPitchRadiusMm = 110 / (2 * Math.sin(Math.PI / 45));
+const expectedPhysicalPitchRadiusWorld = expectedPhysicalPitchRadiusMm * geometry.renderScale.worldUnitsPerMm;
 assert.ok(Math.abs(geometry.bottle.effectiveDiameterMm - 60.7) < 0.000001, "3D bottle diameter must use ServoForge effective bottle diameter math.");
-assert.ok(Math.abs(geometry.machine.pitchRadiusWorld - 2.55) < 0.000001, "Default TopModul pitch radius must map to the v0.2 physical world scale.");
-assert.ok(Math.abs(geometry.machine.headPitchMm - 80.00002860513337) < 0.000001, "Head pitch must derive from physical pitch radius and head count.");
+assert.strictEqual(geometry.machine.plateCenterSpacingMm, 110, "Measured adjacent bottle-plate centers must remain 110 mm.");
+assert.strictEqual(geometry.bottleTable.centerSpacingMm, 110, "Bottle-table contract must publish measured 110 mm center spacing.");
+assert.strictEqual(geometry.bottleTable.clearanceMm, 16, "Measured plate edge clearance must remain 16 mm.");
+assert.strictEqual(geometry.bottleTable.plateDiameterMm, 94, "Plate diameter must resolve to 110 - 16 = 94 mm.");
+assert.ok(Math.abs(geometry.machine.physicalPitchRadiusMm - expectedPhysicalPitchRadiusMm) < 0.000001, "Physical pitch radius must derive from the 110 mm chord measurement and 45 heads.");
+assert.ok(Math.abs(geometry.machine.pitchRadiusWorld - expectedPhysicalPitchRadiusWorld) < 0.000001, "3D pitch circle must use the measured mechanical spacing.");
+assert.strictEqual(geometry.machine.plannerPitchRadiusMm, 572.958, "Existing ServoForge planner/map pitch radius must remain isolated and unchanged.");
+assert.strictEqual(geometry.machine.headPitchMm, 110, "3D head pitch must report measured center-to-center chord spacing.");
+assert.ok(Math.abs(geometry.machine.arcPitchMm - 110.08940527791218) < 0.000001, "Arc pitch should be derived from the physical pitch circle, not confused with measured chord spacing.");
+assert.strictEqual(geometry.authority.machinePitchRadiusSource, "derived-from-user-measured-plate-center-chord");
+assert.strictEqual(geometry.bottleTable.dimensionalAuthority, "user-measured-spacing-and-clearance");
 assert.strictEqual(geometry.authority.bottleDiameter, true);
 assert.strictEqual(geometry.authority.bottleHeight, false, "Reference drawing height must not be misrepresented as bottle-specific CAD authority.");
 assert.strictEqual(geometry.authority.bottleVerticalProfile, "reference-drawing");
@@ -136,6 +147,11 @@ assert.strictEqual(carouselLayout.headCount, 45, "Full-carousel layout must use 
 assert.strictEqual(carouselLayout.heads.length, 45, "Full-carousel layout must publish every bottle table.");
 assert.strictEqual(carouselLayout.activeHead, 1, "Head 1 must remain the live servo head in v0.3.");
 assert.ok(Math.abs(carouselLayout.pitchDegrees - 8) < 0.000001, "45-head carousel spacing must equal 8 degrees per bottle table.");
+assert.strictEqual(carouselLayout.plateCenterSpacingMm, 110);
+assert.strictEqual(carouselLayout.plateClearanceMm, 16);
+assert.strictEqual(carouselLayout.plateDiameterMm, 94);
+assert.ok(Math.abs(carouselLayout.physicalPitchRadiusMm - expectedPhysicalPitchRadiusMm) < 0.000001);
+assert.strictEqual(carouselLayout.plannerPitchRadiusMm, 572.958);
 assert.ok(Math.abs(carouselLayout.heads[0].tableAngleDegrees - 120) < 0.000001, "Head 1 must align with the live preview table angle.");
 assert.ok(Math.abs(carouselLayout.heads[1].tableAngleDegrees - 112) < 0.000001, "Head 2 must trail Head 1 by one table pitch.");
 assert.strictEqual(carouselLayout.heads[0].active, true);
@@ -143,8 +159,13 @@ assert.strictEqual(carouselLayout.heads[1].active, false);
 assert.strictEqual(carouselLayout.passiveServoMode, "neutral-no-invented-motion");
 carouselLayout.heads.forEach((head) => {
   const radialDistance = Math.hypot(head.position.x, head.position.z);
-  assert.ok(Math.abs(radialDistance - geometry.machine.pitchRadiusWorld) < 0.000001, `Head ${head.head} must remain on the physical pitch circle.`);
+  assert.ok(Math.abs(radialDistance - geometry.machine.pitchRadiusWorld) < 0.000001, `Head ${head.head} must remain on the measured physical pitch circle.`);
 });
+const firstCenterDistance = Math.hypot(
+  carouselLayout.heads[0].position.x - carouselLayout.heads[1].position.x,
+  carouselLayout.heads[0].position.z - carouselLayout.heads[1].position.z
+) / geometry.renderScale.worldUnitsPerMm;
+assert.ok(Math.abs(firstCenterDistance - 110) < 0.000001, "Adjacent rendered bottle-table centers must be exactly 110 mm apart.");
 
 sandbox.state = {
   program: rows,
@@ -166,13 +187,17 @@ assert.strictEqual(runtimeSnapshot.geometry.schemaVersion, "servoforge.3d-geomet
 assert.strictEqual(runtimeSnapshot.carousel.schemaVersion, "servoforge.3d-carousel.v1");
 assert.strictEqual(runtimeSnapshot.carousel.headCount, 45, "Runtime must publish the complete 45-head carousel layout.");
 assert.strictEqual(runtimeSnapshot.carousel.heads.length, 45, "Runtime must expose every bottle-table carrier.");
+assert.strictEqual(runtimeSnapshot.geometry.bottleTable.centerSpacingMm, 110);
+assert.strictEqual(runtimeSnapshot.geometry.bottleTable.clearanceMm, 16);
+assert.strictEqual(runtimeSnapshot.geometry.bottleTable.plateDiameterMm, 94);
 assert.ok(Math.abs(runtimeSnapshot.geometry.bottle.effectiveDiameterMm - 60.7) < 0.000001, "Runtime must carry active Bottle Specs into the 3D geometry contract.");
 assert.strictEqual(runtimeSnapshot.geometry.bottle.referenceHeightMm, 241.5, "Runtime must carry the longneck reference height into the 3D viewport contract.");
-assert.ok(Math.abs(runtimeSnapshot.scene.carousel.radius - 2.55) < 0.000001, "Scene orbit radius must default to the physical machine pitch radius.");
+assert.ok(Math.abs(runtimeSnapshot.scene.carousel.radius - expectedPhysicalPitchRadiusWorld) < 0.000001, "Scene orbit radius must default to the measured physical bottle-table pitch circle.");
+assert.strictEqual(runtimeSnapshot.geometry.machine.plannerPitchRadiusMm, 572.958, "3D geometry must not overwrite planner/map pitch radius.");
 assert.strictEqual(JSON.stringify(rows), originalRows, "3D frame generation must not mutate Servo Program rows.");
 assert.ok(Object.isFrozen(runtimeSnapshot.frame), "Published 3D frames must be immutable.");
 assert.ok(Object.isFrozen(runtimeSnapshot.geometry), "Published 3D geometry must be immutable.");
 assert.ok(Object.isFrozen(runtimeSnapshot.carousel), "Published 3D carousel layouts must be immutable.");
 assert.ok(Object.isFrozen(runtimeSnapshot.scene), "Published 3D scene states must be immutable.");
 
-console.log("ServoForge 3D simulation-frame, geometry, and full-carousel parity regression passed.");
+console.log("ServoForge 3D measured plate-spacing, servo, geometry, and full-carousel parity regression passed.");
