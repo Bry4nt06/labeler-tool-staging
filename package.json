@@ -7,7 +7,7 @@
     "prestart": "node --test tests/update-loop-guard.test.js",
     "start": "node owner-recovery.js && node server.js",
     "test:auth": "node --test tests/authentication-server.test.js",
-    "test:3d": "node --test tests/3d-simulation-frame.test.js tests/3d-viewport-integration.test.js tests/3d-wipe-pad-geometry.test.js tests/3d-label-geometry.test.js tests/3d-rotation-parity.test.js tests/3d-hardware-reference.test.js",
+    "test:3d": "node --test tests/3d-simulation-frame.test.js tests/3d-viewport-integration.test.js tests/3d-wipe-pad-geometry.test.js tests/3d-label-geometry.test.js tests/3d-rotation-parity.test.js tests/3d-hardware-reference.test.js tests/3d-spender-placement.test.js",
     "test:update": "node --test tests/update-loop-guard.test.js"
   },
   "engines": {
