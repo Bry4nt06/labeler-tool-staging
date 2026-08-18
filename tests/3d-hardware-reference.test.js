@@ -31,7 +31,8 @@ assert.doesNotThrow(() => vm.runInContext(factorySource, sandbox, { filename: "a
 
 const catalog = sandbox.Labeler3DHardwareReferenceCatalog;
 assert.ok(catalog);
-assert.strictEqual(catalog.CATALOG_VERSION, "servoforge.3d-hardware-reference.v1");
+assert.strictEqual(catalog.CATALOG_VERSION, "servoforge.3d-hardware-reference.v2");
+assert.strictEqual(catalog.REFERENCE_SET, "labeler-hardware-photo-set-2");
 assert.strictEqual(catalog.profileIdForKind("pad"), "wipe-pad");
 assert.strictEqual(catalog.profileIdForKind("roller"), "wipe-roller");
 assert.strictEqual(catalog.profileIdForKind("coding"), "laser-coder");
@@ -42,6 +43,36 @@ assert.strictEqual(catalog.profile("wipe-roller").dimensionalAuthority, false);
 assert.strictEqual(catalog.profile("laser-coder").dimensionalAuthority, false);
 assert.strictEqual(catalog.profile("label-sensor").dimensionalAuthority, false);
 assert.match(catalog.profile("application-spender").notes, /Exact CAD dimensions remain provisional/);
+
+const spenderEvidence = catalog.profile("application-spender").evidence;
+assert.ok(spenderEvidence.observedFeatures.includes("vertical guide roller adjacent to label web"));
+assert.ok(spenderEvidence.observedFeatures.includes("plate mounted to adjustable tubular application arm"));
+assert.ok(spenderEvidence.pendingMeasurements.includes("spender plate length mm"));
+assert.ok(spenderEvidence.pendingMeasurements.includes("plate face to bottle-table centerline distance mm"));
+
+const padEvidence = catalog.profile("wipe-pad").evidence;
+assert.match(padEvidence.confidence, /measured-contact/);
+assert.ok(padEvidence.observedFeatures.includes("curved orange/brown sponge contact face"));
+assert.ok(padEvidence.observedFeatures.includes("dual vertical support posts"));
+
+const rollerEvidence = catalog.profile("wipe-roller").evidence;
+assert.ok(rollerEvidence.observedFeatures.includes("vertical cylindrical dark-rubber contact roller"));
+assert.ok(rollerEvidence.pendingMeasurements.includes("roller outside diameter mm"));
+
+const coderEvidence = catalog.profile("laser-coder").evidence;
+assert.ok(coderEvidence.observedFeatures.includes("coding face aimed radially toward passing bottle"));
+assert.ok(coderEvidence.pendingMeasurements.includes("coding face to bottle surface distance mm"));
+
+const sensorEvidence = catalog.profile("label-sensor").evidence;
+assert.ok(sensorEvidence.observedFeatures.includes("visible status LED"));
+assert.ok(sensorEvidence.pendingMeasurements.includes("sensor face to bottle surface distance mm"));
+
+const catalogStatus = catalog.status();
+assert.strictEqual(catalogStatus.measuredProfileCount, 1);
+assert.ok(catalogStatus.photoReferenceProfileCount >= 5);
+assert.ok(catalogStatus.pendingMeasurementCount > 20);
+assert.ok(catalogStatus.measurementBacklog["application-spender"].length > 0);
+assert.ok(Object.isFrozen(catalogStatus));
 
 assert.match(factorySource, /createSpenderPlateAssembly/);
 assert.match(factorySource, /ServoForgeApplicationArmRoot/);
