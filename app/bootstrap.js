@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-hardware-reference-v158-20260818-0722";
-  const buildUpdatedAt = "Aug 18, 2026 7:22 AM ET";
+  const build = "3d-spender-placement-v159-20260818-0752";
+  const buildUpdatedAt = "Aug 18, 2026 7:52 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -78,6 +78,7 @@
     "app/3d/wipe-pad-mesh-factory.js",
     "app/3d/hardware-reference-catalog.js",
     "app/3d/hardware-mesh-factory.js",
+    "app/3d/spender-plate-placement-integration.js",
     "app/3d/equipment-layout-adapter.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
