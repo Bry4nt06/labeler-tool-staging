@@ -10,6 +10,22 @@
   const PURPOSE = "functional-placement-reference";
   const PAD_REFERENCE_CENTER_Y = 0.60;
 
+  const SPENDER_VISIBLE_MESHES = new Set([
+    "ServoForgeSpenderPlate",
+    "ServoForgeSpenderPlatePeelEdge",
+    "ServoForgeSpenderRefinedRedPivotDial",
+    "ServoForgeSpenderRefinedPivotWasher",
+    "ServoForgeSpenderRefinedPivotBolt",
+    "ServoForgeSpenderRefinedBlackAdjustmentLink",
+    "ServoForgeSpenderRefinedHingeFork",
+    "ServoForgeSpenderRefinedHingePin",
+    "ServoForgeSpenderRefinedPlateAdjustmentArm",
+    "ServoForgeSpenderPlateSupportEar",
+    "ServoForgeSpenderRefinedPlateMountPin",
+    "ServoForgeSpenderRefinedAngleHandle",
+    "ServoForgeSpenderRefinedHandleKnob"
+  ]);
+
   function number(value, fallback = 0) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
@@ -30,11 +46,7 @@
   }
 
   function meshIsPrimarySpenderPiece(mesh) {
-    const name = String(mesh?.name || "");
-    if (name === "ServoForgeSpenderPlate") return true;
-    if (name === "ServoForgeSpenderPlatePeelEdge") return true;
-    if (name.startsWith("ServoForgeSpenderRefined")) return true;
-    return false;
+    return SPENDER_VISIBLE_MESHES.has(String(mesh?.name || ""));
   }
 
   function simplifySpenderAssembly(assembly) {
@@ -53,6 +65,7 @@
       spenderPlateVisible: true,
       knuckleVisible: true,
       mountingArmVisible: false,
+      mainArmKnuckleLinkVisible: false,
       supportHardwareVisible: false,
       guideRollerVisible: false,
       labelWebVisible: false,
@@ -142,6 +155,7 @@
     ...baseFactory,
     FACTORY_VERSION,
     PURPOSE,
+    SPENDER_VISIBLE_MESHES,
     createAggregateAssembly,
     createRollerOnlyAssembly,
     createEquipmentAssembly,
