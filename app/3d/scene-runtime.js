@@ -2,7 +2,7 @@
   "use strict";
 
   const RUNTIME_VERSION = "servoforge.3d-runtime.v1";
-  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v04.js?v=0.9.10-3d-v04-measured-wipe-v1";
+  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v05.js?v=0.9.10-3d-v05-curved-wipe-pad";
   const SPACING_OVERLAY_SCRIPT = "app/3d/measured-spacing-overlay.js?v=0.9.10-3d-v04-machine-map-equipment";
 
   function number(value, fallback = 0) {
@@ -43,6 +43,13 @@
       throw new Error("ServoForge 3D runtime requires Labeler3DWipePadGeometryAdapter.");
     }
     return global.Labeler3DWipePadGeometryAdapter;
+  }
+
+  function wipePadMeshFactory() {
+    if (!global.Labeler3DWipePadMeshFactory) {
+      throw new Error("ServoForge 3D runtime requires Labeler3DWipePadMeshFactory.");
+    }
+    return global.Labeler3DWipePadMeshFactory;
   }
 
   function equipmentAdapter() {
@@ -90,6 +97,7 @@
       worldUnitsPerMm: options.scene?.worldUnitsPerMm
     });
     wipePadGeometryAdapter();
+    wipePadMeshFactory();
     const requestedScene = options.scene || {};
     const carouselDirection = current?.direction || "ccw";
     const zeroAngleDegrees = number(current?.zeroAngle, 0);
@@ -132,6 +140,7 @@
         && global.Labeler3DPhysicalGeometryAdapter
         && global.Labeler3DCarouselLayoutAdapter
         && global.Labeler3DWipePadGeometryAdapter
+        && global.Labeler3DWipePadMeshFactory
         && global.Labeler3DEquipmentLayoutAdapter
         && global.LabelerServoReplayDriver
       ),
@@ -142,11 +151,13 @@
       equipment: "active-machine-map-angles-with-measured-wipe-contact-geometry",
       equipmentCadAuthority: false,
       wipePadGeometryAuthority: "user-measured",
+      wipePadRenderAuthority: "measured-annular-sponge-and-steel",
       wipePadHeightMm: 70,
       wipePadSpongeThicknessMm: 18,
       wipePadBackingPlateThicknessMm: 4,
       wipePadTotalThicknessMm: 22,
       wipePadBottlePenetrationMm: 2,
+      wipePadVerticalMountAuthority: false,
       passiveServoMode: "neutral-no-invented-motion",
       plannerPitchGeometryUntouched: true,
       viewport: Boolean(global.Labeler3DViewport),
@@ -180,7 +191,7 @@
     const script = documentRef.createElement("script");
     script.src = `./${VIEWPORT_SCRIPT}`;
     script.async = true;
-    script.dataset.servoforge3dViewport = "v0.4";
+    script.dataset.servoforge3dViewport = "v0.5";
     script.addEventListener("load", loadMeasuredSpacingOverlay, { once: true });
     script.addEventListener("error", () => {
       console.warn("ServoForge 3D viewport presenter could not be loaded. Core 3D frame runtime remains available.");
