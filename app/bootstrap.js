@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-bottle-label-coder-polish-v191-20260818-1842";
-  const buildUpdatedAt = "Aug 18, 2026 6:42 PM ET";
+  const build = "3d-ui-free-roam-direct-camera-v192-20260818-1901";
+  const buildUpdatedAt = "Aug 18, 2026 7:01 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
