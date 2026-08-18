@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-neck-contact-coder-v185-20260818-1656";
-  const buildUpdatedAt = "Aug 18, 2026 4:56 PM ET";
+  const build = "3d-spender-engagement-wipe-bevel-v186-20260818-1725";
+  const buildUpdatedAt = "Aug 18, 2026 5:25 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -87,6 +87,7 @@
     "app/3d/purpose-view-simplification-integration.js",
     "app/3d/equipment-layout-adapter.js",
     "app/3d/neck-contact-coder-correction-integration.js",
+    "app/3d/spender-engagement-wipe-bevel-integration.js",
     "app/3d/bottle-path-shape-correction-integration.js",
     "app/3d/bottle-handling-adapter.js",
     "app/3d/bottle-handling-video-reference-integration.js",
