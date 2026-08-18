@@ -10,7 +10,7 @@
     "test:3d": "node --test tests/3d-simulation-frame.test.js tests/3d-viewport-integration.test.js tests/3d-wipe-pad-geometry.test.js tests/3d-label-geometry.test.js tests/3d-rotation-parity.test.js tests/3d-hardware-reference.test.js tests/3d-spender-placement.test.js tests/3d-topmodul-parts-reference.test.js tests/3d-spender-manual-assembly.test.js tests/3d-spender-knuckle-correction.test.js tests/3d-spender-linkage-refinement.test.js tests/3d-purpose-view-simplification.test.js",
     "test:update": "node --test tests/update-loop-guard.test.js",
     "test:apl-handoff": "node --test tests/apl-roller-section-handoff.test.js",
-    "test:bottle-handling": "node --test tests/3d-bottle-handling.test.js tests/3d-bottle-handling-video-reference.test.js tests/3d-bottle-handling-zero-datum.test.js tests/3d-bottle-handling-photo-layout.test.js tests/3d-bottle-handling-dead-zone-anchor.test.js tests/3d-bottle-handling-16-pocket.test.js tests/3d-direction-parity.test.js"
+    "test:bottle-handling": "node --test tests/3d-bottle-handling.test.js tests/3d-bottle-handling-video-reference.test.js tests/3d-bottle-handling-zero-datum.test.js tests/3d-bottle-handling-photo-layout.test.js tests/3d-bottle-handling-dead-zone-anchor.test.js tests/3d-bottle-handling-16-pocket.test.js tests/3d-direction-parity.test.js tests/3d-bottle-handling-measured-stars.test.js"
   },
   "engines": {
     "node": ">=20"
