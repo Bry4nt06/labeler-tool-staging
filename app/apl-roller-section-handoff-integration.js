@@ -1,10 +1,12 @@
 "use strict";
 
 (function installAplRollerSectionHandoff(global) {
-  if (global.LabelerAplRollerSectionHandoff?.installed) return;
+  if (global.LabelerAplRollerSectionHandoff?.version >= 2) return;
 
-  const VERSION = 1;
+  const VERSION = 2;
+  const STAGE_ID = "apl.roller-section-handoff";
   const EPS = 0.001;
+  const RETRY_MS = 25;
 
   const finite = (value, fallback = NaN) => {
     const parsed = Number(value);
@@ -32,25 +34,83 @@
     }
   }
 
+  function pipelineDriver() {
+    return global.LabelerDriverRegistry?.resolve?.("profile.pipeline")
+      || global.LabelerProfilePipelineDriver
+      || null;
+  }
+
+  function rowSection(row) {
+    const explicit = text(row?.section).toLowerCase();
+    if (["neck", "body", "back"].includes(explicit)) return explicit;
+    const match = text(row?.action).match(/\b(Neck|Body|Back)\b/i);
+    return match ? match[1].toLowerCase() : "";
+  }
+
   function isNeckTurn2(row) {
     return Number(row?.cmd) === 7
-      && (text(row?.section).toLowerCase() === "neck" || /\bneck\b/i.test(text(row?.action)))
+      && rowSection(row) === "neck"
       && /\bwipe\s+turn\s+2\b/i.test(text(row?.action));
   }
 
-  function isBodyApplicationTransition(turn, reference) {
-    if (Number(turn?.cmd) !== 7 || Number(reference?.cmd) !== 3) return false;
-    const section = text(turn?.section || reference?.section).toLowerCase();
-    const action = `${text(turn?.action)} ${text(reference?.action)}`;
-    const body = section === "body" || /\bbody\b/i.test(action);
-    const application = turn?.applicationTransition === true
-      || reference?.applicationReference === true
-      || /application|tack\s+reference/i.test(action);
-    return body && application;
+  function isBodyWipeStart(row) {
+    return Number(row?.cmd) === 7
+      && rowSection(row) === "body"
+      && /\bwipe\s+turn\s+1\b/i.test(text(row?.action));
   }
 
-  function stationUsesRollers(station) {
-    const map = activeMap();
+  function samePhysicalAngle(left, right, tolerance = 0.15) {
+    const a = finite(left, NaN);
+    const b = finite(right, NaN);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+    let delta = (a - b) % 360;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    return Math.abs(delta) <= tolerance;
+  }
+
+  function findImmediateBodyWipe(rows, referenceIndex) {
+    const reference = rows[referenceIndex];
+    const referenceTable = finite(reference?.tableAngle, NaN);
+    const referencePlate = finite(reference?.plateAngle, NaN);
+    if (!Number.isFinite(referenceTable) || !Number.isFinite(referencePlate)) return null;
+
+    for (let index = referenceIndex + 1; index < Math.min(rows.length, referenceIndex + 4); index += 1) {
+      const row = rows[index];
+      const table = finite(row?.tableAngle, NaN);
+      if (!Number.isFinite(table) || table < referenceTable - EPS) continue;
+      if (table - referenceTable > 2.5 + EPS) break;
+      if (!isBodyWipeStart(row)) continue;
+      if (!samePhysicalAngle(row.plateAngle, referencePlate)) continue;
+      return { row, index };
+    }
+    return null;
+  }
+
+  function isBodyApplicationTransition(rows, turnIndex) {
+    const turn = rows[turnIndex];
+    const reference = rows[turnIndex + 1];
+    if (Number(turn?.cmd) !== 7 || Number(reference?.cmd) !== 3) return false;
+
+    const bodyByMetadata = rowSection(turn) === "body"
+      || rowSection(reference) === "body"
+      || turn?.applicationTransition === true
+      || reference?.applicationReference === true
+      || /\bbody\b/i.test(`${text(turn?.action)} ${text(reference?.action)}`);
+    const applicationByMetadata = turn?.applicationTransition === true
+      || reference?.applicationReference === true
+      || /application|tack\s+reference/i.test(`${text(turn?.action)} ${text(reference?.action)}`);
+    if (bodyByMetadata && applicationByMetadata) return true;
+
+    // Some late orientation stages strip the application metadata while
+    // leaving the physical row sequence intact. In that case, the transition
+    // is authoritative when its reference is immediately followed by Body
+    // Wipe Turn 1 at the same bottle orientation.
+    return Boolean(findImmediateBodyWipe(rows, turnIndex + 1));
+  }
+
+  function stationUsesRollers(station, machineMap = activeMap()) {
+    const map = machineMap;
     if (!map) return false;
     const objects = (Array.isArray(map.objects) ? map.objects : [])
       .filter((item) => item?.application !== "cold-glue")
@@ -101,17 +161,18 @@
       plateAngle: done(reference?.plateAngle),
       action: text(reference?.action),
       station: Number.isFinite(finite(reference?.station, NaN)) ? Number(reference.station) : undefined,
-      section: text(reference?.section).toLowerCase() || "body",
+      section: rowSection(reference) || "body",
       applicationReference: true,
-      motionSource: "apl-roller-section-handoff-v1"
+      motionSource: "apl-roller-section-handoff-v2"
     };
   }
 
-  function repair(sourceRows, maximumRatio = null) {
+  function repair(sourceRows, maximumRatio = null, machineMap = activeMap()) {
     const rows = (Array.isArray(sourceRows) ? sourceRows : []).map((row) => ({ ...row }));
     const current = runtimeState();
     const maxRatio = Math.max(0.1, finite(maximumRatio, finite(current?.maxMoveRatio, 21)));
     const changes = [];
+    const candidates = [];
 
     for (let index = 0; index < rows.length - 3; index += 1) {
       const wipeTurn = rows[index];
@@ -120,8 +181,18 @@
       const transitionReference = rows[index + 3];
 
       if (!isNeckTurn2(wipeTurn) || Number(wipeRest?.cmd) !== 3) continue;
-      if (!isBodyApplicationTransition(transitionTurn, transitionReference)) continue;
-      if (!stationUsesRollers(wipeTurn.station)) continue;
+      if (Number(transitionTurn?.cmd) !== 7 || Number(transitionReference?.cmd) !== 3) continue;
+
+      const candidate = {
+        wipeHmi: wipeTurn.hmi ?? index + 1,
+        transitionHmi: transitionTurn.hmi ?? index + 3,
+        station: Number(wipeTurn.station),
+        bodyTransition: isBodyApplicationTransition(rows, index + 2),
+        rollerStation: stationUsesRollers(wipeTurn.station, machineMap)
+      };
+      candidates.push(candidate);
+
+      if (!candidate.bodyTransition || !candidate.rollerStation) continue;
 
       const wipeStartTable = finite(wipeTurn.tableAngle, NaN);
       const wipeStopTable = finite(wipeRest.tableAngle, NaN);
@@ -138,6 +209,7 @@
       const transitionSpan = transitionStopTable - transitionStartTable;
       const transitionTravel = targetPlate - wipeStopPlate;
       const transitionRatio = Math.abs(transitionTravel) / Math.max(EPS, transitionSpan);
+      candidate.transitionRatio = done(transitionRatio);
       if (Math.abs(transitionTravel) <= EPS || transitionRatio < maxRatio) continue;
 
       const originalWipeTravel = wipeStopPlate - wipeStartPlate;
@@ -152,6 +224,7 @@
       const wipeSpan = wipeStopTable - wipeStartTable;
       if (wipeSpan <= EPS) continue;
       const mergedRatio = Math.abs(mergedTravel) / wipeSpan;
+      candidate.mergedRatio = done(mergedRatio);
       if (mergedRatio >= maxRatio) continue;
 
       const referenceEvent = applicationReferenceEvent(transitionReference);
@@ -199,20 +272,32 @@
       index = Math.max(-1, index - 1);
     }
 
-    return { rows: refreshMetrics(rows), changes };
+    return { rows: refreshMetrics(rows), changes, candidates };
   }
 
-  function synchronize(result) {
-    const current = runtimeState();
+  function publish(result, current = runtimeState()) {
+    global.ServoForgeAplRollerSectionHandoffLastResult = {
+      version: VERSION,
+      applied: result.changes.length > 0,
+      changes: result.changes,
+      candidates: result.candidates
+    };
+    if (!current) return;
+    current.motionPlan = current.motionPlan && typeof current.motionPlan === "object" ? current.motionPlan : {};
+    current.motionPlan.aplRollerSectionHandoff = {
+      version: VERSION,
+      applied: result.changes.length > 0,
+      changes: result.changes,
+      candidates: result.candidates
+    };
+  }
+
+  function synchronize(result, current = runtimeState()) {
     if (!current || !Array.isArray(result?.rows)) return result?.rows || [];
     current.program = result.rows;
     current.motionPlan = current.motionPlan && typeof current.motionPlan === "object" ? current.motionPlan : {};
     current.motionPlan.rows = result.rows;
-    current.motionPlan.aplRollerSectionHandoff = {
-      version: VERSION,
-      applied: result.changes.length > 0,
-      changes: result.changes
-    };
+    publish(result, current);
 
     try {
       const translationService = global.LabelerProfileTranslationService;
@@ -224,33 +309,55 @@
     return result.rows;
   }
 
-  function install() {
-    const base = global.applyGeneratedServoProfile;
-    if (typeof base !== "function") return false;
-    if (base.aplRollerSectionHandoffV1 === true) return true;
+  function applyToState() {
+    const current = runtimeState();
+    if (!current || !Array.isArray(current.program) || !current.program.length) return false;
+    const result = repair(current.program, current.maxMoveRatio, activeMap());
+    publish(result, current);
+    if (!result.changes.length) return false;
+    synchronize(result, current);
+    return true;
+  }
 
-    const wrapped = function applyGeneratedServoProfileWithRollerSectionHandoff(...args) {
-      const output = base.apply(this, args);
-      const current = runtimeState();
-      const source = Array.isArray(current?.program) && current.program.length
-        ? current.program
-        : Array.isArray(output) ? output : [];
-      const result = repair(source);
-      return result.changes.length ? synchronize(result) : output;
-    };
-    wrapped.aplRollerSectionHandoffV1 = true;
-    wrapped.previousApplyGeneratedServoProfile = base;
-    global.applyGeneratedServoProfile = wrapped;
+  function processPipeline(rows, context = {}) {
+    const current = context.state || runtimeState();
+    const map = context.map || activeMap();
+    if (String(context.applicationMode || current?.applicationMode || map?.applicationMode || "").toLowerCase() !== "apl") return rows;
+    const result = repair(rows, current?.maxMoveRatio, map);
+    publish(result, current);
+    return result.rows;
+  }
+
+  function install() {
+    const pipeline = pipelineDriver();
+    if (!pipeline?.registerStage) return false;
+    pipeline.registerStage({
+      id: STAGE_ID,
+      phase: "handoff",
+      order: 9000,
+      source: "app/apl-roller-section-handoff-integration.js",
+      description: "Merge a faulting Neck-roller to Body-application correction into the preceding physical roller turn when the combined move remains inside the configured servo ratio limit.",
+      process: processPipeline
+    });
 
     global.LabelerAplRollerSectionHandoff = Object.freeze({
       installed: true,
       version: VERSION,
+      stageId: STAGE_ID,
       repair,
+      applyToState,
       synchronize,
-      sameDirectionEquivalent
+      sameDirectionEquivalent,
+      isBodyApplicationTransition,
+      findImmediateBodyWipe,
+      processPipeline
     });
     return true;
   }
 
-  if (!install()) global.setTimeout(install, 25);
+  function wait() {
+    if (!install()) global.setTimeout(wait, RETRY_MS);
+  }
+
+  wait();
 })(typeof window !== "undefined" ? window : globalThis);
