@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-bottle-handling-v168-20260818-1113";
-  const buildUpdatedAt = "Aug 18, 2026 11:13 AM ET";
+  const build = "3d-functional-heights-v169-20260818-1119";
+  const buildUpdatedAt = "Aug 18, 2026 11:19 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -40,7 +40,6 @@
     "app/controllers/specification-sensor-guidance-controller.js",
     "app/controllers/specification-required-fields-controller.js",
     "app/controllers/sensor-activation-controller.js",
-    "app/sensor-map-visibility-color-integration.js",
     "app/controllers/build-inputs-controller.js",
     "app/controllers/transfer-controller.js",
     "app/controllers/simulation-controller.js",
