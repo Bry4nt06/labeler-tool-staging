@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-rotation-parity-v157-20260817-2112";
-  const buildUpdatedAt = "Aug 17, 2026 9:12 PM ET";
+  const build = "3d-hardware-reference-v158-20260818-0722";
+  const buildUpdatedAt = "Aug 18, 2026 7:22 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -76,6 +76,8 @@
     "app/3d/label-mesh-factory.js",
     "app/3d/wipe-pad-geometry-adapter.js",
     "app/3d/wipe-pad-mesh-factory.js",
+    "app/3d/hardware-reference-catalog.js",
+    "app/3d/hardware-mesh-factory.js",
     "app/3d/equipment-layout-adapter.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
