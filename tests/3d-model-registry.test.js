@@ -54,72 +54,48 @@ test("registry exposes one canonical lookup boundary for equipment models", () =
   assert.match(registry, /servoMutationAllowed: false/);
 });
 
-test("equipment router preserves current visuals through captured legacy factory", () => {
+test("equipment router preserves compatibility and strips only the spender application arm", () => {
   assert.match(router, /const legacyFactory = global\.Labeler3DHardwareMeshFactory/);
   assert.match(router, /registry\.resolveEquipment\(item\)/);
   assert.match(router, /legacyFactory\.createEquipmentAssembly\(THREE, item, geometry\)/);
-  assert.match(router, /visualCompatibilityMode: true/);
+  assert.match(router, /SPENDER_APPLICATION_ARM_GROUP = "ServoForgeSpenderPhotoApplicationArmExtrusion"/);
+  assert.match(router, /if \(model\.id === "spender"\) stripSpenderApplicationArm\(result\)/);
+  assert.match(router, /removalAuthority: "user-directed-remove-application-arm-only"/);
+  assert.match(router, /spenderPlatePreserved: true/);
+  assert.match(router, /knucklePreserved: true/);
 });
 
-test("wipe roller model retains machine-photo mounting authority with yokes reference-only", () => {
+test("wipe roller model retains machine-photo mounting authority as reference only", () => {
   assert.match(roller, /user-supplied-topmodul-roller-photos-2026-08-19/);
   assert.match(roller, /sourceImageCount: 7/);
   assert.match(roller, /curved-round-carousel-mounting-rail/);
-  assert.match(roller, /individually-adjustable-roller-head-links/);
-  assert.match(roller, /u-shaped-top-bottom-roller-yoke-reference-only/);
-  assert.match(roller, /insideAndOutsideUseSameHardwareFamily: true/);
-  assert.match(roller, /yokesRendered: false/);
-  assert.match(roller, /yokesReferenceOnly: true/);
-  assert.match(roller, /yokeVisible: false/);
-  assert.match(roller, /rearYokeBridgeVisible: false/);
-  assert.match(roller, /extensionHardwareVisible: false/);
+  assert.match(roller, /allMountingHardwareReferenceOnly: true/);
+  assert.match(roller, /rollerCoreOnlyRendered: true/);
   assert.match(roller, /mountingRailVisible: false/);
-  assert.match(roller, /stationMountingHardwareVisible: false/);
   assert.match(roller, /referenceGeometryRetained: true/);
   assert.match(roller, /mountingDimensionalAuthority: false/);
 });
 
-test("wipe roller yoke meshes are removed from the entire render path", () => {
+test("wipe roller rendering contains only roller, spindle, and hubs", () => {
+  assert.match(roller, /ServoForgeWipeRollerSponge/);
+  assert.match(roller, /ServoForgeWipeRollerSpindle/);
+  assert.match(roller, /ServoForgeWipeRollerHubLower/);
+  assert.match(roller, /ServoForgeWipeRollerHubUpper/);
+  assert.match(roller, /immediatePivotVisible: false/);
+  assert.match(roller, /pivotPinVisible: false/);
+  assert.match(roller, /pivotCapVisible: false/);
   assert.doesNotMatch(roller, /ServoForgeWipeRollerYokeUpper/);
   assert.doesNotMatch(roller, /ServoForgeWipeRollerYokeLower/);
   assert.doesNotMatch(roller, /ServoForgeWipeRollerYokeRearBridge/);
-  assert.doesNotMatch(roller, /addImmediateClampHardware/);
-  assert.match(roller, /addImmediatePivotHardware/);
-  assert.match(roller, /yokeRenderAuthority: "removed-from-entire-rendering-by-user-direction"/);
+  assert.doesNotMatch(roller, /ServoForgeWipeRollerImmediatePivotBlock/);
+  assert.doesNotMatch(roller, /ServoForgeWipeRollerPivotPin/);
+  assert.doesNotMatch(roller, /ServoForgeWipeRollerPivotCap/);
 });
 
-test("wipe roller immediate hardware is generated behind the roller, never through the bottle path", () => {
-  assert.match(roller, /rollerIsBottleFacingTerminal: true/);
-  assert.match(roller, /immediateHardwareExtendsAwayFromBottle: true/);
-  assert.match(roller, /hardwareNeverBetweenBottleAndRoller: true/);
-  assert.match(roller, /PIVOT_BLOCK_CLEARANCE_MM/);
-  assert.match(roller, /hardwareDirection = "away-from-bottle"/);
-  assert.match(roller, /hardwareSide = "away-from-bottle"/);
-  assert.match(roller, /radialCenterlineAuthority: "exact-carousel-center-through-roller-station-center"/);
-});
-
-test("roller station side explicitly controls hardware direction with no radius inference override", () => {
-  assert.match(roller, /return side === "inner" \? -1 : 1/);
-  assert.match(roller, /innerHardwareDirection: "radially-inward-toward-carousel-center-away-from-inner-bottle-side"/);
-  assert.match(roller, /outerHardwareDirection: "radially-outward-away-from-carousel-center-away-from-outer-bottle-side"/);
-  assert.match(rollerPairCompat, /wipe-roller-clamp-side\.v4-explicit-station-side/);
-  assert.match(rollerPairCompat, /stationSideControlsClampDirection: true/);
-  assert.match(rollerPairCompat, /outsideRollerHardwareDirection: "radially-outward-away-from-carousel-center"/);
-  assert.match(rollerPairCompat, /insideRollerHardwareDirection: "radially-inward-toward-carousel-center"/);
-  assert.match(rollerPairCompat, /radiusInferenceDisabled: true/);
-  assert.match(rollerPairCompat, /return String\(item\?\.side \|\| ""\)\.toLowerCase\(\) === "inner" \? -1 : 1/);
-  assert.match(rollerPairCompat, /canonicalRollerModelPreserved: true/);
-  assert.doesNotMatch(rollerPairCompat, /physical-bottle-table-pitch-radius/);
-  assert.doesNotMatch(rollerPairCompat, /rollerRadiusFromCenter/);
-  assert.doesNotMatch(rollerPairCompat, /bottlePathRadiusWorld/);
-  assert.doesNotMatch(rollerPairCompat, /global\.Labeler3DWipeRollerModel =/);
-});
-
-test("wipe roller rails and long station hardware are not rendered", () => {
+test("roller mounting rails and station hardware remain non-rendered references", () => {
   assert.match(roller, /mountingRailRendered: false/);
   assert.match(roller, /longExtensionHardwareRendered: false/);
-  assert.match(roller, /mountingRailVisible: false/);
-  assert.match(roller, /extensionHardwareVisible: false/);
+  assert.match(roller, /pivotHardwareRendered: false/);
   assert.doesNotMatch(roller, /new THREE\.TubeGeometry/);
   assert.doesNotMatch(roller, /ServoForgeWipeRollerPairMountRail/);
   assert.doesNotMatch(roller, /ServoForgeWipeRollerCurvedMountingRail/);
