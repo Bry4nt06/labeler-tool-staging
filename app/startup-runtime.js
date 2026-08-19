@@ -91,7 +91,7 @@ async function initializeLabelerApp() {
       throw new Error("Map Builder lifecycle controller is not loaded.");
     }
     if (!window.ServoForgeAccountLibrarySync?.restore) {
-      throw new Error("Account library synchronization service is not loaded.");
+      throw new Error("Account workspace synchronization service is not loaded.");
     }
 
     progress?.set(76, "Restoring saved settings…");
@@ -104,7 +104,7 @@ async function initializeLabelerApp() {
     window.ServoForgeCompanyDefaultsReady = window.LabelerCompanyDefaultsService.reconcile();
     await window.ServoForgeCompanyDefaultsReady;
 
-    progress?.set(85, "Restoring your account library…");
+    progress?.set(85, "Restoring your ServoForge account…");
     window.ServoForgeAccountLibraryReady = window.ServoForgeAccountLibrarySync.restore();
     await window.ServoForgeAccountLibraryReady;
 
