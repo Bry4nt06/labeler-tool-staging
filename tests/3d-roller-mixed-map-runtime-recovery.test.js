@@ -19,36 +19,39 @@ test("runtime recovery loads after shared roller bracket and before later equipm
   assert.ok(spenderIndex > recoveryIndex);
 });
 
-test("roller vector helpers receive THREE explicitly and cannot throw from a free THREE identifier", () => {
-  assert.match(source, /function localMemberPosition\(THREE, member, masterPosition/);
-  assert.match(source, /function mountPointForMember\(THREE, member, masterPosition/);
-  assert.match(source, /localMemberPosition\(THREE, member, masterPosition/);
-  assert.match(source, /mountPointForMember\(THREE, member, masterPosition/);
-});
-
 test("mixed equipment maps retain non-roller hardware rendering", () => {
   assert.match(source, /if \(item\?\.kind === "roller"\) return createRecoveredRollerAssembly\(THREE, item, geometry\);/);
   assert.match(source, /return baseFactory\.createEquipmentAssembly\(THREE, item, geometry\);/);
   assert.match(source, /mixedEquipmentMapsSupported: true/);
 });
 
-test("recovered roller keeps approved compact bracket dimensions and 80 mm roller width", () => {
+test("roller-only presentation keeps the approved 80 mm roller core", () => {
   assert.match(source, /const ROLLER_WIDTH_MM = 80/);
-  assert.match(source, /const RAIL_DIAMETER_MM = 14/);
-  assert.match(source, /const POST_DIAMETER_MM = 12/);
-  assert.match(source, /ServoForgeSharedRollerMountRail/);
-  assert.match(source, /ServoForgeSharedRollerSupportPost/);
-  assert.match(source, /threePointRadialAlignment: true/);
+  assert.match(source, /ServoForgePurposeViewRoller/);
+  assert.match(source, /ServoForgeRollerSpindleShaft/);
+  assert.match(source, /ServoForgeRollerHubLower/);
+  assert.match(source, /ServoForgeRollerHubUpper/);
 });
 
-test("inside and outside rollers use the same mirrored mounting architecture", () => {
+test("mounting hardware is hidden while rail and bracket references are retained", () => {
+  assert.match(source, /const RAIL_DIAMETER_MM = 14/);
+  assert.match(source, /const POST_DIAMETER_MM = 12/);
   assert.match(source, /const OUTER_OUTSET_MM = 125/);
   assert.match(source, /const INNER_INSET_MM = 125/);
-  assert.match(source, /insideHardwareRadiallyInward: side === "inner"/);
-  assert.match(source, /outsideHardwareRadiallyOutward: side === "outer"/);
-  assert.match(source, /mirroredMountingSetup: true/);
-  assert.match(source, /sameTubeAndBracketGeometryBothSides: true/);
-  assert.match(source, /same-bracket-hardware-mirrored-radially-by-side/);
+  assert.match(source, /referenceOnly: true/);
+  assert.match(source, /railRendered: false/);
+  assert.match(source, /carrierArmsRendered: false/);
+  assert.match(source, /clampsRendered: false/);
+  assert.match(source, /supportPostRendered: false/);
+  assert.match(source, /supportFootRendered: false/);
+  assert.match(source, /railsRetainedAsReference: true/);
+  assert.match(source, /mountingHardwareRetainedAsReference: true/);
+  assert.match(source, /threePointRadialAlignment: true/);
+  assert.doesNotMatch(source, /ServoForgeSharedRollerMountRail/);
+  assert.doesNotMatch(source, /ServoForgeSharedRollerCarrierArm/);
+  assert.doesNotMatch(source, /ServoForgeSharedRollerClamp/);
+  assert.doesNotMatch(source, /ServoForgeSharedRollerSupportPost/);
+  assert.doesNotMatch(source, /ServoForgeSharedRollerSupportFoot/);
 });
 
 test("runtime recovery stays presentation-only", () => {
