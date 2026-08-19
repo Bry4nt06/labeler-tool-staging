@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-roller-photo-reference-v201-20260819-0718";
-  const buildUpdatedAt = "Aug 19, 2026 7:18 AM ET";
+  const build = "3d-roller-head-hardware-v202-20260819-0722";
+  const buildUpdatedAt = "Aug 19, 2026 7:22 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
