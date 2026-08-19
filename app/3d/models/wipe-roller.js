@@ -1,7 +1,7 @@
 (function installServoForge3DWipeRollerModel(global) {
   "use strict";
 
-  const MODEL_VERSION = "servoforge.3d-model.wipe-roller.v3-direct-head-hardware";
+  const MODEL_VERSION = "servoforge.3d-model.wipe-roller.v4-radial-hardware-authority";
   const TABLE_Y = 0.20;
   const BOTTLE_LIFT = 0.155;
   const ROLLER_WIDTH_MM = 80;
@@ -16,6 +16,18 @@
   const PIVOT_BLOCK_TANGENTIAL_MM = 24;
   const PIVOT_PIN_DIAMETER_MM = 8;
   const PIVOT_PIN_LENGTH_MM = 32;
+
+  const STANDING_RULES = Object.freeze({
+    source: "user-machine-rule-2026-08-19",
+    appliesToBothSides: true,
+    rollerIsBottleFacingTerminal: true,
+    mountingHardwareExtendsAwayFromBottle: true,
+    directHeadHardwareOnSingleCarouselRadialCenterline: true,
+    radialCenterlineAuthority: "carousel-center-through-bottle-plate-center-through-roller-head-center",
+    rollerHeadMemberDirection: "from-roller-away-from-bottle",
+    sharedCurvedRailIsCircumferentialBackbone: true,
+    sharedCurvedRailExemptFromDirectHeadRadialMemberRule: true
+  });
 
   const PHOTO_MOUNT_REFERENCE = Object.freeze({
     source: "user-supplied-topmodul-roller-photos-2026-08-19",
@@ -57,9 +69,15 @@
       insideOutsideRelationship: "same-hardware-family-mirrored-radially-across-bottle-path",
       rollerAxis: "approximately-vertical",
       mountingRailFollowsCarouselArc: true,
-      preserveAsReferenceEvenWhenHidden: true
+      preserveAsReferenceEvenWhenHidden: true,
+      rollerIsBottleFacingTerminal: true,
+      mountingHardwareExtendsAwayFromBottle: true,
+      directHeadHardwareOnSingleCarouselRadialCenterline: true,
+      radialCenterlineAuthority: "carousel-center-through-bottle-plate-center-through-roller-head-center"
     }),
     notes: Object.freeze([
+      "The roller is the bottle-facing terminal piece of the roller-head assembly; all direct-head mounting hardware extends away from the bottle behind the roller.",
+      "Every direct roller-head hardware member is constrained to the same radial centerline that points to the carousel center. The shared curved mounting rail remains the circumferential backbone and is the only intentional exception.",
       "The direct roller-head hardware ends at the swivel/pivot block immediately behind the yoke.",
       "The long linkage arm, riser, clamps, and curved rail remain reference-only in the current render.",
       "Photo proportions are reference-only until direct yoke, pivot-block, spindle, and roller-diameter measurements are supplied."
@@ -117,7 +135,11 @@
     const outward = radial(item?.position);
     const slope = item?.side === "inner" ? number(neck.radialSlope) : -number(neck.radialSlope);
     const yAxis = new THREE.Vector3(outward.x * slope, 1, outward.z * slope).normalize();
-    const mountSign = item?.side === "inner" ? -1 : 1;
+
+    // Standing machine rule: the roller is the bottle-facing terminal piece.
+    // Direct-head hardware must leave the roller on the side opposite the bottle.
+    // Flip the previous v3 side sign while retaining a strict radial centerline.
+    const mountSign = item?.side === "inner" ? 1 : -1;
     const mountRadial = new THREE.Vector3(outward.x * mountSign, 0, outward.z * mountSign);
     const xAxis = mountRadial.clone().addScaledVector(yAxis, -mountRadial.dot(yAxis)).normalize();
     const zAxis = new THREE.Vector3().crossVectors(xAxis, yAxis).normalize();
@@ -187,6 +209,7 @@
       plate.name = sign < 0 ? "ServoForgeWipeRollerYokeLower" : "ServoForgeWipeRollerYokeUpper";
       plate.position.set(plateCenterX, sign * plateY, 0);
       plate.castShadow = true;
+      plate.userData.radialCenterlineMember = true;
       root.add(plate);
     });
 
@@ -198,6 +221,7 @@
     bridge.name = "ServoForgeWipeRollerYokeRearBridge";
     bridge.position.set(backX, 0, 0);
     bridge.castShadow = true;
+    bridge.userData.radialCenterlineMember = true;
     root.add(bridge);
 
     const pivotBlock = new THREE.Mesh(
@@ -211,6 +235,7 @@
     pivotBlock.name = "ServoForgeWipeRollerImmediatePivotBlock";
     pivotBlock.position.set(backX + (PIVOT_BLOCK_RADIAL_MM * scale) / 2 + 2 * scale, 0, 0);
     pivotBlock.castShadow = true;
+    pivotBlock.userData.radialCenterlineMember = true;
     root.add(pivotBlock);
 
     const pivotPin = new THREE.Mesh(
@@ -225,6 +250,7 @@
     pivotPin.name = "ServoForgeWipeRollerPivotPin";
     pivotPin.rotation.x = Math.PI / 2;
     pivotPin.position.copy(pivotBlock.position);
+    pivotPin.userData.radialCenterlineMember = true;
     root.add(pivotPin);
 
     const pivotCap = new THREE.Mesh(
@@ -234,6 +260,7 @@
     pivotCap.name = "ServoForgeWipeRollerPivotCap";
     pivotCap.rotation.x = Math.PI / 2;
     pivotCap.position.set(pivotBlock.position.x, pivotBlock.position.y, -PIVOT_PIN_LENGTH_MM * scale / 2 - 1.5 * scale);
+    pivotCap.userData.radialCenterlineMember = true;
     root.add(pivotCap);
   }
 
@@ -249,7 +276,11 @@
       railAdjustmentHandleRendered: false,
       side: item?.side === "inner" ? "inner" : "outer",
       radialMirrorAuthority: "same-hardware-family-mirrored-by-side",
-      railReferenceAuthority: "retained-not-rendered"
+      railReferenceAuthority: "retained-not-rendered",
+      rollerIsBottleFacingTerminal: true,
+      mountingHardwareExtendsAwayFromBottle: true,
+      directHeadHardwareOnSingleCarouselRadialCenterline: true,
+      radialCenterlineAuthority: STANDING_RULES.radialCenterlineAuthority
     });
   }
 
@@ -281,6 +312,7 @@
     headRoot.name = "ServoForgeWipeRollerHeadRoot";
     headRoot.position.y = rollerCenterY;
     headRoot.quaternion.copy(rollerHeadQuaternion(THREE, item, neck));
+    headRoot.userData.radialCenterlineAuthority = STANDING_RULES.radialCenterlineAuthority;
     group.add(headRoot);
 
     const core = addRollerCore(THREE, headRoot, geometry, materials);
@@ -291,6 +323,7 @@
     group.userData.station = item?.station;
     group.userData.section = item?.section;
     group.userData.highlightMaterials = [materials.rubber];
+    group.userData.standingRules = STANDING_RULES;
     group.userData.hardwareReference = Object.freeze({
       profileId: "wipe-roller",
       modelVersion: MODEL_VERSION,
@@ -303,6 +336,10 @@
       stationMountingHardwareRendered: false,
       mountingRailRendered: false,
       mountingReferenceRetained: true,
+      rollerIsBottleFacingTerminal: true,
+      mountingHardwareExtendsAwayFromBottle: true,
+      directHeadHardwareOnSingleCarouselRadialCenterline: true,
+      radialCenterlineAuthority: STANDING_RULES.radialCenterlineAuthority,
       dimensionalAuthority: false
     });
     return group;
@@ -313,6 +350,7 @@
     MODEL_VERSION,
     matches,
     create,
+    standingRules: STANDING_RULES,
     mountReference: PHOTO_MOUNT_REFERENCE,
     renderPolicy: Object.freeze({
       rollerVisible: true,
@@ -330,6 +368,9 @@
       contact: "section-aware-neck-contact",
       mountingReference: "user-machine-photo-backed",
       mountingDimensionalAuthority: false,
+      rollerIsBottleFacingTerminal: true,
+      mountingHardwareExtendsAwayFromBottle: true,
+      radialCenterlineAuthority: STANDING_RULES.radialCenterlineAuthority,
       renderOwnership: "models/wipe-roller.js",
       migrationState: "native-model-geometry"
     })
