@@ -54,13 +54,15 @@ test("registry exposes one canonical lookup boundary for equipment models", () =
   assert.match(registry, /servoMutationAllowed: false/);
 });
 
-test("equipment router preserves compatibility and strips only the spender application arm", () => {
-  assert.match(router, /const legacyFactory = global\.Labeler3DHardwareMeshFactory/);
-  assert.match(router, /registry\.resolveEquipment\(item\)/);
-  assert.match(router, /legacyFactory\.createEquipmentAssembly\(THREE, item, geometry\)/);
-  assert.match(router, /SPENDER_APPLICATION_ARM_GROUP = "ServoForgeSpenderPhotoApplicationArmExtrusion"/);
+test("equipment router removes the full spender application-arm family while preserving knuckle and plate", () => {
+  assert.match(router, /servoforge\.3d-equipment-model-router\.v3-spender-arm-family-cleanup/);
+  assert.match(router, /ServoForgeSpenderPhotoApplicationArmExtrusion/);
+  assert.match(router, /ServoForgeABLabelApplicationArm/);
+  assert.match(router, /ServoForgeKronesABArmSection/);
+  assert.match(router, /ApplicationArm\|ABArm/);
+  assert.match(router, /name\.includes\("Knuckle"\)/);
   assert.match(router, /if \(model\.id === "spender"\) stripSpenderApplicationArm\(result\)/);
-  assert.match(router, /removalAuthority: "user-directed-remove-application-arm-only"/);
+  assert.match(router, /removalAuthority: "user-directed-remove-all-application-arm-variants-only"/);
   assert.match(router, /spenderPlatePreserved: true/);
   assert.match(router, /knucklePreserved: true/);
 });
