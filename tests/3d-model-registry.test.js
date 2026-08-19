@@ -68,29 +68,41 @@ test("wipe roller model retains the user-machine mounting photos as reference au
   assert.match(roller, /u-shaped-top-bottom-roller-yoke/);
   assert.match(roller, /insideAndOutsideUseSameHardwareFamily: true/);
   assert.match(roller, /directRollerHardwareVisible: true/);
-  assert.match(roller, /stationMountingHardwareVisible: false/);
-  assert.match(roller, /mountingRailVisible: false/);
+  assert.match(roller, /extensionHardwareVisible: true/);
+  assert.match(roller, /mountingRailVisible: true/);
+  assert.match(roller, /detailedClampsVisible: false/);
   assert.match(roller, /referenceGeometryRetained: true/);
   assert.match(roller, /mountingDimensionalAuthority: false/);
 });
 
-test("wipe roller hardware stays on the exact carousel radial line while extending away from the bottle", () => {
+test("wipe roller mounting sides are flipped away from the bottle path and stay radial", () => {
   assert.match(roller, /rollerIsBottleFacingTerminal: true/);
   assert.match(roller, /mountingHardwareExtendsAwayFromBottle: true/);
-  assert.match(roller, /innerHardwareExtendsAwayFromBottleTowardCarouselCenter: true/);
-  assert.match(roller, /outerHardwareExtendsAwayFromBottleAwayFromCarouselCenter: true/);
+  assert.match(roller, /mountingSidesFlippedFromV204: true/);
+  assert.match(roller, /innerHardwareUsesOutwardHalfLine: true/);
+  assert.match(roller, /outerHardwareUsesInwardHalfLine: true/);
   assert.match(roller, /everyHardwareCenterlineCollinearWithCarouselCenter: true/);
   assert.match(roller, /sideOnlySelectsHalfLineDirection: true/);
   assert.match(roller, /rollerTiltIndependentFromHardwareAzimuth: true/);
   assert.match(roller, /radialCenterlineAuthority: "exact-carousel-center-through-roller-station-center"/);
-  assert.match(roller, /radialTarget: "exact-carousel-center-0-0"/);
-  assert.match(roller, /const halfLineSign = item\?\.side === "inner" \? -1 : 1/);
+  assert.match(roller, /return side === "inner" \? 1 : -1/);
   assert.match(roller, /function hardwareRadialQuaternion/);
   assert.match(roller, /function rollerTiltQuaternion/);
   assert.match(roller, /ServoForgeWipeRollerHardwareRadialRoot/);
   assert.match(roller, /ServoForgeWipeRollerTiltRoot/);
-  assert.doesNotMatch(roller, /addScaledVector\(yAxis/);
-  assert.match(roller, /radialCenterlineMember = true/);
+});
+
+test("wipe roller extension rods terminate at the rendered curved mounting rail", () => {
+  assert.match(roller, /extensionRodsConnectToCurvedRail: true/);
+  assert.match(roller, /sharedCurvedRailRendered: true/);
+  assert.match(roller, /MOUNT_RAIL_DIAMETER_MM = 14/);
+  assert.match(roller, /MOUNT_RISER_DIAMETER_MM = 12/);
+  assert.match(roller, /ServoForgeWipeRollerCurvedMountingRail/);
+  assert.match(roller, /ServoForgeWipeRollerExtensionArm/);
+  assert.match(roller, /ServoForgeWipeRollerRailRiser/);
+  assert.match(roller, /connectsRollerHeadToRail = true/);
+  assert.match(roller, /connectsExtensionToCurvedRail = true/);
+  assert.match(roller, /detailedStationMountingHardwareRendered: false/);
 });
 
 test("model organization layer remains read-only with respect to planner and servo state", () => {
