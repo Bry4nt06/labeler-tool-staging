@@ -61,14 +61,17 @@ test("equipment router preserves current visuals through captured legacy factory
   assert.match(router, /visualCompatibilityMode: true/);
 });
 
-test("wipe roller model retains machine-photo mounting authority while rendering only immediate clamps", () => {
+test("wipe roller model retains machine-photo mounting authority with yokes reference-only", () => {
   assert.match(roller, /user-supplied-topmodul-roller-photos-2026-08-19/);
   assert.match(roller, /sourceImageCount: 7/);
   assert.match(roller, /curved-round-carousel-mounting-rail/);
   assert.match(roller, /individually-adjustable-roller-head-links/);
-  assert.match(roller, /u-shaped-top-bottom-roller-yoke/);
+  assert.match(roller, /u-shaped-top-bottom-roller-yoke-reference-only/);
   assert.match(roller, /insideAndOutsideUseSameHardwareFamily: true/);
-  assert.match(roller, /immediateClampHardwareVisible: true/);
+  assert.match(roller, /yokesRendered: false/);
+  assert.match(roller, /yokesReferenceOnly: true/);
+  assert.match(roller, /yokeVisible: false/);
+  assert.match(roller, /rearYokeBridgeVisible: false/);
   assert.match(roller, /extensionHardwareVisible: false/);
   assert.match(roller, /mountingRailVisible: false/);
   assert.match(roller, /stationMountingHardwareVisible: false/);
@@ -76,17 +79,26 @@ test("wipe roller model retains machine-photo mounting authority while rendering
   assert.match(roller, /mountingDimensionalAuthority: false/);
 });
 
+test("wipe roller yoke meshes are removed from the entire render path", () => {
+  assert.doesNotMatch(roller, /ServoForgeWipeRollerYokeUpper/);
+  assert.doesNotMatch(roller, /ServoForgeWipeRollerYokeLower/);
+  assert.doesNotMatch(roller, /ServoForgeWipeRollerYokeRearBridge/);
+  assert.doesNotMatch(roller, /addImmediateClampHardware/);
+  assert.match(roller, /addImmediatePivotHardware/);
+  assert.match(roller, /yokeRenderAuthority: "removed-from-entire-rendering-by-user-direction"/);
+});
+
 test("wipe roller immediate hardware is generated behind the roller, never through the bottle path", () => {
   assert.match(roller, /rollerIsBottleFacingTerminal: true/);
   assert.match(roller, /immediateHardwareExtendsAwayFromBottle: true/);
   assert.match(roller, /hardwareNeverBetweenBottleAndRoller: true/);
-  assert.match(roller, /frontX = core\.rollerRadius \+ YOKE_ROLLER_CLEARANCE_MM \* scale/);
+  assert.match(roller, /PIVOT_BLOCK_CLEARANCE_MM/);
   assert.match(roller, /hardwareDirection = "away-from-bottle"/);
   assert.match(roller, /hardwareSide = "away-from-bottle"/);
   assert.match(roller, /radialCenterlineAuthority: "exact-carousel-center-through-roller-station-center"/);
 });
 
-test("roller station side explicitly controls clamp direction with no radius inference override", () => {
+test("roller station side explicitly controls hardware direction with no radius inference override", () => {
   assert.match(roller, /return side === "inner" \? -1 : 1/);
   assert.match(roller, /innerHardwareDirection: "radially-inward-toward-carousel-center-away-from-inner-bottle-side"/);
   assert.match(roller, /outerHardwareDirection: "radially-outward-away-from-carousel-center-away-from-outer-bottle-side"/);
