@@ -1,7 +1,7 @@
 (function installServoForge3DWipeRollerModel(global) {
   "use strict";
 
-  const MODEL_VERSION = "servoforge.3d-model.wipe-roller.v5-center-seeking-hardware";
+  const MODEL_VERSION = "servoforge.3d-model.wipe-roller.v6-radial-line-hardware";
   const TABLE_Y = 0.20;
   const BOTTLE_LIFT = 0.155;
   const ROLLER_WIDTH_MM = 80;
@@ -22,12 +22,14 @@
     appliesToBothSides: true,
     rollerIsBottleFacingTerminal: true,
     mountingHardwareExtendsAwayFromBottle: true,
+    innerHardwareExtendsAwayFromBottleTowardCarouselCenter: true,
+    outerHardwareExtendsAwayFromBottleAwayFromCarouselCenter: true,
+    everyHardwareCenterlineCollinearWithCarouselCenter: true,
     directHeadHardwareOnSingleCarouselRadialCenterline: true,
-    directHeadHardwarePointsToCarouselCenter: true,
-    centerSeekingAxisIgnoresInnerOuterSide: true,
-    radialCenterlineAuthority: "carousel-center-through-bottle-plate-center-through-roller-head-center",
+    radialCenterlineAuthority: "exact-carousel-center-through-roller-station-center",
     radialTarget: "exact-carousel-center-0-0",
-    rollerHeadMemberDirection: "station-to-carousel-center",
+    sideOnlySelectsHalfLineDirection: true,
+    rollerTiltIndependentFromHardwareAzimuth: true,
     sharedCurvedRailIsCircumferentialBackbone: true,
     sharedCurvedRailExemptFromDirectHeadRadialMemberRule: true
   });
@@ -69,25 +71,21 @@
       commonRailBackbone: true,
       eachRollerHeadIndividuallyAdjustable: true,
       insideAndOutsideUseSameHardwareFamily: true,
-      insideOutsideRelationship: "same-hardware-family-mirrored-radially-across-bottle-path",
+      insideOutsideRelationship: "same-hardware-family-opposite-half-lines-on-one-carousel-radial-axis",
       rollerAxis: "approximately-vertical",
       mountingRailFollowsCarouselArc: true,
       preserveAsReferenceEvenWhenHidden: true,
       rollerIsBottleFacingTerminal: true,
       mountingHardwareExtendsAwayFromBottle: true,
-      directHeadHardwareOnSingleCarouselRadialCenterline: true,
-      directHeadHardwarePointsToCarouselCenter: true,
-      centerSeekingAxisIgnoresInnerOuterSide: true,
-      radialCenterlineAuthority: "carousel-center-through-bottle-plate-center-through-roller-head-center"
+      everyHardwareCenterlineCollinearWithCarouselCenter: true,
+      rollerTiltIndependentFromHardwareAzimuth: true
     }),
     notes: Object.freeze([
-      "Every roller head keeps its machine-map position; only its hardware orientation is derived from the carousel center.",
-      "Every direct roller-head hardware member uses the station-to-carousel-center radial direction. Inner and outer stations use the same center-seeking rule.",
-      "The roller remains the bottle-facing terminal piece of the roller-head assembly.",
-      "The shared curved mounting rail remains the circumferential backbone and is the only intentional exception to the direct-head radial rule.",
-      "The direct roller-head hardware ends at the swivel/pivot block immediately behind the yoke.",
-      "The long linkage arm, riser, clamps, and curved rail remain reference-only in the current render.",
-      "Photo proportions are reference-only until direct yoke, pivot-block, spindle, and roller-diameter measurements are supplied."
+      "The roller station position does not move when hardware orientation is corrected.",
+      "A straight line drawn from the exact carousel center through a roller station is the hardware centerline for that station.",
+      "Outer hardware uses the outward half of that same radial line; inner hardware uses the inward half. Both extend away from the bottle.",
+      "Roller neck tilt is applied only to the roller/spindle core and is not allowed to yaw the hardware off the radial line in top view.",
+      "The shared curved mounting rail remains the only circumferential exception and stays reference-only in the current render."
     ])
   });
 
@@ -138,22 +136,37 @@
     return new THREE.MeshStandardMaterial(options);
   }
 
-  function rollerHeadQuaternion(THREE, item, neck) {
+  function hardwareRadialQuaternion(THREE, item) {
+    const outward = radial(item?.position);
+
+    // The hardware is always centered on the radial line through the exact
+    // carousel center and this roller station. Side changes ONLY which half
+    // of that line the hardware occupies so it remains away from the bottle.
+    const halfLineSign = item?.side === "inner" ? -1 : 1;
+    const xAxis = new THREE.Vector3(
+      outward.x * halfLineSign,
+      0,
+      outward.z * halfLineSign
+    ).normalize();
+    const yAxis = new THREE.Vector3(0, 1, 0);
+    const zAxis = new THREE.Vector3().crossVectors(xAxis, yAxis).normalize();
+    return new THREE.Quaternion().setFromRotationMatrix(
+      new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis)
+    );
+  }
+
+  function rollerTiltQuaternion(THREE, item, neck) {
     const outward = radial(item?.position);
     const slope = item?.side === "inner" ? number(neck.radialSlope) : -number(neck.radialSlope);
-    const yAxis = new THREE.Vector3(outward.x * slope, 1, outward.z * slope).normalize();
-
-    // Standing machine rule: every roller-head assembly uses the exact same
-    // center-seeking horizontal direction, regardless of inner/outer side.
-    // +X is always station -> carousel center (0, 0 in scene XZ).
-    const centerSeekingRadial = new THREE.Vector3(-outward.x, 0, -outward.z);
-    const xAxis = centerSeekingRadial
-      .clone()
-      .addScaledVector(yAxis, -centerSeekingRadial.dot(yAxis))
-      .normalize();
-    const zAxis = new THREE.Vector3().crossVectors(xAxis, yAxis).normalize();
-    const basis = new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis);
-    return new THREE.Quaternion().setFromRotationMatrix(basis);
+    const rollerAxis = new THREE.Vector3(
+      outward.x * slope,
+      1,
+      outward.z * slope
+    ).normalize();
+    return new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      rollerAxis
+    );
   }
 
   function addRollerCore(THREE, root, geometry, materials) {
@@ -219,7 +232,6 @@
       plate.position.set(plateCenterX, sign * plateY, 0);
       plate.castShadow = true;
       plate.userData.radialCenterlineMember = true;
-      plate.userData.centerSeekingCarousel = true;
       root.add(plate);
     });
 
@@ -232,7 +244,6 @@
     bridge.position.set(backX, 0, 0);
     bridge.castShadow = true;
     bridge.userData.radialCenterlineMember = true;
-    bridge.userData.centerSeekingCarousel = true;
     root.add(bridge);
 
     const pivotBlock = new THREE.Mesh(
@@ -247,7 +258,6 @@
     pivotBlock.position.set(backX + (PIVOT_BLOCK_RADIAL_MM * scale) / 2 + 2 * scale, 0, 0);
     pivotBlock.castShadow = true;
     pivotBlock.userData.radialCenterlineMember = true;
-    pivotBlock.userData.centerSeekingCarousel = true;
     root.add(pivotBlock);
 
     const pivotPin = new THREE.Mesh(
@@ -263,7 +273,6 @@
     pivotPin.rotation.x = Math.PI / 2;
     pivotPin.position.copy(pivotBlock.position);
     pivotPin.userData.radialCenterlineMember = true;
-    pivotPin.userData.centerSeekingCarousel = true;
     root.add(pivotPin);
 
     const pivotCap = new THREE.Mesh(
@@ -272,9 +281,12 @@
     );
     pivotCap.name = "ServoForgeWipeRollerPivotCap";
     pivotCap.rotation.x = Math.PI / 2;
-    pivotCap.position.set(pivotBlock.position.x, pivotBlock.position.y, -PIVOT_PIN_LENGTH_MM * scale / 2 - 1.5 * scale);
+    pivotCap.position.set(
+      pivotBlock.position.x,
+      pivotBlock.position.y,
+      -PIVOT_PIN_LENGTH_MM * scale / 2 - 1.5 * scale
+    );
     pivotCap.userData.radialCenterlineMember = true;
-    pivotCap.userData.centerSeekingCarousel = true;
     root.add(pivotCap);
   }
 
@@ -289,15 +301,14 @@
       mountingRailRendered: false,
       railAdjustmentHandleRendered: false,
       side: item?.side === "inner" ? "inner" : "outer",
-      radialMirrorAuthority: "same-hardware-family-center-seeking-by-station",
-      railReferenceAuthority: "retained-not-rendered",
       rollerIsBottleFacingTerminal: true,
       mountingHardwareExtendsAwayFromBottle: true,
-      directHeadHardwareOnSingleCarouselRadialCenterline: true,
-      directHeadHardwarePointsToCarouselCenter: true,
-      centerSeekingAxisIgnoresInnerOuterSide: true,
+      everyHardwareCenterlineCollinearWithCarouselCenter: true,
+      sideOnlySelectsHalfLineDirection: true,
+      rollerTiltIndependentFromHardwareAzimuth: true,
       radialCenterlineAuthority: STANDING_RULES.radialCenterlineAuthority,
-      radialTarget: STANDING_RULES.radialTarget
+      radialTarget: STANDING_RULES.radialTarget,
+      railReferenceAuthority: "retained-not-rendered"
     });
   }
 
@@ -325,17 +336,25 @@
     group.name = `ServoForgeWipeRollerHead-${String(item?.id || "roller")}`;
     group.position.set(number(item?.position?.x), 0, number(item?.position?.z));
 
-    const headRoot = new THREE.Group();
-    headRoot.name = "ServoForgeWipeRollerHeadRoot";
-    headRoot.position.y = rollerCenterY;
-    headRoot.quaternion.copy(rollerHeadQuaternion(THREE, item, neck));
-    headRoot.userData.radialCenterlineAuthority = STANDING_RULES.radialCenterlineAuthority;
-    headRoot.userData.radialTarget = STANDING_RULES.radialTarget;
-    headRoot.userData.centerSeekingCarousel = true;
-    group.add(headRoot);
+    // Hardware orientation and roller tilt are intentionally separate.
+    // This prevents neck tilt from yawing the bracket off the true centerline.
+    const hardwareRoot = new THREE.Group();
+    hardwareRoot.name = "ServoForgeWipeRollerHardwareRadialRoot";
+    hardwareRoot.position.y = rollerCenterY;
+    hardwareRoot.quaternion.copy(hardwareRadialQuaternion(THREE, item));
+    hardwareRoot.userData.radialCenterlineAuthority = STANDING_RULES.radialCenterlineAuthority;
+    hardwareRoot.userData.sideOnlySelectsHalfLineDirection = true;
+    group.add(hardwareRoot);
 
-    const core = addRollerCore(THREE, headRoot, geometry, materials);
-    addDirectHeadHardware(THREE, headRoot, geometry, core, materials);
+    const rollerRoot = new THREE.Group();
+    rollerRoot.name = "ServoForgeWipeRollerTiltRoot";
+    rollerRoot.position.y = rollerCenterY;
+    rollerRoot.quaternion.copy(rollerTiltQuaternion(THREE, item, neck));
+    rollerRoot.userData.tiltIndependentFromHardwareAzimuth = true;
+    group.add(rollerRoot);
+
+    const core = addRollerCore(THREE, rollerRoot, geometry, materials);
+    addDirectHeadHardware(THREE, hardwareRoot, geometry, core, materials);
     retainHiddenStationMountReference(item, group);
 
     group.userData.kind = "roller";
@@ -349,8 +368,8 @@
       rollerWidthMm: ROLLER_WIDTH_MM,
       rollerWidthAuthority: "user-specified-80mm",
       positionAuthority: "servoforge-machine-map-neck-contact",
-      orientationAuthority: "station-to-exact-carousel-center",
-      tiltAuthority: "existing-section-aware-neck-slope",
+      orientationAuthority: "exact-carousel-radial-line-with-side-specific-away-from-bottle-half-line",
+      tiltAuthority: "section-aware-neck-slope-independent-from-hardware-azimuth",
       directHeadHardwareAuthority: "user-machine-photo-backed-proportional",
       directHeadHardwareRendered: true,
       stationMountingHardwareRendered: false,
@@ -358,9 +377,9 @@
       mountingReferenceRetained: true,
       rollerIsBottleFacingTerminal: true,
       mountingHardwareExtendsAwayFromBottle: true,
-      directHeadHardwareOnSingleCarouselRadialCenterline: true,
-      directHeadHardwarePointsToCarouselCenter: true,
-      centerSeekingAxisIgnoresInnerOuterSide: true,
+      everyHardwareCenterlineCollinearWithCarouselCenter: true,
+      sideOnlySelectsHalfLineDirection: true,
+      rollerTiltIndependentFromHardwareAzimuth: true,
       radialCenterlineAuthority: STANDING_RULES.radialCenterlineAuthority,
       radialTarget: STANDING_RULES.radialTarget,
       dimensionalAuthority: false
@@ -393,8 +412,9 @@
       mountingDimensionalAuthority: false,
       rollerIsBottleFacingTerminal: true,
       mountingHardwareExtendsAwayFromBottle: true,
-      directHeadHardwarePointsToCarouselCenter: true,
-      centerSeekingAxisIgnoresInnerOuterSide: true,
+      everyHardwareCenterlineCollinearWithCarouselCenter: true,
+      sideOnlySelectsHalfLineDirection: true,
+      rollerTiltIndependentFromHardwareAzimuth: true,
       radialCenterlineAuthority: STANDING_RULES.radialCenterlineAuthority,
       radialTarget: STANDING_RULES.radialTarget,
       renderOwnership: "models/wipe-roller.js",
