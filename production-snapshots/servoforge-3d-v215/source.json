@@ -1,0 +1,8 @@
+{
+  "snapshot": "servoforge-production-3d-v215",
+  "sourceCommit": "dfdcb4f45e3a4b9dcbfe27e81aec7b97aa5f4d49",
+  "sourceBuild": "community-runtime-stability-v215-20260819-1558",
+  "scope": "read-only-3d-runtime-plus-community-stability",
+  "createdFor": "Bry4nt06/labeler-tool-app",
+  "immutablePathPolicy": "do-not-modify-this-snapshot; create a new snapshot version for later promotions"
+}
