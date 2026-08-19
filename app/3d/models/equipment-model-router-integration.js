@@ -7,8 +7,13 @@
     throw new Error("ServoForge 3D model router requires the active hardware factory and model registry.");
   }
 
-  const ROUTER_VERSION = "servoforge.3d-equipment-model-router.v2-render-cleanup";
-  const SPENDER_APPLICATION_ARM_GROUP = "ServoForgeSpenderPhotoApplicationArmExtrusion";
+  const ROUTER_VERSION = "servoforge.3d-equipment-model-router.v3-spender-arm-family-cleanup";
+  const SPENDER_APPLICATION_ARM_NAMES = Object.freeze(new Set([
+    "ServoForgeSpenderPhotoApplicationArmExtrusion",
+    "ServoForgeABLabelApplicationArm",
+    "ServoForgeKronesABArmSection",
+    "ServoForgeKronesABArmMeasuringTape"
+  ]));
 
   function disposeObject(object) {
     object?.traverse?.((child) => {
@@ -19,26 +24,44 @@
     });
   }
 
+  function isSpenderApplicationArmNode(child) {
+    const name = String(child?.name || "");
+    if (!name || name.includes("Knuckle")) return false;
+    if (SPENDER_APPLICATION_ARM_NAMES.has(name)) return true;
+    return /ApplicationArm|ABArm/.test(name);
+  }
+
   function stripSpenderApplicationArm(root) {
     if (!root?.traverse) return 0;
     const targets = [];
     root.traverse((child) => {
-      if (child?.name === SPENDER_APPLICATION_ARM_GROUP) targets.push(child);
+      if (isSpenderApplicationArmNode(child)) targets.push(child);
     });
-    targets.forEach((target) => {
+
+    const targetSet = new Set(targets);
+    const roots = targets.filter((target) => {
+      let parent = target?.parent;
+      while (parent) {
+        if (targetSet.has(parent)) return false;
+        parent = parent.parent;
+      }
+      return true;
+    });
+
+    roots.forEach((target) => {
       target.parent?.remove(target);
       disposeObject(target);
     });
-    if (targets.length) {
-      root.userData.spenderApplicationArm = Object.freeze({
-        rendered: false,
-        removedCount: targets.length,
-        removalAuthority: "user-directed-remove-application-arm-only",
-        spenderPlatePreserved: true,
-        knucklePreserved: true
-      });
-    }
-    return targets.length;
+
+    root.userData.spenderApplicationArm = Object.freeze({
+      rendered: false,
+      removedCount: roots.length,
+      removalAuthority: "user-directed-remove-all-application-arm-variants-only",
+      removalMatcher: "ApplicationArm-or-ABArm-excluding-Knuckle",
+      spenderPlatePreserved: true,
+      knucklePreserved: true
+    });
+    return roots.length;
   }
 
   function createEquipmentAssembly(THREE, item, geometry) {
@@ -73,6 +96,7 @@
         legacyFactoryCaptured: true,
         visualCompatibilityMode: true,
         spenderApplicationArmRendered: false,
+        spenderApplicationArmFamilyCleanup: true,
         plannerWrites: false,
         servoWrites: false
       });
