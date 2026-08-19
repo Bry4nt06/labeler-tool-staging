@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-roller-map-runtime-recovery-v197-20260818-2303";
-  const buildUpdatedAt = "Aug 18, 2026 11:03 PM ET";
+  const build = "3d-mirrored-roller-mounts-v198-20260818-2313";
+  const buildUpdatedAt = "Aug 18, 2026 11:13 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
