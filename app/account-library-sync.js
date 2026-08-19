@@ -16,55 +16,31 @@
     return String(value || "").trim().toLowerCase();
   }
 
-  function keyForMap(item) {
-    return normalized(item?.id) || `${normalized(item?.applicationMode)}|${normalized(item?.name)}`;
+  function cleanString(value) {
+    return String(value || "").trim();
   }
 
-  function keyForServo(item) {
-    return normalized(item?.id) || `${normalized(item?.mapId)}|${normalized(item?.name)}`;
-  }
-
-  function keyForBottle(item) {
-    return normalized(item?.id) || normalized(item?.bottleType);
-  }
-
-  function keyForBrand(item) {
-    return `${normalized(item?.brand)}|${normalized(item?.bottleType)}|${normalized(item?.applicationMode)}`;
-  }
-
-  function mergeRecords(localItems, remoteItems, keyFor) {
-    const result = Array.isArray(localItems) ? localItems.map(clone) : [];
-    const index = new Map();
-    result.forEach((item, position) => {
-      const key = keyFor(item);
-      if (key) index.set(key, position);
-    });
-    (Array.isArray(remoteItems) ? remoteItems : []).forEach((item) => {
-      const key = keyFor(item);
-      if (!key) return;
-      if (index.has(key)) result[index.get(key)] = clone(item);
-      else {
-        index.set(key, result.length);
-        result.push(clone(item));
-      }
-    });
-    return result;
-  }
-
-  function librarySnapshot() {
+  function accountWorkspaceSnapshot() {
     return {
-      schemaVersion: 1,
+      schemaVersion: 2,
       mapLibrary: clone(Array.isArray(state.mapLibrary) ? state.mapLibrary : []),
       servoProfileLibrary: clone(Array.isArray(state.servoProfileLibrary) ? state.servoProfileLibrary : []),
       bottleSpecs: clone(Array.isArray(state.bottleSpecs) ? state.bottleSpecs : []),
       labelSpecs: clone(Array.isArray(state.labelSpecs) ? state.labelSpecs : []),
-      machineTypes: [...new Set((Array.isArray(state.machineTypes) ? state.machineTypes : []).map((value) => String(value).trim()).filter(Boolean))],
+      machineTypes: [...new Set((Array.isArray(state.machineTypes) ? state.machineTypes : []).map(cleanString).filter(Boolean))],
+      zoneSiteConfiguration: clone(state.zoneSiteConfiguration && typeof state.zoneSiteConfiguration === "object" ? state.zoneSiteConfiguration : {}),
+      selectedBrand: cleanString(state.selectedBrand),
+      selectedBottle: cleanString(state.selectedBottle),
+      selectedZone: cleanString(state.selectedZone),
+      selectedSite: cleanString(state.selectedSite),
+      activeMapId: cleanString(state.activeMapId),
+      activeServoProfileId: cleanString(state.activeServoProfileId),
       savedAt: new Date().toISOString()
     };
   }
 
   function stableSnapshotForFingerprint() {
-    const snapshot = librarySnapshot();
+    const snapshot = accountWorkspaceSnapshot();
     delete snapshot.savedAt;
     return snapshot;
   }
@@ -73,16 +49,30 @@
     try { return JSON.stringify(stableSnapshotForFingerprint()); } catch { return ""; }
   }
 
-  function applyRemoteLibrary(remote) {
+  function applyRemoteWorkspace(remote) {
     if (!remote || typeof remote !== "object") return false;
-    state.mapLibrary = mergeRecords(state.mapLibrary, remote.mapLibrary, keyForMap);
-    state.servoProfileLibrary = mergeRecords(state.servoProfileLibrary, remote.servoProfileLibrary, keyForServo);
-    state.bottleSpecs = mergeRecords(state.bottleSpecs, remote.bottleSpecs, keyForBottle);
-    state.labelSpecs = mergeRecords(state.labelSpecs, remote.labelSpecs, keyForBrand);
-    state.machineTypes = [...new Set([
-      ...(Array.isArray(state.machineTypes) ? state.machineTypes : []),
-      ...(Array.isArray(remote.machineTypes) ? remote.machineTypes : [])
-    ].map((value) => String(value).trim()).filter(Boolean))];
+
+    // Once an account has cloud data, that account is authoritative for the
+    // portable catalog. A different PC must not silently merge stale browser
+    // records back into the user's account during startup.
+    if (Array.isArray(remote.mapLibrary)) state.mapLibrary = clone(remote.mapLibrary);
+    if (Array.isArray(remote.servoProfileLibrary)) state.servoProfileLibrary = clone(remote.servoProfileLibrary);
+    if (Array.isArray(remote.bottleSpecs)) state.bottleSpecs = clone(remote.bottleSpecs);
+    if (Array.isArray(remote.labelSpecs)) state.labelSpecs = clone(remote.labelSpecs);
+    if (Array.isArray(remote.machineTypes)) {
+      state.machineTypes = [...new Set(remote.machineTypes.map(cleanString).filter(Boolean))];
+    }
+    if (remote.zoneSiteConfiguration && typeof remote.zoneSiteConfiguration === "object") {
+      state.zoneSiteConfiguration = clone(remote.zoneSiteConfiguration);
+      if (typeof ensureSelectedZoneAndSite === "function") ensureSelectedZoneAndSite();
+    }
+
+    const assignIfPresent = (key) => {
+      if (!Object.hasOwn(remote, key)) return;
+      const value = cleanString(remote[key]);
+      if (value) state[key] = value;
+    };
+    ["selectedBrand", "selectedBottle", "selectedZone", "selectedSite", "activeMapId", "activeServoProfileId"].forEach(assignIfPresent);
     return true;
   }
 
@@ -95,7 +85,7 @@
       body: body ? JSON.stringify(body) : undefined
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || `Account library request failed (${response.status}).`);
+    if (!response.ok) throw new Error(payload.error || `Account workspace request failed (${response.status}).`);
     return payload;
   }
 
@@ -105,11 +95,11 @@
     if (!force && currentFingerprint && currentFingerprint === lastFingerprint) return false;
     syncing = true;
     try {
-      await request("PUT", { library: librarySnapshot() });
+      await request("PUT", { library: accountWorkspaceSnapshot() });
       lastFingerprint = fingerprint();
       return true;
     } catch (error) {
-      console.error("ServoForge account library sync failed", error);
+      console.error("ServoForge account workspace sync failed", error);
       return false;
     } finally {
       syncing = false;
@@ -119,10 +109,18 @@
   async function restore() {
     try {
       const result = await request("GET");
-      if (result.library) applyRemoteLibrary(result.library);
       initialized = true;
-      if (typeof saveCurrentSettings === "function") saveCurrentSettings();
+
+      if (result.library) {
+        applyRemoteWorkspace(result.library);
+        if (typeof saveCurrentSettings === "function") saveCurrentSettings();
+      }
+
       lastFingerprint = fingerprint();
+
+      // The first browser used by an account becomes the seed only when the
+      // account has no cloud workspace yet. Every later PC restores from the
+      // cloud first and never overwrites it with stale localStorage on login.
       if (!result.library) await syncNow({ force: true });
       startWatch();
       return { restored: Boolean(result.library), updatedAt: result.updatedAt || null };
@@ -130,7 +128,7 @@
       initialized = true;
       lastFingerprint = fingerprint();
       startWatch();
-      console.error("ServoForge account library restore failed", error);
+      console.error("ServoForge account workspace restore failed", error);
       return { restored: false, error: error.message || String(error) };
     }
   }
@@ -153,7 +151,7 @@
     syncNow,
     startWatch,
     stopWatch,
-    snapshot: librarySnapshot,
+    snapshot: accountWorkspaceSnapshot,
     get initialized() { return initialized; }
   });
 })();
