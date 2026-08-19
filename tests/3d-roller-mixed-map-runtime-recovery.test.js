@@ -32,13 +32,23 @@ test("mixed equipment maps retain non-roller hardware rendering", () => {
   assert.match(source, /mixedEquipmentMapsSupported: true/);
 });
 
-test("recovered roller keeps approved shared bracket dimensions and 80 mm roller width", () => {
+test("recovered roller keeps approved compact bracket dimensions and 80 mm roller width", () => {
   assert.match(source, /const ROLLER_WIDTH_MM = 80/);
   assert.match(source, /const RAIL_DIAMETER_MM = 14/);
   assert.match(source, /const POST_DIAMETER_MM = 12/);
   assert.match(source, /ServoForgeSharedRollerMountRail/);
   assert.match(source, /ServoForgeSharedRollerSupportPost/);
   assert.match(source, /threePointRadialAlignment: true/);
+});
+
+test("inside and outside rollers use the same mirrored mounting architecture", () => {
+  assert.match(source, /const OUTER_OUTSET_MM = 125/);
+  assert.match(source, /const INNER_INSET_MM = 125/);
+  assert.match(source, /insideHardwareRadiallyInward: side === "inner"/);
+  assert.match(source, /outsideHardwareRadiallyOutward: side === "outer"/);
+  assert.match(source, /mirroredMountingSetup: true/);
+  assert.match(source, /sameTubeAndBracketGeometryBothSides: true/);
+  assert.match(source, /same-bracket-hardware-mirrored-radially-by-side/);
 });
 
 test("runtime recovery stays presentation-only", () => {
