@@ -6,7 +6,7 @@
     throw new Error("ServoForge roller runtime recovery requires the active hardware factory.");
   }
 
-  const PATCH_VERSION = "servoforge.3d-roller-shared-bracket-runtime-recovery.v1";
+  const PATCH_VERSION = "servoforge.3d-roller-shared-bracket-runtime-recovery.v2-mirrored-side-mounts";
   const TABLE_Y = 0.20;
   const BOTTLE_LIFT = 0.155;
   const ROLLER_WIDTH_MM = 80;
@@ -18,7 +18,7 @@
   const HUB_DIAMETER_MM = 18;
   const HUB_HEIGHT_MM = 8;
   const OUTER_OUTSET_MM = 125;
-  const INNER_INSET_MM = 95;
+  const INNER_INSET_MM = 125;
   const FOOT_DIAMETER_MM = 34;
   const FOOT_HEIGHT_MM = 10;
 
@@ -244,6 +244,10 @@
       railDiameterMm: RAIL_DIAMETER_MM,
       supportPostDiameterMm: POST_DIAMETER_MM,
       outsideHardwareRadiallyOutward: side === "outer",
+      insideHardwareRadiallyInward: side === "inner",
+      mountStandOffMm: side === "inner" ? INNER_INSET_MM : OUTER_OUTSET_MM,
+      mirroredMountingSetup: true,
+      sameTubeAndBracketGeometryBothSides: true,
       threePointRadialAlignment: true,
       sharedBracketPerSide: true,
       runtimeRecovery: true
@@ -268,9 +272,11 @@
       rollerWidthAuthority: "user-specified-80mm",
       activeStationAuthority: "active-machine-map-only",
       positionAuthority: "servoforge-machine-map-neck-contact",
-      outsideMountingAuthority: item?.side === "outer" ? "hardware-outside-labeler" : "hardware-inside-labeler",
+      outsideMountingAuthority: item?.side === "outer" ? "hardware-outside-labeler" : "not-applicable",
+      insideMountingAuthority: item?.side === "inner" ? "hardware-inside-labeler" : "not-applicable",
       radialAlignmentAuthority: "carousel-center-bottle-plate-center-bracket-center",
       sharedBracketAuthority: "one-bracket-per-active-side-group",
+      mirroredMountingAuthority: "same-bracket-hardware-mirrored-radially-by-side",
       runtimeRecoveryAuthority: true,
       dimensionalAuthority: false
     });
@@ -284,9 +290,11 @@
 
   global.Labeler3DHardwareMeshFactory = Object.freeze({
     ...baseFactory,
-    FACTORY_VERSION: "servoforge.3d-hardware-mesh.v16-roller-runtime-recovery",
+    FACTORY_VERSION: "servoforge.3d-hardware-mesh.v17-roller-mirrored-side-mounts",
     PATCH_VERSION,
     ROLLER_WIDTH_MM,
+    ROLLER_OUTER_MOUNT_STANDOFF_MM: OUTER_OUTSET_MM,
+    ROLLER_INNER_MOUNT_STANDOFF_MM: INNER_INSET_MM,
     createEquipmentAssembly,
     createRecoveredRollerAssembly
   });
@@ -294,6 +302,8 @@
   global.Labeler3DRollerSharedBracketRuntimeRecovery = Object.freeze({
     PATCH_VERSION,
     ROLLER_WIDTH_MM,
+    OUTER_OUTSET_MM,
+    INNER_INSET_MM,
     status() {
       return Object.freeze({
         patchVersion: PATCH_VERSION,
@@ -301,6 +311,9 @@
         mixedEquipmentMapsSupported: true,
         rollerWidthMm: ROLLER_WIDTH_MM,
         sharedBracketPreserved: true,
+        outerMount: "same-setup-radially-outside-labeler",
+        innerMount: "same-setup-radially-inside-labeler",
+        symmetricMountStandOffMm: OUTER_OUTSET_MM,
         readOnly: true
       });
     }
