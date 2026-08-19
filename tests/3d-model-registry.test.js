@@ -10,6 +10,7 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 const bootstrap = read("app/bootstrap.js");
 const registry = read("app/3d/models/index.js");
 const router = read("app/3d/models/equipment-model-router-integration.js");
+const roller = read("app/3d/models/wipe-roller.js");
 
 const modelFiles = [
   "app/3d/models/bottle.js",
@@ -57,6 +58,19 @@ test("equipment router preserves current visuals through captured legacy factory
   assert.match(router, /registry\.resolveEquipment\(item\)/);
   assert.match(router, /legacyFactory\.createEquipmentAssembly\(THREE, item, geometry\)/);
   assert.match(router, /visualCompatibilityMode: true/);
+});
+
+test("wipe roller model retains the user-machine mounting photos as hidden reference authority", () => {
+  assert.match(roller, /user-supplied-topmodul-roller-photos-2026-08-19/);
+  assert.match(roller, /sourceImageCount: 7/);
+  assert.match(roller, /curved-round-carousel-mounting-rail/);
+  assert.match(roller, /individually-adjustable-roller-head-links/);
+  assert.match(roller, /u-shaped-top-bottom-roller-yoke/);
+  assert.match(roller, /insideAndOutsideUseSameHardwareFamily: true/);
+  assert.match(roller, /mountingHardwareVisible: false/);
+  assert.match(roller, /mountingRailVisible: false/);
+  assert.match(roller, /referenceGeometryRetained: true/);
+  assert.match(roller, /mountingDimensionalAuthority: false/);
 });
 
 test("model organization layer remains read-only with respect to planner and servo state", () => {
