@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-roller-only-reference-mounts-v199-20260818-2319";
-  const buildUpdatedAt = "Aug 18, 2026 11:19 PM ET";
+  const build = "3d-model-registry-v200-20260818-2324";
+  const buildUpdatedAt = "Aug 18, 2026 11:24 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -106,6 +106,14 @@
     "app/3d/bottle-label-coder-visual-polish-integration.js",
     "app/3d/coder-housing-dimension-refinement-integration.js",
     "app/3d/coder-height-26in-refinement-integration.js",
+    "app/3d/models/bottle.js",
+    "app/3d/models/star-wheel.js",
+    "app/3d/models/spender.js",
+    "app/3d/models/wipe-pad.js",
+    "app/3d/models/wipe-roller.js",
+    "app/3d/models/coder.js",
+    "app/3d/models/index.js",
+    "app/3d/models/equipment-model-router-integration.js",
     "app/3d/bottle-handling-measured-star-presentation-integration.js",
     "app/3d/bottle-handling-photo-presentation-integration.js",
     "app/3d/bottle-handling-pocket-phase-presentation-integration.js",
