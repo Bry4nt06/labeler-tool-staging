@@ -1,12 +1,13 @@
 {
   "name": "servoforge-labeler-tool",
-  "version": "0.9.10-auth.1",
+  "version": "0.9.10-auth.3",
   "private": true,
-  "description": "ServoForge Labeler Tool with local account authentication for Railway deployments.",
+  "description": "ServoForge Labeler Tool with shared Supabase authentication, environment access control, and account portability.",
   "scripts": {
     "prestart": "node --test tests/update-loop-guard.test.js tests/apl-roller-section-handoff.test.js",
-    "start": "node owner-recovery.js && node server.js",
+    "start": "node owner-recovery.js && node --require ./environment-access-preload.js supabase-auth-server.js",
     "test:auth": "node --test tests/authentication-server.test.js",
+    "test:auth:syntax": "node --check supabase-auth-server.js && node --check environment-access-preload.js",
     "test:3d": "node --test tests/3d-simulation-frame.test.js tests/3d-viewport-integration.test.js tests/3d-wipe-pad-geometry.test.js tests/3d-label-geometry.test.js tests/3d-rotation-parity.test.js tests/3d-hardware-reference.test.js tests/3d-spender-placement.test.js tests/3d-topmodul-parts-reference.test.js tests/3d-spender-manual-assembly.test.js tests/3d-spender-knuckle-correction.test.js tests/3d-spender-linkage-refinement.test.js tests/3d-purpose-view-simplification.test.js tests/3d-neck-contact-coder-correction.test.js tests/3d-roller-shared-bracket-refinement.test.js tests/3d-roller-mixed-map-runtime-recovery.test.js tests/3d-spender-engagement-wipe-bevel.test.js tests/3d-spender-root-outset-refinement.test.js tests/3d-bottle-label-coder-visual-polish.test.js tests/3d-coder-housing-dimensions.test.js tests/3d-coder-height-26in-refinement.test.js tests/3d-model-registry.test.js tests/3d-wipe-roller-head-model.test.js tests/3d-progressive-label-flow.test.js",
     "test:update": "node --test tests/update-loop-guard.test.js",
     "test:apl-handoff": "node --test tests/apl-roller-section-handoff.test.js",

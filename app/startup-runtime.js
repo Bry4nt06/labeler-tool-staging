@@ -90,6 +90,9 @@ async function initializeLabelerApp() {
     if (!window.LabelerMapController?.populateBuilder) {
       throw new Error("Map Builder lifecycle controller is not loaded.");
     }
+    if (!window.ServoForgeAccountLibrarySync?.restore) {
+      throw new Error("Account workspace synchronization service is not loaded.");
+    }
 
     progress?.set(76, "Restoring saved settings…");
     loadSavedSettings();
@@ -100,6 +103,10 @@ async function initializeLabelerApp() {
     progress?.set(82, "Loading company defaults…");
     window.ServoForgeCompanyDefaultsReady = window.LabelerCompanyDefaultsService.reconcile();
     await window.ServoForgeCompanyDefaultsReady;
+
+    progress?.set(85, "Restoring your ServoForge account…");
+    window.ServoForgeAccountLibraryReady = window.ServoForgeAccountLibrarySync.restore();
+    await window.ServoForgeAccountLibraryReady;
 
     progress?.set(87, "Preparing machine maps…");
     ensurePersistentApplicationMaps();
