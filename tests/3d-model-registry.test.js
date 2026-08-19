@@ -74,13 +74,17 @@ test("wipe roller model retains the user-machine mounting photos as reference au
   assert.match(roller, /mountingDimensionalAuthority: false/);
 });
 
-test("wipe roller standing rules keep the roller bottle-facing and all direct hardware radial behind it", () => {
+test("wipe roller standing rules point every direct-head assembly at the exact carousel center", () => {
   assert.match(roller, /rollerIsBottleFacingTerminal: true/);
   assert.match(roller, /mountingHardwareExtendsAwayFromBottle: true/);
   assert.match(roller, /directHeadHardwareOnSingleCarouselRadialCenterline: true/);
+  assert.match(roller, /directHeadHardwarePointsToCarouselCenter: true/);
+  assert.match(roller, /centerSeekingAxisIgnoresInnerOuterSide: true/);
   assert.match(roller, /radialCenterlineAuthority: "carousel-center-through-bottle-plate-center-through-roller-head-center"/);
-  assert.match(roller, /sharedCurvedRailExemptFromDirectHeadRadialMemberRule: true/);
-  assert.match(roller, /const mountSign = item\?\.side === "inner" \? 1 : -1/);
+  assert.match(roller, /radialTarget: "exact-carousel-center-0-0"/);
+  assert.match(roller, /const centerSeekingRadial = new THREE\.Vector3\(-outward\.x, 0, -outward\.z\)/);
+  assert.doesNotMatch(roller, /const mountSign = item\?\.side/);
+  assert.match(roller, /centerSeekingCarousel = true/);
   assert.match(roller, /radialCenterlineMember = true/);
 });
 
