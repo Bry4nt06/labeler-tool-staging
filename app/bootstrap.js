@@ -2,7 +2,7 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-progressive-label-flow-v213-20260819-1007";
+  const build = "3d-progressive-label-flow-v214-20260819-1007";
   const buildUpdatedAt = "Aug 19, 2026 10:07 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
@@ -120,6 +120,7 @@
     "app/3d/bottle-handling-photo-presentation-integration.js",
     "app/3d/bottle-handling-pocket-phase-presentation-integration.js",
     "app/3d/bottle-handling-pocket-clearance-label-restore-integration.js",
+    "app/3d/bottle-handling-progressive-label-authority-integration.js",
     "app/3d/three-d-direction-parity-presentation-integration.js",
     "app/3d/dashboard-top-view-parity-integration.js",
     "app/3d/bottle-handling-unified-star-height-thickness-integration.js",
