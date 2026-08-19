@@ -10,7 +10,7 @@ const ROOT_DIR = __dirname;
 const DEFAULT_PORT = Number(process.env.PORT || 3000);
 const SESSION_COOKIE = "servoforge_session";
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
-const MAX_BODY_BYTES = 64 * 1024;
+const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_FAILURES = 6;
 const SUPABASE_URL = String(process.env.SUPABASE_URL || "https://dtdewgbfckwvldceussa.supabase.co").replace(/\/$/, "");
@@ -18,6 +18,7 @@ const SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "");
 const AUTH_API_KEY = String(process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || SERVICE_ROLE_KEY);
 const LEGACY_IMPORT = String(process.env.SERVOFORGE_LEGACY_AUTH_IMPORT || "false").toLowerCase() === "true";
 const SOURCE_ENVIRONMENT = String(process.env.SERVOFORGE_ENVIRONMENT || process.env.RAILWAY_ENVIRONMENT_NAME || "unknown");
+const ACCOUNT_LIBRARY_KEY = "account-library-v1";
 
 const MIME_TYPES = Object.freeze({
   ".html": "text/html; charset=utf-8",
@@ -376,6 +377,42 @@ function createServer(options = {}) {
     return auth;
   }
 
+  async function getAccountLibraryRow(userId) {
+    const query = `owner_user_id=eq.${encodeURIComponent(userId)}&scope=eq.private&entity_type=eq.user_setup&entity_key=eq.${encodeURIComponent(ACCOUNT_LIBRARY_KEY)}&select=id,payload,updated_at,source_environment&limit=1`;
+    return (await selectRows("shared_entities", query))[0] || null;
+  }
+
+  async function saveAccountLibrary(userId, library) {
+    if (!library || typeof library !== "object" || Array.isArray(library)) {
+      throw Object.assign(new Error("Account library payload must be an object."), { statusCode: 400 });
+    }
+    const current = await getAccountLibraryRow(userId);
+    if (current) {
+      const rows = await requestJson(rest("shared_entities", `id=eq.${encodeURIComponent(current.id)}`), {
+        method: "PATCH",
+        body: { payload: library, updated_by: userId },
+        headers: { Prefer: "return=representation" }
+      });
+      return Array.isArray(rows) ? rows[0] : null;
+    }
+    const rows = await requestJson(rest("shared_entities"), {
+      method: "POST",
+      body: {
+        entity_type: "user_setup",
+        entity_key: ACCOUNT_LIBRARY_KEY,
+        name: "ServoForge account library",
+        payload: library,
+        owner_user_id: userId,
+        scope: "private",
+        source_environment: SOURCE_ENVIRONMENT,
+        created_by: userId,
+        updated_by: userId
+      },
+      headers: { Prefer: "return=representation" }
+    });
+    return Array.isArray(rows) ? rows[0] : null;
+  }
+
   async function apiHandler(req, res, url) {
     const pathname = url.pathname; const method = req.method || "GET";
     if (["POST", "PUT", "PATCH", "DELETE"].includes(method) && !originAllowed(req)) { sendJson(res, 403, { error: "Request origin rejected." }); return true; }
@@ -386,6 +423,19 @@ function createServer(options = {}) {
       sendJson(res, 200, { configured, authenticated: Boolean(auth), user: auth ? publicUser(auth.user) : null, sharedAuth: true }); return true;
     }
     if (pathname === "/api/auth/me" && method === "GET") { const auth = await requireApiUser(req, res); if (auth) sendJson(res, 200, { user: publicUser(auth.user) }); return true; }
+
+    if (pathname === "/api/user/library" && method === "GET") {
+      const auth = await requireApiUser(req, res); if (!auth) return true;
+      const row = await getAccountLibraryRow(auth.user.id);
+      sendJson(res, 200, { library: row?.payload || null, updatedAt: row?.updated_at || null, sourceEnvironment: row?.source_environment || null }); return true;
+    }
+
+    if (pathname === "/api/user/library" && method === "PUT") {
+      const auth = await requireApiUser(req, res); if (!auth) return true;
+      const body = await readJsonBody(req);
+      const row = await saveAccountLibrary(auth.user.id, body.library);
+      sendJson(res, 200, { ok: true, updatedAt: row?.updated_at || nowIso() }); return true;
+    }
 
     if (pathname === "/api/auth/setup" && method === "POST") {
       if ((await selectRows("profiles", "select=id&limit=1")).length > 0 || legacyStore.data.users.length > 0) { sendJson(res, 409, { error: "Owner setup has already been completed." }); return true; }
