@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-progressive-label-flow-v214-20260819-1007";
-  const buildUpdatedAt = "Aug 19, 2026 10:07 AM ET";
+  const build = "community-runtime-stability-v215-20260819-1558";
+  const buildUpdatedAt = "Aug 19, 2026 3:58 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -30,6 +30,7 @@
     "app/community-library-v104-metadata-integration.js",
     "app/community-library-v103-integration.js",
     "app/top-action-icons-integration.js",
+    "app/community-library-runtime-stability-integration.js",
     "app/controllers/settings-reset-controller.js",
     "app/controllers/local-persistence-controller.js",
     "app/controllers/map-controller.js",
