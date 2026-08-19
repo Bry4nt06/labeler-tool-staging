@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-spender-arm-family-removal-v212-20260819-0958";
-  const buildUpdatedAt = "Aug 19, 2026 9:58 AM ET";
+  const build = "3d-progressive-label-flow-v213-20260819-1007";
+  const buildUpdatedAt = "Aug 19, 2026 10:07 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -104,6 +104,7 @@
     "app/3d/bottle-handling-transfer-synchronization-integration.js",
     "app/3d/bottle-handling-viewport-integration.js",
     "app/3d/bottle-label-coder-visual-polish-integration.js",
+    "app/3d/bottle-handling-progressive-label-flow-integration.js",
     "app/3d/coder-housing-dimension-refinement-integration.js",
     "app/3d/coder-height-26in-refinement-integration.js",
     "app/3d/models/bottle.js",
