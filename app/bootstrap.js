@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-roller-flipped-rail-mount-v205-20260819-0814";
-  const buildUpdatedAt = "Aug 19, 2026 8:14 AM ET";
+  const build = "3d-roller-pair-mount-v206-20260819-0828";
+  const buildUpdatedAt = "Aug 19, 2026 8:28 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -111,6 +111,7 @@
     "app/3d/models/spender.js",
     "app/3d/models/wipe-pad.js",
     "app/3d/models/wipe-roller.js",
+    "app/3d/models/wipe-roller-pair-mount-authority.js",
     "app/3d/models/coder.js",
     "app/3d/models/index.js",
     "app/3d/models/equipment-model-router-integration.js",
