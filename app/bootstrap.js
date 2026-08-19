@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-roller-clamp-geometry-v208-20260819-0905";
-  const buildUpdatedAt = "Aug 19, 2026 9:05 AM ET";
+  const build = "3d-roller-explicit-side-v209-20260819-0920";
+  const buildUpdatedAt = "Aug 19, 2026 9:20 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
