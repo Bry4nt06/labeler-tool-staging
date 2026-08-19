@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-mounted-roller-system-v195-20260818-1916";
-  const buildUpdatedAt = "Aug 18, 2026 7:16 PM ET";
+  const build = "3d-shared-roller-bracket-coder26-v196-20260818-2254";
+  const buildUpdatedAt = "Aug 18, 2026 10:54 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -87,6 +87,7 @@
     "app/3d/purpose-view-simplification-integration.js",
     "app/3d/equipment-layout-adapter.js",
     "app/3d/neck-contact-coder-correction-integration.js",
+    "app/3d/roller-shared-bracket-refinement-integration.js",
     "app/3d/spender-engagement-wipe-bevel-integration.js",
     "app/3d/spender-root-outset-refinement-integration.js",
     "app/3d/bottle-path-shape-correction-integration.js",
@@ -103,6 +104,7 @@
     "app/3d/bottle-handling-viewport-integration.js",
     "app/3d/bottle-label-coder-visual-polish-integration.js",
     "app/3d/coder-housing-dimension-refinement-integration.js",
+    "app/3d/coder-height-26in-refinement-integration.js",
     "app/3d/bottle-handling-measured-star-presentation-integration.js",
     "app/3d/bottle-handling-photo-presentation-integration.js",
     "app/3d/bottle-handling-pocket-phase-presentation-integration.js",
