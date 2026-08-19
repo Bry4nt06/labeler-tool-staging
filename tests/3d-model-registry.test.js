@@ -76,21 +76,33 @@ test("wipe roller model retains machine-photo mounting authority while rendering
   assert.match(roller, /mountingDimensionalAuthority: false/);
 });
 
-test("wipe roller immediate hardware is always on the side away from the bottle", () => {
+test("wipe roller immediate hardware is generated behind the roller, never through the bottle path", () => {
   assert.match(roller, /rollerIsBottleFacingTerminal: true/);
   assert.match(roller, /immediateHardwareExtendsAwayFromBottle: true/);
   assert.match(roller, /hardwareNeverBetweenBottleAndRoller: true/);
-  assert.match(roller, /innerHardwareDirection: "radially-inward-toward-carousel-center-away-from-inner-bottle-side"/);
-  assert.match(roller, /outerHardwareDirection: "radially-outward-away-from-carousel-center-away-from-outer-bottle-side"/);
-  assert.match(roller, /return side === "inner" \? -1 : 1/);
-  assert.match(roller, /function hardwareRadialQuaternion/);
-  assert.match(roller, /ServoForgeWipeRollerHardwareRadialRoot/);
+  assert.match(roller, /frontX = core\.rollerRadius \+ YOKE_ROLLER_CLEARANCE_MM \* scale/);
   assert.match(roller, /hardwareDirection = "away-from-bottle"/);
   assert.match(roller, /hardwareSide = "away-from-bottle"/);
   assert.match(roller, /radialCenterlineAuthority: "exact-carousel-center-through-roller-station-center"/);
 });
 
-test("wipe roller rails and long station hardware are not rendered by the canonical model", () => {
+test("final clamp-side authority derives direction from actual roller radius versus bottle pitch radius", () => {
+  assert.match(rollerPairCompat, /wipe-roller-clamp-side\.v3-geometry-derived/);
+  assert.match(rollerPairCompat, /sideLabelDoesNotControlClampDirection: true/);
+  assert.match(rollerPairCompat, /clampDirectionDerivedFromActualRollerRadius: true/);
+  assert.match(rollerPairCompat, /bottlePathAuthority: "physical-bottle-table-pitch-radius"/);
+  assert.match(rollerPairCompat, /function bottlePathRadiusWorld/);
+  assert.match(rollerPairCompat, /function clampDirectionSign/);
+  assert.match(rollerPairCompat, /if \(delta < -EPSILON\) return -1/);
+  assert.match(rollerPairCompat, /if \(delta > EPSILON\) return 1/);
+  assert.match(rollerPairCompat, /hardwareDirectionAuthority = "actual-roller-radius-vs-bottle-pitch-radius"/);
+  assert.match(rollerPairCompat, /hardwareNeverBetweenBottleAndRoller = true/);
+  assert.doesNotMatch(rollerPairCompat, /new THREE\.TubeGeometry/);
+  assert.doesNotMatch(rollerPairCompat, /new THREE\.BoxGeometry/);
+  assert.doesNotMatch(rollerPairCompat, /new THREE\.CylinderGeometry/);
+});
+
+test("wipe roller rails and long station hardware are not rendered", () => {
   assert.match(roller, /mountingRailRendered: false/);
   assert.match(roller, /longExtensionHardwareRendered: false/);
   assert.match(roller, /mountingRailVisible: false/);
@@ -100,12 +112,9 @@ test("wipe roller rails and long station hardware are not rendered by the canoni
   assert.doesNotMatch(roller, /ServoForgeWipeRollerCurvedMountingRail/);
   assert.doesNotMatch(roller, /ServoForgeWipeRollerExtensionArm/);
   assert.doesNotMatch(roller, /ServoForgeWipeRollerRailRiser/);
-  assert.match(rollerPairCompat, /compatibilityOnly: true/);
   assert.match(rollerPairCompat, /railGeometryRendered: false/);
-  assert.match(rollerPairCompat, /immediateClampOwnedByCanonicalRollerModel: true/);
-  assert.doesNotMatch(rollerPairCompat, /new THREE\.TubeGeometry/);
-  assert.doesNotMatch(rollerPairCompat, /new THREE\.BoxGeometry/);
-  assert.doesNotMatch(rollerPairCompat, /new THREE\.CylinderGeometry/);
+  assert.match(rollerPairCompat, /extensionArmsRendered: false/);
+  assert.match(rollerPairCompat, /risersRendered: false/);
 });
 
 test("model organization layer remains read-only with respect to planner and servo state", () => {
