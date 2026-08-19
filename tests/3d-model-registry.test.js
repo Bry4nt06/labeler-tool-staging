@@ -60,17 +60,28 @@ test("equipment router preserves current visuals through captured legacy factory
   assert.match(router, /visualCompatibilityMode: true/);
 });
 
-test("wipe roller model retains the user-machine mounting photos as hidden reference authority", () => {
+test("wipe roller model retains the user-machine mounting photos as reference authority", () => {
   assert.match(roller, /user-supplied-topmodul-roller-photos-2026-08-19/);
   assert.match(roller, /sourceImageCount: 7/);
   assert.match(roller, /curved-round-carousel-mounting-rail/);
   assert.match(roller, /individually-adjustable-roller-head-links/);
   assert.match(roller, /u-shaped-top-bottom-roller-yoke/);
   assert.match(roller, /insideAndOutsideUseSameHardwareFamily: true/);
-  assert.match(roller, /mountingHardwareVisible: false/);
+  assert.match(roller, /directRollerHardwareVisible: true/);
+  assert.match(roller, /stationMountingHardwareVisible: false/);
   assert.match(roller, /mountingRailVisible: false/);
   assert.match(roller, /referenceGeometryRetained: true/);
   assert.match(roller, /mountingDimensionalAuthority: false/);
+});
+
+test("wipe roller standing rules keep the roller bottle-facing and all direct hardware radial behind it", () => {
+  assert.match(roller, /rollerIsBottleFacingTerminal: true/);
+  assert.match(roller, /mountingHardwareExtendsAwayFromBottle: true/);
+  assert.match(roller, /directHeadHardwareOnSingleCarouselRadialCenterline: true/);
+  assert.match(roller, /radialCenterlineAuthority: "carousel-center-through-bottle-plate-center-through-roller-head-center"/);
+  assert.match(roller, /sharedCurvedRailExemptFromDirectHeadRadialMemberRule: true/);
+  assert.match(roller, /const mountSign = item\?\.side === "inner" \? 1 : -1/);
+  assert.match(roller, /radialCenterlineMember = true/);
 });
 
 test("model organization layer remains read-only with respect to planner and servo state", () => {
