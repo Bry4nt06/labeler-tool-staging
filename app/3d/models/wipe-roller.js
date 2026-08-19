@@ -1,20 +1,17 @@
 (function installServoForge3DWipeRollerModel(global) {
   "use strict";
 
-  const MODEL_VERSION = "servoforge.3d-model.wipe-roller.v8-clamp-only-away-from-bottles";
+  const MODEL_VERSION = "servoforge.3d-model.wipe-roller.v9-yoke-free";
   const TABLE_Y = 0.20;
   const BOTTLE_LIFT = 0.155;
   const ROLLER_WIDTH_MM = 80;
   const SPINDLE_DIAMETER_MM = 8;
   const HUB_DIAMETER_MM = 18;
   const HUB_HEIGHT_MM = 8;
-  const YOKE_PLATE_THICKNESS_MM = 4;
-  const YOKE_TANGENTIAL_WIDTH_MM = 24;
-  const YOKE_RADIAL_LENGTH_MM = 28;
-  const YOKE_ROLLER_CLEARANCE_MM = 2;
   const PIVOT_BLOCK_RADIAL_MM = 18;
   const PIVOT_BLOCK_HEIGHT_MM = 26;
   const PIVOT_BLOCK_TANGENTIAL_MM = 24;
+  const PIVOT_BLOCK_CLEARANCE_MM = 4;
   const PIVOT_PIN_DIAMETER_MM = 8;
   const PIVOT_PIN_LENGTH_MM = 32;
 
@@ -22,7 +19,8 @@
     source: "user-machine-rule-2026-08-19",
     appliesToBothSides: true,
     rollerIsBottleFacingTerminal: true,
-    immediateClampHardwareOnly: true,
+    yokesRendered: false,
+    yokesReferenceOnly: true,
     mountingRailRendered: false,
     longExtensionHardwareRendered: false,
     mountingReferenceRetained: true,
@@ -48,7 +46,7 @@
       "individually-adjustable-roller-head-links",
       "rectangular-horizontal-link-arms",
       "cast-swivel-knuckle-blocks",
-      "u-shaped-top-bottom-roller-yoke",
+      "u-shaped-top-bottom-roller-yoke-reference-only",
       "vertical-roller-spindle",
       "black-sponge-roller",
       "rail-level-adjustment-handle-lever"
@@ -57,12 +55,12 @@
       "black-sponge-roller",
       "vertical-spindle",
       "upper-lower-hubs",
-      "u-shaped-top-bottom-roller-yoke",
-      "rear-yoke-bridge",
       "immediate-swivel-pivot-block",
       "pivot-pin"
     ]),
     referenceOnlyBoundary: Object.freeze([
+      "upper-lower-roller-yokes",
+      "rear-yoke-bridge",
       "long-horizontal-link-arm",
       "vertical-riser-stanchion",
       "rail-clamp",
@@ -74,16 +72,16 @@
       insideAndOutsideUseSameHardwareFamily: true,
       rollerAxis: "approximately-vertical",
       rollerIsBottleFacingTerminal: true,
+      yokesDoNotRender: true,
       immediateHardwareExtendsAwayFromBottle: true,
       hardwareNeverBetweenBottleAndRoller: true,
       immediateHardwareOnSingleCarouselRadialCenterline: true,
       railAndLongMountingHardwareReferenceOnly: true
     }),
     notes: Object.freeze([
-      "Only the roller core and immediate clamp/yoke/pivot hardware render in this build.",
-      "The rail, risers, long linkage arms, and rail clamps remain stored as machine-reference authority but do not render.",
-      "For an inner roller, the bottle is radially outward of the roller, so immediate hardware extends radially inward toward carousel center.",
-      "For an outer roller, the bottle is radially inward of the roller, so immediate hardware extends radially outward away from carousel center.",
+      "Roller yokes are retained only as photo/mechanical reference and are intentionally not rendered.",
+      "The visible roller head is the sponge roller, spindle, hubs, and immediate pivot block/pin only.",
+      "The rail, risers, long linkage arms, rail clamps, and yokes remain stored as machine-reference authority but do not render.",
       "The roller remains the bottle-facing terminal piece on both sides."
     ])
   });
@@ -109,10 +107,6 @@
   }
 
   function hardwareDirectionSignForSide(side) {
-    // Neck-contact placement puts inner rollers radially inside the bottle center
-    // and outer rollers radially outside the bottle center. Hardware must always
-    // leave the roller on the opposite side from the bottle:
-    // inner -> farther inward (-radial), outer -> farther outward (+radial).
     return side === "inner" ? -1 : 1;
   }
 
@@ -212,46 +206,12 @@
     return Object.freeze({ rollerRadius, rollerWidth, roller });
   }
 
-  function addImmediateClampHardware(THREE, root, geometry, core, materials) {
+  function addImmediatePivotHardware(THREE, root, geometry, core, materials) {
     const scale = unitsPerMm(geometry);
-    const plateThickness = YOKE_PLATE_THICKNESS_MM * scale;
-    const yokeWidth = YOKE_TANGENTIAL_WIDTH_MM * scale;
+    const pivotBlockCenterX = core.rollerRadius
+      + PIVOT_BLOCK_CLEARANCE_MM * scale
+      + (PIVOT_BLOCK_RADIAL_MM * scale) / 2;
 
-    // Local +X is guaranteed to point away from the bottle. Start the yoke just
-    // behind the roller's away-side tangent so no clamp geometry can appear
-    // between the bottle and the roller.
-    const frontX = core.rollerRadius + YOKE_ROLLER_CLEARANCE_MM * scale;
-    const backX = frontX + YOKE_RADIAL_LENGTH_MM * scale;
-    const plateDepth = backX - frontX;
-    const plateCenterX = (frontX + backX) / 2;
-    const plateY = core.rollerWidth / 2 + HUB_HEIGHT_MM * scale + plateThickness / 2 + 1.5 * scale;
-
-    [-1, 1].forEach((sign) => {
-      const plate = new THREE.Mesh(
-        new THREE.BoxGeometry(plateDepth, plateThickness, yokeWidth),
-        materials.metal
-      );
-      plate.name = sign < 0 ? "ServoForgeWipeRollerYokeLower" : "ServoForgeWipeRollerYokeUpper";
-      plate.position.set(plateCenterX, sign * plateY, 0);
-      plate.castShadow = true;
-      plate.userData.radialCenterlineMember = true;
-      plate.userData.hardwareSide = "away-from-bottle";
-      root.add(plate);
-    });
-
-    const bridgeHeight = plateY * 2 + plateThickness;
-    const bridge = new THREE.Mesh(
-      new THREE.BoxGeometry(plateThickness, bridgeHeight, yokeWidth),
-      materials.metal
-    );
-    bridge.name = "ServoForgeWipeRollerYokeRearBridge";
-    bridge.position.set(backX, 0, 0);
-    bridge.castShadow = true;
-    bridge.userData.radialCenterlineMember = true;
-    bridge.userData.hardwareSide = "away-from-bottle";
-    root.add(bridge);
-
-    const pivotBlockCenterX = backX + (PIVOT_BLOCK_RADIAL_MM * scale) / 2 + 2 * scale;
     const pivotBlock = new THREE.Mesh(
       new THREE.BoxGeometry(
         PIVOT_BLOCK_RADIAL_MM * scale,
@@ -304,12 +264,13 @@
       source: PHOTO_MOUNT_REFERENCE.source,
       referenceOnly: true,
       rendered: false,
+      yokesRendered: false,
       mountingRailRendered: false,
       longExtensionArmRendered: false,
       riserRendered: false,
       railClampRendered: false,
       railAdjustmentHandleRendered: false,
-      immediateClampHardwareRendered: true,
+      immediatePivotHardwareRendered: true,
       side: item?.side === "inner" ? "inner" : "outer",
       hardwareDirectionSign: hardwareDirectionSignForSide(item?.side),
       hardwareDirectionAuthority: "opposite-bottle-side-of-roller",
@@ -358,7 +319,7 @@
     hardwareRoot.userData.hardwareDirection = "away-from-bottle";
     group.add(hardwareRoot);
 
-    addImmediateClampHardware(THREE, hardwareRoot, geometry, core, materials);
+    addImmediatePivotHardware(THREE, hardwareRoot, geometry, core, materials);
     retainMountingReference(item, group);
 
     group.userData.kind = "roller";
@@ -373,8 +334,9 @@
       rollerWidthAuthority: "user-specified-80mm",
       positionAuthority: "servoforge-machine-map-neck-contact",
       tiltAuthority: "existing-section-aware-neck-slope",
-      immediateClampAuthority: "user-machine-photo-backed-proportional",
-      immediateClampHardwareRendered: true,
+      yokesRendered: false,
+      immediatePivotAuthority: "user-machine-photo-backed-proportional",
+      immediatePivotHardwareRendered: true,
       mountingRailRendered: false,
       longExtensionHardwareRendered: false,
       mountingReferenceRetained: true,
@@ -399,13 +361,12 @@
       rollerVisible: true,
       spindleVisible: true,
       hubsVisible: true,
-      yokeVisible: true,
+      yokeVisible: false,
+      rearYokeBridgeVisible: false,
       immediatePivotVisible: true,
-      immediateClampHardwareVisible: true,
       extensionHardwareVisible: false,
       stationMountingHardwareVisible: false,
       mountingRailVisible: false,
-      detailedClampsVisible: false,
       referenceGeometryRetained: true
     }),
     authority: Object.freeze({
@@ -413,6 +374,7 @@
       contact: "section-aware-neck-contact",
       mountingReference: "user-machine-photo-backed-reference-only",
       mountingDimensionalAuthority: false,
+      yokeRenderAuthority: "removed-from-entire-rendering-by-user-direction",
       rollerIsBottleFacingTerminal: true,
       immediateHardwareExtendsAwayFromBottle: true,
       hardwareDirectionAuthority: "opposite-bottle-side-of-roller",
