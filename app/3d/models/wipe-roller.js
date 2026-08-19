@@ -1,7 +1,7 @@
 (function installServoForge3DWipeRollerModel(global) {
   "use strict";
 
-  const MODEL_VERSION = "servoforge.3d-model.wipe-roller.v4-radial-hardware-authority";
+  const MODEL_VERSION = "servoforge.3d-model.wipe-roller.v5-center-seeking-hardware";
   const TABLE_Y = 0.20;
   const BOTTLE_LIFT = 0.155;
   const ROLLER_WIDTH_MM = 80;
@@ -23,8 +23,11 @@
     rollerIsBottleFacingTerminal: true,
     mountingHardwareExtendsAwayFromBottle: true,
     directHeadHardwareOnSingleCarouselRadialCenterline: true,
+    directHeadHardwarePointsToCarouselCenter: true,
+    centerSeekingAxisIgnoresInnerOuterSide: true,
     radialCenterlineAuthority: "carousel-center-through-bottle-plate-center-through-roller-head-center",
-    rollerHeadMemberDirection: "from-roller-away-from-bottle",
+    radialTarget: "exact-carousel-center-0-0",
+    rollerHeadMemberDirection: "station-to-carousel-center",
     sharedCurvedRailIsCircumferentialBackbone: true,
     sharedCurvedRailExemptFromDirectHeadRadialMemberRule: true
   });
@@ -73,11 +76,15 @@
       rollerIsBottleFacingTerminal: true,
       mountingHardwareExtendsAwayFromBottle: true,
       directHeadHardwareOnSingleCarouselRadialCenterline: true,
+      directHeadHardwarePointsToCarouselCenter: true,
+      centerSeekingAxisIgnoresInnerOuterSide: true,
       radialCenterlineAuthority: "carousel-center-through-bottle-plate-center-through-roller-head-center"
     }),
     notes: Object.freeze([
-      "The roller is the bottle-facing terminal piece of the roller-head assembly; all direct-head mounting hardware extends away from the bottle behind the roller.",
-      "Every direct roller-head hardware member is constrained to the same radial centerline that points to the carousel center. The shared curved mounting rail remains the circumferential backbone and is the only intentional exception.",
+      "Every roller head keeps its machine-map position; only its hardware orientation is derived from the carousel center.",
+      "Every direct roller-head hardware member uses the station-to-carousel-center radial direction. Inner and outer stations use the same center-seeking rule.",
+      "The roller remains the bottle-facing terminal piece of the roller-head assembly.",
+      "The shared curved mounting rail remains the circumferential backbone and is the only intentional exception to the direct-head radial rule.",
       "The direct roller-head hardware ends at the swivel/pivot block immediately behind the yoke.",
       "The long linkage arm, riser, clamps, and curved rail remain reference-only in the current render.",
       "Photo proportions are reference-only until direct yoke, pivot-block, spindle, and roller-diameter measurements are supplied."
@@ -136,12 +143,14 @@
     const slope = item?.side === "inner" ? number(neck.radialSlope) : -number(neck.radialSlope);
     const yAxis = new THREE.Vector3(outward.x * slope, 1, outward.z * slope).normalize();
 
-    // Standing machine rule: the roller is the bottle-facing terminal piece.
-    // Direct-head hardware must leave the roller on the side opposite the bottle.
-    // Flip the previous v3 side sign while retaining a strict radial centerline.
-    const mountSign = item?.side === "inner" ? 1 : -1;
-    const mountRadial = new THREE.Vector3(outward.x * mountSign, 0, outward.z * mountSign);
-    const xAxis = mountRadial.clone().addScaledVector(yAxis, -mountRadial.dot(yAxis)).normalize();
+    // Standing machine rule: every roller-head assembly uses the exact same
+    // center-seeking horizontal direction, regardless of inner/outer side.
+    // +X is always station -> carousel center (0, 0 in scene XZ).
+    const centerSeekingRadial = new THREE.Vector3(-outward.x, 0, -outward.z);
+    const xAxis = centerSeekingRadial
+      .clone()
+      .addScaledVector(yAxis, -centerSeekingRadial.dot(yAxis))
+      .normalize();
     const zAxis = new THREE.Vector3().crossVectors(xAxis, yAxis).normalize();
     const basis = new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis);
     return new THREE.Quaternion().setFromRotationMatrix(basis);
@@ -210,6 +219,7 @@
       plate.position.set(plateCenterX, sign * plateY, 0);
       plate.castShadow = true;
       plate.userData.radialCenterlineMember = true;
+      plate.userData.centerSeekingCarousel = true;
       root.add(plate);
     });
 
@@ -222,6 +232,7 @@
     bridge.position.set(backX, 0, 0);
     bridge.castShadow = true;
     bridge.userData.radialCenterlineMember = true;
+    bridge.userData.centerSeekingCarousel = true;
     root.add(bridge);
 
     const pivotBlock = new THREE.Mesh(
@@ -236,6 +247,7 @@
     pivotBlock.position.set(backX + (PIVOT_BLOCK_RADIAL_MM * scale) / 2 + 2 * scale, 0, 0);
     pivotBlock.castShadow = true;
     pivotBlock.userData.radialCenterlineMember = true;
+    pivotBlock.userData.centerSeekingCarousel = true;
     root.add(pivotBlock);
 
     const pivotPin = new THREE.Mesh(
@@ -251,6 +263,7 @@
     pivotPin.rotation.x = Math.PI / 2;
     pivotPin.position.copy(pivotBlock.position);
     pivotPin.userData.radialCenterlineMember = true;
+    pivotPin.userData.centerSeekingCarousel = true;
     root.add(pivotPin);
 
     const pivotCap = new THREE.Mesh(
@@ -261,6 +274,7 @@
     pivotCap.rotation.x = Math.PI / 2;
     pivotCap.position.set(pivotBlock.position.x, pivotBlock.position.y, -PIVOT_PIN_LENGTH_MM * scale / 2 - 1.5 * scale);
     pivotCap.userData.radialCenterlineMember = true;
+    pivotCap.userData.centerSeekingCarousel = true;
     root.add(pivotCap);
   }
 
@@ -275,12 +289,15 @@
       mountingRailRendered: false,
       railAdjustmentHandleRendered: false,
       side: item?.side === "inner" ? "inner" : "outer",
-      radialMirrorAuthority: "same-hardware-family-mirrored-by-side",
+      radialMirrorAuthority: "same-hardware-family-center-seeking-by-station",
       railReferenceAuthority: "retained-not-rendered",
       rollerIsBottleFacingTerminal: true,
       mountingHardwareExtendsAwayFromBottle: true,
       directHeadHardwareOnSingleCarouselRadialCenterline: true,
-      radialCenterlineAuthority: STANDING_RULES.radialCenterlineAuthority
+      directHeadHardwarePointsToCarouselCenter: true,
+      centerSeekingAxisIgnoresInnerOuterSide: true,
+      radialCenterlineAuthority: STANDING_RULES.radialCenterlineAuthority,
+      radialTarget: STANDING_RULES.radialTarget
     });
   }
 
@@ -313,6 +330,8 @@
     headRoot.position.y = rollerCenterY;
     headRoot.quaternion.copy(rollerHeadQuaternion(THREE, item, neck));
     headRoot.userData.radialCenterlineAuthority = STANDING_RULES.radialCenterlineAuthority;
+    headRoot.userData.radialTarget = STANDING_RULES.radialTarget;
+    headRoot.userData.centerSeekingCarousel = true;
     group.add(headRoot);
 
     const core = addRollerCore(THREE, headRoot, geometry, materials);
@@ -330,6 +349,7 @@
       rollerWidthMm: ROLLER_WIDTH_MM,
       rollerWidthAuthority: "user-specified-80mm",
       positionAuthority: "servoforge-machine-map-neck-contact",
+      orientationAuthority: "station-to-exact-carousel-center",
       tiltAuthority: "existing-section-aware-neck-slope",
       directHeadHardwareAuthority: "user-machine-photo-backed-proportional",
       directHeadHardwareRendered: true,
@@ -339,7 +359,10 @@
       rollerIsBottleFacingTerminal: true,
       mountingHardwareExtendsAwayFromBottle: true,
       directHeadHardwareOnSingleCarouselRadialCenterline: true,
+      directHeadHardwarePointsToCarouselCenter: true,
+      centerSeekingAxisIgnoresInnerOuterSide: true,
       radialCenterlineAuthority: STANDING_RULES.radialCenterlineAuthority,
+      radialTarget: STANDING_RULES.radialTarget,
       dimensionalAuthority: false
     });
     return group;
@@ -370,7 +393,10 @@
       mountingDimensionalAuthority: false,
       rollerIsBottleFacingTerminal: true,
       mountingHardwareExtendsAwayFromBottle: true,
+      directHeadHardwarePointsToCarouselCenter: true,
+      centerSeekingAxisIgnoresInnerOuterSide: true,
       radialCenterlineAuthority: STANDING_RULES.radialCenterlineAuthority,
+      radialTarget: STANDING_RULES.radialTarget,
       renderOwnership: "models/wipe-roller.js",
       migrationState: "native-model-geometry"
     })
