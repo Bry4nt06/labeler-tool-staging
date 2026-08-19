@@ -86,20 +86,21 @@ test("wipe roller immediate hardware is generated behind the roller, never throu
   assert.match(roller, /radialCenterlineAuthority: "exact-carousel-center-through-roller-station-center"/);
 });
 
-test("final clamp-side authority derives direction from actual roller radius versus bottle pitch radius", () => {
-  assert.match(rollerPairCompat, /wipe-roller-clamp-side\.v3-geometry-derived/);
-  assert.match(rollerPairCompat, /sideLabelDoesNotControlClampDirection: true/);
-  assert.match(rollerPairCompat, /clampDirectionDerivedFromActualRollerRadius: true/);
-  assert.match(rollerPairCompat, /bottlePathAuthority: "physical-bottle-table-pitch-radius"/);
-  assert.match(rollerPairCompat, /function bottlePathRadiusWorld/);
-  assert.match(rollerPairCompat, /function clampDirectionSign/);
-  assert.match(rollerPairCompat, /if \(delta < -EPSILON\) return -1/);
-  assert.match(rollerPairCompat, /if \(delta > EPSILON\) return 1/);
-  assert.match(rollerPairCompat, /hardwareDirectionAuthority = "actual-roller-radius-vs-bottle-pitch-radius"/);
-  assert.match(rollerPairCompat, /hardwareNeverBetweenBottleAndRoller = true/);
-  assert.doesNotMatch(rollerPairCompat, /new THREE\.TubeGeometry/);
-  assert.doesNotMatch(rollerPairCompat, /new THREE\.BoxGeometry/);
-  assert.doesNotMatch(rollerPairCompat, /new THREE\.CylinderGeometry/);
+test("roller station side explicitly controls clamp direction with no radius inference override", () => {
+  assert.match(roller, /return side === "inner" \? -1 : 1/);
+  assert.match(roller, /innerHardwareDirection: "radially-inward-toward-carousel-center-away-from-inner-bottle-side"/);
+  assert.match(roller, /outerHardwareDirection: "radially-outward-away-from-carousel-center-away-from-outer-bottle-side"/);
+  assert.match(rollerPairCompat, /wipe-roller-clamp-side\.v4-explicit-station-side/);
+  assert.match(rollerPairCompat, /stationSideControlsClampDirection: true/);
+  assert.match(rollerPairCompat, /outsideRollerHardwareDirection: "radially-outward-away-from-carousel-center"/);
+  assert.match(rollerPairCompat, /insideRollerHardwareDirection: "radially-inward-toward-carousel-center"/);
+  assert.match(rollerPairCompat, /radiusInferenceDisabled: true/);
+  assert.match(rollerPairCompat, /return String\(item\?\.side \|\| ""\)\.toLowerCase\(\) === "inner" \? -1 : 1/);
+  assert.match(rollerPairCompat, /canonicalRollerModelPreserved: true/);
+  assert.doesNotMatch(rollerPairCompat, /physical-bottle-table-pitch-radius/);
+  assert.doesNotMatch(rollerPairCompat, /rollerRadiusFromCenter/);
+  assert.doesNotMatch(rollerPairCompat, /bottlePathRadiusWorld/);
+  assert.doesNotMatch(rollerPairCompat, /global\.Labeler3DWipeRollerModel =/);
 });
 
 test("wipe roller rails and long station hardware are not rendered", () => {
