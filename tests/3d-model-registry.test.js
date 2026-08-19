@@ -74,17 +74,22 @@ test("wipe roller model retains the user-machine mounting photos as reference au
   assert.match(roller, /mountingDimensionalAuthority: false/);
 });
 
-test("wipe roller standing rules point every direct-head assembly at the exact carousel center", () => {
+test("wipe roller hardware stays on the exact carousel radial line while extending away from the bottle", () => {
   assert.match(roller, /rollerIsBottleFacingTerminal: true/);
   assert.match(roller, /mountingHardwareExtendsAwayFromBottle: true/);
-  assert.match(roller, /directHeadHardwareOnSingleCarouselRadialCenterline: true/);
-  assert.match(roller, /directHeadHardwarePointsToCarouselCenter: true/);
-  assert.match(roller, /centerSeekingAxisIgnoresInnerOuterSide: true/);
-  assert.match(roller, /radialCenterlineAuthority: "carousel-center-through-bottle-plate-center-through-roller-head-center"/);
+  assert.match(roller, /innerHardwareExtendsAwayFromBottleTowardCarouselCenter: true/);
+  assert.match(roller, /outerHardwareExtendsAwayFromBottleAwayFromCarouselCenter: true/);
+  assert.match(roller, /everyHardwareCenterlineCollinearWithCarouselCenter: true/);
+  assert.match(roller, /sideOnlySelectsHalfLineDirection: true/);
+  assert.match(roller, /rollerTiltIndependentFromHardwareAzimuth: true/);
+  assert.match(roller, /radialCenterlineAuthority: "exact-carousel-center-through-roller-station-center"/);
   assert.match(roller, /radialTarget: "exact-carousel-center-0-0"/);
-  assert.match(roller, /const centerSeekingRadial = new THREE\.Vector3\(-outward\.x, 0, -outward\.z\)/);
-  assert.doesNotMatch(roller, /const mountSign = item\?\.side/);
-  assert.match(roller, /centerSeekingCarousel = true/);
+  assert.match(roller, /const halfLineSign = item\?\.side === "inner" \? -1 : 1/);
+  assert.match(roller, /function hardwareRadialQuaternion/);
+  assert.match(roller, /function rollerTiltQuaternion/);
+  assert.match(roller, /ServoForgeWipeRollerHardwareRadialRoot/);
+  assert.match(roller, /ServoForgeWipeRollerTiltRoot/);
+  assert.doesNotMatch(roller, /addScaledVector\(yAxis/);
   assert.match(roller, /radialCenterlineMember = true/);
 });
 
