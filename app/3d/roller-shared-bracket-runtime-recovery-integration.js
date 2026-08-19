@@ -6,7 +6,7 @@
     throw new Error("ServoForge roller runtime recovery requires the active hardware factory.");
   }
 
-  const PATCH_VERSION = "servoforge.3d-roller-shared-bracket-runtime-recovery.v2-mirrored-side-mounts";
+  const PATCH_VERSION = "servoforge.3d-roller-runtime.v3-reference-only-mounting";
   const TABLE_Y = 0.20;
   const BOTTLE_LIFT = 0.155;
   const ROLLER_WIDTH_MM = 80;
@@ -19,8 +19,6 @@
   const HUB_HEIGHT_MM = 8;
   const OUTER_OUTSET_MM = 125;
   const INNER_INSET_MM = 125;
-  const FOOT_DIAMETER_MM = 34;
-  const FOOT_HEIGHT_MM = 10;
 
   function number(value, fallback = 0) {
     const parsed = Number(value);
@@ -69,47 +67,6 @@
     return new THREE.MeshStandardMaterial(options);
   }
 
-  function cylinderBetween(THREE, start, end, radiusValue, meshMaterial, segments = 20) {
-    const a = new THREE.Vector3(number(start?.x), number(start?.y), number(start?.z));
-    const b = new THREE.Vector3(number(end?.x), number(end?.y), number(end?.z));
-    const delta = new THREE.Vector3().subVectors(b, a);
-    const length = Math.max(0.000001, delta.length());
-    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radiusValue, radiusValue, length, segments), meshMaterial);
-    mesh.position.copy(a).add(b).multiplyScalar(0.5);
-    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize());
-    return mesh;
-  }
-
-  function boxBetween(THREE, start, end, height, depth, meshMaterial) {
-    const a = new THREE.Vector3(number(start?.x), number(start?.y), number(start?.z));
-    const b = new THREE.Vector3(number(end?.x), number(end?.y), number(end?.z));
-    const delta = new THREE.Vector3().subVectors(b, a);
-    const length = Math.max(0.000001, delta.length());
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(length, height, depth), meshMaterial);
-    mesh.position.copy(a).add(b).multiplyScalar(0.5);
-    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), delta.normalize());
-    return mesh;
-  }
-
-  function localMemberPosition(THREE, member, masterPosition, y = 0) {
-    return new THREE.Vector3(
-      number(member?.position?.x) - number(masterPosition?.x),
-      y,
-      number(member?.position?.z) - number(masterPosition?.z)
-    );
-  }
-
-  function mountPointForMember(THREE, member, masterPosition, side, y, scale) {
-    const local = localMemberPosition(THREE, member, masterPosition, y);
-    const direction = radial(member?.position);
-    const signedOffsetMm = side === "inner" ? -INNER_INSET_MM : OUTER_OUTSET_MM;
-    return new THREE.Vector3(
-      local.x + direction.x * signedOffsetMm * scale,
-      y,
-      local.z + direction.z * signedOffsetMm * scale
-    );
-  }
-
   function createRollerHead(THREE, item, geometry, group) {
     const scale = unitsPerMm(geometry);
     const neck = neckReference(geometry);
@@ -119,8 +76,16 @@
       ? number(item.contactHeightWorld)
       : bottleBaseYWorld() + number(neck.targetYmm) * scale;
 
-    const rubber = material(THREE, { color: 0x262d30, roughness: 0.88, metalness: 0.01 });
-    const metal = material(THREE, { color: 0xa4adb2, roughness: 0.24, metalness: 0.88 });
+    const rubber = material(THREE, {
+      color: 0x262d30,
+      roughness: 0.88,
+      metalness: 0.01
+    });
+    const metal = material(THREE, {
+      color: 0xa4adb2,
+      roughness: 0.24,
+      metalness: 0.88
+    });
 
     const roller = new THREE.Mesh(
       new THREE.CylinderGeometry(rollerRadius, rollerRadius, rollerWidth, 40),
@@ -136,8 +101,15 @@
     roller.castShadow = true;
     roller.receiveShadow = true;
 
+    // Keep only the functional roller core visible. The spindle and end hubs
+    // are part of the roller itself, not the station mounting structure.
     const shaft = new THREE.Mesh(
-      new THREE.CylinderGeometry(SPINDLE_DIAMETER_MM * scale / 2, SPINDLE_DIAMETER_MM * scale / 2, rollerWidth * 1.18, 20),
+      new THREE.CylinderGeometry(
+        SPINDLE_DIAMETER_MM * scale / 2,
+        SPINDLE_DIAMETER_MM * scale / 2,
+        rollerWidth * 1.18,
+        20
+      ),
       metal
     );
     shaft.name = "ServoForgeRollerSpindleShaft";
@@ -145,7 +117,12 @@
 
     [-1, 1].forEach((sign) => {
       const hub = new THREE.Mesh(
-        new THREE.CylinderGeometry(HUB_DIAMETER_MM * scale / 2, HUB_DIAMETER_MM * scale / 2, HUB_HEIGHT_MM * scale, 24),
+        new THREE.CylinderGeometry(
+          HUB_DIAMETER_MM * scale / 2,
+          HUB_DIAMETER_MM * scale / 2,
+          HUB_HEIGHT_MM * scale,
+          24
+        ),
         metal
       );
       hub.name = sign < 0 ? "ServoForgeRollerHubLower" : "ServoForgeRollerHubUpper";
@@ -157,110 +134,45 @@
     return Object.freeze({ rollerCenterY, rubber });
   }
 
-  function createSharedBracket(THREE, item, geometry, group, rollerCenterY) {
-    const mount = item?.sharedRollerMount;
-    if (!mount?.isMaster || !Array.isArray(mount.members) || !mount.members.length) return;
+  function retainMountingReference(item, group) {
+    const side = item?.side === "inner" ? "inner" : "outer";
+    const mount = item?.sharedRollerMount || null;
+    const standOffMm = side === "inner" ? INNER_INSET_MM : OUTER_OUTSET_MM;
 
-    const scale = unitsPerMm(geometry);
-    const side = mount.side === "inner" ? "inner" : "outer";
-    const masterPosition = item.position || { x: 0, z: 0 };
-    const railY = rollerCenterY - 28 * scale;
-    const tableY = TABLE_Y + 6 * scale;
-    const railRadius = RAIL_DIAMETER_MM * scale / 2;
-
-    const railMaterial = material(THREE, { color: 0x899399, roughness: 0.27, metalness: 0.82 });
-    const bracketMaterial = material(THREE, { color: 0x707b81, roughness: 0.30, metalness: 0.76 });
-    const darkMaterial = material(THREE, { color: 0x343b40, roughness: 0.40, metalness: 0.60 });
-
-    const actualMountPoints = mount.members.map((member) => mountPointForMember(THREE, member, masterPosition, side, railY, scale));
-    const railPoints = actualMountPoints.map((point) => point.clone());
-    if (railPoints.length === 1) {
-      const direction = radial(mount.members[0].position);
-      const tangent = new THREE.Vector3(-direction.z, 0, direction.x);
-      const center = railPoints[0].clone();
-      const halfSpan = 55 * scale;
-      railPoints.splice(0, 1,
-        center.clone().addScaledVector(tangent, -halfSpan),
-        center,
-        center.clone().addScaledVector(tangent, halfSpan)
-      );
-    }
-
-    const curve = new THREE.CatmullRomCurve3(railPoints, false, "catmullrom", 0.25);
-    const rail = new THREE.Mesh(new THREE.TubeGeometry(curve, 36, railRadius, 12, false), railMaterial);
-    rail.name = "ServoForgeSharedRollerMountRail";
-    rail.castShadow = true;
-    group.add(rail);
-
-    mount.members.forEach((member, index) => {
-      const rollerPoint = localMemberPosition(THREE, member, masterPosition, rollerCenterY);
-      const mountPoint = mountPointForMember(THREE, member, masterPosition, side, rollerCenterY, scale);
-      const arm = boxBetween(
-        THREE,
-        rollerPoint,
-        mountPoint,
-        ARM_HEIGHT_MM * scale,
-        ARM_DEPTH_MM * scale,
-        bracketMaterial
-      );
-      arm.name = `ServoForgeSharedRollerCarrierArm${index + 1}`;
-      arm.userData.threePointRadialAlignment = true;
-      arm.castShadow = true;
-      group.add(arm);
-
-      const clamp = new THREE.Mesh(
-        new THREE.CylinderGeometry(railRadius * 1.45, railRadius * 1.45, 20 * scale, 20),
-        darkMaterial
-      );
-      clamp.name = `ServoForgeSharedRollerClamp${index + 1}`;
-      clamp.position.copy(mountPoint);
-      group.add(clamp);
-    });
-
-    const supportPoint = actualMountPoints.reduce((sum, point) => sum.add(point), new THREE.Vector3()).multiplyScalar(1 / actualMountPoints.length);
-    const post = cylinderBetween(
-      THREE,
-      { x: supportPoint.x, y: tableY, z: supportPoint.z },
-      { x: supportPoint.x, y: railY, z: supportPoint.z },
-      POST_DIAMETER_MM * scale / 2,
-      railMaterial,
-      20
-    );
-    post.name = "ServoForgeSharedRollerSupportPost";
-    post.castShadow = true;
-    group.add(post);
-
-    const foot = new THREE.Mesh(
-      new THREE.CylinderGeometry(FOOT_DIAMETER_MM * scale / 2, FOOT_DIAMETER_MM * scale / 2, FOOT_HEIGHT_MM * scale, 24),
-      darkMaterial
-    );
-    foot.name = "ServoForgeSharedRollerSupportFoot";
-    foot.position.set(supportPoint.x, tableY - FOOT_HEIGHT_MM * scale / 2, supportPoint.z);
-    group.add(foot);
-
-    group.userData.sharedRollerBracket = Object.freeze({
+    // These values intentionally remain available for later restoration of the
+    // TopModul support system, but no mounting meshes are created in this build.
+    group.userData.rollerMountReference = Object.freeze({
+      referenceOnly: true,
+      rendered: false,
+      railRendered: false,
+      carrierArmsRendered: false,
+      clampsRendered: false,
+      supportPostRendered: false,
+      supportFootRendered: false,
       side,
-      memberCount: mount.memberCount,
+      groupId: String(mount?.groupId || `shared-roller-${side}`),
+      memberCount: Math.max(1, number(mount?.memberCount, 1)),
       railDiameterMm: RAIL_DIAMETER_MM,
       supportPostDiameterMm: POST_DIAMETER_MM,
-      outsideHardwareRadiallyOutward: side === "outer",
-      insideHardwareRadiallyInward: side === "inner",
-      mountStandOffMm: side === "inner" ? INNER_INSET_MM : OUTER_OUTSET_MM,
-      mirroredMountingSetup: true,
-      sameTubeAndBracketGeometryBothSides: true,
+      carrierArmHeightMm: ARM_HEIGHT_MM,
+      carrierArmDepthMm: ARM_DEPTH_MM,
+      mountStandOffMm: standOffMm,
+      outsideReferenceRadiallyOutward: side === "outer",
+      insideReferenceRadiallyInward: side === "inner",
       threePointRadialAlignment: true,
-      sharedBracketPerSide: true,
-      runtimeRecovery: true
+      radialAlignmentAuthority: "carousel-center-bottle-plate-center-bracket-center",
+      railReferenceAuthority: "retained-not-rendered",
+      mountingHardwareAuthority: "retained-reference-only-not-rendered"
     });
   }
 
   function createRecoveredRollerAssembly(THREE, item, geometry) {
     const group = new THREE.Group();
-    group.name = `ServoForgeRecoveredSharedMountedRoller-${String(item?.id || "roller")}`;
+    group.name = `ServoForgeRollerOnly-${String(item?.id || "roller")}`;
     group.position.set(number(item?.position?.x), 0, number(item?.position?.z));
 
     const head = createRollerHead(THREE, item, geometry, group);
-    createSharedBracket(THREE, item, geometry, group, head.rollerCenterY);
+    retainMountingReference(item, group);
 
     group.userData.kind = "roller";
     group.userData.station = item?.station;
@@ -272,11 +184,12 @@
       rollerWidthAuthority: "user-specified-80mm",
       activeStationAuthority: "active-machine-map-only",
       positionAuthority: "servoforge-machine-map-neck-contact",
-      outsideMountingAuthority: item?.side === "outer" ? "hardware-outside-labeler" : "not-applicable",
-      insideMountingAuthority: item?.side === "inner" ? "hardware-inside-labeler" : "not-applicable",
+      mountingHardwareRendered: false,
+      railsRendered: false,
+      railsRetainedAsReference: true,
+      mountingHardwareRetainedAsReference: true,
       radialAlignmentAuthority: "carousel-center-bottle-plate-center-bracket-center",
-      sharedBracketAuthority: "one-bracket-per-active-side-group",
-      mirroredMountingAuthority: "same-bracket-hardware-mirrored-radially-by-side",
+      presentationAuthority: "roller-only-mounting-reference-hidden",
       runtimeRecoveryAuthority: true,
       dimensionalAuthority: false
     });
@@ -290,7 +203,7 @@
 
   global.Labeler3DHardwareMeshFactory = Object.freeze({
     ...baseFactory,
-    FACTORY_VERSION: "servoforge.3d-hardware-mesh.v17-roller-mirrored-side-mounts",
+    FACTORY_VERSION: "servoforge.3d-hardware-mesh.v18-roller-only-reference-mounts",
     PATCH_VERSION,
     ROLLER_WIDTH_MM,
     ROLLER_OUTER_MOUNT_STANDOFF_MM: OUTER_OUTSET_MM,
@@ -310,10 +223,11 @@
         rollerRendererRecovered: true,
         mixedEquipmentMapsSupported: true,
         rollerWidthMm: ROLLER_WIDTH_MM,
-        sharedBracketPreserved: true,
-        outerMount: "same-setup-radially-outside-labeler",
-        innerMount: "same-setup-radially-inside-labeler",
-        symmetricMountStandOffMm: OUTER_OUTSET_MM,
+        rollerOnlyRender: true,
+        mountingHardwareRendered: false,
+        railsRendered: false,
+        railsRetainedAsReference: true,
+        mirroredMountReferencesPreserved: true,
         readOnly: true
       });
     }
