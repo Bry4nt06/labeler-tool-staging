@@ -130,6 +130,7 @@
     "app/3d/free-roam-camera-capture-integration.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
+    "app/account-library-sync.js",
     "app/startup-runtime.js"
   ]);
 
