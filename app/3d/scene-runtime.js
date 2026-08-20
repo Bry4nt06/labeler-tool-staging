@@ -1,9 +1,12 @@
 (function (global) {
   "use strict";
 
-  const RUNTIME_VERSION = "servoforge.3d-runtime.v1";
+  const RUNTIME_VERSION = "servoforge.3d-runtime.v2";
   const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v08.js?v=0.9.10-3d-v08-hardware-reference";
   const SPACING_OVERLAY_SCRIPT = "app/3d/measured-spacing-overlay.js?v=0.9.10-3d-v04-machine-map-equipment";
+
+  let lastSnapshot = null;
+  let snapshotBuildCount = 0;
 
   function number(value, fallback = 0) {
     const parsed = Number(value);
@@ -133,7 +136,8 @@
       zeroAngleDegrees
     });
 
-    return Object.freeze({
+    snapshotBuildCount += 1;
+    lastSnapshot = Object.freeze({
       runtimeVersion: RUNTIME_VERSION,
       readOnly: true,
       frame,
@@ -143,6 +147,11 @@
       equipment,
       scene
     });
+    return lastSnapshot;
+  }
+
+  function latestSnapshot() {
+    return lastSnapshot;
   }
 
   function status() {
@@ -165,6 +174,9 @@
       ),
       readOnly: true,
       source: "generated-servo-program",
+      snapshotAuthority: "single-latest-render-snapshot",
+      snapshotBuildCount,
+      hasLatestSnapshot: Boolean(lastSnapshot),
       geometry: "measured-plate-spacing-plus-active-bottle-profile",
       carousel: "machine-head-count-and-user-measured-plate-spacing",
       labels: "active-label-spec-wraps-with-reference-artwork",
@@ -240,6 +252,7 @@
   global.Labeler3DSceneRuntime = Object.freeze({
     RUNTIME_VERSION,
     snapshot,
+    latestSnapshot,
     status,
     loadViewport: loadViewportRenderer,
     loadMeasuredSpacingTelemetry: loadMeasuredSpacingOverlay

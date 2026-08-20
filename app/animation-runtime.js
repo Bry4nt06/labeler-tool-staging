@@ -13,17 +13,12 @@ function syncBottleHandling(now) {
   const handling = window.Labeler3DBottleHandlingViewport;
   const sceneRuntime = window.Labeler3DSceneRuntime;
   const viewportOpen = Boolean(window.Labeler3DViewport?.status?.().open);
-  if (!viewportOpen || !handling?.sync || !sceneRuntime?.snapshot) return;
+  if (!viewportOpen || !handling?.sync || !sceneRuntime?.latestSnapshot) return;
   if (now - lastBottleHandlingSyncTime < 33) return;
+  const snapshot = sceneRuntime.latestSnapshot();
+  if (!snapshot) return;
   lastBottleHandlingSyncTime = now;
   try {
-    const snapshot = sceneRuntime.snapshot({
-      scene: {
-        tableY: 0.20,
-        bottleLift: 0.155,
-        unitMode: "physical-mm-bottle-handling-primary-clock-v4"
-      }
-    });
     handling.sync(snapshot);
   } catch (error) {
     console.warn("Bottle handling synchronization skipped", error);
