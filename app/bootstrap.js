@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-runtime-cleanup-v226-20260820-1241";
-  const buildUpdatedAt = "Aug 20, 2026 12:41 PM ET";
+  const build = "3d-legacy-scrub-v227-20260820-1245";
+  const buildUpdatedAt = "Aug 20, 2026 12:45 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -129,7 +129,6 @@
     "app/3d/bottle-handling-rounded-pocket-inner-hub-integration.js",
     "app/3d/bottle-handling-visible-inner-hub-integration.js",
     "app/3d/viewport-ui-controls-integration.js",
-    "app/3d/free-roam-camera-capture-integration.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
     "app/account-library-sync.js",
