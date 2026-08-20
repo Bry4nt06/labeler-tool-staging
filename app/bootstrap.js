@@ -118,15 +118,6 @@
     "app/3d/models/coder.js",
     "app/3d/models/index.js",
     "app/3d/models/equipment-model-router-integration.js",
-    "app/3d/bottle-handling-measured-star-presentation-integration.js",
-    "app/3d/bottle-handling-photo-presentation-integration.js",
-    "app/3d/bottle-handling-pocket-phase-presentation-integration.js",
-    "app/3d/bottle-handling-pocket-clearance-label-restore-integration.js",
-    "app/3d/three-d-direction-parity-presentation-integration.js",
-    "app/3d/dashboard-top-view-parity-integration.js",
-    "app/3d/bottle-handling-unified-star-height-thickness-integration.js",
-    "app/3d/bottle-handling-rounded-pocket-inner-hub-integration.js",
-    "app/3d/bottle-handling-visible-inner-hub-integration.js",
     "app/3d/viewport-ui-controls-integration.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
@@ -189,7 +180,7 @@
     try {
       window.Labeler3DSceneRuntime?.loadViewport?.();
     } catch (error) {
-      console.warn("ServoForge 3D viewport recovery could not be started.", error);
+      console.warn("ServoForge 3D viewport could not be started.", error);
     }
 
     return Object.freeze({
