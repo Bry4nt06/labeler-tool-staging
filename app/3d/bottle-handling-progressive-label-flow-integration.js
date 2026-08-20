@@ -197,8 +197,13 @@
     mesh.position.x = entrySign * (1 - p) * 0.014;
     if (mesh.material) {
       mesh.material.opacity = clamp(0.18 + p * 0.82, 0, 1);
-      mesh.material.transparent = p < 0.999;
-      mesh.material.needsUpdate = true;
+      const transparent = p < 0.999;
+      if (mesh.material.transparent !== transparent) {
+        mesh.material.transparent = transparent;
+        // Opacity is a uniform update. Recompile only when the transparency
+        // render path actually changes at the end of application.
+        mesh.material.needsUpdate = true;
+      }
     }
   }
 
