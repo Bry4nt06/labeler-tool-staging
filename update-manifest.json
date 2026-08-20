@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "apl-roller-handoff-v170-20260818-1122",
+  "buildId": "runtime-recovery-v216-20260819-2134",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v170 makes the APL 6-Aggregate Neck-to-Body roller handoff an authoritative late profile-pipeline stage after orientation planning. It recognizes the real metadata-free row sequence, merges the faulting 0.5-degree correction into the preceding Neck roller turn only when the combined motion remains below the configured ratio limit, and re-applies the safeguard after startup initialization. Current 3D functional-height work is preserved."
+  "notes": "v216 hardens ServoForge startup so a missing optional integration can no longer stop the remaining bootstrap chain. Core startup, animation, workspace view controls, and the 3D scene runtime are still loaded and the 3D viewport launcher is re-requested after bootstrap completion."
 }
