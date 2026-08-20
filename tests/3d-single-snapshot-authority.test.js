@@ -29,10 +29,11 @@ test("main animation clock does not synchronize a second 3D environment", () => 
 test("canonical renderer owns the snapshot, complete bottle population, and render", () => {
   const source = read("app/3d/three-scene-renderer-v08.js");
   assert.match(source, /lastSnapshot = activeRuntime\.snapshot\(/);
-  assert.match(source, /Labeler3DBottleHandlingViewport\?\.sync\?\.\(snapshot\)/);
+  assert.match(source, /handlingViewport\?\.attach\?\.\(scene\)/);
+  assert.match(source, /handlingViewport\?\.sync\?\.\(snapshot\)/);
   assert.match(source, /renderer\.render\(scene,camera\)/);
   assert.ok(
-    source.indexOf("Labeler3DBottleHandlingViewport?.sync?.(snapshot)") < source.indexOf("renderer.render(scene,camera)"),
+    source.indexOf("handlingViewport?.sync?.(snapshot)") < source.indexOf("renderer.render(scene,camera)"),
     "the complete handling environment must be synchronized before the scene renders"
   );
   assert.doesNotMatch(source, /ServoForgeLiveBottle|createBottleModel|activeBottleModel/);
