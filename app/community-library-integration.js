@@ -295,6 +295,7 @@
       browseItems = Array.isArray(data.packages) ? data.packages : [];
       host.innerHTML = browseItems.length ? browseItems.map((item) => cardHtml(item)).join("") : `<div class="sf-community-empty">No published packages match this search.</div>`;
     } catch (error) { host.innerHTML = `<div class="sf-community-empty">${esc(error.message)}</div>`; }
+    finally { global.LabelerCommunityCartIntegration?.decorate?.(); }
   }
 
   function refreshUploadSummary() {
@@ -399,9 +400,7 @@
     return map;
   }
 
-  function importPackage(pkg, mode) {
-    const source = runtimeState();
-    if (!source) throw new Error("ServoForge workspace state is unavailable.");
+  function applyPackageToState(pkg, mode, source) {
     const payload = sanitize(pkg?.configPayload || {});
     source.mapLibrary = Array.isArray(source.mapLibrary) ? source.mapLibrary : [];
     source.bottleSpecs = Array.isArray(source.bottleSpecs) ? source.bottleSpecs : [];
@@ -456,12 +455,47 @@
         source.labelSpecs.push(incoming);
       }
     }
+  }
 
+  function commitImportedState() {
     global.saveCurrentSettings?.();
     global.LabelerLocalPersistenceController?.flush?.();
     global.LabelerWorkspaceActionService?.present?.();
     if (typeof global.render === "function") global.render();
+  }
+
+  function importPackage(pkg, mode) {
+    const source = runtimeState();
+    if (!source) throw new Error("ServoForge workspace state is unavailable.");
+    applyPackageToState(pkg, mode, source);
+    commitImportedState();
     return true;
+  }
+
+  function importPackages(packages, mode = "add") {
+    const source = runtimeState();
+    if (!source) throw new Error("ServoForge workspace state is unavailable.");
+    const list = Array.isArray(packages) ? packages.filter(Boolean) : [];
+    if (!list.length) return Object.freeze({ importedCount: 0, mode });
+
+    list.forEach((pkg) => sanitize(pkg?.configPayload || {}));
+    const backup = {
+      mapLibrary: deepClone(source.mapLibrary),
+      bottleSpecs: deepClone(source.bottleSpecs),
+      labelSpecs: deepClone(source.labelSpecs)
+    };
+
+    try {
+      list.forEach((pkg) => applyPackageToState(pkg, mode, source));
+    } catch (error) {
+      source.mapLibrary = backup.mapLibrary;
+      source.bottleSpecs = backup.bottleSpecs;
+      source.labelSpecs = backup.labelSpecs;
+      throw error;
+    }
+
+    commitImportedState();
+    return Object.freeze({ importedCount: list.length, mode });
   }
 
   async function savePackageRating(card) {
@@ -589,6 +623,7 @@
     validationSummary,
     sanitize,
     importPackage,
+    importPackages,
     removeLegacySettingsActions,
     loadBrowse,
     loadMine
