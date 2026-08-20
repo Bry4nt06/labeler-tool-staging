@@ -317,6 +317,7 @@
   function setBottleMode(mode) {
     const next = BOTTLE_MODES.has(String(mode)) ? String(mode) : "all";
     bottleMode = next;
+    global.Labeler3DBottleHandlingViewport?.setBottleMode?.(next);
     const select = document.querySelector("#servoforge3dBottleMode");
     if (select && select.value !== next) select.value = next;
   }
