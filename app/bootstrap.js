@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "runtime-recovery-v216-20260819-2134";
-  const buildUpdatedAt = "Aug 19, 2026 9:34 PM ET";
+  const build = "3d-animation-parity-v217-20260820-0751";
+  const buildUpdatedAt = "Aug 20, 2026 7:51 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -187,9 +187,6 @@
   ).then(() => {
     window.ServoForgeBootstrapFailures = Object.freeze([...moduleFailures]);
 
-    // The 3D launcher is installed by the viewport renderer loaded from the
-    // scene runtime. Re-issuing the idempotent loader here makes the button
-    // recover even when an earlier optional integration was unavailable.
     try {
       window.Labeler3DSceneRuntime?.loadViewport?.();
     } catch (error) {
