@@ -1,7 +1,7 @@
 (function installServoForge3DAllBottleServoSynchronization(global) {
   "use strict";
 
-  const PATCH_VERSION = "servoforge.3d-all-bottle-servo-sync.v2";
+  const PATCH_VERSION = "servoforge.3d-all-bottle-servo-sync.v3";
   const THREE_VERSION = "0.185.1";
   const THREE_MODULE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
   const handlingBottles = new Set();
@@ -19,6 +19,10 @@
   function isHandlingBottle(object) {
     return Boolean(object?.userData?.handlingBottle)
       || /^ServoForgeHandlingBottle\d+$/.test(String(object?.name || ""));
+  }
+
+  function selectedBottleMode() {
+    return String(document.querySelector("#servoforge3dBottleMode")?.value || "all");
   }
 
   function currentServoRotationY() {
@@ -59,6 +63,7 @@
 
   function synchronize() {
     const rotationY = currentServoRotationY();
+    const bottleMode = selectedBottleMode();
     lastServoRotationY = rotationY;
     let count = 0;
     let visibleCount = 0;
@@ -69,13 +74,10 @@
         return;
       }
 
-      // The bottle-mode UI owns whether handling bottles are actually rendered.
-      // Reassert the handling population's base visibility so switching back to
-      // "All" cannot leave the pool latched invisible after Head 1 / None views.
-      if (bottle.userData?.owner || bottle.userData?.segmentId) {
-        bottle.visible = true;
-        visibleCount += 1;
-      }
+      const activePoint = Boolean(bottle.userData?.owner || bottle.userData?.segmentId);
+      const shouldShow = bottleMode === "all" && activePoint;
+      bottle.visible = shouldShow;
+      if (shouldShow) visibleCount += 1;
 
       bottle.rotation.y = rotationY;
       bottle.userData.servoRotationAuthority = PATCH_VERSION;
@@ -84,6 +86,7 @@
       count += 1;
     });
 
+    global.Labeler3DBottleHandlingViewport?.setBottleMode?.(bottleMode);
     synchronizedBottleCount = count;
     restoredVisibleBottleCount = visibleCount;
   }
@@ -102,7 +105,7 @@
 
   function installHook() {
     const prototype = THREE?.Object3D?.prototype;
-    if (!prototype || prototype.__servoforgeAllBottleServoSyncV2) return;
+    if (!prototype || prototype.__servoforgeAllBottleServoSyncV3) return;
     const nativeAdd = prototype.add;
     prototype.add = function servoForgeAllBottleServoSyncAdd(...objects) {
       const result = nativeAdd.apply(this, objects);
@@ -112,7 +115,7 @@
       if (handlingBottles.size) startLoop();
       return result;
     };
-    Object.defineProperty(prototype, "__servoforgeAllBottleServoSyncV2", {
+    Object.defineProperty(prototype, "__servoforgeAllBottleServoSyncV3", {
       configurable: false,
       enumerable: false,
       writable: false,
@@ -126,6 +129,7 @@
       synchronizedBottleCount,
       restoredVisibleBottleCount,
       trackedBottleCount: handlingBottles.size,
+      selectedBottleMode: selectedBottleMode(),
       lastServoRotationY,
       motionAuthority: "current-preview-angle-generated-servo-program",
       populationMode: "all-bottles-one-servo-path",
