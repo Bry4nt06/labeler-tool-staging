@@ -279,16 +279,15 @@
     }
   }
 
-  function carouselBottleRotation(point, handling) {
+  function sharedServoBottleRotation(handling) {
     const driver = frameDriver();
     const scene = sceneAdapter();
     const rows = Array.isArray(global.state?.program) ? global.state.program : [];
-    if (!driver?.snapshot || !scene?.toSceneState || !rows.length || !Number.isFinite(Number(point.tableAngleDegrees))) {
-      return point.routeRotationY;
-    }
+    const tableAngle = number(global.state?.previewAngle, 0);
+    if (!driver?.snapshot || !scene?.toSceneState || !rows.length) return 0;
 
     try {
-      const frame = driver.snapshot(rows, point.tableAngleDegrees, {
+      const frame = driver.snapshot(rows, tableAngle, {
         commandDriver: global.LabelerServoCommandDriver
       });
       const bottleScene = scene.toSceneState(frame, {
@@ -298,13 +297,14 @@
         tableY: TABLE_Y,
         bottleLift: BOTTLE_LIFT
       });
-      return number(bottleScene?.bottle?.rotation?.y, point.routeRotationY);
+      return number(bottleScene?.bottle?.rotation?.y, 0);
     } catch {
-      return point.routeRotationY;
+      return 0;
     }
   }
 
   function updateBottlePopulation(handling) {
+    const synchronizedServoRotation = sharedServoBottleRotation(handling);
     bottlePool.forEach((bottle, index) => {
       const point = handling.bottles[index];
       bottle.visible = Boolean(point);
@@ -312,10 +312,10 @@
       bottle.userData.owner = point.owner;
       bottle.userData.segmentId = point.segmentId;
       bottle.userData.tableAngleDegrees = point.tableAngleDegrees;
+      bottle.userData.servoRotationMode = "all-visible-bottles-shared-servo-path";
+      bottle.userData.servoRotationY = synchronizedServoRotation;
       bottle.position.set(number(point.position?.x), BOTTLE_BASE_Y, number(point.position?.z));
-      bottle.rotation.y = point.owner === "carousel"
-        ? carouselBottleRotation(point, handling)
-        : number(point.routeRotationY);
+      bottle.rotation.y = synchronizedServoRotation;
     });
   }
 
@@ -325,26 +325,13 @@
       if (!group) return;
       const reference = number(group.userData.referencePocketAngleRadians);
       const worldPocketAngle = reference + wheel.routeDirectionSign * handling.feedPhasePitch * wheel.pocketPitchRadians;
-      // Three.js Y rotation negates the XZ-plane polar angle.
       group.rotation.y = -worldPocketAngle;
     });
   }
 
   function updateViewportCopy() {
     const title = document.querySelector("#servoforge3dTitle");
-    if (title && title.textContent !== "ServoForge 3D • Bottle Handling") {
-      title.textContent = "ServoForge 3D • Bottle Handling";
-    }
-    const note = document.querySelector(".servoforge-3d-note");
-    if (note && !note.dataset.bottleHandlingV1) {
-      note.dataset.bottleHandlingV1 = "true";
-      note.innerHTML = "<strong>Bottle handling:</strong> bottles are fed continuously through infeed conveyor → infeed star → intermediate star → carousel → discharge star → outfeed. Carousel bottle rotation still comes only from the ServoForge replay program. Star-wheel dimensions/centers remain provisional until machine measurements are supplied.";
-    }
-    const legend = document.querySelector(".servoforge-3d-legend");
-    if (legend && !legend.dataset.bottleHandlingV1) {
-      legend.dataset.bottleHandlingV1 = "true";
-      legend.innerHTML = "<b>Bottle flow</b><br>Infeed conveyor → Infeed Star → Intermediate Star → Carousel → Discharge Star → Outfeed<br>Orange bottle datum: ServoForge bottle orientation reference";
-    }
+    if (title && title.textContent !== "ServoForge 3D • Bottle Handling") title.textContent = "ServoForge 3D • Bottle Handling";
   }
 
   function renderHandlingFrame() {
@@ -353,21 +340,11 @@
       const activeRuntime = runtime();
       const handlingAdapter = adapter();
       if (layer && activeRuntime?.snapshot && handlingAdapter?.snapshot) {
-        const snapshot = activeRuntime.snapshot({
-          scene: {
-            tableY: TABLE_Y,
-            bottleLift: BOTTLE_LIFT,
-            unitMode: "physical-mm-bottle-handling-v1"
-          }
+        const snapshot = activeRuntime.snapshot({ scene: { tableY: TABLE_Y, bottleLift: BOTTLE_LIFT, unitMode: "physical-mm-bottle-handling-v1" } });
+        const handling = handlingAdapter.snapshot(snapshot?.scene?.carousel?.machineAngleDegrees, snapshot.geometry, {
+          carouselDirection: String(global.state?.direction || "ccw"),
+          zeroAngleDegrees: number(global.state?.zeroAngle, 0)
         });
-        const handling = handlingAdapter.snapshot(
-          snapshot?.scene?.carousel?.machineAngleDegrees,
-          snapshot.geometry,
-          {
-            carouselDirection: String(global.state?.direction || "ccw"),
-            zeroAngleDegrees: number(global.state?.zeroAngle, 0)
-          }
-        );
         lastHandlingSnapshot = handling;
         const signature = geometrySignature(snapshot, handling);
         if (signature !== lastGeometrySignature || bottlePool.length < handling.bottleCount) {
@@ -403,7 +380,7 @@
     layer.userData.handlingAuthority = Object.freeze({
       integrationVersion: INTEGRATION_VERSION,
       topology: "infeed-star-intermediate-star-carousel-discharge-star",
-      servoAuthority: "ServoForge-only-while-carousel-owned",
+      servoAuthority: "all-visible-bottles-shared-servo-path",
       dimensionalAuthority: false,
       readOnly: true
     });
@@ -418,47 +395,45 @@
     prototype.add = function servoforgeBottleHandlingAdd(...objects) {
       const result = nativeAdd.apply(this, objects);
       objects.forEach((object) => {
-        if (object?.name === "ServoForgeLiveBottle" && !object?.userData?.handlingBottle) {
-          object.visible = false;
-          object.userData.hiddenByBottleHandlingV1 = true;
-          hiddenLegacyBottleCount += 1;
-        }
-        if (object?.name === "ServoForgeBottleTablePopulation") {
-          ensureHandlingLayer(this);
-        }
+        if (object?.name === "ServoForge3DScene") ensureHandlingLayer(object);
       });
       return result;
     };
-    Object.defineProperty(prototype, "__servoforgeBottleHandlingHookV1", {
-      configurable: false,
-      enumerable: false,
-      writable: false,
-      value: true
+    Object.defineProperty(prototype, "__servoforgeBottleHandlingHookV1", { value: true });
+  }
+
+  function hideLegacyBottles() {
+    const sceneRoot = layerScene;
+    if (!sceneRoot) return;
+    let hidden = 0;
+    sceneRoot.traverse?.((object) => {
+      if (object === layer || layer?.contains?.(object)) return;
+      if (object?.userData?.servoforgeBottle || object?.name === "ServoForgeBottle") {
+        object.visible = false;
+        hidden += 1;
+      }
     });
+    hiddenLegacyBottleCount = hidden;
   }
 
   function status() {
     return Object.freeze({
       integrationVersion: INTEGRATION_VERSION,
-      installed: Boolean(THREE),
-      sceneCaptured: Boolean(layer),
-      bottleCount: lastHandlingSnapshot?.bottleCount || 0,
+      installed: Boolean(layer),
+      running,
+      bottleCount: bottlePool.length,
       hiddenLegacyBottleCount,
-      ownershipSequence: lastHandlingSnapshot?.ownershipSequence || [],
-      noSingleBottleZeroReset: true,
-      carouselServoAuthorityPreserved: true,
-      starWheelDimensionsAuthoritative: false,
-      readOnly: true
+      allVisibleBottleServoSynchronization: true,
+      lastHandlingSnapshot
     });
   }
 
-  global.Labeler3DBottleHandlingViewport = Object.freeze({
-    INTEGRATION_VERSION,
-    THREE_VERSION,
-    status
-  });
+  global.Labeler3DBottleHandlingViewport = Object.freeze({ status });
 
   ensureThree()
-    .then(() => installThreeSceneHooks())
-    .catch((error) => console.error("ServoForge 3D bottle handling integration failed", error));
+    .then(() => {
+      installThreeSceneHooks();
+      global.setInterval(hideLegacyBottles, 500);
+    })
+    .catch((error) => console.error("ServoForge bottle handling viewport integration failed", error));
 })(window);
