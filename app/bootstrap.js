@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "community-cart-v127-20260820-0940";
-  const buildUpdatedAt = "Aug 20, 2026 9:40 AM ET";
+  const build = "community-cart-v129-20260820-1110";
+  const buildUpdatedAt = "Aug 20, 2026 11:10 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
