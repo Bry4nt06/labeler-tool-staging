@@ -125,13 +125,17 @@
   function loop() {
     if (!running) return;
     enforceAllStars();
-    global.requestAnimationFrame(loop);
   }
 
   function startLoop() {
     if (running) return;
+    const coordinator = global.Labeler3DPresentationFrameCoordinator;
+    if (!coordinator?.register) {
+      console.warn("ServoForge 3D presentation frame coordinator is unavailable.");
+      return;
+    }
     running = true;
-    global.requestAnimationFrame(loop);
+    coordinator.register(PATCH_VERSION, loop, { minIntervalMs: 250 });
   }
 
   import(THREE_MODULE_URL).then((module) => {
