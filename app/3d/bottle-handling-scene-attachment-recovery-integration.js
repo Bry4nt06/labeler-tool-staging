@@ -1,13 +1,15 @@
 (function installServoForgeBottleHandlingSceneAttachmentRecovery(global) {
   "use strict";
 
-  const VERSION = "servoforge.3d-bottle-handling-scene-attachment-recovery.v1";
-  const BUILD = "3d-bottle-population-v222-20260820-0955";
-  const UPDATED_AT = "Aug 20, 2026 9:55 AM ET";
+  const VERSION = "servoforge.3d-bottle-handling-scene-attachment-recovery.v2";
+  const BUILD = "3d-handling-attach-v223-20260820-1004";
+  const UPDATED_AT = "Aug 20, 2026 10:04 AM ET";
   const THREE_VERSION = "0.185.1";
   const THREE_MODULE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
   let attachedSceneCount = 0;
+  let attachmentAttempts = 0;
   let lastBottleCount = 0;
+  let lastVisibleBottleCount = 0;
 
   function publishBuild() {
     global.ServoForgeBootstrapBuild = BUILD;
@@ -17,21 +19,43 @@
     global.ServoForgeStagingBuildBannerAuthorityV2?.enforce?.();
   }
 
-  function triggerBottleHandlingSceneHook(THREE, scene) {
-    if (!scene?.isScene || scene.userData?.servoforgeBottleHandlingSceneAttachmentV1) return false;
+  function handlingStatus() {
+    return global.Labeler3DBottleHandlingViewport?.status?.() || null;
+  }
 
+  function triggerBottleHandlingSceneHook(THREE, scene) {
+    if (!scene?.isScene) return false;
+    if (handlingStatus()?.installed) {
+      scene.userData.servoforgeBottleHandlingSceneAttachmentV2 = true;
+      return true;
+    }
+
+    attachmentAttempts += 1;
     const originalName = scene.name;
     const probe = new THREE.Group();
+
     try {
-      // bottle-handling-viewport-integration installs an Object3D.add hook that
-      // recognizes a scene named ServoForge3DScene. The v0.8 renderer creates
-      // its Scene directly, so that hook never previously saw the scene.
+      // The bottle-handling renderer installs an Object3D.add hook that listens
+      // for an object named ServoForge3DScene. The canonical v0.8 renderer owns
+      // its THREE.Scene directly, so there is no parent.add(scene) event during
+      // normal startup. Replaying that event here attaches the star wheels,
+      // conveyors and handling-bottle population to the scene actually rendered.
+      //
+      // IMPORTANT: do not latch success until the handling integration reports
+      // installed. Its Three.js import is asynchronous, so the first rendered
+      // frame can occur before its hook is ready.
       scene.name = "ServoForge3DScene";
       probe.add(scene);
       probe.remove(scene);
       scene.name = originalName || "ServoForge3DScene";
-      scene.userData.servoforgeBottleHandlingSceneAttachmentV1 = true;
+
+      const status = handlingStatus();
+      if (!status?.installed) return false;
+
+      scene.userData.servoforgeBottleHandlingSceneAttachmentV2 = true;
       attachedSceneCount += 1;
+      const mode = document.querySelector("#servoforge3dBottleMode")?.value || "all";
+      global.Labeler3DBottleHandlingViewport?.setBottleMode?.(mode);
       return true;
     } catch (error) {
       scene.name = originalName;
@@ -43,18 +67,19 @@
   async function install() {
     const THREE = await import(THREE_MODULE_URL);
     const prototype = THREE.WebGLRenderer?.prototype;
-    if (!prototype || prototype.__servoforgeBottleHandlingSceneAttachmentRecoveryV1) return;
+    if (!prototype || prototype.__servoforgeBottleHandlingSceneAttachmentRecoveryV2) return;
 
     const nativeRender = prototype.render;
     prototype.render = function servoforgeBottleHandlingSceneAttachmentRender(scene, camera) {
       triggerBottleHandlingSceneHook(THREE, scene);
       const result = nativeRender.call(this, scene, camera);
-      const status = global.Labeler3DBottleHandlingViewport?.status?.();
+      const status = handlingStatus();
       lastBottleCount = Number(status?.bottleCount || 0);
+      lastVisibleBottleCount = Number(status?.visibleHandlingBottleCount || 0);
       return result;
     };
 
-    Object.defineProperty(prototype, "__servoforgeBottleHandlingSceneAttachmentRecoveryV1", {
+    Object.defineProperty(prototype, "__servoforgeBottleHandlingSceneAttachmentRecoveryV2", {
       configurable: false,
       enumerable: false,
       writable: false,
@@ -69,14 +94,17 @@
     VERSION,
     BUILD,
     status() {
-      const handling = global.Labeler3DBottleHandlingViewport?.status?.();
+      const handling = handlingStatus();
       return Object.freeze({
         version: VERSION,
         attachedSceneCount,
+        attachmentAttempts,
         bottleHandlingInstalled: Boolean(handling?.installed),
         bottleCount: Number(handling?.bottleCount || lastBottleCount || 0),
-        visibleHandlingBottleCount: Number(handling?.visibleHandlingBottleCount || 0),
-        bottleMode: handling?.bottleMode || null
+        visibleHandlingBottleCount: Number(handling?.visibleHandlingBottleCount || lastVisibleBottleCount || 0),
+        bottleMode: handling?.bottleMode || null,
+        retryUntilAttached: true,
+        canonicalViewportOnly: true
       });
     }
   });
