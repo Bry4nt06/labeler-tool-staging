@@ -254,27 +254,21 @@
     }
   }
 
-  function syncBaseBottleVisibility() {
-    if (!layerScene) return;
-    layerScene.traverse?.((object) => {
-      if (object?.name === "ServoForgeLiveBottle" && !object?.userData?.handlingBottle) {
-        object.visible = bottleMode === "head1";
-      }
-    });
-  }
-
   function setBottleMode(mode) {
     bottleMode = ["all", "head1", "none"].includes(String(mode)) ? String(mode) : "all";
-    syncBaseBottleVisibility();
     return bottleMode;
   }
 
   function updateBottlePopulation(snapshot, handling) {
     const sharedServoRotation = number(snapshot?.scene?.bottle?.servoRotationY, 0);
+    const headOneIndex = (handling?.bottles || []).findIndex((point) => point?.owner === "carousel");
     let visible = 0;
     bottlePool.forEach((bottle, index) => {
       const point = handling?.bottles?.[index];
-      const shouldShow = bottleMode === "all" && Boolean(point);
+      const shouldShow = Boolean(point) && (
+        bottleMode === "all"
+        || (bottleMode === "head1" && index === headOneIndex)
+      );
       bottle.visible = shouldShow;
       if (!point) return;
       if (shouldShow) visible += 1;
@@ -285,7 +279,6 @@
       bottle.rotation.y = sharedServoRotation;
     });
     visibleHandlingBottleCount = visible;
-    syncBaseBottleVisibility();
   }
 
   function updateWheels(handling) {
@@ -349,7 +342,6 @@
     layer.userData.handlingAuthority = INTEGRATION_VERSION;
     sceneRoot.add(layer);
     attachedSceneCount += 1;
-    syncBaseBottleVisibility();
     return true;
   }
 
@@ -381,6 +373,8 @@
       attachedSceneCount,
       independentAnimationLoop: false,
       singleSnapshotAuthority: true,
+      bottlePopulationAuthority: "continuous-handling-route-only",
+      legacySingleBottlePopulation: false,
       activeSceneName: layerScene?.name || null,
       lastHandlingSnapshot
     });
