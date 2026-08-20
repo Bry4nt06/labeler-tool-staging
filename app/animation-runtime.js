@@ -45,8 +45,6 @@ function animationFrame(now) {
     }
   }
   syncBottleHandling(now);
-  window.Labeler3DControlSurfaceRecovery?.ensure?.();
-  window.Labeler3DMechanicalMapAnimationLauncher?.ensure?.();
   animationTimerId = window.requestAnimationFrame(animationFrame);
 }
 
@@ -67,39 +65,3 @@ window.LabelerAnimationRuntime = Object.freeze({
   stop: stopAnimationLoop,
   resetClock: resetAnimationClock
 });
-
-(function loadCurrent3DAnimationIntegrations() {
-  const version = window.SERVOFORGE_RELEASE_VERSION || "0.9.10";
-  const build = window.ServoForgeBootstrapBuild || "3d-runtime-cleanup-v226";
-
-  function loadScript(path, datasetKey, datasetValue) {
-    const existing = [...document.scripts].find((script) => script.dataset[datasetKey] === datasetValue);
-    if (existing) return Promise.resolve();
-    return new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = `./${path}?v=${encodeURIComponent(version)}&build=${encodeURIComponent(build)}`;
-      script.async = false;
-      script.dataset[datasetKey] = datasetValue;
-      script.addEventListener("load", resolve, { once: true });
-      script.addEventListener("error", () => {
-        console.warn(`ServoForge 3D integration ${path} could not be loaded; the base animation remains available.`);
-        resolve();
-      }, { once: true });
-      (document.body || document.head || document.documentElement).appendChild(script);
-    });
-  }
-
-  loadScript(
-    "app/3d/animation-authority-integration.js",
-    "servoforge3dAnimationAuthority",
-    "v3"
-  ).then(() => loadScript(
-    "app/3d/control-surface-recovery-integration.js",
-    "servoforge3dControlSurfaceRecovery",
-    "v2"
-  )).then(() => loadScript(
-    "app/3d/mechanical-map-animation-launcher-integration.js",
-    "servoforge3dMechanicalMapAnimationLauncher",
-    "v2"
-  ));
-})();
