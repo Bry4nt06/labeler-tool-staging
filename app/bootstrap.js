@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-single-renderer-v230-20260820-1728";
-  const buildUpdatedAt = "Aug 20, 2026 5:28 PM ET";
+  const build = "3d-viewport-singleton-v231-20260820-1817";
+  const buildUpdatedAt = "Aug 20, 2026 6:17 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
