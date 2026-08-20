@@ -1,5 +1,0 @@
-ServoForge staging physical wipe direction v125
-Build: physical-wipe-direction-v125-20260816-0905
-Published: 2026-08-16 09:02 ET
-Redeploy trigger: 2026-08-18 18:23 ET
-Reason: retry Railway deployment after source snapshot initialization failures; includes latest 3D transparency, alternate bottle, spender engagement/wipe bevel, and spender root outset changes.
