@@ -1,0 +1,54 @@
+name: Build production export archive
+
+on:
+  pull_request:
+    types: [opened]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    if: github.event.pull_request.head.ref == 'build-production-export'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout staging PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 1
+
+      - name: Build exact staging application archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f production-export.tar.gz production-export-source.json
+          printf '{\n  "repository": "Bry4nt06/labeler-tool-staging",\n  "commit": "%s",\n  "builtAt": "%s"\n}\n' \
+            "${{ github.event.pull_request.base.sha }}" \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > production-export-source.json
+
+          tar -czf production-export.tar.gz \
+            --exclude='./.git' \
+            --exclude='./.git/*' \
+            --exclude='./.github' \
+            --exclude='./.github/*' \
+            --exclude='./production-export.tar.gz' \
+            --exclude='./production-export-source.json' \
+            .
+
+          test -s production-export.tar.gz
+          tar -tzf production-export.tar.gz | grep -q './app/bootstrap.js'
+          tar -tzf production-export.tar.gz | grep -q './app/3d/three-scene-renderer-v08.js'
+          tar -tzf production-export.tar.gz | grep -q './app/startup-runtime.js'
+
+      - name: Commit export archive to staging branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'ServoForge Export'
+          git config user.email 'servoforge-export@users.noreply.github.com'
+          git add production-export.tar.gz production-export-source.json
+          git commit -m 'Build exact staging application export for production'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
