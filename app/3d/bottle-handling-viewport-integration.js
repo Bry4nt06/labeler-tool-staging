@@ -1,7 +1,7 @@
 (function installServoForge3DBottleHandlingViewport(global) {
   "use strict";
 
-  const INTEGRATION_VERSION = "servoforge.3d-bottle-handling-viewport.v1";
+  const INTEGRATION_VERSION = "servoforge.3d-bottle-handling-viewport.v2";
   const THREE_VERSION = "0.185.1";
   const THREE_MODULE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
   const TABLE_Y = 0.20;
@@ -21,6 +21,8 @@
   let sharedBottleAssets = null;
   let hiddenLegacyBottleCount = 0;
   let lastHandlingSnapshot = null;
+  let bottleMode = "all";
+  let lastVisibleHandlingBottleCount = 0;
 
   function number(value, fallback = 0) {
     const parsed = Number(value);
@@ -303,12 +305,33 @@
     }
   }
 
+  function applyBottleMode() {
+    let visible = 0;
+    bottlePool.forEach((bottle, index) => {
+      const point = lastHandlingSnapshot?.bottles?.[index];
+      const shouldShow = bottleMode === "all" && Boolean(point);
+      bottle.visible = shouldShow;
+      if (shouldShow) visible += 1;
+    });
+    lastVisibleHandlingBottleCount = visible;
+  }
+
+  function setBottleMode(mode) {
+    const next = ["all", "head1", "none"].includes(String(mode)) ? String(mode) : "all";
+    bottleMode = next;
+    applyBottleMode();
+    return bottleMode;
+  }
+
   function updateBottlePopulation(handling) {
     const synchronizedServoRotation = sharedServoBottleRotation(handling);
+    let visible = 0;
     bottlePool.forEach((bottle, index) => {
       const point = handling.bottles[index];
-      bottle.visible = Boolean(point);
+      const shouldShow = bottleMode === "all" && Boolean(point);
+      bottle.visible = shouldShow;
       if (!point) return;
+      if (shouldShow) visible += 1;
       bottle.userData.owner = point.owner;
       bottle.userData.segmentId = point.segmentId;
       bottle.userData.tableAngleDegrees = point.tableAngleDegrees;
@@ -317,6 +340,7 @@
       bottle.position.set(number(point.position?.x), BOTTLE_BASE_Y, number(point.position?.z));
       bottle.rotation.y = synchronizedServoRotation;
     });
+    lastVisibleHandlingBottleCount = visible;
   }
 
   function updateWheels(handling) {
@@ -421,14 +445,17 @@
       integrationVersion: INTEGRATION_VERSION,
       installed: Boolean(layer),
       running,
+      bottleMode,
       bottleCount: bottlePool.length,
+      visibleHandlingBottleCount: lastVisibleHandlingBottleCount,
       hiddenLegacyBottleCount,
       allVisibleBottleServoSynchronization: true,
+      directBottleModeAuthority: true,
       lastHandlingSnapshot
     });
   }
 
-  global.Labeler3DBottleHandlingViewport = Object.freeze({ status });
+  global.Labeler3DBottleHandlingViewport = Object.freeze({ setBottleMode, status });
 
   ensureThree()
     .then(() => {
