@@ -158,8 +158,10 @@ test("bottle handling presentation remains read-only and preserves ServoForge ca
   assert.match(viewportSource, /point\.owner === "carousel"/);
   assert.match(viewportSource, /driver\.snapshot\(rows, point\.tableAngleDegrees/);
   assert.match(viewportSource, /scene\.toSceneState\(frame/);
-  assert.match(viewportSource, /ServoForgeLiveBottle/);
-  assert.match(viewportSource, /object\.visible = false/);
+  assert.doesNotMatch(viewportSource, /ServoForgeLiveBottle|syncBaseBottleVisibility/);
+  assert.match(viewportSource, /headOneIndex/);
+  assert.match(viewportSource, /bottlePopulationAuthority: "continuous-handling-route-only"/);
+  assert.match(viewportSource, /legacySingleBottlePopulation: false/);
   assert.match(viewportSource, /ServoForgeBottleHandlingSystem/);
   assert.match(viewportSource, /ServoForgeInfeedConveyor/);
   assert.match(viewportSource, /ServoForgeOutfeedConveyor/);

@@ -31,7 +31,6 @@
   let equipmentAssemblies = [];
   let aggregateAssemblies = [];
   let activeServoPlate = null;
-  let activeBottleModel = null;
   let ui = null;
 
   const cameraState = {
@@ -135,26 +134,6 @@
     return [[0.27,0],[0.31,0.18],[0.31,1.02],[0.18,1.37],[0.12,1.85],[0.13,1.90]].map(([radius,y]) => new THREE.Vector2(radius,y));
   }
 
-  function createBottleModel(geometry, labels) {
-    const group = new THREE.Group();
-    group.name = "ServoForgeLiveBottle";
-    const profile = bottleProfile(geometry);
-    const bodyRadius = Math.max(...profile.map((point) => point.x));
-    const height = Math.max(...profile.map((point) => point.y));
-    const unitsPerMm = number(geometry?.renderScale?.worldUnitsPerMm, 0.00445);
-    const glass = new THREE.Mesh(new THREE.LatheGeometry(profile, 64), material({ color: 0x70401f, roughness: 0.27, metalness: 0.02 }));
-    glass.castShadow = true; glass.receiveShadow = true; group.add(glass);
-    const finishRadius = number(geometry?.bottle?.finishOuterDiameterMm, 26.6) * unitsPerMm / 2;
-    const capHeight = Math.max(0.024, 6 * unitsPerMm);
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(Math.max(finishRadius * 1.08, bodyRadius * 0.20), Math.max(finishRadius * 1.08, bodyRadius * 0.20), capHeight, 32), material({ color: 0x3387c8, roughness: 0.32, metalness: 0.42 }));
-    cap.position.y = height + capHeight / 2; group.add(cap);
-    const marker = new THREE.Mesh(new THREE.BoxGeometry(Math.max(0.009, bodyRadius * 0.07), Math.max(0.18, height * 0.32), Math.max(0.022, bodyRadius * 0.20)), material({ color: 0xff6a3d, emissive: 0x421308, emissiveIntensity: 0.35, roughness: 0.35 }));
-    marker.position.set(bodyRadius * 1.04, height * 0.30, 0); group.add(marker);
-    const labelGroup = labelMeshFactory()?.createBottleLabels?.(THREE, labels, geometry);
-    if (labelGroup) { group.add(labelGroup); group.userData.labelMeshes = labelGroup.userData.labelMeshes || {}; }
-    return group;
-  }
-
   function createHeadAssembly(headNumber, geometry, labels) {
     const active = headNumber === 1;
     const group = new THREE.Group();
@@ -169,7 +148,7 @@
     datum.position.set(plateRadius * 0.66, 0.24, 0); plateGroup.add(datum); group.add(plateGroup);
     if (active) {
       const halo = new THREE.Mesh(new THREE.TorusGeometry(plateRadius * 1.06, 0.018, 10, 44), material({ color: 0xff6a3d, emissive: 0x8a240d, emissiveIntensity: 0.85, roughness: 0.30 })); halo.rotation.x = Math.PI / 2; halo.position.y = 0.245; group.add(halo);
-      const bottle = createBottleModel(geometry, labels); bottle.position.y = BOTTLE_LIFT; group.add(bottle); activeServoPlate = plateGroup; activeBottleModel = bottle;
+      activeServoPlate = plateGroup;
     }
     return group;
   }
@@ -182,7 +161,7 @@
   function populationSignature(snapshot) { return [snapshot?.carousel?.headCount, snapshot?.geometry?.bottle?.diameterWorld, snapshot?.geometry?.bottle?.visualHeightWorld, snapshot?.labels?.brand, ...(snapshot?.labels?.activeSections || [])].join("|"); }
   function rebuildHeads(snapshot) {
     const signature = populationSignature(snapshot); if (signature === lastPopulationSignature && headAssemblies.length === number(snapshot?.carousel?.headCount)) return;
-    lastPopulationSignature = signature; clearLayer(headLayer, headAssemblies); activeServoPlate = null; activeBottleModel = null;
+    lastPopulationSignature = signature; clearLayer(headLayer, headAssemblies); activeServoPlate = null;
     const count = Math.max(1, Math.round(number(snapshot?.carousel?.headCount, 1)));
     for (let head = 1; head <= count; head += 1) { const assembly = createHeadAssembly(head, snapshot.geometry, snapshot.labels); headAssemblies.push(assembly); headLayer.add(assembly); }
   }
@@ -218,10 +197,8 @@
 
   function applyHeadLayout(snapshot) {
     (snapshot?.carousel?.heads || []).forEach((head,index) => { const assembly = headAssemblies[index]; if (!assembly) return; assembly.position.set(number(head.position?.x), number(head.position?.y,TABLE_Y), number(head.position?.z)); assembly.rotation.y = number(head.rotationY); });
-    if (activeServoPlate) activeServoPlate.rotation.y = number(snapshot?.scene?.bottleTable?.servoRotationY); if (activeBottleModel) activeBottleModel.rotation.y = number(snapshot?.scene?.bottle?.servoRotationY);
+    if (activeServoPlate) activeServoPlate.rotation.y = number(snapshot?.scene?.bottleTable?.servoRotationY);
   }
-  function updateLabelVisibility(snapshot) { const meshes = activeBottleModel?.userData?.labelMeshes || {}; ["neck","body","back"].forEach((section) => { if (meshes[section]) meshes[section].visible = Boolean(snapshot?.labels?.sections?.[section]?.applied); }); }
-
   function updateActivityHighlight(snapshot) {
     const activeAggregate = Number(snapshot?.scene?.activity?.aggregate); const activeStage = String(snapshot?.scene?.activity?.stage || "").toLowerCase();
     aggregateAssemblies.forEach((assembly) => { const active = Number.isFinite(activeAggregate) && Number(assembly.userData.aggregate) === activeAggregate; (assembly.userData.highlightMaterials || []).forEach((entry) => { entry.emissive?.setHex?.(active ? 0x4c2a12 : 0x000000); entry.emissiveIntensity = active ? 0.58 : 0; }); });
@@ -243,7 +220,7 @@
     ui.machineAngle.textContent = formatDegrees(snapshot?.scene?.carousel?.machineAngleDegrees); ui.servoAngle.textContent = formatDegrees(snapshot?.scene?.bottle?.servoAngleDegrees); ui.command.textContent = active ? `HMI ${active.hmi} • CMD ${active.command}` : "No active row"; ui.liveHead.textContent = `Head ${snapshot?.carousel?.activeHead || 1}`; ui.hardwareCatalog.textContent = catalogStatus ? `${catalogStatus.profileCount} profiles • photo ref` : "Unavailable"; ui.mapName.textContent = equipment.mapName || "—"; ui.equipmentCount.textContent = `${equipment?.aggregates?.length || 0} spender • ${equipment?.objects?.length || 0} map objects`; ui.sensors.textContent = `${number(counts.sensors)} visible`; ui.coders.textContent = `${number(counts.coding)} visible`; ui.measuredPads.textContent = `${number(counts.measuredPads)}/${number(counts.pads)} measured`; ui.pitchRadius.textContent = formatMillimeters(geometry.machine?.physicalPitchRadiusMm,3); ui.bottleDiameter.textContent = formatMillimeters(geometry.bottle?.effectiveDiameterMm,2); ui.event.textContent = activity.eventId || "—"; ui.motion.textContent = flags.executesRotation ? "Rotating" : flags.hold ? "Holding" : "Idle"; ui.action.textContent = active?.action || "Waiting for Servo Program"; ui.stageName.textContent = [activity.section,activity.stage].filter(Boolean).join(" / ") || "—";
   }
 
-  function applySnapshot(snapshot) { if (!snapshot?.scene || !snapshot?.carousel || !snapshot?.equipment || !snapshot?.labels) return; syncMachineGeometry(snapshot); rebuildHeads(snapshot); rebuildEquipment(snapshot); applyHeadLayout(snapshot); updateLabelVisibility(snapshot); updateActivityHighlight(snapshot); if (followHead) focusHead(snapshot); updateTelemetry(snapshot); }
+  function applySnapshot(snapshot) { if (!snapshot?.scene || !snapshot?.carousel || !snapshot?.equipment || !snapshot?.labels) return; syncMachineGeometry(snapshot); rebuildHeads(snapshot); rebuildEquipment(snapshot); applyHeadLayout(snapshot); updateActivityHighlight(snapshot); const handlingViewport = global.Labeler3DBottleHandlingViewport; handlingViewport?.attach?.(scene); handlingViewport?.sync?.(snapshot); if (followHead) focusHead(snapshot); updateTelemetry(snapshot); }
   function renderFrame() { if (!viewportOpen || !renderer || !scene || !camera) return; try { const activeRuntime = runtime(); if (!activeRuntime?.snapshot) throw new Error("3D scene runtime is unavailable."); lastSnapshot = activeRuntime.snapshot({ scene: { tableY: TABLE_Y, bottleLift: BOTTLE_LIFT, unitMode: "physical-mm-hardware-reference-v0.8" } }); applySnapshot(lastSnapshot); ui.error.hidden = true; renderer.render(scene,camera); } catch (error) { ui.error.hidden = false; ui.error.textContent = `3D frame unavailable: ${error?.message || error}`; } animationFrame = global.requestAnimationFrame(renderFrame); }
   async function openViewport() { installUi(); ui.backdrop.hidden = false; viewportOpen = true; try { await ensureThree(); if (!hardwareFactory()?.createEquipmentAssembly) throw new Error("3D hardware mesh factory is unavailable."); if (!renderer) createMachineScene(); resizeRenderer(); ui.error.hidden = true; if (animationFrame !== null) global.cancelAnimationFrame(animationFrame); animationFrame = global.requestAnimationFrame(renderFrame); } catch (error) { ui.error.hidden = false; ui.error.textContent = `Unable to start the 3D hardware renderer. ${error?.message || error}`; console.error("ServoForge 3D hardware renderer failed", error); } }
   function closeViewport() { if (!ui) return; viewportOpen = false; ui.backdrop.hidden = true; if (animationFrame !== null) { global.cancelAnimationFrame(animationFrame); animationFrame = null; } }

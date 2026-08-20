@@ -18,16 +18,23 @@ test("scene runtime exposes the latest renderer snapshot", () => {
   assert.match(source, /latestSnapshot,/);
 });
 
-test("main animation clock reuses the renderer snapshot instead of rebuilding it", () => {
+test("main animation clock does not synchronize a second 3D environment", () => {
   const source = read("app/animation-runtime.js");
-  assert.match(source, /sceneRuntime\?\.latestSnapshot/);
-  assert.match(source, /const snapshot = sceneRuntime\.latestSnapshot\(\)/);
+  assert.doesNotMatch(source, /Labeler3DBottleHandlingViewport/);
   assert.doesNotMatch(source, /sceneRuntime\.snapshot\(/);
-  assert.doesNotMatch(source, /physical-mm-bottle-handling-primary-clock/);
+  assert.doesNotMatch(source, /sceneRuntime\.latestSnapshot\(/);
+  assert.doesNotMatch(source, /syncBottleHandling/);
 });
 
-test("canonical renderer remains the scene snapshot producer", () => {
+test("canonical renderer owns the snapshot, complete bottle population, and render", () => {
   const source = read("app/3d/three-scene-renderer-v08.js");
   assert.match(source, /lastSnapshot = activeRuntime\.snapshot\(/);
+  assert.match(source, /handlingViewport\?\.attach\?\.\(scene\)/);
+  assert.match(source, /handlingViewport\?\.sync\?\.\(snapshot\)/);
   assert.match(source, /renderer\.render\(scene,camera\)/);
+  assert.ok(
+    source.indexOf("handlingViewport?.sync?.(snapshot)") < source.indexOf("renderer.render(scene,camera)"),
+    "the complete handling environment must be synchronized before the scene renders"
+  );
+  assert.doesNotMatch(source, /ServoForgeLiveBottle|createBottleModel|activeBottleModel/);
 });
