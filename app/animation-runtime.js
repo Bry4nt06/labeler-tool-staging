@@ -17,7 +17,6 @@ function animationFrame(now) {
     try {
       renderAnimationFrame();
       window.LabelerBottleOrientationPanel?.renderAll?.();
-      window.Labeler3DAllBottleServoSynchronization?.synchronize?.();
       window.Labeler3DControlSurfaceRecovery?.ensure?.();
       window.Labeler3DMechanicalMapAnimationLauncher?.ensure?.();
     } catch (error) {
@@ -47,7 +46,7 @@ window.LabelerAnimationRuntime = Object.freeze({
 
 (function loadCurrent3DAnimationIntegrations() {
   const version = window.SERVOFORGE_RELEASE_VERSION || "0.9.10";
-  const build = window.ServoForgeBootstrapBuild || "3d-handling-direct-v224";
+  const build = window.ServoForgeBootstrapBuild || "3d-canonical-cleanup-v225";
 
   function loadScript(path, datasetKey, datasetValue) {
     const existing = [...document.scripts].find((script) => script.dataset[datasetKey] === datasetValue);
@@ -67,22 +66,10 @@ window.LabelerAnimationRuntime = Object.freeze({
   }
 
   loadScript(
-    "app/3d/bottle-handling-render-fallback-integration.js",
-    "servoforge3dBottleHandlingRenderFallback",
-    "v1"
-  ).then(() => loadScript(
-    "app/3d/bottle-handling-scene-attachment-recovery-integration.js",
-    "servoforge3dBottleHandlingSceneAttachmentRecovery",
-    "v2"
-  )).then(() => loadScript(
-    "app/3d/all-bottle-servo-synchronization-integration.js",
-    "servoforge3dAllBottleServoSync",
-    "v3"
-  )).then(() => loadScript(
     "app/3d/animation-authority-integration.js",
     "servoforge3dAnimationAuthority",
     "v3"
-  )).then(() => loadScript(
+  ).then(() => loadScript(
     "app/3d/control-surface-recovery-integration.js",
     "servoforge3dControlSurfaceRecovery",
     "v2"
