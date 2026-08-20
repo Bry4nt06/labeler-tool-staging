@@ -1,13 +1,14 @@
 (function installServoForge3DAnimationAuthority(global) {
   "use strict";
 
-  const VERSION = "servoforge.3d-animation-authority.v2";
+  const VERSION = "servoforge.3d-animation-authority.v3";
   const RETRY_MS = 50;
   const MAX_ATTEMPTS = 240;
 
   let installed = false;
   let syncFrame = null;
   let viewportControls = null;
+  let launcherObserver = null;
 
   function sourceControls() {
     return {
@@ -36,6 +37,15 @@
 
   function removeLegacyMechanicalMapLauncher() {
     document.querySelectorAll("#servoforge3dOpen").forEach((button) => button.remove());
+  }
+
+  function installLauncherGuard() {
+    if (launcherObserver || !document.documentElement) return;
+    launcherObserver = new MutationObserver(() => {
+      removeLegacyMechanicalMapLauncher();
+      cleanupDuplicateViewportDom();
+    });
+    launcherObserver.observe(document.documentElement, { childList: true, subtree: true });
   }
 
   function syncControlValues() {
@@ -104,8 +114,8 @@
       speedReadout: controls.querySelector("[data-3d-animation-speed-readout]")
     };
 
-    if (!controls.dataset.servoforgeAnimationBindingsV2) {
-      controls.dataset.servoforgeAnimationBindingsV2 = "true";
+    if (!controls.dataset.servoforgeAnimationBindingsV3) {
+      controls.dataset.servoforgeAnimationBindingsV3 = "true";
       viewportControls.playPause.addEventListener("click", () => sourceControls().playPause?.click());
       viewportControls.angle.addEventListener("input", () => dispatchInput(sourceControls().angle, viewportControls.angle.value));
       viewportControls.speed.addEventListener("input", () => dispatchInput(sourceControls().speed, viewportControls.speed.value));
@@ -117,6 +127,7 @@
   }
 
   function installLauncher() {
+    installLauncherGuard();
     removeLegacyMechanicalMapLauncher();
     cleanupDuplicateViewportDom();
 
@@ -138,6 +149,7 @@
           cleanupDuplicateViewportDom();
           await global.Labeler3DViewport?.open?.();
           cleanupDuplicateViewportDom();
+          removeLegacyMechanicalMapLauncher();
           installViewportControls();
         });
         row.insertBefore(button, row.firstChild);
@@ -153,7 +165,7 @@
       return false;
     }
 
-    if (!viewport.__animationAuthorityWrappedV2) {
+    if (!viewport.__animationAuthorityWrappedV3) {
       const nativeOpen = viewport.open.bind(viewport);
       const wrapped = Object.freeze({
         ...viewport,
@@ -161,12 +173,14 @@
           cleanupDuplicateViewportDom();
           const result = await nativeOpen(...args);
           cleanupDuplicateViewportDom();
+          removeLegacyMechanicalMapLauncher();
           installViewportControls();
           installLauncher();
           return result;
         },
         __animationAuthorityWrapped: true,
-        __animationAuthorityWrappedV2: true
+        __animationAuthorityWrappedV2: true,
+        __animationAuthorityWrappedV3: true
       });
       global.Labeler3DViewport = wrapped;
     }
@@ -180,6 +194,7 @@
     VERSION,
     install: installWhenReady,
     cleanupDuplicateViewportDom,
+    removeLegacyMechanicalMapLauncher,
     status() {
       return Object.freeze({
         version: VERSION,
