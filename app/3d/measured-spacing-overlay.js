@@ -2,6 +2,7 @@
   "use strict";
 
   const VERSION = "servoforge.3d-measured-spacing.v2";
+  let frameUnsubscribe = null;
 
   function formatMm(value, decimals = 2) {
     const numeric = Number(value);
@@ -19,7 +20,6 @@
     const backdrop = document.querySelector("#servoforge3dBackdrop");
     const telemetry = backdrop?.querySelector(".servoforge-3d-telemetry");
     if (!backdrop || !telemetry) return null;
-
     const pitchRadius = backdrop.querySelector("#servoforge3dPitchRadius");
     const pitchLabel = pitchRadius?.parentElement?.querySelector("span");
     if (pitchLabel) pitchLabel.textContent = "Physical pitch radius";
@@ -52,6 +52,18 @@
     return true;
   }
 
+  function bindToCanonicalFrame(attempt = 0) {
+    const viewport = global.Labeler3DViewport;
+    if (typeof viewport?.addFrameListener === "function") {
+      frameUnsubscribe?.();
+      frameUnsubscribe = viewport.addFrameListener(({ snapshot }) => sync(snapshot));
+      sync(global.Labeler3DSceneRuntime?.latestSnapshot?.());
+      return true;
+    }
+    if (attempt < 240) global.setTimeout(() => bindToCanonicalFrame(attempt + 1), 25);
+    return false;
+  }
+
   global.Labeler3DMeasuredSpacingOverlay = Object.freeze({
     VERSION,
     sync,
@@ -63,4 +75,6 @@
     snapshotAuthority: "canonical-3d-render-frame",
     readOnly: true
   });
+
+  bindToCanonicalFrame();
 })(window);
