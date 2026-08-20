@@ -44,3 +44,15 @@ window.LabelerAnimationRuntime = Object.freeze({
   stop: stopAnimationLoop,
   resetClock: resetAnimationClock
 });
+
+(function loadCurrent3DAnimationAuthority() {
+  const path = "app/3d/animation-authority-integration.js";
+  const existing = [...document.scripts].find((script) => script.dataset.servoforge3dAnimationAuthority === "v1");
+  if (existing) return;
+  const script = document.createElement("script");
+  script.src = `./${path}?v=${encodeURIComponent(window.SERVOFORGE_RELEASE_VERSION || "0.9.10")}&build=${encodeURIComponent(window.ServoForgeBootstrapBuild || "3d-animation-authority-v217")}`;
+  script.async = false;
+  script.dataset.servoforge3dAnimationAuthority = "v1";
+  script.addEventListener("error", () => console.warn("ServoForge 3D animation authority could not be loaded; the base animation remains available."), { once: true });
+  (document.body || document.head || document.documentElement).appendChild(script);
+})();
