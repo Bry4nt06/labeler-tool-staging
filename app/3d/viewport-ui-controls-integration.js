@@ -90,7 +90,7 @@
   }
 
   function isMachineMesh(mesh) {
-    if (!mesh?.isMesh || hasBottleAncestor(mesh)) return false;
+    if (!mesh?.isMesh || hasBottleAncestor(mesh) || mesh?.userData?.handlingBottleInstances) return false;
     // The unnamed CircleGeometry is the viewport floor, not labeler hardware.
     if (mesh.geometry?.type === "CircleGeometry" && !hasServoForgeAncestor(mesh)) return false;
     return true;
@@ -574,3 +574,4 @@
     })
     .catch((error) => console.error("ServoForge 3D viewport UI controls failed", error));
 })(window);
+
