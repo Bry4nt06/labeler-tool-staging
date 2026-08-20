@@ -16,13 +16,9 @@ function animationFrame(now) {
     state.previewAngle = norm(state.previewAngle + degreesPerSecond * elapsedSeconds);
     try {
       renderAnimationFrame();
-      // Keep the Servo Program Bottle Orientation panel on the same clock as
-      // the primary labeler animation, even when the panel integration loaded
-      // before renderAnimationFrame was available to wrap.
       window.LabelerBottleOrientationPanel?.renderAll?.();
-      // The 3D all-bottle synchronization integration uses this same preview
-      // angle and generated Servo Program as the single bottle-rotation path.
       window.Labeler3DAllBottleServoSynchronization?.synchronize?.();
+      window.Labeler3DControlSurfaceRecovery?.ensure?.();
     } catch (error) {
       console.error("Animation frame render failed", error);
     }
@@ -50,7 +46,7 @@ window.LabelerAnimationRuntime = Object.freeze({
 
 (function loadCurrent3DAnimationIntegrations() {
   const version = window.SERVOFORGE_RELEASE_VERSION || "0.9.10";
-  const build = window.ServoForgeBootstrapBuild || "3d-animation-authority-v218";
+  const build = window.ServoForgeBootstrapBuild || "3d-control-surface-v219";
 
   function loadScript(path, datasetKey, datasetValue) {
     const existing = [...document.scripts].find((script) => script.dataset[datasetKey] === datasetValue);
@@ -76,6 +72,10 @@ window.LabelerAnimationRuntime = Object.freeze({
   ).then(() => loadScript(
     "app/3d/animation-authority-integration.js",
     "servoforge3dAnimationAuthority",
+    "v3"
+  )).then(() => loadScript(
+    "app/3d/control-surface-recovery-integration.js",
+    "servoforge3dControlSurfaceRecovery",
     "v1"
   ));
 })();
