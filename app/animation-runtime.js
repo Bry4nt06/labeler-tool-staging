@@ -2,9 +2,32 @@
 
 let lastAnimationTime = performance.now();
 let animationTimerId = null;
+let lastBottleHandlingSyncTime = 0;
 
 function resetAnimationClock() {
   lastAnimationTime = performance.now();
+  lastBottleHandlingSyncTime = 0;
+}
+
+function syncBottleHandling(now) {
+  const handling = window.Labeler3DBottleHandlingViewport;
+  const sceneRuntime = window.Labeler3DSceneRuntime;
+  const viewportOpen = Boolean(window.Labeler3DViewport?.status?.().open);
+  if (!viewportOpen || !handling?.sync || !sceneRuntime?.snapshot) return;
+  if (now - lastBottleHandlingSyncTime < 33) return;
+  lastBottleHandlingSyncTime = now;
+  try {
+    const snapshot = sceneRuntime.snapshot({
+      scene: {
+        tableY: 0.20,
+        bottleLift: 0.155,
+        unitMode: "physical-mm-bottle-handling-primary-clock-v4"
+      }
+    });
+    handling.sync(snapshot);
+  } catch (error) {
+    console.warn("Bottle handling synchronization skipped", error);
+  }
 }
 
 function animationFrame(now) {
@@ -17,12 +40,13 @@ function animationFrame(now) {
     try {
       renderAnimationFrame();
       window.LabelerBottleOrientationPanel?.renderAll?.();
-      window.Labeler3DControlSurfaceRecovery?.ensure?.();
-      window.Labeler3DMechanicalMapAnimationLauncher?.ensure?.();
     } catch (error) {
       console.error("Animation frame render failed", error);
     }
   }
+  syncBottleHandling(now);
+  window.Labeler3DControlSurfaceRecovery?.ensure?.();
+  window.Labeler3DMechanicalMapAnimationLauncher?.ensure?.();
   animationTimerId = window.requestAnimationFrame(animationFrame);
 }
 
@@ -46,7 +70,7 @@ window.LabelerAnimationRuntime = Object.freeze({
 
 (function loadCurrent3DAnimationIntegrations() {
   const version = window.SERVOFORGE_RELEASE_VERSION || "0.9.10";
-  const build = window.ServoForgeBootstrapBuild || "3d-canonical-cleanup-v225";
+  const build = window.ServoForgeBootstrapBuild || "3d-runtime-cleanup-v226";
 
   function loadScript(path, datasetKey, datasetValue) {
     const existing = [...document.scripts].find((script) => script.dataset[datasetKey] === datasetValue);
