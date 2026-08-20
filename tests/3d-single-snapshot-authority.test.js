@@ -31,9 +31,10 @@ test("canonical renderer owns the snapshot, complete bottle population, and rend
   assert.match(source, /lastSnapshot = activeRuntime\.snapshot\(/);
   assert.match(source, /handlingViewport\?\.attach\?\.\(scene\)/);
   assert.match(source, /handlingViewport\?\.sync\?\.\(snapshot\)/);
-  assert.match(source, /renderer\.render\(scene,camera\)/);
+  assert.match(source, /renderer\.render\(scene,\s*camera\)/);
+  assert.match(source, /Labeler3DPresentationFrameCoordinator\?\.frame\?\.\(\{/);
   assert.ok(
-    source.indexOf("handlingViewport?.sync?.(snapshot)") < source.indexOf("renderer.render(scene,camera)"),
+    source.indexOf("handlingViewport?.sync?.(snapshot)") < source.indexOf("renderer.render(scene, camera)"),
     "the complete handling environment must be synchronized before the scene renders"
   );
   assert.doesNotMatch(source, /ServoForgeLiveBottle|createBottleModel|activeBottleModel/);
