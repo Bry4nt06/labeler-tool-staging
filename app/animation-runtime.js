@@ -19,6 +19,7 @@ function animationFrame(now) {
       window.LabelerBottleOrientationPanel?.renderAll?.();
       window.Labeler3DAllBottleServoSynchronization?.synchronize?.();
       window.Labeler3DControlSurfaceRecovery?.ensure?.();
+      window.Labeler3DMechanicalMapAnimationLauncher?.ensure?.();
     } catch (error) {
       console.error("Animation frame render failed", error);
     }
@@ -46,7 +47,7 @@ window.LabelerAnimationRuntime = Object.freeze({
 
 (function loadCurrent3DAnimationIntegrations() {
   const version = window.SERVOFORGE_RELEASE_VERSION || "0.9.10";
-  const build = window.ServoForgeBootstrapBuild || "3d-control-surface-v219";
+  const build = window.ServoForgeBootstrapBuild || "3d-map-launcher-v220";
 
   function loadScript(path, datasetKey, datasetValue) {
     const existing = [...document.scripts].find((script) => script.dataset[datasetKey] === datasetValue);
@@ -68,7 +69,7 @@ window.LabelerAnimationRuntime = Object.freeze({
   loadScript(
     "app/3d/all-bottle-servo-synchronization-integration.js",
     "servoforge3dAllBottleServoSync",
-    "v1"
+    "v2"
   ).then(() => loadScript(
     "app/3d/animation-authority-integration.js",
     "servoforge3dAnimationAuthority",
@@ -76,6 +77,10 @@ window.LabelerAnimationRuntime = Object.freeze({
   )).then(() => loadScript(
     "app/3d/control-surface-recovery-integration.js",
     "servoforge3dControlSurfaceRecovery",
+    "v1"
+  )).then(() => loadScript(
+    "app/3d/mechanical-map-animation-launcher-integration.js",
+    "servoforge3dMechanicalMapAnimationLauncher",
     "v1"
   ));
 })();
