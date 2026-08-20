@@ -1,13 +1,21 @@
 (function installServoForge3DControlSurfaceRecovery(global) {
   "use strict";
 
-  const VERSION = "servoforge.3d-control-surface-recovery.v1";
-  const BUILD = "3d-control-surface-v219-20260820-0936";
-  const UPDATED_AT = "Aug 20, 2026 9:36 AM ET";
+  const VERSION = "servoforge.3d-control-surface-recovery.v2";
+  const BUILD = "3d-all-bottles-v221-20260820-0947";
+  const UPDATED_AT = "Aug 20, 2026 9:47 AM ET";
   let observer = null;
 
   function authority() {
     return global.Labeler3DViewportUiControls || null;
+  }
+
+  function setBottleModeEverywhere(mode) {
+    const next = ["all", "head1", "none"].includes(String(mode)) ? String(mode) : "all";
+    authority()?.setBottleMode?.(next);
+    global.Labeler3DBottleHandlingViewport?.setBottleMode?.(next);
+    global.Labeler3DAllBottleServoSynchronization?.synchronize?.();
+    return next;
   }
 
   function setPressed(button, pressed) {
@@ -24,7 +32,7 @@
       wrap.className = "servoforge-3d-bottle-control";
       wrap.innerHTML = 'Bottles <select id="servoforge3dBottleMode"><option value="all">All</option><option value="head1">Head 1</option><option value="none">None</option></select>';
       const select = wrap.querySelector("#servoforge3dBottleMode");
-      select.addEventListener("change", () => authority()?.setBottleMode?.(select.value));
+      select.addEventListener("change", () => setBottleModeEverywhere(select.value));
       controls.prepend(wrap);
     }
 
@@ -71,7 +79,7 @@
       controls.prepend(button);
     }
 
-    authority()?.setBottleMode?.(document.querySelector("#servoforge3dBottleMode")?.value || "all");
+    setBottleModeEverywhere(document.querySelector("#servoforge3dBottleMode")?.value || "all");
     return true;
   }
 
@@ -97,10 +105,14 @@
     VERSION,
     BUILD,
     ensure: ensureControlSurface,
+    setBottleMode: setBottleModeEverywhere,
     status() {
+      const handling = global.Labeler3DBottleHandlingViewport?.status?.();
       return Object.freeze({
         version: VERSION,
         bottleMode: Boolean(document.querySelector("#servoforge3dBottleMode")),
+        selectedBottleMode: document.querySelector("#servoforge3dBottleMode")?.value || "all",
+        visibleHandlingBottleCount: handling?.visibleHandlingBottleCount ?? null,
         telemetryToggle: Boolean(document.querySelector("#servoforge3dTelemetryToggle")),
         transparencyToggle: Boolean(document.querySelector("#servoforge3dTransparentObjects")),
         freeRoamToggle: Boolean(document.querySelector("#servoforge3dFreeRoam"))
