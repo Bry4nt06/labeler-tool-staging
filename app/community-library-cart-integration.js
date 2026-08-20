@@ -3,14 +3,12 @@
 (function installServoForgeCommunityCart(global) {
   if (global.LabelerCommunityCartIntegration?.installed) return;
 
-  const BUILD_MARKER = "community-cart-v129-20260820-1110";
+  const BUILD_MARKER = "community-batch-cart-v2-20260820";
   const cart = new Map();
   let cartOpen = false;
   let busy = false;
   let statusMessage = "";
   let browseObserver = null;
-  let browsePaneObserver = null;
-  let observedBrowseHost = null;
 
   function esc(value) {
     return String(value ?? "")
@@ -23,7 +21,7 @@
 
   function communityApi() {
     const community = global.LabelerCommunityLibrary;
-    if (!community?.installed || typeof community.api !== "function" || typeof community.importPackage !== "function") {
+    if (!community?.installed || typeof community.api !== "function" || typeof community.importPackages !== "function") {
       throw new Error("Community Library is unavailable.");
     }
     return community;
@@ -205,24 +203,37 @@
 
     busy = true;
     cartOpen = true;
-    statusMessage = "Preparing batch import…";
+    const pending = [...cart.entries()];
+    statusMessage = `Downloading ${pending.length} package${pending.length === 1 ? "" : "s"}…`;
     renderCart();
 
-    const pending = [...cart.entries()];
-    const imported = [];
-    const failures = [];
+    const downloads = await Promise.allSettled(pending.map(async ([id, item]) => {
+      const data = await community.api("download", { packageId: id });
+      if (!data?.package?.configPayload) throw new Error("Package configuration is unavailable.");
+      return { id, item, package: data.package };
+    }));
 
-    for (let index = 0; index < pending.length; index += 1) {
+    const ready = [];
+    const failures = [];
+    downloads.forEach((result, index) => {
       const [id, item] = pending[index];
-      statusMessage = `Importing ${index + 1} of ${pending.length}: ${item.name}`;
+      if (result.status === "fulfilled") ready.push(result.value);
+      else failures.push({ id, name: item.name, message: String(result.reason?.message || result.reason) });
+    });
+
+    const imported = [];
+    if (ready.length) {
+      statusMessage = `Adding ${ready.length} package${ready.length === 1 ? "" : "s"} to your workspace…`;
       renderCart();
       try {
-        const data = await community.api("download", { packageId: id });
-        if (!data?.package?.configPayload) throw new Error("Package configuration is unavailable.");
-        community.importPackage(data.package, "add");
-        imported.push({ id, name: item.name });
+        community.importPackages(ready.map((entry) => entry.package), "add");
+        ready.forEach(({ id, item }) => imported.push({ id, name: item.name }));
       } catch (error) {
-        failures.push({ id, name: item.name, message: String(error?.message || error) });
+        ready.forEach(({ id, item }) => failures.push({
+          id,
+          name: item.name,
+          message: String(error?.message || error)
+        }));
       }
     }
 
@@ -281,46 +292,27 @@
   function attachBrowseObserver() {
     const host = document.getElementById("communityBrowseList");
     if (!host) return false;
-    if (host === observedBrowseHost && browseObserver) return true;
+    if (browseObserver) return true;
 
-    browseObserver?.disconnect();
-    observedBrowseHost = host;
     browseObserver = new MutationObserver(() => decorateCards());
     browseObserver.observe(host, { childList: true });
     decorateCards();
     return true;
   }
 
-  function attachBrowseHostReplacementObserver() {
-    const pane = document.querySelector('[data-community-pane="browse"]');
-    if (!pane || browsePaneObserver) return false;
 
-    browsePaneObserver = new MutationObserver(() => {
-      const currentHost = document.getElementById("communityBrowseList");
-      if (currentHost !== observedBrowseHost) attachBrowseObserver();
-    });
-    browsePaneObserver.observe(pane, { childList: true });
-    return true;
-  }
 
   function install() {
     const controls = ensureControls();
     if (!controls) return false;
     document.addEventListener("click", handleClick);
-    attachBrowseHostReplacementObserver();
     attachBrowseObserver();
     renderCart();
     return true;
   }
 
   function start() {
-    if (install()) return;
-    const observer = new MutationObserver(() => {
-      if (!document.getElementById("servoforgeCommunityDialog")) return;
-      observer.disconnect();
-      install();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+    if (!install()) console.warn("ServoForge Community cart could not find the Community Library dialog.");
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
@@ -333,6 +325,7 @@
     render: renderCart,
     clear: clearCart,
     importAll,
+    decorate: decorateCards,
     reconnectBrowseHost: attachBrowseObserver
   });
 })(typeof window !== "undefined" ? window : globalThis);

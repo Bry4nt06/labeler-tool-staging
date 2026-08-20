@@ -30,13 +30,17 @@
       if (!bottle?.parent) handlingBottles.delete(bottle);
       else suppressLegacyLabelGroup(bottle);
     });
-    global.requestAnimationFrame(loop);
   }
 
   function startLoop() {
     if (running) return;
+    const coordinator = global.Labeler3DPresentationFrameCoordinator;
+    if (!coordinator?.register) {
+      console.warn("ServoForge 3D presentation frame coordinator is unavailable.");
+      return;
+    }
     running = true;
-    global.requestAnimationFrame(loop);
+    coordinator.register(PATCH_VERSION, loop, { minIntervalMs: 250 });
   }
 
   function installHook() {

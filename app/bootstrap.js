@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-viewport-singleton-v231-20260820-1817";
-  const buildUpdatedAt = "Aug 20, 2026 6:17 PM ET";
+  const build = "community-cart-3d-performance-v240-20260820-2045";
+  const buildUpdatedAt = "Aug 20, 2026 8:45 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -106,6 +106,7 @@
     "app/3d/bottle-handling-transfer-synchronization-integration.js",
     "app/3d/bottle-handling-viewport-integration.js",
     "app/3d/bottle-label-coder-visual-polish-integration.js",
+    "app/3d/presentation-frame-coordinator.js",
     "app/3d/bottle-handling-progressive-label-flow-integration.js",
     "app/3d/coder-housing-dimension-refinement-integration.js",
     "app/3d/coder-height-26in-refinement-integration.js",
