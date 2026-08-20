@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
@@ -37,5 +38,19 @@ presentationModules.forEach((file) => {
 const coordinatorIndex = bootstrap.indexOf('"app/3d/presentation-frame-coordinator.js"');
 const firstPresentationIndex = bootstrap.indexOf('"app/3d/bottle-handling-progressive-label-flow-integration.js"');
 assert.ok(coordinatorIndex >= 0 && coordinatorIndex < firstPresentationIndex, "Coordinator must load before presentation integrations.");
+
+const context = { console, performance: { now: () => 0 } };
+context.window = context;
+context.globalThis = context;
+vm.runInNewContext(coordinator, context);
+let fullRateRuns = 0;
+let throttledRuns = 0;
+context.Labeler3DPresentationFrameCoordinator.register("full", () => { fullRateRuns += 1; });
+context.Labeler3DPresentationFrameCoordinator.register("static", () => { throttledRuns += 1; }, { minIntervalMs: 100 });
+[0, 20, 99, 100, 180, 200].forEach((timestamp) => {
+  context.Labeler3DPresentationFrameCoordinator.frame({ timestamp });
+});
+assert.equal(fullRateRuns, 6, "Animated presentation callbacks must remain full-rate.");
+assert.equal(throttledRuns, 3, "Static presentation callbacks must honor their interval.");
 
 console.log("3D shared presentation frame coordinator regression passed.");
