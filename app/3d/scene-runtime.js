@@ -2,7 +2,9 @@
   "use strict";
 
   const RUNTIME_VERSION = "servoforge.3d-runtime.v2";
-  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v08.js?v=0.9.10-3d-v08-hardware-reference";
+  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v08.js?v=0.9.10-3d-v09-singleton-20260820";
+  const VIEWPORT_LOAD_KEY = "__servoforge3DViewportScriptLoadV09";
+  const VIEWPORT_SINGLETON_KEY = "__servoforge3DViewportSingletonV09";
   const SPACING_OVERLAY_SCRIPT = "app/3d/measured-spacing-overlay.js?v=0.9.10-3d-v04-machine-map-equipment";
 
   let lastSnapshot = null;
@@ -234,17 +236,33 @@
   function loadViewportRenderer() {
     const documentRef = global.document;
     if (!documentRef?.createElement) return false;
-    const existing = documentRef.querySelector("script[data-servoforge-3d-viewport]");
-    if (existing) {
+
+    const existing = documentRef.querySelector(
+      'script[data-servoforge-3d-viewport], script[src*="app/3d/three-scene-renderer-v08.js"]'
+    );
+    if (
+      global[VIEWPORT_LOAD_KEY]
+      || global[VIEWPORT_SINGLETON_KEY]
+      || global.Labeler3DViewport
+      || existing
+    ) {
       loadMeasuredSpacingOverlay();
       return false;
     }
+
+    global[VIEWPORT_LOAD_KEY] = "loading";
     const script = documentRef.createElement("script");
     script.src = `./${VIEWPORT_SCRIPT}`;
     script.async = true;
-    script.dataset.servoforge3dViewport = "v0.8";
-    script.addEventListener("load", loadMeasuredSpacingOverlay, { once: true });
-    script.addEventListener("error", () => console.warn("ServoForge 3D hardware-reference viewport could not be loaded. Core 3D frame runtime remains available."), { once: true });
+    script.dataset.servoforge3dViewport = "v0.9";
+    script.addEventListener("load", () => {
+      global[VIEWPORT_LOAD_KEY] = "loaded";
+      loadMeasuredSpacingOverlay();
+    }, { once: true });
+    script.addEventListener("error", () => {
+      delete global[VIEWPORT_LOAD_KEY];
+      console.warn("ServoForge 3D hardware-reference viewport could not be loaded. Core 3D frame runtime remains available.");
+    }, { once: true });
     (documentRef.body || documentRef.head || documentRef.documentElement).appendChild(script);
     return true;
   }
