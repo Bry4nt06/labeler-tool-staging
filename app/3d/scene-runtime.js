@@ -1,9 +1,9 @@
 (function (global) {
   "use strict";
 
-  const RUNTIME_VERSION = "servoforge.3d-runtime.v2";
-  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v08.js?v=0.9.10-3d-v08-hardware-reference";
-  const SPACING_OVERLAY_SCRIPT = "app/3d/measured-spacing-overlay.js?v=0.9.10-3d-v04-machine-map-equipment";
+  const RUNTIME_VERSION = "servoforge.3d-runtime.v3";
+  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v09.js?v=0.9.10-3d-v09-starwheel-single-scene";
+  const SPACING_OVERLAY_SCRIPT = "app/3d/measured-spacing-overlay.js?v=0.9.10-3d-v05-single-frame-telemetry";
 
   let lastSnapshot = null;
   let snapshotBuildCount = 0;
@@ -174,9 +174,11 @@
       ),
       readOnly: true,
       source: "generated-servo-program",
-      snapshotAuthority: "single-latest-render-snapshot",
+      snapshotAuthority: "canonical-3d-render-frame",
       snapshotBuildCount,
       hasLatestSnapshot: Boolean(lastSnapshot),
+      viewportAuthority: "starwheel-bottle-handling-single-scene-v09",
+      legacyCarouselViewportRetired: true,
       geometry: "measured-plate-spacing-plus-active-bottle-profile",
       carousel: "machine-head-count-and-user-measured-plate-spacing",
       labels: "active-label-spec-wraps-with-reference-artwork",
@@ -225,7 +227,7 @@
     const script = documentRef.createElement("script");
     script.src = `./${SPACING_OVERLAY_SCRIPT}`;
     script.async = true;
-    script.dataset.servoforge3dSpacingOverlay = "v1";
+    script.dataset.servoforge3dSpacingOverlay = "v2";
     script.addEventListener("error", () => console.warn("ServoForge measured bottle-plate spacing telemetry could not be loaded."), { once: true });
     (documentRef.body || documentRef.head || documentRef.documentElement).appendChild(script);
     return true;
@@ -242,9 +244,9 @@
     const script = documentRef.createElement("script");
     script.src = `./${VIEWPORT_SCRIPT}`;
     script.async = true;
-    script.dataset.servoforge3dViewport = "v0.8";
+    script.dataset.servoforge3dViewport = "v0.9";
     script.addEventListener("load", loadMeasuredSpacingOverlay, { once: true });
-    script.addEventListener("error", () => console.warn("ServoForge 3D hardware-reference viewport could not be loaded. Core 3D frame runtime remains available."), { once: true });
+    script.addEventListener("error", () => console.warn("ServoForge starwheel bottle-handling viewport could not be loaded. Core 3D frame runtime remains available."), { once: true });
     (documentRef.body || documentRef.head || documentRef.documentElement).appendChild(script);
     return true;
   }
