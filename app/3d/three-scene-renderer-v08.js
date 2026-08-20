@@ -204,7 +204,7 @@
 
   function createMachineScene() {
     scene = new THREE.Scene(); scene.background = new THREE.Color(0x071117); scene.fog = new THREE.Fog(0x071117, 12, 24); camera = new THREE.PerspectiveCamera(42, 1, 0.05, 60); cameraState.target = new THREE.Vector3(0, 0.72, 0);
-    renderer = new THREE.WebGLRenderer({ canvas: ui.canvas, antialias: true, powerPreference: "high-performance" }); renderer.setPixelRatio(Math.min(global.devicePixelRatio || 1, 2)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer = new THREE.WebGLRenderer({ canvas: ui.canvas, antialias: true, powerPreference: "high-performance" }); renderer.setPixelRatio(Math.min(global.devicePixelRatio || 1, 1.5)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
     scene.add(new THREE.HemisphereLight(0xa9d8ef, 0x101519, 1.5)); const key = new THREE.DirectionalLight(0xffffff, 2.1); key.position.set(5,8,4); key.castShadow = true; scene.add(key); const fill = new THREE.DirectionalLight(0xff8a5c, 0.55); fill.position.set(-5,3,-4); scene.add(fill);
     const floor = new THREE.Mesh(new THREE.CircleGeometry(8.5, 96), material({ color: 0x0b171d, roughness: 0.86, metalness: 0.05 })); floor.rotation.x = -Math.PI / 2; floor.position.y = -0.02; floor.receiveShadow = true; scene.add(floor); const grid = new THREE.GridHelper(16,32,0x36505b,0x1e3038); grid.position.y = 0.002; scene.add(grid);
     carouselBody = new THREE.Mesh(new THREE.CylinderGeometry(1,1.035,0.20,96), material({ color: 0x202b31, roughness: 0.42, metalness: 0.72 })); carouselBody.position.y = 0.10; scene.add(carouselBody); carouselTop = new THREE.Mesh(new THREE.CylinderGeometry(1,1,0.035,96), material({ color: 0x35434a, roughness: 0.34, metalness: 0.78 })); carouselTop.position.y = 0.218; scene.add(carouselTop); pathRing = new THREE.Mesh(new THREE.TorusGeometry(1,0.024,10,160), material({ color: 0xff6a3d, emissive: 0x4a1408, emissiveIntensity: 0.42, roughness: 0.35 })); pathRing.rotation.x = Math.PI / 2; pathRing.position.y = 0.247; scene.add(pathRing); hub = new THREE.Mesh(new THREE.CylinderGeometry(0.72,0.82,0.34,64), material({ color: 0x10191e, roughness: 0.3, metalness: 0.82 })); hub.position.y = 0.34; scene.add(hub);
@@ -244,7 +244,30 @@
   }
 
   function applySnapshot(snapshot) { if (!snapshot?.scene || !snapshot?.carousel || !snapshot?.equipment || !snapshot?.labels) return; syncMachineGeometry(snapshot); rebuildHeads(snapshot); rebuildEquipment(snapshot); applyHeadLayout(snapshot); updateActivityHighlight(snapshot); const handlingViewport = global.Labeler3DBottleHandlingViewport; handlingViewport?.attach?.(scene); handlingViewport?.sync?.(snapshot); if (followHead) focusHead(snapshot); updateTelemetry(snapshot); }
-  function renderFrame() { if (!viewportOpen || !renderer || !scene || !camera) return; try { const activeRuntime = runtime(); if (!activeRuntime?.snapshot) throw new Error("3D scene runtime is unavailable."); lastSnapshot = activeRuntime.snapshot({ scene: { tableY: TABLE_Y, bottleLift: BOTTLE_LIFT, unitMode: "physical-mm-hardware-reference-v0.8" } }); applySnapshot(lastSnapshot); ui.error.hidden = true; renderer.render(scene,camera); } catch (error) { ui.error.hidden = false; ui.error.textContent = `3D frame unavailable: ${error?.message || error}`; } animationFrame = global.requestAnimationFrame(renderFrame); }
+  function renderFrame(timestamp) {
+    if (!viewportOpen || !renderer || !scene || !camera) return;
+    try {
+      const activeRuntime = runtime();
+      if (!activeRuntime?.snapshot) throw new Error("3D scene runtime is unavailable.");
+      lastSnapshot = activeRuntime.snapshot({
+        scene: { tableY: TABLE_Y, bottleLift: BOTTLE_LIFT, unitMode: "physical-mm-hardware-reference-v0.8" }
+      });
+      applySnapshot(lastSnapshot);
+      global.Labeler3DPresentationFrameCoordinator?.frame?.({
+        timestamp,
+        snapshot: lastSnapshot,
+        scene,
+        camera,
+        renderer
+      });
+      ui.error.hidden = true;
+      renderer.render(scene, camera);
+    } catch (error) {
+      ui.error.hidden = false;
+      ui.error.textContent = `3D frame unavailable: ${error?.message || error}`;
+    }
+    animationFrame = global.requestAnimationFrame(renderFrame);
+  }
   async function openViewport() { installUi(); ui.backdrop.hidden = false; viewportOpen = true; viewportSingleton.open = true; try { await ensureThree(); if (!hardwareFactory()?.createEquipmentAssembly) throw new Error("3D hardware mesh factory is unavailable."); if (!renderer) createMachineScene(); resizeRenderer(); ui.error.hidden = true; if (animationFrame !== null) global.cancelAnimationFrame(animationFrame); animationFrame = global.requestAnimationFrame(renderFrame); } catch (error) { ui.error.hidden = false; ui.error.textContent = `Unable to start the 3D hardware renderer. ${error?.message || error}`; console.error("ServoForge 3D hardware renderer failed", error); } }
   function closeViewport() { if (!ui) return; viewportOpen = false; viewportSingleton.open = false; ui.backdrop.hidden = true; if (animationFrame !== null) { global.cancelAnimationFrame(animationFrame); animationFrame = null; } }
   function status() { return Object.freeze({ version: VIEWPORT_VERSION, threeVersion: THREE_VERSION, installed: Boolean(ui), engineReady: Boolean(THREE && renderer), open: viewportOpen, followHead, hardwareCatalog: hardwareCatalog()?.CATALOG_VERSION || null, hardwareFactory: hardwareFactory()?.FACTORY_VERSION || null, sensorsRendered: true, coderRendered: true, measuredWipePads: true, spenderPhotoReference: true, readOnly: true, sensorLogicUntouched: true, coderLogicUntouched: true, plannerPitchGeometryUntouched: true, source: "Labeler3DSceneRuntime.snapshot" }); }
