@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-animation-parity-v217-20260820-0751";
-  const buildUpdatedAt = "Aug 20, 2026 7:51 AM ET";
+  const build = "3d-single-launcher-v218-20260820-0931";
+  const buildUpdatedAt = "Aug 20, 2026 9:31 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
