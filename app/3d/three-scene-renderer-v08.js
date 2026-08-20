@@ -1,7 +1,30 @@
 (function installServoForge3DHardwareViewport(global) {
   "use strict";
 
-  const VIEWPORT_VERSION = "servoforge.3d-viewport.v0.8";
+  const VIEWPORT_SINGLETON_KEY = "__servoforge3DViewportSingletonV09";
+  if (global[VIEWPORT_SINGLETON_KEY]) return;
+
+  const staleBackdrops = [...(global.document?.querySelectorAll?.("#servoforge3dBackdrop") || [])];
+  staleBackdrops.forEach((backdrop) => {
+    try {
+      backdrop.querySelector?.("#servoforge3dClose")?.click?.();
+    } catch {
+      // Removing the stale viewport still prevents it from remaining interactive.
+    }
+    backdrop.remove?.();
+  });
+
+  const viewportSingleton = {
+    version: "servoforge.3d-viewport-singleton.v1",
+    installing: true,
+    installed: false,
+    open: false,
+    staleViewportCountRemoved: staleBackdrops.length,
+    api: null
+  };
+  global[VIEWPORT_SINGLETON_KEY] = viewportSingleton;
+
+  const VIEWPORT_VERSION = "servoforge.3d-viewport.v0.9";
   const THREE_VERSION = "0.185.1";
   const THREE_MODULE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
   const TABLE_Y = 0.20;
@@ -222,10 +245,10 @@
 
   function applySnapshot(snapshot) { if (!snapshot?.scene || !snapshot?.carousel || !snapshot?.equipment || !snapshot?.labels) return; syncMachineGeometry(snapshot); rebuildHeads(snapshot); rebuildEquipment(snapshot); applyHeadLayout(snapshot); updateActivityHighlight(snapshot); const handlingViewport = global.Labeler3DBottleHandlingViewport; handlingViewport?.attach?.(scene); handlingViewport?.sync?.(snapshot); if (followHead) focusHead(snapshot); updateTelemetry(snapshot); }
   function renderFrame() { if (!viewportOpen || !renderer || !scene || !camera) return; try { const activeRuntime = runtime(); if (!activeRuntime?.snapshot) throw new Error("3D scene runtime is unavailable."); lastSnapshot = activeRuntime.snapshot({ scene: { tableY: TABLE_Y, bottleLift: BOTTLE_LIFT, unitMode: "physical-mm-hardware-reference-v0.8" } }); applySnapshot(lastSnapshot); ui.error.hidden = true; renderer.render(scene,camera); } catch (error) { ui.error.hidden = false; ui.error.textContent = `3D frame unavailable: ${error?.message || error}`; } animationFrame = global.requestAnimationFrame(renderFrame); }
-  async function openViewport() { installUi(); ui.backdrop.hidden = false; viewportOpen = true; try { await ensureThree(); if (!hardwareFactory()?.createEquipmentAssembly) throw new Error("3D hardware mesh factory is unavailable."); if (!renderer) createMachineScene(); resizeRenderer(); ui.error.hidden = true; if (animationFrame !== null) global.cancelAnimationFrame(animationFrame); animationFrame = global.requestAnimationFrame(renderFrame); } catch (error) { ui.error.hidden = false; ui.error.textContent = `Unable to start the 3D hardware renderer. ${error?.message || error}`; console.error("ServoForge 3D hardware renderer failed", error); } }
-  function closeViewport() { if (!ui) return; viewportOpen = false; ui.backdrop.hidden = true; if (animationFrame !== null) { global.cancelAnimationFrame(animationFrame); animationFrame = null; } }
+  async function openViewport() { installUi(); ui.backdrop.hidden = false; viewportOpen = true; viewportSingleton.open = true; try { await ensureThree(); if (!hardwareFactory()?.createEquipmentAssembly) throw new Error("3D hardware mesh factory is unavailable."); if (!renderer) createMachineScene(); resizeRenderer(); ui.error.hidden = true; if (animationFrame !== null) global.cancelAnimationFrame(animationFrame); animationFrame = global.requestAnimationFrame(renderFrame); } catch (error) { ui.error.hidden = false; ui.error.textContent = `Unable to start the 3D hardware renderer. ${error?.message || error}`; console.error("ServoForge 3D hardware renderer failed", error); } }
+  function closeViewport() { if (!ui) return; viewportOpen = false; viewportSingleton.open = false; ui.backdrop.hidden = true; if (animationFrame !== null) { global.cancelAnimationFrame(animationFrame); animationFrame = null; } }
   function status() { return Object.freeze({ version: VIEWPORT_VERSION, threeVersion: THREE_VERSION, installed: Boolean(ui), engineReady: Boolean(THREE && renderer), open: viewportOpen, followHead, hardwareCatalog: hardwareCatalog()?.CATALOG_VERSION || null, hardwareFactory: hardwareFactory()?.FACTORY_VERSION || null, sensorsRendered: true, coderRendered: true, measuredWipePads: true, spenderPhotoReference: true, readOnly: true, sensorLogicUntouched: true, coderLogicUntouched: true, plannerPitchGeometryUntouched: true, source: "Labeler3DSceneRuntime.snapshot" }); }
-  function installWhenReady(attempt = 0) { if (!runtime()?.snapshot || !hardwareFactory()?.createEquipmentAssembly) { if (attempt < 160) global.setTimeout(() => installWhenReady(attempt + 1),25); return; } if (!installUi() && attempt < 160) { global.setTimeout(() => installWhenReady(attempt + 1),25); return; } global.Labeler3DViewport = Object.freeze({ VIEWPORT_VERSION, THREE_VERSION, open: openViewport, close: closeViewport, status, resetCamera: () => setCameraPreset("reset"), topCamera: () => setCameraPreset("top"), focusHead }); }
+  function installWhenReady(attempt = 0) { if (!runtime()?.snapshot || !hardwareFactory()?.createEquipmentAssembly) { if (attempt < 160) global.setTimeout(() => installWhenReady(attempt + 1),25); return; } if (!installUi() && attempt < 160) { global.setTimeout(() => installWhenReady(attempt + 1),25); return; } global.Labeler3DViewport = Object.freeze({ VIEWPORT_VERSION, THREE_VERSION, open: openViewport, close: closeViewport, status, resetCamera: () => setCameraPreset("reset"), topCamera: () => setCameraPreset("top"), focusHead }); viewportSingleton.api = global.Labeler3DViewport; viewportSingleton.installing = false; viewportSingleton.installed = true; }
 
   installWhenReady();
 })(window);
