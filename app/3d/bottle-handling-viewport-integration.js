@@ -383,6 +383,7 @@
   global.Labeler3DBottleHandlingViewport = Object.freeze({
     INTEGRATION_VERSION,
     THREE_VERSION,
+    attach: ensureHandlingLayer,
     setBottleMode,
     sync,
     status
