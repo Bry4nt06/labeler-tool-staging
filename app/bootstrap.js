@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-single-launcher-v218-20260820-0931";
-  const buildUpdatedAt = "Aug 20, 2026 9:31 AM ET";
+  const build = "community-cart-v127-20260820-0940";
+  const buildUpdatedAt = "Aug 20, 2026 9:40 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -31,6 +31,7 @@
     "app/community-library-v103-integration.js",
     "app/top-action-icons-integration.js",
     "app/community-library-runtime-stability-integration.js",
+    "app/community-library-cart-integration.js",
     "app/controllers/settings-reset-controller.js",
     "app/controllers/local-persistence-controller.js",
     "app/controllers/map-controller.js",
