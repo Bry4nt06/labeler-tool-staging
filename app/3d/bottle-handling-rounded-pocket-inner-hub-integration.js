@@ -297,7 +297,7 @@
     const activeRuntime = runtime();
     const handlingAdapter = adapter();
     if (!activeRuntime?.snapshot || !handlingAdapter?.snapshot) return null;
-    const snapshot = activeRuntime.snapshot({
+    const snapshot = activeRuntime.latestSnapshot?.() || activeRuntime.snapshot({
       scene: {
         tableY: TABLE_Y,
         bottleLift: BOTTLE_LIFT,
@@ -384,13 +384,17 @@
     } catch (error) {
       console.warn("ServoForge rounded star pocket / inner hub frame skipped", error);
     }
-    global.requestAnimationFrame(loop);
   }
 
   function startLoop() {
     if (running) return;
+    const coordinator = global.Labeler3DPresentationFrameCoordinator;
+    if (!coordinator?.register) {
+      console.warn("ServoForge 3D presentation frame coordinator is unavailable.");
+      return;
+    }
     running = true;
-    global.requestAnimationFrame(loop);
+    coordinator.register(PATCH_VERSION, loop, { minIntervalMs: 250 });
   }
 
   import(THREE_MODULE_URL).then((module) => {
