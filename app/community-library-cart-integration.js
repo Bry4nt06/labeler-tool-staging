@@ -3,12 +3,12 @@
 (function installServoForgeCommunityCart(global) {
   if (global.LabelerCommunityCartIntegration?.installed) return;
 
-  const BUILD_MARKER = "community-cart-v127-20260820-0940";
+  const BUILD_MARKER = "community-cart-v128-20260820-0956";
   const cart = new Map();
   let cartOpen = false;
   let busy = false;
   let statusMessage = "";
-  let dialogObserver = null;
+  let browseObserver = null;
 
   function esc(value) {
     return String(value ?? "")
@@ -105,8 +105,18 @@
       dialog.appendChild(panel);
     }
 
-    decorateCards();
     return { dialog, toggle, panel };
+  }
+
+  function syncAddButtons() {
+    document.querySelectorAll("[data-community-cart-add]").forEach((button) => {
+      const selected = cart.has(String(button.dataset.communityCartAdd || ""));
+      const disabled = selected || busy;
+      const label = selected ? "✓ In Cart" : "Add to Cart";
+      if (button.disabled !== disabled) button.disabled = disabled;
+      if (button.textContent !== label) button.textContent = label;
+      button.classList.toggle("secondary-button", selected);
+    });
   }
 
   function decorateCards() {
@@ -119,18 +129,10 @@
       button.type = "button";
       button.className = "sf-community-cart-add";
       button.dataset.communityCartAdd = item.id;
+      button.textContent = "Add to Cart";
       actions.appendChild(button);
     });
     syncAddButtons();
-  }
-
-  function syncAddButtons() {
-    document.querySelectorAll("[data-community-cart-add]").forEach((button) => {
-      const selected = cart.has(String(button.dataset.communityCartAdd || ""));
-      button.disabled = selected || busy;
-      button.textContent = selected ? "✓ In Cart" : "Add to Cart";
-      button.classList.toggle("secondary-button", selected);
-    });
   }
 
   function renderCart() {
@@ -140,23 +142,27 @@
     const list = document.getElementById("communityCartList");
     const headerCount = document.getElementById("communityCartCount");
     const panelCount = panel.querySelector("[data-community-cart-count]");
-    const importAll = panel.querySelector("[data-community-cart-import-all]");
+    const importAllButton = panel.querySelector("[data-community-cart-import-all]");
     const clear = panel.querySelector("[data-community-cart-clear]");
     const status = document.getElementById("communityCartStatus");
     const count = cart.size;
 
     panel.hidden = !cartOpen;
     dialog.classList.toggle("sf-community-cart-open", cartOpen);
-    toggle.setAttribute("aria-expanded", cartOpen ? "true" : "false");
-    if (headerCount) headerCount.textContent = String(count);
-    if (panelCount) panelCount.textContent = String(count);
-    if (list) list.innerHTML = count ? [...cart.values()].map(cartItemHtml).join("") : `<div class="sf-community-cart-empty">Your cart is empty. Add Community packages while you browse.</div>`;
-    if (importAll) {
-      importAll.textContent = busy ? "Importing…" : `Import All (${count})`;
-      importAll.disabled = busy || count === 0;
+    toggle?.setAttribute("aria-expanded", cartOpen ? "true" : "false");
+    if (headerCount && headerCount.textContent !== String(count)) headerCount.textContent = String(count);
+    if (panelCount && panelCount.textContent !== String(count)) panelCount.textContent = String(count);
+    if (list) {
+      const nextHtml = count ? [...cart.values()].map(cartItemHtml).join("") : `<div class="sf-community-cart-empty">Your cart is empty. Add Community packages while you browse.</div>`;
+      if (list.innerHTML !== nextHtml) list.innerHTML = nextHtml;
+    }
+    if (importAllButton) {
+      const label = busy ? "Importing…" : `Import All (${count})`;
+      if (importAllButton.textContent !== label) importAllButton.textContent = label;
+      importAllButton.disabled = busy || count === 0;
     }
     if (clear) clear.disabled = busy || count === 0;
-    if (status) status.textContent = statusMessage;
+    if (status && status.textContent !== statusMessage) status.textContent = statusMessage;
     syncAddButtons();
   }
 
@@ -188,8 +194,12 @@
   async function importAll() {
     if (busy || !cart.size) return;
     let community;
-    try { community = communityApi(); }
-    catch (error) { alert(error.message); return; }
+    try {
+      community = communityApi();
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
 
     busy = true;
     cartOpen = true;
@@ -199,6 +209,7 @@
     const pending = [...cart.entries()];
     const imported = [];
     const failures = [];
+
     for (let index = 0; index < pending.length; index += 1) {
       const [id, item] = pending[index];
       statusMessage = `Importing ${index + 1} of ${pending.length}: ${item.name}`;
@@ -217,7 +228,10 @@
     busy = false;
     statusMessage = `${imported.length} imported${failures.length ? ` • ${failures.length} failed and kept in cart` : ""}.`;
     renderCart();
-    try { await community.loadBrowse?.(); } catch { }
+
+    try {
+      await community.loadBrowse?.();
+    } catch { }
 
     if (failures.length) {
       alert(`Community batch import finished. ${imported.length} imported; ${failures.length} failed. Failed packages remain in the cart.\n\n${failures.map((item) => `${item.name}: ${item.message}`).join("\n")}`);
@@ -235,39 +249,46 @@
       renderCart();
       return;
     }
+
     if (event.target.closest?.("[data-community-cart-dismiss]")) {
       cartOpen = false;
       renderCart();
       return;
     }
+
     const add = event.target.closest?.("[data-community-cart-add]");
     if (add) {
       addToCart(add);
       return;
     }
+
     const remove = event.target.closest?.("[data-community-cart-remove]");
     if (remove) {
       removeFromCart(remove.dataset.communityCartRemove);
       return;
     }
+
     if (event.target.closest?.("[data-community-cart-clear]")) {
       clearCart();
       return;
     }
-    if (event.target.closest?.("[data-community-cart-import-all]")) {
-      importAll();
-    }
+
+    if (event.target.closest?.("[data-community-cart-import-all]")) importAll();
+  }
+
+  function attachBrowseObserver() {
+    const host = document.getElementById("communityBrowseList");
+    if (!host || browseObserver) return;
+    browseObserver = new MutationObserver(() => decorateCards());
+    browseObserver.observe(host, { childList: true });
   }
 
   function install() {
     const controls = ensureControls();
     if (!controls) return false;
     document.addEventListener("click", handleClick);
-    dialogObserver = new MutationObserver(() => {
-      decorateCards();
-      if (!document.getElementById("communityImportCart")) ensureControls();
-    });
-    dialogObserver.observe(controls.dialog, { childList: true, subtree: true });
+    attachBrowseObserver();
+    decorateCards();
     renderCart();
     return true;
   }
