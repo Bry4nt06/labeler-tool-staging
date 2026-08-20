@@ -15,10 +15,9 @@ test("progressive bottle labeling follows active program sections and Head 1 app
   assert.match(source, /active-servoforge-program-sections-plus-head1-application-angles/);
   assert.match(source, /head1ReferenceAuthority: true/);
   assert.match(source, /programSectionAuthority: true/);
-  assert.match(source, /\bNECK\b/);
-  assert.match(source, /\bBODY\b/);
-  assert.match(source, /\bFRONT\b/);
-  assert.match(source, /\bBACK\b/);
+  ["NECK", "BODY", "FRONT", "BACK"].forEach((section) => {
+    assert.ok(source.includes(`\\b${section}\\b`));
+  });
 });
 
 test("handling bottles are unlabeled before carousel and fully settled after carousel", () => {
@@ -31,6 +30,8 @@ test("handling bottles are unlabeled before carousel and fully settled after car
 
 test("each label uses a short smooth application animation rather than appearing fully wrapped", () => {
   assert.match(source, /progressiveWrapAnimation: true/);
+  assert.match(source, /activeRuntime\.latestSnapshot\?\.\(\) \|\| activeRuntime\.snapshot\(/);
+  assert.match(source, /coordinator\.register\(INTEGRATION_VERSION, renderFrame, \{ minIntervalMs: 0 \}\)/);
   assert.match(source, /animationWindowDegrees/);
   assert.match(source, /applicationState = p <= 0\.001 \? "unapplied" : p >= 0\.999 \? "applied" : "wrapping"/);
   assert.match(source, /mesh\.rotation\.y/);
