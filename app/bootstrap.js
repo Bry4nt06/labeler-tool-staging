@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "community-runtime-stability-v215-20260819-1558";
-  const buildUpdatedAt = "Aug 19, 2026 3:58 PM ET";
+  const build = "runtime-recovery-v216-20260819-2134";
+  const buildUpdatedAt = "Aug 19, 2026 9:34 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -135,6 +135,8 @@
     "app/startup-runtime.js"
   ]);
 
+  const moduleFailures = [];
+
   function loadScript(path) {
     return new Promise((resolve, reject) => {
       const expected = new URL(`./${path}?v=${encodeURIComponent(version)}&build=${encodeURIComponent(build)}`, window.location.href).href;
@@ -161,10 +163,44 @@
     });
   }
 
+  async function loadModuleSafely(path) {
+    try {
+      await loadScript(path);
+      return true;
+    } catch (error) {
+      const failure = Object.freeze({
+        path,
+        message: String(error?.message || error || "Module failed to load.")
+      });
+      moduleFailures.push(failure);
+      console.error(`[ServoForge bootstrap] ${path} failed to load; continuing so core runtime recovery can complete.`, error);
+      return false;
+    }
+  }
+
   window.ServoForgeBootstrapModules = modules;
   window.ServoForgeBootstrapBuild = build;
+  window.ServoForgeBootstrapFailures = moduleFailures;
   window.ServoForgeBootstrapReady = modules.reduce(
-    (promise, path) => promise.then(() => loadScript(path)),
+    (promise, path) => promise.then(() => loadModuleSafely(path)),
     Promise.resolve()
-  );
+  ).then(() => {
+    window.ServoForgeBootstrapFailures = Object.freeze([...moduleFailures]);
+
+    // The 3D launcher is installed by the viewport renderer loaded from the
+    // scene runtime. Re-issuing the idempotent loader here makes the button
+    // recover even when an earlier optional integration was unavailable.
+    try {
+      window.Labeler3DSceneRuntime?.loadViewport?.();
+    } catch (error) {
+      console.warn("ServoForge 3D viewport recovery could not be started.", error);
+    }
+
+    return Object.freeze({
+      build,
+      loaded: modules.length - moduleFailures.length,
+      failed: moduleFailures.length,
+      failures: window.ServoForgeBootstrapFailures
+    });
+  });
 })();
