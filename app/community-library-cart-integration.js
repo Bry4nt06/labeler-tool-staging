@@ -3,12 +3,14 @@
 (function installServoForgeCommunityCart(global) {
   if (global.LabelerCommunityCartIntegration?.installed) return;
 
-  const BUILD_MARKER = "community-cart-v128-20260820-0956";
+  const BUILD_MARKER = "community-cart-v129-20260820-1110";
   const cart = new Map();
   let cartOpen = false;
   let busy = false;
   let statusMessage = "";
   let browseObserver = null;
+  let browsePaneObserver = null;
+  let observedBrowseHost = null;
 
   function esc(value) {
     return String(value ?? "")
@@ -278,17 +280,35 @@
 
   function attachBrowseObserver() {
     const host = document.getElementById("communityBrowseList");
-    if (!host || browseObserver) return;
+    if (!host) return false;
+    if (host === observedBrowseHost && browseObserver) return true;
+
+    browseObserver?.disconnect();
+    observedBrowseHost = host;
     browseObserver = new MutationObserver(() => decorateCards());
     browseObserver.observe(host, { childList: true });
+    decorateCards();
+    return true;
+  }
+
+  function attachBrowseHostReplacementObserver() {
+    const pane = document.querySelector('[data-community-pane="browse"]');
+    if (!pane || browsePaneObserver) return false;
+
+    browsePaneObserver = new MutationObserver(() => {
+      const currentHost = document.getElementById("communityBrowseList");
+      if (currentHost !== observedBrowseHost) attachBrowseObserver();
+    });
+    browsePaneObserver.observe(pane, { childList: true });
+    return true;
   }
 
   function install() {
     const controls = ensureControls();
     if (!controls) return false;
     document.addEventListener("click", handleClick);
+    attachBrowseHostReplacementObserver();
     attachBrowseObserver();
-    decorateCards();
     renderCart();
     return true;
   }
@@ -312,6 +332,7 @@
     get count() { return cart.size; },
     render: renderCart,
     clear: clearCart,
-    importAll
+    importAll,
+    reconnectBrowseHost: attachBrowseObserver
   });
 })(typeof window !== "undefined" ? window : globalThis);
