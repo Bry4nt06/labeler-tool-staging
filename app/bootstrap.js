@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-single-renderer-v230-20260820-1728";
-  const buildUpdatedAt = "Aug 20, 2026 5:28 PM ET";
+  const build = "3d-single-environment-v231-20260820-1755";
+  const buildUpdatedAt = "Aug 20, 2026 5:55 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -122,7 +122,6 @@
     "app/3d/bottle-handling-photo-presentation-integration.js",
     "app/3d/bottle-handling-pocket-phase-presentation-integration.js",
     "app/3d/bottle-handling-pocket-clearance-label-restore-integration.js",
-    "app/3d/bottle-handling-progressive-label-authority-integration.js",
     "app/3d/three-d-direction-parity-presentation-integration.js",
     "app/3d/dashboard-top-view-parity-integration.js",
     "app/3d/bottle-handling-unified-star-height-thickness-integration.js",
