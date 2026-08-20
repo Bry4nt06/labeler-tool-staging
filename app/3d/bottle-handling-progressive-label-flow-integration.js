@@ -219,7 +219,7 @@
     try {
       const activeRuntime = runtime();
       if (handlingLayer && activeRuntime?.snapshot && labelFactory()?.createBottleLabels) {
-        const snapshot = activeRuntime.snapshot({
+        const snapshot = activeRuntime.latestSnapshot?.() || activeRuntime.snapshot({
           scene: { tableY: 0.20, bottleLift: 0.155, unitMode: "progressive-label-flow-v1" }
         });
         const activeSections = activeProgramSections(snapshot?.labels);
@@ -249,13 +249,17 @@
     } catch (error) {
       console.warn("ServoForge progressive label-flow frame skipped", error);
     }
-    global.requestAnimationFrame(renderFrame);
   }
 
   function startLoop() {
     if (running) return;
+    const coordinator = global.Labeler3DPresentationFrameCoordinator;
+    if (!coordinator?.register) {
+      console.warn("ServoForge 3D presentation frame coordinator is unavailable.");
+      return;
+    }
     running = true;
-    global.requestAnimationFrame(renderFrame);
+    coordinator.register(INTEGRATION_VERSION, renderFrame, { minIntervalMs: 0 });
   }
 
   function captureHandlingLayer(candidate) {
