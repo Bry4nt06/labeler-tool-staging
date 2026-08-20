@@ -3,7 +3,7 @@
 (function installBottleOrientationPanelRecovery(global) {
   if (global.ServoForgeBottleOrientationPanelRecovery?.installed) return;
 
-  const VERSION = 4;
+  const VERSION = 5;
   const sources = ["program", "simulation"];
   const observers = new Map();
   const TOP_CORRECTION_ATTR = "data-machine-direction-bottle-datum-v79";
@@ -163,9 +163,14 @@
   }
 
   function observeDocument() {
-    if (documentObserver || typeof document === "undefined" || typeof MutationObserver !== "function" || !document.body) return false;
+    if (documentObserver || typeof document === "undefined" || typeof MutationObserver !== "function") return false;
+    const workspaceRoot = document.querySelector?.("main");
+    if (!workspaceRoot) return false;
     documentObserver = new MutationObserver(() => queueRecovery());
-    documentObserver.observe(document.body, { childList: true, subtree: true });
+    // Program and simulation are direct children of main. Watching only root
+    // additions/removals avoids treating per-frame 3D telemetry changes as
+    // workspace rebuilds.
+    documentObserver.observe(workspaceRoot, { childList: true });
     return true;
   }
 
@@ -205,3 +210,5 @@
     nativeBottleDatumCompatibilityV79: true
   });
 })(typeof window !== "undefined" ? window : globalThis);
+
+
