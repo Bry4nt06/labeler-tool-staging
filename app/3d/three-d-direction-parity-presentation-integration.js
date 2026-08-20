@@ -177,7 +177,7 @@
     const activeRuntime = runtime();
     const adapter = handlingAdapter();
     if (!activeRuntime?.snapshot || !adapter?.snapshot) return null;
-    const sceneSnapshot = activeRuntime.snapshot({
+    const sceneSnapshot = activeRuntime.latestSnapshot?.() || activeRuntime.snapshot({
       scene: {
         tableY: 0.20,
         bottleLift: 0.155,
@@ -218,13 +218,17 @@
   function loop() {
     if (!running) return;
     synchronizeFrame();
-    global.requestAnimationFrame(loop);
   }
 
   function startLoop() {
     if (running) return;
+    const coordinator = global.Labeler3DPresentationFrameCoordinator;
+    if (!coordinator?.register) {
+      console.warn("ServoForge 3D presentation frame coordinator is unavailable.");
+      return;
+    }
     running = true;
-    global.requestAnimationFrame(loop);
+    coordinator.register(PATCH_VERSION, loop, { minIntervalMs: 32 });
   }
 
   import(THREE_MODULE_URL).then((module) => {
