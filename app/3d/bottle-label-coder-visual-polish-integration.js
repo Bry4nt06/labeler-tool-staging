@@ -13,6 +13,7 @@
   const THREE_MODULE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
   const CODER_LENS_DIAMETER_MM = 76.2;
   const LABEL_TEXT = "I ♥ Beer";
+  const beerTextureCaches = new WeakMap();
 
   let THREE = null;
   let threePromise = null;
@@ -87,6 +88,13 @@
 
   function createBeerLabelTexture(THREERef, sectionName) {
     if (!global.document?.createElement || !THREERef?.CanvasTexture) return null;
+    let cache = beerTextureCaches.get(THREERef);
+    if (!cache) {
+      cache = new Map();
+      beerTextureCaches.set(THREERef, cache);
+    }
+    const cacheKey = String(sectionName || "body").toLowerCase();
+    if (cache.has(cacheKey)) return cache.get(cacheKey);
     const canvas = global.document.createElement("canvas");
     canvas.width = 1024;
     canvas.height = 512;
@@ -132,6 +140,8 @@
     texture.colorSpace = THREERef.SRGBColorSpace;
     texture.anisotropy = 8;
     texture.needsUpdate = true;
+    texture.userData = { ...(texture.userData || {}), servoforgeSharedLabelAsset: true };
+    cache.set(cacheKey, texture);
     return texture;
   }
 
@@ -141,13 +151,14 @@
     group.traverse?.((child) => {
       if (!child?.isMesh || !child?.userData?.labelSection || !child.material) return;
       const texture = createBeerLabelTexture(THREERef, child.userData.labelSection);
-      const material = child.material.clone();
+      const material = child.material;
       material.color?.set?.(0xffffff);
       material.map = texture;
       material.roughness = 0.52;
       material.metalness = 0;
       material.needsUpdate = true;
       child.material = material;
+      child.userData.texture = texture;
       child.userData.labelText = LABEL_TEXT;
       child.userData.labelAuthority = Object.freeze({
         ...(child.userData.labelAuthority || {}),
@@ -234,16 +245,18 @@
   function polishBottleObject(object, THREERef) {
     if (!object?.isMesh) return;
     const name = String(object.name || "");
+    const instanceKind = String(object.userData?.handlingBottleInstances || "");
     const materials = realisticBottleMaterials(THREERef);
-    if (name === "ServoForgeHandlingBottleBody" || /BottleBody$/.test(name)) {
+    if (instanceKind === "body" || name === "ServoForgeHandlingBottleBody" || /BottleBody$/.test(name)) {
       object.material = materials.amberGlassMaterial;
-      object.castShadow = true;
-      object.receiveShadow = true;
+      object.castShadow = false;
+      object.receiveShadow = false;
       object.userData.visualAuthority = "realistic-amber-glass-reference-presentation";
     }
-    if (name === "ServoForgeHandlingBottleCap" || /BottleCap$/.test(name) || /Crown/i.test(name)) {
+    if (instanceKind === "cap" || name === "ServoForgeHandlingBottleCap" || /BottleCap$/.test(name) || /Crown/i.test(name)) {
       object.material = materials.silverCrownMaterial;
-      object.castShadow = true;
+      object.castShadow = false;
+      object.receiveShadow = false;
       object.userData.crownFinish = "silver-metallic";
     }
   }
@@ -289,3 +302,4 @@
     .then((THREERef) => installBottleVisualHook(THREERef))
     .catch((error) => console.warn("ServoForge bottle visual polish could not install", error));
 })(window);
+
