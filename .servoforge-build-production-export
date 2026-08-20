@@ -1,2 +1,2 @@
 Build the exact current staging application archive for production promotion.
-retry=2
+retry=3
