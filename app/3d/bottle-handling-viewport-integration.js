@@ -1,7 +1,7 @@
 (function installServoForge3DBottleHandlingViewport(global) {
   "use strict";
 
-  const INTEGRATION_VERSION = "servoforge.3d-bottle-handling-viewport.v4";
+  const INTEGRATION_VERSION = "servoforge.3d-bottle-handling-viewport.v5";
   const THREE_VERSION = "0.185.1";
   const THREE_MODULE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
   const TABLE_Y = 0.20;
@@ -47,11 +47,15 @@
     });
   }
 
+  function disposeSharedBottleAssets() {
+    if (!sharedBottleAssets) return;
+    [sharedBottleAssets.bodyGeometry, sharedBottleAssets.capGeometry, sharedBottleAssets.markerGeometry].forEach((geometry) => geometry?.dispose?.());
+    [sharedBottleAssets.glassMaterial, sharedBottleAssets.capMaterial, sharedBottleAssets.datumMaterial].forEach((material) => material?.dispose?.());
+    sharedBottleAssets = null;
+  }
+
   function clearGenerated() {
-    bottlePool.forEach((bottle) => {
-      bottle.parent?.remove(bottle);
-      disposeObject(bottle);
-    });
+    bottlePool.forEach((bottle) => bottle.parent?.remove(bottle));
     bottlePool = [];
     wheelGroups.forEach((wheel) => {
       wheel.parent?.remove(wheel);
@@ -63,7 +67,7 @@
       disposeObject(object);
     });
     staticHardware = [];
-    sharedBottleAssets = null;
+    disposeSharedBottleAssets();
   }
 
   function bottleProfile(geometry) {
@@ -71,7 +75,7 @@
     if (Array.isArray(supplied) && supplied.length >= 4) {
       return supplied.map((point) => new THREE.Vector2(number(point.radius), number(point.y)));
     }
-    return [[0.27,0],[0.31,0.18],[0.31,1.02],[0.18,1.37],[0.12,1.85],[0.13,1.90]]
+    return [[0.27, 0], [0.31, 0.18], [0.31, 1.02], [0.18, 1.37], [0.12, 1.85], [0.13, 1.90]]
       .map(([radius, y]) => new THREE.Vector2(radius, y));
   }
 
@@ -90,11 +94,7 @@
       height,
       bodyGeometry: new THREE.LatheGeometry(profile, 40),
       capGeometry: new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 20),
-      markerGeometry: new THREE.BoxGeometry(
-        Math.max(0.009, bodyRadius * 0.07),
-        markerHeight,
-        Math.max(0.022, bodyRadius * 0.20)
-      ),
+      markerGeometry: new THREE.BoxGeometry(Math.max(0.009, bodyRadius * 0.07), markerHeight, Math.max(0.022, bodyRadius * 0.20)),
       capHeight,
       markerHeight,
       glassMaterial: new THREE.MeshStandardMaterial({ color: 0x70401f, roughness: 0.27, metalness: 0.02 }),
@@ -124,7 +124,6 @@
     datum.name = "ServoForgeHandlingBottleServoDatum";
     datum.position.set(assets.bodyRadius * 1.04, assets.markerHeight * 0.92, 0);
     group.add(datum);
-
     return group;
   }
 
@@ -147,11 +146,7 @@
     shape.closePath();
 
     const thickness = Math.max(0.045, bottleRadius * 0.30);
-    const geometry = new THREE.ExtrudeGeometry(shape, {
-      depth: thickness,
-      bevelEnabled: false,
-      curveSegments: 2
-    });
+    const geometry = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false, curveSegments: 2 });
     geometry.translate(0, 0, -thickness / 2);
     geometry.rotateX(Math.PI / 2);
     return { geometry, thickness };
@@ -171,10 +166,7 @@
     group.userData.handlingWheel = wheelKey;
 
     const star = createScallopedStarGeometry(wheel, bottleRadius);
-    const surface = new THREE.Mesh(
-      star.geometry,
-      new THREE.MeshStandardMaterial({ color: 0xd4d9da, roughness: 0.48, metalness: 0.18 })
-    );
+    const surface = new THREE.Mesh(star.geometry, new THREE.MeshStandardMaterial({ color: 0xd4d9da, roughness: 0.48, metalness: 0.18 }));
     surface.castShadow = true;
     surface.receiveShadow = true;
     group.add(surface);
@@ -185,7 +177,6 @@
       new THREE.MeshStandardMaterial({ color: 0x657177, roughness: 0.30, metalness: 0.72 })
     );
     group.add(hub);
-
     group.userData.referencePocketAngleRadians = starStartReference(layout, wheelKey);
     layer.add(group);
     wheelGroups.set(wheelKey, group);
@@ -204,19 +195,14 @@
     group.position.set(centerX, STAR_SURFACE_Y - 0.035, centerZ);
     group.rotation.y = angleY;
 
-    const belt = new THREE.Mesh(
-      new THREE.BoxGeometry(length, 0.045, width),
-      new THREE.MeshStandardMaterial({ color: 0x22292d, roughness: 0.70, metalness: 0.12 })
-    );
+    const belt = new THREE.Mesh(new THREE.BoxGeometry(length, 0.045, width), new THREE.MeshStandardMaterial({ color: 0x22292d, roughness: 0.70, metalness: 0.12 }));
     group.add(belt);
-
     const railMaterial = new THREE.MeshStandardMaterial({ color: 0x8e9a9f, roughness: 0.28, metalness: 0.78 });
     [-1, 1].forEach((side) => {
       const rail = new THREE.Mesh(new THREE.BoxGeometry(length, 0.055, 0.025), railMaterial);
       rail.position.set(0, 0.08, side * width * 0.56);
       group.add(rail);
     });
-
     layer.add(group);
     staticHardware.push(group);
   }
@@ -238,10 +224,7 @@
     sharedBottleAssets = createSharedBottleAssets(snapshot.geometry);
     const bottleRadius = sharedBottleAssets.bodyRadius;
 
-    Object.entries(handling?.layout?.wheels || {}).forEach(([key, wheel]) => {
-      createStarWheel(key, wheel, handling.layout, bottleRadius);
-    });
-
+    Object.entries(handling?.layout?.wheels || {}).forEach(([key, wheel]) => createStarWheel(key, wheel, handling.layout, bottleRadius));
     const infeed = (handling?.layout?.segments || []).find((segment) => segment.owner === "infeed-conveyor");
     const outfeed = (handling?.layout?.segments || []).find((segment) => segment.owner === "outfeed-conveyor");
     if (infeed) createConveyor(infeed, bottleRadius, "ServoForgeInfeedConveyor");
@@ -252,20 +235,11 @@
       layer.add(bottle);
       bottlePool.push(bottle);
     }
-  }
-
-  function syncBaseBottleVisibility() {
-    if (!layerScene) return;
-    layerScene.traverse?.((object) => {
-      if (object?.name === "ServoForgeLiveBottle" && !object?.userData?.handlingBottle) {
-        object.visible = bottleMode === "head1";
-      }
-    });
+    global.Labeler3DProgressiveLabelFlow?.attachLayer?.(layer);
   }
 
   function setBottleMode(mode) {
     bottleMode = ["all", "head1", "none"].includes(String(mode)) ? String(mode) : "all";
-    syncBaseBottleVisibility();
     return bottleMode;
   }
 
@@ -281,11 +255,11 @@
       bottle.userData.owner = point.owner;
       bottle.userData.segmentId = point.segmentId;
       bottle.userData.tableAngleDegrees = point.tableAngleDegrees;
+      bottle.userData.routeRotationY = point.routeRotationY;
       bottle.position.set(number(point.position?.x), BOTTLE_BASE_Y, number(point.position?.z));
       bottle.rotation.y = sharedServoRotation;
     });
     visibleHandlingBottleCount = visible;
-    syncBaseBottleVisibility();
   }
 
   function updateWheels(handling) {
@@ -293,19 +267,9 @@
       const group = wheelGroups.get(key);
       if (!group) return;
       const reference = number(group.userData.referencePocketAngleRadians);
-      const worldPocketAngle = reference
-        + number(wheel.routeDirectionSign, 1)
-        * number(handling.feedPhasePitch)
-        * number(wheel.pocketPitchRadians);
+      const worldPocketAngle = reference + number(wheel.routeDirectionSign, 1) * number(handling.feedPhasePitch) * number(wheel.pocketPitchRadians);
       group.rotation.y = -worldPocketAngle;
     });
-  }
-
-  function updateViewportCopy() {
-    const title = document.querySelector("#servoforge3dTitle");
-    if (title && title.textContent !== "ServoForge 3D • Bottle Handling") {
-      title.textContent = "ServoForge 3D • Bottle Handling";
-    }
   }
 
   function sync(snapshot) {
@@ -328,7 +292,6 @@
       }
       updateWheels(handling);
       updateBottlePopulation(snapshot, handling);
-      updateViewportCopy();
       return true;
     } catch (error) {
       console.warn("ServoForge 3D bottle handling sync skipped", error);
@@ -347,27 +310,28 @@
     layer = new THREE.Group();
     layer.name = "ServoForgeBottleHandlingSystem";
     layer.userData.handlingAuthority = INTEGRATION_VERSION;
+    layer.userData.singleSceneAuthority = true;
     sceneRoot.add(layer);
     attachedSceneCount += 1;
-    syncBaseBottleVisibility();
+    global.Labeler3DProgressiveLabelFlow?.attachLayer?.(layer);
     return true;
   }
 
-  function installThreeSceneHooks() {
-    const prototype = THREE?.Object3D?.prototype;
-    if (!prototype || prototype.__servoforgeBottleHandlingHookV4) return;
-    const nativeAdd = prototype.add;
-    prototype.add = function servoforgeBottleHandlingAdd(...objects) {
-      const result = nativeAdd.apply(this, objects);
-      if (this?.isScene) ensureHandlingLayer(this);
-      return result;
-    };
-    Object.defineProperty(prototype, "__servoforgeBottleHandlingHookV4", {
-      configurable: false,
-      enumerable: false,
-      writable: false,
-      value: true
-    });
+  async function attachScene(sceneRoot) {
+    await ensureThree();
+    if (!sceneRoot?.isScene) throw new Error("Bottle handling can only attach to a Three.js Scene.");
+    ensureHandlingLayer(sceneRoot);
+    return layer;
+  }
+
+  function detachScene(sceneRoot = layerScene) {
+    if (!layer || !sceneRoot || layerScene !== sceneRoot) return false;
+    layer.parent?.remove(layer);
+    clearGenerated();
+    layer = null;
+    layerScene = null;
+    lastGeometrySignature = "";
+    return true;
   }
 
   function status() {
@@ -380,7 +344,9 @@
       starWheelCount: wheelGroups.size,
       attachedSceneCount,
       independentAnimationLoop: false,
+      prototypeSceneHook: false,
       singleSnapshotAuthority: true,
+      singleSceneAuthority: true,
       activeSceneName: layerScene?.name || null,
       lastHandlingSnapshot
     });
@@ -389,12 +355,10 @@
   global.Labeler3DBottleHandlingViewport = Object.freeze({
     INTEGRATION_VERSION,
     THREE_VERSION,
+    attachScene,
+    detachScene,
     setBottleMode,
     sync,
     status
   });
-
-  ensureThree()
-    .then(() => installThreeSceneHooks())
-    .catch((error) => console.error("ServoForge 3D bottle handling integration failed", error));
 })(window);
