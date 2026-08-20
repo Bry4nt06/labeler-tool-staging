@@ -72,7 +72,7 @@
           unitMode: "physical-mm-bottle-handling-photo-datum"
         }
       });
-      const handling = adapter.snapshot(
+      const handling = global.Labeler3DBottleHandlingViewport?.latestSnapshot?.() || adapter.snapshot(
         snapshot?.scene?.carousel?.machineAngleDegrees,
         snapshot.geometry,
         {
@@ -153,3 +153,4 @@
     }
   });
 })(window);
+
