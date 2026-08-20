@@ -305,13 +305,13 @@
     if (!labelPrototype) return;
     labelPrototype.traverse?.((child) => {
       if (!child?.isMesh) return;
-      child.geometry?.dispose?.();
+      if (!child.geometry?.userData?.servoforgeSharedLabelAsset) child.geometry?.dispose?.();
       if (Array.isArray(child.material)) child.material.forEach((material) => {
-        material?.map?.dispose?.();
+        if (!material?.map?.userData?.servoforgeSharedLabelAsset) material?.map?.dispose?.();
         material?.dispose?.();
       });
       else {
-        child.material?.map?.dispose?.();
+        if (!child.material?.map?.userData?.servoforgeSharedLabelAsset) child.material?.map?.dispose?.();
         child.material?.dispose?.();
       }
     });
@@ -407,7 +407,7 @@
       }
     });
     const current = appState();
-    const handling = handlingAdapter.snapshot(
+    const handling = global.Labeler3DBottleHandlingViewport?.latestSnapshot?.() || handlingAdapter.snapshot(
       snapshot?.scene?.carousel?.machineAngleDegrees,
       snapshot.geometry,
       {
@@ -520,3 +520,4 @@
     })
     .catch((error) => console.error("ServoForge star pocket/label restoration integration failed", error));
 })(window);
+
