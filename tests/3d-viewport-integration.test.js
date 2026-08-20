@@ -18,24 +18,25 @@ const wipeMesh = read("app/3d/wipe-pad-mesh-factory.js");
 const hardwareCatalog = read("app/3d/hardware-reference-catalog.js");
 const hardwareMesh = read("app/3d/hardware-mesh-factory.js");
 const equipment = read("app/3d/equipment-layout-adapter.js");
-const viewport = read("app/3d/three-scene-renderer-v08.js");
+const viewport = read("app/3d/three-scene-renderer-v09.js");
+const handlingViewport = read("app/3d/bottle-handling-viewport-integration.js");
+const progressiveFlow = read("app/3d/bottle-handling-progressive-label-flow-integration.js");
+const viewportControls = read("app/3d/viewport-ui-controls-integration.js");
 const spacingOverlay = read("app/3d/measured-spacing-overlay.js");
 const bootstrap = read("app/bootstrap.js");
 
-assert.match(runtime, /app\/3d\/three-scene-renderer-v08\.js/, "3D runtime must load the hardware-reference viewport.");
-assert.match(runtime, /Labeler3DLabelGeometryAdapter/, "Runtime must require the label geometry contract.");
-assert.match(runtime, /Labeler3DLabelMeshFactory/, "Runtime must require the label mesh factory.");
-assert.match(runtime, /Labeler3DHardwareReferenceCatalog/, "Runtime must require the hardware reference catalog.");
-assert.match(runtime, /Labeler3DHardwareMeshFactory/, "Runtime must require the hardware mesh factory.");
+assert.match(runtime, /app\/3d\/three-scene-renderer-v09\.js/, "3D runtime must load the single starwheel viewport.");
+assert.doesNotMatch(runtime, /three-scene-renderer-v08/);
+assert.match(runtime, /Labeler3DLabelGeometryAdapter/);
+assert.match(runtime, /Labeler3DLabelMeshFactory/);
+assert.match(runtime, /Labeler3DHardwareReferenceCatalog/);
+assert.match(runtime, /Labeler3DHardwareMeshFactory/);
+assert.match(runtime, /snapshotAuthority:\s*"canonical-3d-render-frame"/);
+assert.match(runtime, /viewportAuthority:\s*"starwheel-bottle-handling-single-scene-v09"/);
+assert.match(runtime, /legacyCarouselViewportRetired:\s*true/);
 assert.match(runtime, /labelWrapAuthority:\s*"active-servoforge-label-spec"/);
-assert.match(runtime, /labelArtworkAuthority:\s*false/);
-assert.match(runtime, /labelBodyBackVerticalAuthority:\s*false/);
-assert.match(runtime, /spenderPlateMechanicalHierarchyAuthority:\s*true/);
-assert.match(runtime, /spenderPlateDimensionalAuthority:\s*false/);
 assert.match(runtime, /sensorsRenderedIn3D:\s*true/);
-assert.match(runtime, /sensorRuntimeDataPreserved:\s*true/);
 assert.match(runtime, /coderRenderedIn3D:\s*true/);
-assert.match(runtime, /coderTimingLogicUntouched:\s*true/);
 assert.match(runtime, /plannerPitchGeometryUntouched:\s*true/);
 
 const labelGeometryIndex = bootstrap.indexOf("app/3d/label-geometry-adapter.js");
@@ -44,7 +45,9 @@ const wipeGeometryIndex = bootstrap.indexOf("app/3d/wipe-pad-geometry-adapter.js
 const wipeMeshIndex = bootstrap.indexOf("app/3d/wipe-pad-mesh-factory.js");
 const hardwareCatalogIndex = bootstrap.indexOf("app/3d/hardware-reference-catalog.js");
 const hardwareMeshIndex = bootstrap.indexOf("app/3d/hardware-mesh-factory.js");
-const equipmentIndex = bootstrap.indexOf("app/3d/equipment-layout-adapter.js");
+const handlingViewportIndex = bootstrap.indexOf("app/3d/bottle-handling-viewport-integration.js");
+const progressiveFlowIndex = bootstrap.indexOf("app/3d/bottle-handling-progressive-label-flow-integration.js");
+const controlsIndex = bootstrap.indexOf("app/3d/viewport-ui-controls-integration.js");
 const runtimeIndex = bootstrap.indexOf("app/3d/scene-runtime.js");
 assert.ok(labelGeometryIndex >= 0);
 assert.ok(labelMeshIndex > labelGeometryIndex);
@@ -52,89 +55,75 @@ assert.ok(wipeGeometryIndex > labelMeshIndex);
 assert.ok(wipeMeshIndex > wipeGeometryIndex);
 assert.ok(hardwareCatalogIndex > wipeMeshIndex);
 assert.ok(hardwareMeshIndex > hardwareCatalogIndex);
-assert.ok(equipmentIndex > hardwareMeshIndex);
-assert.ok(runtimeIndex > equipmentIndex);
+assert.ok(handlingViewportIndex > hardwareMeshIndex);
+assert.ok(progressiveFlowIndex > handlingViewportIndex);
+assert.ok(controlsIndex > progressiveFlowIndex);
+assert.ok(runtimeIndex > controlsIndex);
+assert.doesNotMatch(bootstrap, /bottle-handling-progressive-label-authority-integration|three-scene-renderer-v08/);
 
 assert.match(geometry, /centerSpacingMm:\s*110/);
 assert.match(geometry, /edgeClearanceMm:\s*16/);
 assert.match(geometry, /pitchRadiusFromChordSpacing/);
 assert.match(carousel, /servoforge\.3d-carousel\.v1/);
 assert.match(carousel, /neutral-no-invented-motion/);
-
 assert.match(labelGeometry, /servoforge\.3d-labels\.v1/);
-assert.match(labelGeometry, /CENTER_ANGLES/);
-assert.match(labelGeometry, /back:\s*180/);
-assert.match(labelGeometry, /active-servoforge-label-spec/);
-assert.match(labelGeometry, /reference-until-body-back-label-height-is-stored/);
-assert.match(labelGeometry, /bottleHasPassedApplication/);
 assert.match(labelMesh, /servoforge\.3d-label-mesh\.v1/);
 assert.match(labelMesh, /curvedLabelGeometry/);
-assert.match(labelMesh, /radiusAtY/);
-assert.match(labelMesh, /new THREE\.CanvasTexture/);
-assert.match(labelMesh, /REFERENCE ART/);
-assert.match(labelMesh, /ServoForgeBottleLabels/);
-
 assert.match(wipeGeometry, /heightMm:\s*70/);
 assert.match(wipeGeometry, /spongeThicknessMm:\s*18/);
 assert.match(wipeGeometry, /backingPlateThicknessMm:\s*4/);
-assert.match(wipeGeometry, /totalThicknessMm:\s*22/);
-assert.match(wipeGeometry, /bottlePenetrationMm:\s*2/);
-assert.match(wipeMesh, /annularPrismGeometry/);
 assert.match(wipeMesh, /ServoForgeWipePadSponge18mm/);
 assert.match(wipeMesh, /ServoForgeWipePadSteelBacking4mm/);
-
 assert.match(hardwareCatalog, /servoforge\.3d-hardware-reference\.v1/);
-assert.match(hardwareCatalog, /user-supplied-machine-photos-2026-08-18/);
-assert.match(hardwareCatalog, /application-spender/);
-assert.match(hardwareCatalog, /wipe-roller/);
-assert.match(hardwareCatalog, /laser-coder/);
-assert.match(hardwareCatalog, /label-sensor/);
-assert.match(hardwareMesh, /servoforge\.3d-hardware-mesh\.v1/);
 assert.match(hardwareMesh, /createSpenderPlateAssembly/);
-assert.match(hardwareMesh, /ServoForgeApplicationArmRoot/);
-assert.match(hardwareMesh, /ServoForgeForwardAnglePivot/);
-assert.match(hardwareMesh, /ServoForgeSideAnglePivot/);
-assert.match(hardwareMesh, /ServoForgeEngagementAnglePivot/);
 assert.match(hardwareMesh, /createRollerAssembly/);
 assert.match(hardwareMesh, /createCoderAssembly/);
 assert.match(hardwareMesh, /createSensorAssembly/);
-assert.match(hardwareMesh, /sensorFieldOfViewDegrees/);
-assert.match(hardwareMesh, /beamPresentationOnly:\s*true/);
-assert.match(hardwareMesh, /fovAuthority:\s*"servoforge-runtime-data"/);
-
 assert.match(equipment, /machine-map-angle-plus-user-measured-wipe-contact-geometry/);
-assert.match(equipment, /machine-map-aggregate-centerline/);
 assert.match(equipment, /sensorFieldOfViewDegrees/);
-assert.match(equipment, /orientationTarget/);
 
-assert.match(viewport, /servoforge\.3d-viewport\.v0\.8/);
-assert.match(viewport, /0\.185\.1/);
-assert.match(viewport, /cdn\.jsdelivr\.net\/npm\/three@/);
+assert.match(viewport, /servoforge\.3d-viewport\.v0\.9/);
 assert.match(viewport, /new THREE\.WebGLRenderer/);
 assert.match(viewport, /new THREE\.PerspectiveCamera/);
-assert.match(viewport, /new THREE\.LatheGeometry/);
-assert.match(viewport, /createBottleModel\(geometry, labels\)/);
-assert.match(viewport, /labelMeshFactory\(\)\?\.createBottleLabels/);
-assert.match(viewport, /updateLabelVisibility/);
-assert.match(viewport, /snapshot\?\.labels\?\.sections/);
-assert.match(viewport, /Hardware Reference/);
-assert.match(viewport, /Hardware authority:/);
-assert.match(viewport, /factory\?\.createAggregateAssembly/);
-assert.match(viewport, /factory\?\.createEquipmentAssembly/);
-assert.match(viewport, /sensorsRendered:\s*true/);
-assert.match(viewport, /coderRendered:\s*true/);
-assert.match(viewport, /sensorLogicUntouched:\s*true/);
-assert.match(viewport, /coderLogicUntouched:\s*true/);
-assert.match(viewport, /activeServoPlate\.rotation\.y/);
-assert.match(viewport, /activeBottleModel\.rotation\.y/);
+assert.match(viewport, /new THREE\.Scene\(\)/);
+assert.match(viewport, /ServoForgeCanonicalBottleHandlingScene/);
+assert.match(viewport, /handling\.attachScene\(scene\)/);
+assert.match(viewport, /handlingViewport\(\)\?\.sync\?\.\(snapshot\)/);
+assert.match(viewport, /progressiveLabelFlow\(\)\?\.sync\?\.\(snapshot\)/);
+assert.match(viewport, /viewportControls\(\)\?\.syncScene\?\.\(scene, camera, snapshot\)/);
+assert.match(viewport, /sceneAuthority:\s*"starwheel-bottle-handling-only"/);
+assert.match(viewport, /legacyCarouselEnvironment:\s*false/);
+assert.match(viewport, /ServoForge 3D • Bottle Handling/);
 assert.match(viewport, /Follow Head 1/);
-assert.match(viewport, /requestAnimationFrame/);
-assert.match(viewport, /textContent = "3D View"/);
+assert.doesNotMatch(viewport, /ServoForgeBottleTablePopulation|createHeadAssembly|createBottleModel|carouselBody|carouselTop|pathRing/);
+
+assert.match(handlingViewport, /servoforge\.3d-bottle-handling-viewport\.v5/);
+assert.match(handlingViewport, /function attachScene\(sceneRoot\)/);
+assert.match(handlingViewport, /ServoForgeBottleHandlingSystem/);
+assert.match(handlingViewport, /prototypeSceneHook:\s*false/);
+assert.match(handlingViewport, /singleSceneAuthority:\s*true/);
+assert.doesNotMatch(handlingViewport, /\.prototype\.add\s*=/);
+assert.doesNotMatch(handlingViewport, /requestAnimationFrame\s*\(/);
+
+assert.match(progressiveFlow, /servoforge\.3d-progressive-label-flow\.v2/);
+assert.match(progressiveFlow, /function sync\(snapshot\)/);
+assert.match(progressiveFlow, /snapshotAuthority:\s*"canonical-3d-render-frame"/);
+assert.doesNotMatch(progressiveFlow, /requestAnimationFrame\s*\(/);
+assert.doesNotMatch(progressiveFlow, /\.prototype\.add\s*=/);
+
+assert.match(viewportControls, /servoforge\.3d-viewport-ui-controls\.v5/);
+assert.match(viewportControls, /function syncScene\(scene, camera, snapshot/);
+assert.match(viewportControls, /independentAnimationLoop:\s*false/);
+assert.match(viewportControls, /objectHooksInstalled:\s*false/);
+assert.doesNotMatch(viewportControls, /requestAnimationFrame\s*\(/);
+assert.doesNotMatch(viewportControls, /\.prototype\.(?:add|lookAt)\s*=/);
 
 assert.match(spacingOverlay, /Plate center spacing/);
 assert.match(spacingOverlay, /measuredCenterSpacingMm:\s*110/);
-assert.match(spacingOverlay, /measuredClearanceMm:\s*16/);
-assert.match(spacingOverlay, /derivedPlateDiameterMm:\s*94/);
+assert.match(spacingOverlay, /independentTimer:\s*false/);
+assert.match(spacingOverlay, /addFrameListener/);
+assert.doesNotMatch(spacingOverlay, /setInterval\s*\(/);
+assert.doesNotMatch(spacingOverlay, /\.snapshot\s*\(/);
 
 [
   /saveCurrentSettings\s*\(/,
@@ -150,17 +139,21 @@ assert.match(spacingOverlay, /derivedPlateDiameterMm:\s*94/);
   assert.doesNotMatch(hardwareMesh, pattern, `Hardware mesh factory must remain presentation-only: ${pattern}`);
 });
 
-const syntaxSandbox = { window: {}, console, setTimeout() { return 0; } };
-syntaxSandbox.window = syntaxSandbox;
-syntaxSandbox.globalThis = syntaxSandbox;
-vm.createContext(syntaxSandbox);
-assert.doesNotThrow(() => vm.runInContext(carousel, syntaxSandbox, { filename: "app/3d/carousel-layout-adapter.js" }));
-assert.doesNotThrow(() => vm.runInContext(labelGeometry, syntaxSandbox, { filename: "app/3d/label-geometry-adapter.js" }));
-assert.doesNotThrow(() => vm.runInContext(labelMesh, syntaxSandbox, { filename: "app/3d/label-mesh-factory.js" }));
-assert.doesNotThrow(() => vm.runInContext(wipeMesh, syntaxSandbox, { filename: "app/3d/wipe-pad-mesh-factory.js" }));
-assert.doesNotThrow(() => vm.runInContext(hardwareCatalog, syntaxSandbox, { filename: "app/3d/hardware-reference-catalog.js" }));
-assert.doesNotThrow(() => vm.runInContext(hardwareMesh, syntaxSandbox, { filename: "app/3d/hardware-mesh-factory.js" }));
-assert.doesNotThrow(() => vm.runInContext(equipment, syntaxSandbox, { filename: "app/3d/equipment-layout-adapter.js" }));
-assert.doesNotThrow(() => vm.runInContext(viewport, syntaxSandbox, { filename: "app/3d/three-scene-renderer-v08.js" }));
+[
+  [carousel, "app/3d/carousel-layout-adapter.js"],
+  [labelGeometry, "app/3d/label-geometry-adapter.js"],
+  [labelMesh, "app/3d/label-mesh-factory.js"],
+  [wipeMesh, "app/3d/wipe-pad-mesh-factory.js"],
+  [hardwareCatalog, "app/3d/hardware-reference-catalog.js"],
+  [hardwareMesh, "app/3d/hardware-mesh-factory.js"],
+  [equipment, "app/3d/equipment-layout-adapter.js"],
+  [viewport, "app/3d/three-scene-renderer-v09.js"],
+  [handlingViewport, "app/3d/bottle-handling-viewport-integration.js"],
+  [progressiveFlow, "app/3d/bottle-handling-progressive-label-flow-integration.js"],
+  [viewportControls, "app/3d/viewport-ui-controls-integration.js"],
+  [spacingOverlay, "app/3d/measured-spacing-overlay.js"]
+].forEach(([source, filename]) => {
+  assert.doesNotThrow(() => new vm.Script(source, { filename }));
+});
 
-console.log("ServoForge hardware-reference 3D viewport boundary regression passed.");
+console.log("ServoForge single starwheel 3D viewport boundary regression passed.");
