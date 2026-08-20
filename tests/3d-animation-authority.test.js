@@ -7,9 +7,10 @@ const assert = require("node:assert/strict");
 
 const root = path.resolve(__dirname, "..");
 const integration = fs.readFileSync(path.join(root, "app/3d/animation-authority-integration.js"), "utf8");
+const animationRuntime = fs.readFileSync(path.join(root, "app/animation-runtime.js"), "utf8");
 const bootstrap = fs.readFileSync(path.join(root, "app/bootstrap.js"), "utf8");
 
-const indexOf = (needle) => bootstrap.indexOf(`\"${needle}\"`);
+const bootstrapIndex = (needle) => bootstrap.indexOf(`\"${needle}\"`);
 
 test("3D animation uses current viewport as visual authority", () => {
   assert.match(integration, /visualAuthority: "current-servoforge-3d-hardware-render"/);
@@ -18,13 +19,12 @@ test("3D animation uses current viewport as visual authority", () => {
   assert.match(integration, /Open 3D Animation/);
 });
 
-test("3D animation authority loads after scene and animation runtimes", () => {
-  const scene = indexOf("app/3d/scene-runtime.js");
-  const animation = indexOf("app/animation-runtime.js");
-  const authority = indexOf("app/3d/animation-authority-integration.js");
+test("animation clock loads the 3D animation authority after the scene runtime", () => {
+  const scene = bootstrapIndex("app/3d/scene-runtime.js");
+  const animation = bootstrapIndex("app/animation-runtime.js");
   assert.ok(scene >= 0, "scene runtime must be bootstrapped");
   assert.ok(animation >= 0, "animation runtime must be bootstrapped");
-  assert.ok(authority >= 0, "3D animation authority must be bootstrapped");
-  assert.ok(scene < authority, "scene runtime must load before 3D animation authority");
-  assert.ok(animation < authority, "animation clock must load before 3D animation authority");
+  assert.ok(scene < animation, "scene runtime must load before the animation clock");
+  assert.match(animationRuntime, /app\/3d\/animation-authority-integration\.js/);
+  assert.match(animationRuntime, /servoforge3dAnimationAuthority/);
 });
