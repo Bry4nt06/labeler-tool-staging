@@ -305,7 +305,7 @@
       }
     });
     const current = appState();
-    const handling = handlingAdapter.snapshot(
+    const handling = global.Labeler3DBottleHandlingViewport?.latestSnapshot?.() || handlingAdapter.snapshot(
       snapshot?.scene?.carousel?.machineAngleDegrees,
       snapshot.geometry,
       {
@@ -445,3 +445,4 @@
     }
   });
 })(window);
+

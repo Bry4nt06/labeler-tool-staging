@@ -59,6 +59,8 @@
   }
 
   function currentHandling() {
+    const sharedHandling = global.Labeler3DBottleHandlingViewport?.latestSnapshot?.();
+    if (sharedHandling) return sharedHandling;
     const activeRuntime = runtime();
     const handlingAdapter = adapter();
     if (!activeRuntime?.snapshot || !handlingAdapter?.snapshot) return null;
@@ -167,3 +169,4 @@
     }
   });
 })(window);
+

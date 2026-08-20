@@ -186,7 +186,7 @@
     });
     const current = appState() || {};
     const direction = normalizeDirection(current.direction || sceneSnapshot?.carousel?.carouselDirection || "ccw");
-    const handling = adapter.snapshot(
+    const handling = global.Labeler3DBottleHandlingViewport?.latestSnapshot?.() || adapter.snapshot(
       sceneSnapshot?.scene?.carousel?.machineAngleDegrees,
       sceneSnapshot.geometry,
       {
@@ -290,3 +290,4 @@
     }
   });
 })(window);
+

@@ -2,6 +2,16 @@
   "use strict";
 
   const FACTORY_VERSION = "servoforge.3d-label-mesh.v1";
+  const assetCaches = new WeakMap();
+
+  function cachesFor(THREE) {
+    let caches = assetCaches.get(THREE);
+    if (!caches) {
+      caches = { geometries: new Map(), textures: new Map() };
+      assetCaches.set(THREE, caches);
+    }
+    return caches;
+  }
 
   function number(value, fallback = 0) {
     const parsed = Number(value);
@@ -45,6 +55,17 @@
     const centerRadians = number(section?.centerAngleDegrees, 0) * Math.PI / 180;
     const radialOffset = positive(options.radialOffsetWorld, 0.006);
     if (!THREE?.BufferGeometry || top <= bottom || wrapRadians <= 0.01) return null;
+    const cacheKey = JSON.stringify([
+      bottom,
+      top,
+      number(section?.wrapDegrees),
+      number(section?.centerAngleDegrees),
+      radialOffset,
+      number(geometry?.bottle?.radiusWorld),
+      profile.map((point) => [number(point?.radius), number(point?.y)])
+    ]);
+    const cache = cachesFor(THREE).geometries;
+    if (cache.has(cacheKey)) return cache.get(cacheKey);
 
     const angularSegments = Math.max(8, Math.min(72, Math.ceil(number(section?.wrapDegrees, 20) / 4)));
     const verticalSegments = Math.max(2, Math.min(20, Math.ceil((top - bottom) / 0.055)));
@@ -79,6 +100,8 @@
     meshGeometry.computeVertexNormals();
     meshGeometry.computeBoundingBox();
     meshGeometry.computeBoundingSphere();
+    meshGeometry.userData = { ...(meshGeometry.userData || {}), servoforgeSharedLabelAsset: true };
+    cache.set(cacheKey, meshGeometry);
     return meshGeometry;
   }
 
@@ -94,6 +117,9 @@
 
   function referenceTexture(THREE, brand, sectionName) {
     if (!global.document?.createElement || !THREE?.CanvasTexture) return null;
+    const cache = cachesFor(THREE).textures;
+    const cacheKey = `${String(brand || "SERVOFORGE").trim()}|${String(sectionName || "body").toLowerCase()}`;
+    if (cache.has(cacheKey)) return cache.get(cacheKey);
     const canvas = global.document.createElement("canvas");
     canvas.width = 768;
     canvas.height = 320;
@@ -125,6 +151,8 @@
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = 4;
     texture.needsUpdate = true;
+    texture.userData = { ...(texture.userData || {}), servoforgeSharedLabelAsset: true };
+    cache.set(cacheKey, texture);
     return texture;
   }
 
@@ -148,7 +176,7 @@
     const mesh = new THREE.Mesh(meshGeometry, material);
     mesh.name = `ServoForgeBottleLabel-${sectionName}`;
     mesh.castShadow = false;
-    mesh.receiveShadow = true;
+    mesh.receiveShadow = false;
     mesh.visible = Boolean(section.applied);
     mesh.userData.labelSection = sectionName;
     mesh.userData.texture = texture;
@@ -178,12 +206,22 @@
     return group;
   }
 
+  function cacheStatus(THREE) {
+    const caches = THREE ? cachesFor(THREE) : null;
+    return Object.freeze({
+      geometryCount: caches?.geometries?.size || 0,
+      textureCount: caches?.textures?.size || 0
+    });
+  }
+
   global.Labeler3DLabelMeshFactory = Object.freeze({
     FACTORY_VERSION,
     radiusAtY,
     curvedLabelGeometry,
     referenceTexture,
+    cacheStatus,
     createSectionMesh,
     createBottleLabels
   });
 })(window);
+

@@ -108,11 +108,11 @@
 
   function disposeObject(object) {
     object?.traverse?.((child) => {
-      child.geometry?.dispose?.();
+      if (!child.geometry?.userData?.servoforgeSharedLabelAsset) child.geometry?.dispose?.();
       const disposeMaterial = (entry) => entry?.dispose?.();
       if (Array.isArray(child.material)) child.material.forEach(disposeMaterial);
       else disposeMaterial(child.material);
-      child.userData?.texture?.dispose?.();
+      if (!child.userData?.texture?.userData?.servoforgeSharedLabelAsset) child.userData?.texture?.dispose?.();
     });
   }
 
@@ -152,7 +152,6 @@
       mesh.visible = false;
       mesh.userData.applyProgress = 0;
       if (mesh.material) {
-        mesh.material = mesh.material.clone();
         mesh.material.transparent = true;
         mesh.material.opacity = 0;
         mesh.material.depthWrite = true;
@@ -198,8 +197,13 @@
     mesh.position.x = entrySign * (1 - p) * 0.014;
     if (mesh.material) {
       mesh.material.opacity = clamp(0.18 + p * 0.82, 0, 1);
-      mesh.material.transparent = p < 0.999;
-      mesh.material.needsUpdate = true;
+      const transparent = p < 0.999;
+      if (mesh.material.transparent !== transparent) {
+        mesh.material.transparent = transparent;
+        // Opacity is a uniform update. Recompile only when the transparency
+        // render path actually changes at the end of application.
+        mesh.material.needsUpdate = true;
+      }
     }
   }
 
@@ -308,3 +312,4 @@
     .then(() => installSceneHook())
     .catch((error) => console.error("ServoForge progressive label-flow integration failed", error));
 })(window);
+
