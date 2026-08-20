@@ -1,9 +1,9 @@
 (function installServoForgeMechanicalMapAnimationLauncher(global) {
   "use strict";
 
-  const VERSION = "servoforge.3d-mechanical-map-launcher.v1";
-  const BUILD = "3d-map-launcher-v220-20260820-0942";
-  const UPDATED_AT = "Aug 20, 2026 9:42 AM ET";
+  const VERSION = "servoforge.3d-mechanical-map-launcher.v2";
+  const BUILD = "3d-all-bottles-v221-20260820-0947";
+  const UPDATED_AT = "Aug 20, 2026 9:47 AM ET";
   let observer = null;
 
   function publishBuild() {
@@ -36,6 +36,8 @@
         await global.Labeler3DViewport?.open?.();
         global.Labeler3DAnimationAuthority?.cleanupDuplicateViewportDom?.();
         global.Labeler3DControlSurfaceRecovery?.ensure?.();
+        const mode = document.querySelector("#servoforge3dBottleMode")?.value || "all";
+        global.Labeler3DControlSurfaceRecovery?.setBottleMode?.(mode);
         global.Labeler3DAllBottleServoSynchronization?.synchronize?.();
       });
       toolbar.appendChild(button);
