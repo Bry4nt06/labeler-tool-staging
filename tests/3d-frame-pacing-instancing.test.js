@@ -65,6 +65,8 @@ assert.match(labelFactory, /cache\.set\(cacheKey, texture\)/);
 const progressive = read("app/3d/bottle-handling-progressive-label-flow-integration.js");
 assert.doesNotMatch(progressive, /mesh\.material = mesh\.material\.clone\(\)/);
 assert.match(progressive, /servoforgeSharedLabelAsset/);
+assert.match(progressive, /if \(mesh\.material\.transparent !== transparent\)/);
+assert.doesNotMatch(progressive, /mesh\.material\.transparent = p < 0\.999;\s*mesh\.material\.needsUpdate = true/);
 
 const polish = read("app/3d/bottle-label-coder-visual-polish-integration.js");
 assert.match(polish, /handlingBottleInstances/);
