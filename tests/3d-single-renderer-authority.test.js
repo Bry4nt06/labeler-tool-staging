@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
+const vm = require("node:vm");
 const assert = require("node:assert/strict");
 
 const root = path.resolve(__dirname, "..");
@@ -18,6 +19,33 @@ test("only the canonical v08 Three.js renderer remains", () => {
   assert.equal((renderer.match(/new THREE\.WebGLRenderer/g) || []).length, 1);
   assert.match(renderer, /requestAnimationFrame\(renderFrame\)/);
   assert.match(renderer, /cancelAnimationFrame\(animationFrame\)/);
+});
+
+test("renderer installation is a page-level singleton", () => {
+  const renderer = read("app/3d/three-scene-renderer-v08.js");
+  const runtime = read("app/3d/scene-runtime.js");
+  const scheduled = [];
+  const sandbox = {
+    window: null,
+    console,
+    setTimeout(callback) {
+      scheduled.push(callback);
+      return scheduled.length;
+    }
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+
+  vm.runInContext(renderer, sandbox, { filename: "three-scene-renderer-v08.js:first" });
+  vm.runInContext(renderer, sandbox, { filename: "three-scene-renderer-v08.js:duplicate" });
+
+  assert.equal(scheduled.length, 1, "a duplicate script execution must not start another installer");
+  assert.equal(sandbox.__servoforge3DViewportSingletonV09?.installing, true);
+  assert.match(renderer, /querySelectorAll\?\.\("#servoforge3dBackdrop"\)/);
+  assert.match(renderer, /querySelector\?\.\("#servoforge3dClose"\)\?\.click/);
+  assert.match(runtime, /__servoforge3DViewportScriptLoadV09/);
+  assert.match(runtime, /script\[src\*="app\/3d\/three-scene-renderer-v08\.js"\]/);
+  assert.match(runtime, /3d-v09-singleton-20260820/);
 });
 
 test("legacy 3D recovery authorities are absent", () => {
