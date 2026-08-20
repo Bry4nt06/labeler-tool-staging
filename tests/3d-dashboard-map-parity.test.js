@@ -140,7 +140,8 @@ test("dashboard parity layer locks overhead screen axes and continuously syncs m
   assert.match(paritySource, /ServoForgePhotoReferencedMachineHardware/);
   assert.match(paritySource, /snapshot\.equipment/);
   assert.match(paritySource, /machineMapAngleDegrees/);
-  assert.match(paritySource, /global\.requestAnimationFrame\(loop\)/);
+  assert.match(paritySource, /activeRuntime\.latestSnapshot\?\.\(\) \|\| activeRuntime\.snapshot\(/);
+  assert.match(paritySource, /coordinator\.register\(PATCH_VERSION, loop, \{ minIntervalMs: 100 \}\)/);
 });
 
 test("bootstrap loads dashboard parity after direction parity and before scene runtime", () => {
