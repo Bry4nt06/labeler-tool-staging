@@ -343,6 +343,37 @@
     return refs.anchor;
   }
 
+  function synchronizeSectionHandoffStarts(rows) {
+    const changes = [];
+    for (let index = 1; index < rows.length; index += 1) {
+      const previous = rows[index - 1];
+      const row = rows[index];
+      const handoff = Number(previous?.cmd) === 3
+        && Number(row?.cmd) === 7
+        && (row?.applicationTransition === true
+          || row?.wipeResetTransition === true
+          || /^Orient\s+(?:Neck|Body|Back)\s+(?:to\s+Tack\s+Reference|for\s+Re-Wipe)/i.test(text(row?.action)));
+      if (!handoff) continue;
+
+      const referencePlate = finite(previous?.plateAngle, NaN);
+      const transitionPlate = finite(row?.plateAngle, NaN);
+      if (!Number.isFinite(referencePlate) || !Number.isFinite(transitionPlate)) continue;
+
+      const correctedStart = round(referencePlate);
+      if (Math.abs(transitionPlate - correctedStart) <= EPS) continue;
+      row.plateAngle = correctedStart;
+      row.canonicalHandoffStartV60 = true;
+      changes.push({
+        hmi: row.hmi ?? index + 1,
+        station: rowStation(row),
+        section: rowSection(row),
+        previousPlateAngle: round(transitionPlate),
+        correctedPlateAngle: correctedStart
+      });
+    }
+    return changes;
+  }
+
   function recompute(rows) {
     rows.sort((left, right) => finite(left?.tableAngle, 0) - finite(right?.tableAngle, 0));
     rows.forEach((row, index) => {
@@ -397,6 +428,7 @@
       rows[group.hold].canonicalSectionHandoffV44 = true;
     });
 
+    const handoffStartChanges = synchronizeSectionHandoffStarts(rows);
     const finalized = recompute(rows);
     const target = stateRef();
     target.motionPlan = target.motionPlan && typeof target.motionPlan === "object" ? target.motionPlan : {};
@@ -404,6 +436,10 @@
     target.motionPlan.firstTackDatumFlowV41 = true;
     target.motionPlan.canonicalStationResetV43 = true;
     target.motionPlan.canonicalSectionHandoffV44 = true;
+    target.motionPlan.canonicalHandoffStartV60 = {
+      applied: handoffStartChanges.length > 0,
+      changes: handoffStartChanges
+    };
     target.motionPlan.firstApplicationZeroRebaseRetired = false;
     target.motionPlan.firstApplicationTackAnchoredToServoStart = true;
     target.motionPlan.initialApplicationSection = datum.first.section;
@@ -500,6 +536,7 @@
     targetFor,
     correctProfile,
     ensureReference,
+    synchronizeSectionHandoffStarts,
     install
   });
 

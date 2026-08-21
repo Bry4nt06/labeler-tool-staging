@@ -3,7 +3,7 @@
 (function installAplSectionHandoffContinuity(global) {
   if (global.LabelerAplSectionHandoffContinuity?.installed) return;
 
-  const VERSION = 3;
+  const VERSION = 4;
   const EPS = 0.001;
   const RETRY_MS = 25;
   let installed = false;
@@ -178,29 +178,41 @@
       if (!Number.isFinite(previousPlate) || !Number.isFinite(currentPlate)) continue;
 
       const correctedStart = done(previousPlate);
-      if (Math.abs(currentPlate - correctedStart) <= EPS) continue;
+      const generatedPlate = finite(row?.generatedPlateAngle, NaN);
+      const manualPlateOverride = Number.isFinite(finite(row?.plateAngleOverride, NaN));
+      const effectiveNeedsRepair = !manualPlateOverride
+        && Math.abs(currentPlate - correctedStart) > EPS;
+      const generatedNeedsRepair = Number.isFinite(generatedPlate)
+        && Math.abs(generatedPlate - correctedStart) > EPS;
+      if (!effectiveNeedsRepair && !generatedNeedsRepair) continue;
 
-      row.plateAngle = correctedStart;
+      if (effectiveNeedsRepair) row.plateAngle = correctedStart;
+      if (generatedNeedsRepair) row.generatedPlateAngle = correctedStart;
       row.sectionHandoffContinuityV56 = true;
+      row.generatedHandoffAngleAuthorityV60 = true;
       row.continuitySourceHmi = previous.hmi ?? index;
 
       const next = rows[index + 1];
       const targetPlate = finite(next?.plateAngle, NaN);
+      const effectiveStart = finite(row?.plateAngle, correctedStart);
       const tableStart = finite(row?.tableAngle, NaN);
       const tableStop = finite(next?.tableAngle, NaN);
-      if (Number.isFinite(targetPlate)) row.plannedRotation = targetPlate - correctedStart;
+      if (Number.isFinite(targetPlate)) row.plannedRotation = targetPlate - effectiveStart;
       if (Number.isFinite(targetPlate)
         && Number.isFinite(tableStart)
         && Number.isFinite(tableStop)
         && tableStop > tableStart + EPS) {
-        row.plannedRatio = Math.abs(targetPlate - correctedStart) / (tableStop - tableStart);
+        row.plannedRatio = Math.abs(targetPlate - effectiveStart) / (tableStop - tableStart);
       }
 
       changes.push({
         hmi: row.hmi ?? index + 1,
         action: String(row.action || ""),
         previousPlateAngle: done(currentPlate),
+        previousGeneratedPlateAngle: Number.isFinite(generatedPlate) ? done(generatedPlate) : undefined,
         correctedPlateAngle: correctedStart,
+        generatedPlateAngleSynchronized: generatedNeedsRepair,
+        manualPlateOverridePreserved: manualPlateOverride,
         sourceRestHmi: previous.hmi ?? index
       });
     }
@@ -253,7 +265,7 @@
     if (!current || typeof global.applyGeneratedServoProfile !== "function") return false;
 
     const base = global.applyGeneratedServoProfile;
-    if (base.aplSectionHandoffContinuityV59 === true) {
+    if (base.aplSectionHandoffContinuityV60 === true) {
       installed = true;
       return true;
     }
@@ -266,6 +278,7 @@
       return synchronize(repair(source));
     };
     wrapped.aplSectionHandoffContinuityV59 = true;
+    wrapped.aplSectionHandoffContinuityV60 = true;
     wrapped.previousApplyGeneratedServoProfile = base;
     global.applyGeneratedServoProfile = wrapped;
 

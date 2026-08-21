@@ -50,7 +50,9 @@ function baseRows() {
     { cmd: 7, tableAngle: 149, plateAngle: bodyTarget, action: "Wipe Turn 1 Body - Agg 3", station: 3, section: "body" },
     { cmd: 7, tableAngle: 151.8, plateAngle: -20, action: "Wipe Turn 2 Body - Agg 3", station: 3, section: "body" },
     { cmd: 3, tableAngle: 169, plateAngle: bodyEnd, action: "Wipe Hold Body - Agg 3", station: 3, section: "body" },
-    { cmd: 7, tableAngle: 169.5, plateAngle: bodyEnd, action: "Orient Body for Re-Wipe - Agg 4", station: 4, section: "body" },
+    // Deliberately carry a stale unwrapped label span into the handoff. The
+    // canonical generator must replace it with the preceding stopped reference.
+    { cmd: 7, tableAngle: 169.5, plateAngle: bodyEnd * 2, action: "Orient Body for Re-Wipe - Agg 4", station: 4, section: "body" },
     { cmd: 3, tableAngle: 187.5, plateAngle: bodyTarget, action: "Orient Body for Re-Wipe - Agg 4", station: 4, section: "body", wipeResetReference: true },
     { cmd: 7, tableAngle: 189, plateAngle: bodyTarget, action: "Wipe Turn 1 Body - Agg 4", station: 4, section: "body" },
     { cmd: 7, tableAngle: 191.8, plateAngle: -20, action: "Wipe Turn 2 Body - Agg 4", station: 4, section: "body" },
@@ -109,6 +111,14 @@ assert.equal(rows[backIndex - 1].applicationTransition, true);
 const bodyReset = rows.find((row) => row.station === 4 && row.wipeResetReference === true);
 const backReset = rows.find((row) => row.station === 6 && row.wipeResetReference === true);
 assert.ok(bodyReset && backReset, "Second Body and Back aggregates must retain their re-wipe references.");
+const bodyHandoffIndex = rows.findIndex((row) => row.station === 4 && row.wipeResetTransition === true);
+assert.ok(bodyHandoffIndex > 0, "Aggregate 4 must retain a dedicated re-wipe transition.");
+assert.equal(
+  rows[bodyHandoffIndex].plateAngle,
+  rows[bodyHandoffIndex - 1].plateAngle,
+  "Every generated section handoff must inherit the immediately preceding stopped reference, regardless of label span."
+);
+assert.equal(rows[bodyHandoffIndex].canonicalHandoffStartV60, true);
 assert.equal(state.motionPlan.canonicalSectionHandoffV44, true);
 
 let run = 0;

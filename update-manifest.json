@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "runtime-recovery-v216-20260819-2134",
+  "buildId": "apl-handoff-angle-authority-v301-20260820-2031",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v216 hardens ServoForge startup so a missing optional integration can no longer stop the remaining bootstrap chain. Core startup, animation, workspace view controls, and the 3D scene runtime are still loaded and the 3D viewport launcher is re-requested after bootstrap completion."
+  "notes": "v301 makes APL aggregate handoff angles brand-independent: every generated CMD 7 application or re-wipe transition inherits the immediately preceding stopped CMD 3 reference, and the effective and displayed generated bottle angles remain synchronized for long-label recipes."
 }
