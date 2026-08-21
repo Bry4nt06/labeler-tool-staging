@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "3d-frame-pacing-instancing-v300-20260820-1910";
-  const buildUpdatedAt = "Aug 20, 2026 7:10 PM ET";
+  const build = "apl-handoff-angle-authority-v301-20260820-2031";
+  const buildUpdatedAt = "Aug 20, 2026 8:31 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;

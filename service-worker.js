@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-3d-frame-pacing-instancing-v300-20260820-1910";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-apl-handoff-angle-authority-v301-20260820-2031";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 

@@ -86,6 +86,66 @@ assert.equal(
 );
 assert.equal(ordinaryWipe.changes.length, 0);
 
+// Long-label regression: the upstream generator can carry an unwrapped full
+// label span (224 degrees) while the physical Agg 3 reference is the half-wrap
+// position (112 degrees). Both the effective servo coordinate and the readonly
+// generated value shown in the table must use the stopped reference.
+const longLabelHandoff = context.LabelerAplSectionHandoffContinuity.repair([
+  {
+    hmi: 12,
+    plc: 11,
+    cmd: 3,
+    tableAngle: 169,
+    plateAngle: 112,
+    generatedPlateAngle: 112,
+    action: "Wipe Hold Body - Agg 3",
+    station: 3,
+    section: "body"
+  },
+  {
+    hmi: 13,
+    plc: 12,
+    cmd: 7,
+    tableAngle: 169.5,
+    plateAngle: 224,
+    generatedPlateAngle: 224,
+    plateAngleOverride: null,
+    action: "Orient Body for Re-Wipe - Agg 4",
+    station: 4,
+    section: "body",
+    wipeResetTransition: true
+  },
+  {
+    hmi: 14,
+    plc: 13,
+    cmd: 3,
+    tableAngle: 187.5,
+    plateAngle: -112,
+    generatedPlateAngle: -112,
+    action: "Orient Body for Re-Wipe - Agg 4",
+    station: 4,
+    section: "body",
+    wipeResetReference: true
+  }
+]);
+assert.equal(longLabelHandoff.rows[1].plateAngle, 112);
+assert.equal(longLabelHandoff.rows[1].generatedPlateAngle, 112);
+assert.equal(longLabelHandoff.rows[1].plannedRotation, -224);
+assert.ok(Math.abs(longLabelHandoff.rows[1].plannedRatio - (224 / 18)) < 1e-9);
+assert.equal(longLabelHandoff.rows[1].generatedHandoffAngleAuthorityV60, true);
+assert.equal(longLabelHandoff.changes[0].generatedPlateAngleSynchronized, true);
+
+// The guard must also heal display state after an earlier pass already fixed
+// the effective coordinate but left generatedPlateAngle stale.
+const staleDisplayOnly = context.LabelerAplSectionHandoffContinuity.repair([
+  { cmd: 3, tableAngle: 169, plateAngle: 112, generatedPlateAngle: 112, action: "Wipe Hold Body - Agg 3" },
+  { cmd: 7, tableAngle: 169.5, plateAngle: 112, generatedPlateAngle: 224, action: "Orient Body for Re-Wipe - Agg 4" },
+  { cmd: 3, tableAngle: 187.5, plateAngle: -112, generatedPlateAngle: -112, action: "Orient Body for Re-Wipe - Agg 4" }
+]);
+assert.equal(staleDisplayOnly.rows[1].plateAngle, 112);
+assert.equal(staleDisplayOnly.rows[1].generatedPlateAngle, 112);
+assert.equal(staleDisplayOnly.changes.length, 1);
+
 // Exact Mic Family APL 6-Aggregate pattern reported from HMI 6 through HMI 13.
 // The second CMD 3 in each 3 -> 3 -> 7 chain is only a logical reference point:
 // it does not change the bottle angle and therefore must not consume an HMI row.
