@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "apl-handoff-angle-authority-v301-20260820-2031",
+  "buildId": "bottle-orientation-live-sync-v302-20260821-1020",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v301 makes APL aggregate handoff angles brand-independent: every generated CMD 7 application or re-wipe transition inherits the immediately preceding stopped CMD 3 reference, and the effective and displayed generated bottle angles remain synchronized for long-label recipes."
+  "notes": "v302 makes the shared animation clock the authoritative owner of Bottle Orientation live refreshes. It removes the legacy Bottle Orientation renderAnimationFrame wrapper from the active frame path and refreshes the panel directly from the same frame that advances the table preview angle, preventing a frozen Top View while the rest of the labeler animation continues."
 }
