@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "apl-handoff-angle-authority-v301-20260820-2031";
-  const buildUpdatedAt = "Aug 20, 2026 8:31 PM ET";
+  const build = "bottle-orientation-live-sync-v302-20260821-1020";
+  const buildUpdatedAt = "Aug 21, 2026 10:20 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -202,4 +202,3 @@
     });
   });
 })();
-
