@@ -12,6 +12,14 @@
     return String(value || "").toLowerCase() === "ccw" ? "ccw" : "cw";
   }
 
+  // ServoForge preserves the legacy map token convention where the stored
+  // machine direction is the inverse of the physical bottle-table travel.
+  // Keep that translation here so every Cold Glue wipe uses one physical
+  // direction authority instead of reinterpreting the stored token locally.
+  function physicalMachineDirection(value = "cw") {
+    return normalizedDirection(value) === "cw" ? "ccw" : "cw";
+  }
+
   function flowFacingTarget(applicationPlateDeg, mapDirection = "cw", labelDeg = 0) {
     if (finite(labelDeg, 0) >= 330) return 0;
     void applicationPlateDeg;
@@ -23,8 +31,8 @@
   }
 
   function wipeDirectionForSide(side, mapDirection = "cw") {
-    const direction = normalizedDirection(mapDirection);
-    const outerDirection = direction === "cw" ? 1 : -1;
+    const physicalDirection = physicalMachineDirection(mapDirection);
+    const outerDirection = physicalDirection === "cw" ? 1 : -1;
     return side === "inner" ? -outerDirection : outerDirection;
   }
 
@@ -49,72 +57,6 @@
       holdCurrent: Boolean(item?.holdCurrentBottleAngle),
       holdStart: Math.max(start, Math.min(end, finite(item?.bottleHoldStartDeg, start)))
     };
-  }
-
-  function sharesBrushContact(segment, holdBrushIds) {
-    const ids = Array.isArray(segment?.brushIds) ? segment.brushIds : [];
-    return ids.some((id) => holdBrushIds.has(id));
-  }
-
-  function holdThroughChannelClearance(rawSegments) {
-    let previousEnd = null;
-    let holdBrushIds = new Set();
-    let holdAngle = null;
-    let holdCurrent = false;
-    let holdActive = false;
-
-    return rawSegments.map((segment) => {
-      const contiguous = previousEnd !== null && Math.abs(finite(segment.start) - previousEnd) <= EPSILON;
-      if (!contiguous) {
-        holdBrushIds = new Set();
-        holdAngle = null;
-        holdCurrent = false;
-        holdActive = false;
-      }
-
-      let next = segment;
-      if (segment.stage === "opposed") {
-        holdActive = true;
-        holdBrushIds = new Set(Array.isArray(segment.brushIds) ? segment.brushIds : []);
-        holdAngle = finite(segment.holdAngle, 0);
-        holdCurrent = Boolean(segment.holdCurrent);
-      } else if (
-        holdActive
-        && (segment.stage === "outer" || segment.stage === "inner")
-        && sharesBrushContact(segment, holdBrushIds)
-      ) {
-        // Once opposed brush contact has established the bottle angle, a side
-        // ending early does not create a new servo-turn window. The remaining
-        // brush is still touching the bottle, so hold that same angle until the
-        // final side clears. Keep stage="opposed" so every existing profile
-        // consumer treats this interval as a hold without adding a second
-        // runtime authority.
-        next = {
-          ...segment,
-          stage: "opposed",
-          rotation: 0,
-          ratio: 0,
-          direction: 0,
-          holdAngle,
-          holdCurrent,
-          configuredHold: false,
-          parallelBrushHold: false,
-          channelClearanceHold: true,
-          trailingBrushSide: segment.side,
-          singleSideOpening: false
-        };
-      } else if (holdActive && (segment.stage === "outer" || segment.stage === "inner")) {
-        // A different brush beginning exactly at the previous boundary is a new
-        // contact region, not a continuation of the old opposed channel.
-        holdBrushIds = new Set();
-        holdAngle = null;
-        holdCurrent = false;
-        holdActive = false;
-      }
-
-      previousEnd = finite(next.end, previousEnd);
-      return next;
-    });
   }
 
   function segmentChannel(channel, mapDirection, labelDeg, channelIndex) {
@@ -180,7 +122,7 @@
         });
       }
     }
-    return holdThroughChannelClearance(segments);
+    return segments;
   }
 
   function segmentBrushes(brushes, mapDirection, labelDeg) {
@@ -244,7 +186,7 @@
         });
       }
     }
-    return holdThroughChannelClearance(segments);
+    return segments;
   }
 
   function allocateAcrossWindows(required, windows, maxRatio, safetyFactor) {
@@ -420,11 +362,12 @@
     createBrushChannelPlan,
     flowFacingTarget,
     channelEntryAngle,
+    physicalMachineDirection,
     wipeDirectionForSide,
     applicationTarget,
     centerTackOnly: true,
     leadingEdgeWipeAllowed: false,
     parallelOverlapTurnsBottle: false,
-    channelExitHoldAuthority: true
+    channelRunoutWipeAuthority: true
   });
 })(window);

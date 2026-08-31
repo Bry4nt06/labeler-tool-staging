@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "cold-glue-channel-clearance-v310-20260831-1148";
-  const buildUpdatedAt = "Aug 31, 2026 11:48 AM ET";
+  const build = "cold-glue-wipe-away-direction-v311-20260831-1222";
+  const buildUpdatedAt = "Aug 31, 2026 12:22 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
