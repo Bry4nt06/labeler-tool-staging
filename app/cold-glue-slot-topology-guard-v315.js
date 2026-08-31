@@ -23,15 +23,20 @@
     return slots;
   }
 
-  function hasGripperSequenceWrapper(candidate) {
+  function hasWrapper(candidate, marker) {
     let current = candidate;
     let depth = 0;
     while (typeof current === "function" && depth < 24) {
-      if (current.coldGlueThreeGripperWrappedV2) return true;
+      if (current[marker]) return true;
       current = current.originalGenerator;
       depth += 1;
     }
     return false;
+  }
+
+  function coldGlueGeneratorStackReady(candidate) {
+    return hasWrapper(candidate, "coldGlueThreeGripperWrappedV2")
+      && hasWrapper(candidate, "coldGlueGripperChannelWrapped");
   }
 
   function snapshot(map) {
@@ -78,11 +83,10 @@
     if (typeof original !== "function") return false;
     if (original.coldGlueSlotTopologyGuardV315) return true;
 
-    // This guard must sit outside the legacy gripper-sequence wrapper. Loading
-    // earlier would snapshot topology only after that wrapper had already
-    // inferred enabled slots from its object list, which is exactly the state
-    // ownership collision this integration retires.
-    if (!hasGripperSequenceWrapper(original)) return false;
+    // This guard must sit outside both legacy Cold Glue generator wrappers.
+    // Otherwise one of them can infer enabled slots from its object list before
+    // the guard snapshots the operator-selected sparse topology.
+    if (!coldGlueGeneratorStackReady(original)) return false;
 
     function generatedColdGlueWithExplicitTopology(...args) {
       const map = activeColdGlueMap();
@@ -105,7 +109,8 @@
       version: VERSION,
       snapshot,
       restore,
-      hasGripperSequenceWrapper
+      hasWrapper,
+      coldGlueGeneratorStackReady
     });
     return true;
   }
