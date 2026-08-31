@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "handling-zero-position-v305-20260831-0812";
-  const buildUpdatedAt = "Aug 31, 2026 8:12 AM ET";
+  const build = "per-bottle-servo-replay-v306-20260831-0815";
+  const buildUpdatedAt = "Aug 31, 2026 8:15 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -107,6 +107,7 @@
     "app/3d/bottle-handling-transfer-synchronization-integration.js",
     "app/3d/bottle-handling-viewport-integration.js",
     "app/3d/bottle-table-orientation-correction-integration.js",
+    "app/3d/bottle-handling-per-bottle-servo-authority-integration.js",
     "app/3d/bottle-label-coder-visual-polish-integration.js",
     "app/3d/presentation-frame-coordinator.js",
     "app/3d/bottle-handling-progressive-label-flow-integration.js",
