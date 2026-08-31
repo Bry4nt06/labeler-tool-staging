@@ -1,8 +1,12 @@
 (function installServoForgeColdGlueBrushVisualIntegration(global) {
   "use strict";
 
-  const INTEGRATION_VERSION = "servoforge.cold-glue-brush-visual.v1";
+  const INTEGRATION_VERSION = "servoforge.cold-glue-brush-visual.v2";
   const SVG_NS = "http://www.w3.org/2000/svg";
+  const BRUSH_HEIGHT_MM = 70;
+  const BRISTLE_DEPTH_MM = 18;
+  const BACKING_DEPTH_MM = 4;
+  const TOTAL_DEPTH_MM = BRISTLE_DEPTH_MM + BACKING_DEPTH_MM;
 
   function number(value, fallback = 0) {
     const parsed = Number(value);
@@ -13,11 +17,17 @@
     return Math.max(minimum, Math.min(maximum, value));
   }
 
-  function normalizedSpan(startValue, endValue) {
-    const start = number(startValue, 0);
-    let end = number(endValue, start);
-    while (end < start) end += 360;
-    return Math.max(0.5, end - start);
+  function normalizeAngle(value) {
+    const normalized = number(value, 0) % 360;
+    return normalized < 0 ? normalized + 360 : normalized;
+  }
+
+  function forwardSpan(startValue, endValue) {
+    const start = normalizeAngle(startValue);
+    const end = normalizeAngle(endValue);
+    let span = end - start;
+    if (span <= 0) span += 360;
+    return Math.max(0.5, span);
   }
 
   function brushRange(item, side) {
@@ -33,12 +43,16 @@
         end: number(item?.outerEnd, item?.end)
       };
     }
-    return { start: number(item?.start), end: number(item?.end, item?.start) };
+    return {
+      start: number(item?.start, item?.angle),
+      end: number(item?.end, item?.start)
+    };
   }
 
   function brushRadius(item, side) {
     const effectiveSide = side || (item?.side === "inner" ? "inner" : "outer");
-    return number(state?.radius) + number(effectiveSide === "inner" ? state?.depths?.brushInner : state?.depths?.brushOuter);
+    const depth = effectiveSide === "inner" ? state?.depths?.brushInner : state?.depths?.brushOuter;
+    return number(state?.radius) + number(depth);
   }
 
   function svgNode(name, attrs = {}) {
@@ -47,11 +61,51 @@
     return node;
   }
 
+  function brushWidthMapUnits() {
+    if (typeof wipeDownPadWidthMapUnits === "function") return wipeDownPadWidthMapUnits();
+    return Math.max(8, number(state?.radius, 250) * 0.045);
+  }
+
+  function curvedBrushPath(start, end, centerRadius, width) {
+    if (typeof machineTrailingPadPath === "function") {
+      return machineTrailingPadPath(start, end, centerRadius, width);
+    }
+    if (typeof arcPath === "function") {
+      return arcPath(start, end, centerRadius - width / 2, centerRadius + width / 2);
+    }
+    return "";
+  }
+
+  function addTopDownBristleTexture(group, range, centerRadius, width) {
+    if (typeof angleToXY !== "function") return;
+    const span = forwardSpan(range.start, range.end);
+    const rows = clamp(Math.round(span / 2.4), 6, 18);
+    const innerRadius = centerRadius - width * 0.34;
+    const outerRadius = centerRadius + width * 0.34;
+
+    for (let index = 1; index < rows; index += 1) {
+      const angle = number(range.start) + span * (index / rows);
+      const a = angleToXY(angle, innerRadius);
+      const b = angleToXY(angle, outerRadius);
+      group.appendChild(svgNode("line", {
+        x1: a.x,
+        y1: a.y,
+        x2: b.x,
+        y2: b.y,
+        stroke: index % 2 ? "#fffdf2" : "#d8d1bd",
+        "stroke-width": index % 2 ? 0.62 : 0.44,
+        "stroke-opacity": index % 2 ? 0.78 : 0.55,
+        "stroke-linecap": "round",
+        "pointer-events": "none"
+      }));
+    }
+  }
+
   function installTopDownBrushVisuals() {
-    if (typeof drawConfiguredAssemblies !== "function" || global.__ServoForgeColdGlueBrushTopDownInstalled) return;
+    if (typeof drawConfiguredAssemblies !== "function" || global.__ServoForgeColdGlueBrushTopDownV2Installed) return;
     const originalDrawConfiguredAssemblies = drawConfiguredAssemblies;
 
-    drawConfiguredAssemblies = function drawConfiguredAssembliesWithColdGlueBrushVisuals(add, layer) {
+    drawConfiguredAssemblies = function drawConfiguredAssembliesWithCurvedColdGlueBrushes(add, layer) {
       originalDrawConfiguredAssemblies(add, layer);
       if (state?.applicationMode !== "cold-glue" || !layer?.querySelectorAll) return;
 
@@ -59,143 +113,143 @@
       const byId = new Map(objects.map((item) => [String(item?.id || ""), item]));
       const sourcePaths = layer.querySelectorAll("[data-cold-glue-brush], [data-cold-glue-brush-channel]");
 
-      sourcePaths.forEach((path) => {
-        if (path.dataset.servoforgeBrushReplaced === "true") return;
-        const objectLayer = path.closest?.("[data-map-object-id]");
+      sourcePaths.forEach((sourcePath) => {
+        if (sourcePath.dataset.servoforgeBrushV2 === "true") return;
+        const objectLayer = sourcePath.closest?.("[data-map-object-id]");
         const item = byId.get(String(objectLayer?.getAttribute("data-map-object-id") || ""));
-        if (!item || !path.parentNode) return;
+        if (!item || !sourcePath.parentNode) return;
 
-        const side = path.getAttribute("data-channel-side") || (item.side === "inner" ? "inner" : "outer");
+        const side = sourcePath.getAttribute("data-channel-side") || (item.side === "inner" ? "inner" : "outer");
         const range = brushRange(item, side);
-        const start = range.start;
-        let end = range.end;
-        while (end < start) end += 360;
-        const midpoint = start + (end - start) / 2;
         const radius = brushRadius(item, side);
-        const center = angleToXY(midpoint, radius);
-        const tangentLength = clamp(radius * normalizedSpan(start, end) * Math.PI / 180, 20, 82);
-        const thickness = clamp(number(item?.extension, 20) * 0.52, 9, 14);
-        const rotation = angleToSvgRotation(midpoint) + 90;
+        const width = brushWidthMapUnits();
+        const d = curvedBrushPath(range.start, range.end, radius, width);
+        if (!d) return;
 
-        const group = svgNode("g", {
-          transform: `translate(${center.x} ${center.y}) rotate(${rotation})`,
+        const visual = svgNode("g", {
           "data-cold-glue-brush-visual": item.id,
-          "data-brush-side": side
+          "data-brush-side": side,
+          "data-brush-shape": "curved-wipe-profile",
+          "pointer-events": "none"
         });
-        const backing = svgNode("rect", {
-          x: -tangentLength / 2,
-          y: -thickness / 2,
-          width: tangentLength,
-          height: thickness,
-          rx: Math.min(4.5, thickness * 0.34),
-          fill: "#4738a7",
-          stroke: "#28206f",
-          "stroke-width": 1.1
-        });
-        group.appendChild(backing);
 
-        const inset = 2.1;
-        const faceWidth = Math.max(4, tangentLength - inset * 2);
-        const faceHeight = Math.max(3, thickness - inset * 2);
-        group.appendChild(svgNode("rect", {
-          x: -faceWidth / 2,
-          y: -faceHeight / 2,
-          width: faceWidth,
-          height: faceHeight,
-          rx: Math.min(3, faceHeight * 0.34),
-          fill: "#6e5dcc",
-          "fill-opacity": 0.88
+        visual.appendChild(svgNode("path", {
+          d,
+          fill: "#202428",
+          stroke: "#0f1113",
+          "stroke-width": 2.5,
+          "stroke-linejoin": "round"
         }));
 
-        const textureCount = clamp(Math.round(tangentLength / 7), 5, 12);
-        for (let index = 1; index < textureCount; index += 1) {
-          const x = -faceWidth / 2 + (index / textureCount) * faceWidth;
-          group.appendChild(svgNode("line", {
-            x1: x,
-            y1: -faceHeight * 0.34,
-            x2: x,
-            y2: faceHeight * 0.34,
-            stroke: "#d8d1ff",
-            "stroke-width": 0.55,
-            "stroke-opacity": 0.26,
-            "stroke-linecap": "round",
-            "pointer-events": "none"
-          }));
-        }
+        visual.appendChild(svgNode("path", {
+          d,
+          fill: "#eee8d5",
+          stroke: "#c6bd9f",
+          "stroke-width": 0.8,
+          "stroke-linejoin": "round",
+          transform: `scale(${1 - 1.3 / Math.max(20, radius)} ${1 - 1.3 / Math.max(20, radius)})`
+        }));
 
-        path.setAttribute("visibility", "hidden");
-        path.dataset.servoforgeBrushReplaced = "true";
-        path.parentNode.appendChild(group);
+        addTopDownBristleTexture(visual, range, radius, width);
+        sourcePath.setAttribute("fill-opacity", "0.001");
+        sourcePath.setAttribute("stroke", "transparent");
+        sourcePath.dataset.servoforgeBrushV2 = "true";
+        sourcePath.parentNode.appendChild(visual);
       });
     };
 
-    global.__ServoForgeColdGlueBrushTopDownInstalled = true;
+    global.__ServoForgeColdGlueBrushTopDownV2Installed = true;
   }
 
-  function roundedBrushGeometry(THREE, width, height, depth, radius) {
-    const halfW = width / 2;
-    const halfH = height / 2;
-    const r = clamp(radius, 0.005, Math.min(halfW, halfH) * 0.9);
-    const shape = new THREE.Shape();
-    shape.moveTo(-halfW + r, -halfH);
-    shape.lineTo(halfW - r, -halfH);
-    shape.quadraticCurveTo(halfW, -halfH, halfW, -halfH + r);
-    shape.lineTo(halfW, halfH - r);
-    shape.quadraticCurveTo(halfW, halfH, halfW - r, halfH);
-    shape.lineTo(-halfW + r, halfH);
-    shape.quadraticCurveTo(-halfW, halfH, -halfW, halfH - r);
-    shape.lineTo(-halfW, -halfH + r);
-    shape.quadraticCurveTo(-halfW, -halfH, -halfW + r, -halfH);
-    const geometry = new THREE.ExtrudeGeometry(shape, {
-      depth,
-      steps: 1,
-      bevelEnabled: true,
-      bevelSegments: 2,
-      bevelSize: Math.min(0.008, depth * 0.18),
-      bevelThickness: Math.min(0.006, depth * 0.14)
+  function brushBands(item, geometry) {
+    const unitsPerMm = Math.max(0.000001, number(geometry?.renderScale?.worldUnitsPerMm, 0.00445));
+    const origin = Math.max(0.1, number(item?.radialWorld, 1));
+    const bristleDepth = BRISTLE_DEPTH_MM * unitsPerMm;
+    const backingDepth = BACKING_DEPTH_MM * unitsPerMm;
+    const totalDepth = TOTAL_DEPTH_MM * unitsPerMm;
+    const contactRadius = item?.side === "inner"
+      ? origin + totalDepth / 2
+      : origin - totalDepth / 2;
+
+    if (item?.side === "inner") {
+      return Object.freeze({
+        origin,
+        contactRadius,
+        bristleInner: contactRadius - bristleDepth,
+        bristleOuter: contactRadius,
+        backingInner: contactRadius - bristleDepth - backingDepth,
+        backingOuter: contactRadius - bristleDepth,
+        contactSign: 1,
+        unitsPerMm
+      });
+    }
+
+    return Object.freeze({
+      origin,
+      contactRadius,
+      bristleInner: contactRadius,
+      bristleOuter: contactRadius + bristleDepth,
+      backingInner: contactRadius + bristleDepth,
+      backingOuter: contactRadius + bristleDepth + backingDepth,
+      contactSign: -1,
+      unitsPerMm
     });
-    geometry.center();
-    return geometry;
   }
 
-  function createColdGlueBrushAssembly(THREE, item) {
+  function createCurvedColdGlueBrushAssembly(THREE, item, geometry) {
+    const annularPrismGeometry = global.Labeler3DWipePadMeshFactory?.annularPrismGeometry;
+    if (typeof annularPrismGeometry !== "function") return null;
+
+    const bands = brushBands(item, geometry);
+    const spanRadians = Math.max(0.0001, number(item?.spanDegrees, 0.5) * Math.PI / 180);
+    const height = BRUSH_HEIGHT_MM * bands.unitsPerMm;
     const group = new THREE.Group();
     group.name = `ServoForgeColdGlueBrush-${String(item?.id || "brush")}`;
 
-    const span = clamp(number(item?.tangentLengthWorld, 0.30), 0.16, 0.72);
-    const height = 0.34;
-    const backingDepth = 0.070;
-    const bristleDepth = 0.038;
-    const inner = item?.side === "inner";
-    const contactSign = inner ? 1 : -1;
-
-    const backingMaterial = new THREE.MeshStandardMaterial({
-      color: 0x3f3299,
-      roughness: 0.48,
-      metalness: 0.08,
-      emissive: 0x000000,
-      emissiveIntensity: 0
-    });
     const bristleMaterial = new THREE.MeshStandardMaterial({
-      color: 0x6e5dcc,
-      roughness: 0.90,
-      metalness: 0.01,
+      color: 0xeee8d5,
+      roughness: 0.98,
+      metalness: 0.0,
       emissive: 0x000000,
       emissiveIntensity: 0
     });
-    const textureMaterial = new THREE.MeshStandardMaterial({
-      color: 0x9183e2,
-      roughness: 0.96,
+    const bristleShadeMaterial = new THREE.MeshStandardMaterial({
+      color: 0xcfc5aa,
+      roughness: 1.0,
       metalness: 0
     });
-    const mountMaterial = new THREE.MeshStandardMaterial({
-      color: 0x7f898f,
-      roughness: 0.30,
-      metalness: 0.78
+    const backingMaterial = new THREE.MeshStandardMaterial({
+      color: 0x202428,
+      roughness: 0.58,
+      metalness: 0.22,
+      emissive: 0x000000,
+      emissiveIntensity: 0
     });
 
+    const bristles = new THREE.Mesh(
+      annularPrismGeometry(THREE, {
+        innerRadius: bands.bristleInner,
+        outerRadius: bands.bristleOuter,
+        originRadius: bands.origin,
+        height,
+        spanRadians
+      }),
+      bristleMaterial
+    );
+    bristles.name = "ServoForgeColdGlueBrushBristles";
+    bristles.position.y = 0.60;
+    bristles.castShadow = true;
+    bristles.receiveShadow = true;
+    group.add(bristles);
+
     const backing = new THREE.Mesh(
-      roundedBrushGeometry(THREE, span, height, backingDepth, 0.035),
+      annularPrismGeometry(THREE, {
+        innerRadius: bands.backingInner,
+        outerRadius: bands.backingOuter,
+        originRadius: bands.origin,
+        height,
+        spanRadians
+      }),
       backingMaterial
     );
     backing.name = "ServoForgeColdGlueBrushBacking";
@@ -204,75 +258,50 @@
     backing.receiveShadow = true;
     group.add(backing);
 
-    const faceWidth = span * 0.94;
-    const faceHeight = height * 0.90;
-    const face = new THREE.Mesh(
-      roundedBrushGeometry(THREE, faceWidth, faceHeight, bristleDepth, 0.028),
-      bristleMaterial
-    );
-    face.name = "ServoForgeColdGlueBrushBristleFace";
-    face.position.set(0, 0.60, contactSign * (backingDepth / 2 + bristleDepth / 2 + 0.004));
-    face.castShadow = true;
-    group.add(face);
+    const textureRows = clamp(Math.round(number(item?.spanDegrees, 0.5) / 1.3), 8, 22);
+    const contactOffset = bands.contactSign * Math.max(0.003, bands.unitsPerMm * 0.8);
+    const laneDepth = Math.max(0.0025, bands.unitsPerMm * 0.65);
+    const laneWidth = Math.max(0.0025, bands.unitsPerMm * 0.75);
+    const laneHeight = height * 0.88;
 
-    const grooveCount = clamp(Math.round(span / 0.045), 6, 13);
-    for (let index = 1; index < grooveCount; index += 1) {
-      const x = -faceWidth / 2 + (index / grooveCount) * faceWidth;
-      const groove = new THREE.Mesh(
-        new THREE.BoxGeometry(0.004, faceHeight * 0.84, 0.004),
-        textureMaterial
+    for (let index = 1; index < textureRows; index += 1) {
+      const angle = -spanRadians / 2 + spanRadians * (index / textureRows);
+      const radius = bands.contactRadius + contactOffset;
+      const localX = Math.cos(angle) * radius - bands.origin;
+      const localZ = Math.sin(angle) * radius;
+      const lane = new THREE.Mesh(
+        new THREE.BoxGeometry(laneDepth, laneHeight, laneWidth),
+        bristleShadeMaterial
       );
-      groove.position.set(x, 0.60, contactSign * (backingDepth / 2 + bristleDepth + 0.006));
-      group.add(groove);
+      lane.position.set(localX, 0.60, localZ);
+      lane.rotation.y = -angle;
+      group.add(lane);
     }
-
-    const postRadius = 0.018;
-    const postHeight = height * 1.42;
-    const mountSign = -contactSign;
-    [-0.30, 0.30].forEach((ratio) => {
-      const post = new THREE.Mesh(
-        new THREE.CylinderGeometry(postRadius, postRadius, postHeight, 20),
-        mountMaterial
-      );
-      post.position.set(span * ratio, 0.60 + height * 0.18, mountSign * (backingDepth / 2 + postRadius * 2.3));
-      group.add(post);
-    });
-    const crossbar = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.014, 0.014, span * 0.72, 20),
-      mountMaterial
-    );
-    crossbar.rotation.z = Math.PI / 2;
-    crossbar.position.set(0, 0.60 + height * 0.48, mountSign * (backingDepth / 2 + postRadius * 2.3));
-    group.add(crossbar);
 
     group.userData.hardwareReference = Object.freeze({
       profileId: "cold-glue-brush",
       dimensionalAuthority: false,
-      sideAuthority: inner ? "inner" : "outer",
-      visualReference: "cold-glue-brush-photo-reference"
+      shapeAuthority: "wipe-down-pad-curvature",
+      visualReference: "user-supplied-cold-glue-brush-photo",
+      curved: true
     });
-    group.userData.highlightMaterials = [backingMaterial, bristleMaterial];
+    group.userData.highlightMaterials = [bristleMaterial, backingMaterial];
     group.userData.contactMaterials = [bristleMaterial];
     return group;
   }
 
   function install3DBrushLayout() {
     const previousAdapter = global.Labeler3DEquipmentLayoutAdapter;
-    if (!previousAdapter || global.__ServoForgeColdGlueBrushLayoutInstalled) return;
-
-    function midpoint(startValue, endValue) {
-      const start = number(startValue, 0);
-      let end = number(endValue, start);
-      while (end < start) end += 360;
-      const value = (start + (end - start) / 2) % 360;
-      return value < 0 ? value + 360 : value;
-    }
+    if (!previousAdapter || global.__ServoForgeColdGlueBrushLayoutV2Installed) return;
 
     function mappedBrushItem(source, raw, side, context) {
       const range = brushRange(raw, side);
-      const angleDegrees = midpoint(range.start, range.end);
-      const depthMapUnits = number(side === "inner" ? context.depths?.brushInner : context.depths?.brushOuter,
-        number(side === "inner" ? context.depths?.wipeInner : context.depths?.wipeOuter));
+      const span = forwardSpan(range.start, range.end);
+      const angleDegrees = normalizeAngle(number(range.start) + span / 2);
+      const depthMapUnits = number(
+        side === "inner" ? context.depths?.brushInner : context.depths?.brushOuter,
+        number(side === "inner" ? context.depths?.wipeInner : context.depths?.wipeOuter)
+      );
       const radialWorld = Math.max(0.1, context.physicalPitchRadiusWorld + depthMapUnits * context.mapToWorldScale);
       const orbit = global.Labeler3DSceneAdapter?.machineOrbit?.(angleDegrees, {
         carouselRadius: radialWorld,
@@ -280,24 +309,26 @@
         zeroAngleDegrees: context.zeroAngleDegrees
       });
       if (!orbit) return null;
-      const span = normalizedSpan(range.start, range.end);
+
       return Object.freeze({
         ...source,
-        id: `${source.id}-${side}`,
-        name: `${source.name} ${side === "inner" ? "Inside" : "Outside"}`,
+        id: source.kind === "brush-channel" ? `${source.id}-${side}` : source.id,
+        name: source.kind === "brush-channel"
+          ? `${source.name} ${side === "inner" ? "Inside" : "Outside"}`
+          : source.name,
         kind: "brush",
         side,
         angleDegrees,
-        startDegrees: range.start,
-        endDegrees: range.end,
+        startDegrees: normalizeAngle(range.start),
+        endDegrees: normalizeAngle(range.end),
         spanDegrees: span,
         mapDepthUnits: depthMapUnits,
         radialWorld,
         radialMmEquivalent: radialWorld / Math.max(0.000001, context.worldUnitsPerMm),
         tangentLengthWorld: Math.max(0.12, radialWorld * span * Math.PI / 180),
         position: { x: orbit.x, y: 0, z: orbit.z },
-        rotationY: orbit.radians + Math.PI / 2,
-        placementAuthority: "cold-glue-brush-channel-inner-outer-map-geometry",
+        rotationY: -Math.atan2(orbit.z, orbit.x),
+        placementAuthority: "cold-glue-brush-uses-wipe-down-curved-footprint",
         radialCadAuthority: false
       });
     }
@@ -321,15 +352,22 @@
 
       const expanded = [];
       (Array.isArray(base?.objects) ? base.objects : []).forEach((item) => {
-        if (item?.kind !== "brush-channel") {
+        if (item?.kind !== "brush" && item?.kind !== "brush-channel") {
           expanded.push(item);
           return;
         }
-        const raw = rawById.get(String(item.id)) || {};
-        const outer = mappedBrushItem(item, raw, "outer", context);
-        const inner = mappedBrushItem(item, raw, "inner", context);
-        if (outer) expanded.push(outer);
-        if (inner) expanded.push(inner);
+
+        const raw = rawById.get(String(item.id)) || item;
+        if (item.kind === "brush-channel") {
+          const outer = mappedBrushItem(item, raw, "outer", context);
+          const inner = mappedBrushItem(item, raw, "inner", context);
+          if (outer) expanded.push(outer);
+          if (inner) expanded.push(inner);
+          return;
+        }
+
+        const mapped = mappedBrushItem(item, raw, raw?.side === "inner" ? "inner" : "outer", context);
+        if (mapped) expanded.push(mapped);
       });
 
       return Object.freeze({
@@ -340,43 +378,44 @@
           brushes: expanded.filter((item) => item?.kind === "brush").length,
           other: expanded.filter((item) => !["pad", "roller", "sensor", "coding", "brush"].includes(item?.kind)).length
         }),
-        coldGlueBrushAuthority: "expanded-inner-outer-brush-channel"
+        coldGlueBrushAuthority: "wipe-down-curvature-inner-outer-v2"
       });
     }
 
     global.Labeler3DEquipmentLayoutAdapter = Object.freeze({
       ...previousAdapter,
-      SCHEMA_VERSION: `${previousAdapter.SCHEMA_VERSION || "servoforge.3d-equipment"}+cold-glue-brush-v1`,
+      SCHEMA_VERSION: `${previousAdapter.SCHEMA_VERSION || "servoforge.3d-equipment"}+cold-glue-brush-v2`,
       snapshot
     });
-    global.__ServoForgeColdGlueBrushLayoutInstalled = true;
+    global.__ServoForgeColdGlueBrushLayoutV2Installed = true;
   }
 
   function install3DBrushVisuals() {
     const previousFactory = global.Labeler3DHardwareMeshFactory;
-    if (!previousFactory || global.__ServoForgeColdGlueBrush3DInstalled) return;
+    if (!previousFactory || global.__ServoForgeColdGlueBrush3DV2Installed) return;
 
     function createEquipmentAssembly(THREE, item, geometry) {
       if (item?.kind !== "brush" && item?.kind !== "brush-channel") {
         return previousFactory.createEquipmentAssembly?.(THREE, item, geometry) || null;
       }
-      const group = createColdGlueBrushAssembly(THREE, item);
-      group.name = group.name || `ServoForgeEquipment-${String(item?.id || "equipment")}`;
+
+      const group = createCurvedColdGlueBrushAssembly(THREE, item, geometry);
+      if (!group) return previousFactory.createEquipmentAssembly?.(THREE, item, geometry) || null;
       group.userData.kind = item?.kind;
       group.userData.station = item?.station;
       group.userData.section = item?.section;
       group.position.set(number(item?.position?.x), 0, number(item?.position?.z));
-      group.rotation.y = number(item?.rotationY);
+      group.rotation.y = number(item?.rotationY, -Math.atan2(number(item?.position?.z), number(item?.position?.x)));
       return group;
     }
 
     global.Labeler3DHardwareMeshFactory = Object.freeze({
       ...previousFactory,
-      FACTORY_VERSION: `${previousFactory.FACTORY_VERSION || "servoforge.3d-hardware-mesh"}+cold-glue-brush-v1`,
-      createBrushAssembly: createColdGlueBrushAssembly,
+      FACTORY_VERSION: `${previousFactory.FACTORY_VERSION || "servoforge.3d-hardware-mesh"}+cold-glue-brush-v2`,
+      createBrushAssembly: createCurvedColdGlueBrushAssembly,
       createEquipmentAssembly
     });
-    global.__ServoForgeColdGlueBrush3DInstalled = true;
+    global.__ServoForgeColdGlueBrush3DV2Installed = true;
   }
 
   installTopDownBrushVisuals();
@@ -385,9 +424,13 @@
 
   global.ServoForgeColdGlueBrushVisualIntegration = Object.freeze({
     INTEGRATION_VERSION,
+    BRUSH_HEIGHT_MM,
+    BRISTLE_DEPTH_MM,
+    BACKING_DEPTH_MM,
+    TOTAL_DEPTH_MM,
     installTopDownBrushVisuals,
     install3DBrushLayout,
     install3DBrushVisuals,
-    createColdGlueBrushAssembly
+    createCurvedColdGlueBrushAssembly
   });
 })(window);
