@@ -51,6 +51,72 @@
     };
   }
 
+  function sharesBrushContact(segment, holdBrushIds) {
+    const ids = Array.isArray(segment?.brushIds) ? segment.brushIds : [];
+    return ids.some((id) => holdBrushIds.has(id));
+  }
+
+  function holdThroughChannelClearance(rawSegments) {
+    let previousEnd = null;
+    let holdBrushIds = new Set();
+    let holdAngle = null;
+    let holdCurrent = false;
+    let holdActive = false;
+
+    return rawSegments.map((segment) => {
+      const contiguous = previousEnd !== null && Math.abs(finite(segment.start) - previousEnd) <= EPSILON;
+      if (!contiguous) {
+        holdBrushIds = new Set();
+        holdAngle = null;
+        holdCurrent = false;
+        holdActive = false;
+      }
+
+      let next = segment;
+      if (segment.stage === "opposed") {
+        holdActive = true;
+        holdBrushIds = new Set(Array.isArray(segment.brushIds) ? segment.brushIds : []);
+        holdAngle = finite(segment.holdAngle, 0);
+        holdCurrent = Boolean(segment.holdCurrent);
+      } else if (
+        holdActive
+        && (segment.stage === "outer" || segment.stage === "inner")
+        && sharesBrushContact(segment, holdBrushIds)
+      ) {
+        // Once opposed brush contact has established the bottle angle, a side
+        // ending early does not create a new servo-turn window. The remaining
+        // brush is still touching the bottle, so hold that same angle until the
+        // final side clears. Keep stage="opposed" so every existing profile
+        // consumer treats this interval as a hold without adding a second
+        // runtime authority.
+        next = {
+          ...segment,
+          stage: "opposed",
+          rotation: 0,
+          ratio: 0,
+          direction: 0,
+          holdAngle,
+          holdCurrent,
+          configuredHold: false,
+          parallelBrushHold: false,
+          channelClearanceHold: true,
+          trailingBrushSide: segment.side,
+          singleSideOpening: false
+        };
+      } else if (holdActive && (segment.stage === "outer" || segment.stage === "inner")) {
+        // A different brush beginning exactly at the previous boundary is a new
+        // contact region, not a continuation of the old opposed channel.
+        holdBrushIds = new Set();
+        holdAngle = null;
+        holdCurrent = false;
+        holdActive = false;
+      }
+
+      previousEnd = finite(next.end, previousEnd);
+      return next;
+    });
+  }
+
   function segmentChannel(channel, mapDirection, labelDeg, channelIndex) {
     const outerStart = finite(channel?.outerStart, channel?.start);
     const outerEnd = Math.max(outerStart, finite(channel?.outerEnd, channel?.end));
@@ -60,6 +126,7 @@
     const channelEnd = Math.max(outerEnd, innerEnd);
     const holdStart = Math.max(channelStart, Math.min(channelEnd, finite(channel?.bottleHoldStartDeg, channelStart)));
     const entryAngle = channelEntryAngle(mapDirection, labelDeg);
+    const channelId = channel?.id || `brush-channel-${channelIndex + 1}`;
     const points = [...new Set([
       outerStart, outerEnd, innerStart, innerEnd,
       ...(channel?.holdBottleAngle ? [holdStart] : [])
@@ -78,7 +145,8 @@
 
       if (configuredHold || (outerActive && innerActive)) {
         segments.push({
-          id: channel?.id || `brush-channel-${channelIndex + 1}`,
+          id: channelId,
+          brushIds: [channelId],
           key: `channel-${channelIndex}-${index}`,
           stage: "opposed",
           start,
@@ -97,7 +165,8 @@
       } else {
         const side = outerActive ? "outer" : "inner";
         segments.push({
-          id: channel?.id || `brush-channel-${channelIndex + 1}`,
+          id: channelId,
+          brushIds: [channelId],
           key: `channel-${channelIndex}-${index}`,
           stage: side,
           side,
@@ -111,7 +180,7 @@
         });
       }
     }
-    return segments;
+    return holdThroughChannelClearance(segments);
   }
 
   function segmentBrushes(brushes, mapDirection, labelDeg) {
@@ -136,10 +205,12 @@
       const outer = active.filter((brush) => brush.side === "outer");
       const inner = active.filter((brush) => brush.side === "inner");
       const configuredHoldBrush = active.find((brush) => brush.holdBottleAngle && middle >= brush.holdStart - EPSILON);
+      const brushIds = active.map((brush) => brush.id);
 
       if (configuredHoldBrush || (outer.length && inner.length)) {
         segments.push({
-          id: active.map((brush) => brush.id).join("+"),
+          id: brushIds.join("+"),
+          brushIds,
           key: `brushes-${index}`,
           stage: "opposed",
           start,
@@ -158,7 +229,8 @@
       } else {
         const side = outer.length ? "outer" : "inner";
         segments.push({
-          id: active.map((brush) => brush.id).join("+"),
+          id: brushIds.join("+"),
+          brushIds,
           key: `brushes-${index}`,
           stage: side,
           side,
@@ -172,7 +244,7 @@
         });
       }
     }
-    return segments;
+    return holdThroughChannelClearance(segments);
   }
 
   function allocateAcrossWindows(required, windows, maxRatio, safetyFactor) {
@@ -284,7 +356,7 @@
       totalRotation,
       fullWrap: labelDeg >= 330,
       centerTackTwoSided: true,
-      simultaneousOppositeWipe: opposed.length > 0,
+      simultaneousOppositeWipe: opposed.some((move) => move.parallelBrushHold),
       brushEntryLeadDeg: 0,
       channelEntryAngle: channelEntryAngle(mapDirection, labelDeg),
       finalPlateTravel: signedRotation,
@@ -352,6 +424,7 @@
     applicationTarget,
     centerTackOnly: true,
     leadingEdgeWipeAllowed: false,
-    parallelOverlapTurnsBottle: false
+    parallelOverlapTurnsBottle: false,
+    channelExitHoldAuthority: true
   });
 })(window);
