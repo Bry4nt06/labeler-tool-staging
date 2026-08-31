@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "per-bottle-servo-replay-v306-20260831-0815";
-  const buildUpdatedAt = "Aug 31, 2026 8:15 AM ET";
+  const build = "top-view-handling-parity-v307-20260831-0820";
+  const buildUpdatedAt = "Aug 31, 2026 8:20 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -101,7 +101,6 @@
     "app/3d/bottle-handling-dead-zone-anchor-integration.js",
     "app/3d/bottle-handling-16-pocket-integration.js",
     "app/3d/bottle-handling-measured-star-layout-integration.js",
-    "app/3d/bottle-handling-zero-position-authority-integration.js",
     "app/3d/bottle-handling-direction-authority-integration.js",
     "app/3d/bottle-handling-carousel-table-center-integration.js",
     "app/3d/bottle-handling-transfer-synchronization-integration.js",
