@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "head-one-view-stability-v308-20260831-0832";
-  const buildUpdatedAt = "Aug 31, 2026 8:32 AM ET";
+  const build = "label-artwork-orientation-v309-20260831-0912";
+  const buildUpdatedAt = "Aug 31, 2026 9:12 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
