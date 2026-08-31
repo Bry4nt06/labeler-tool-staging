@@ -1,7 +1,7 @@
 "use strict";
 
 (function loadServoForgeMapBuilderModules() {
-  const releaseVersion = "0.9.10-map-builder-slot-authority-v135";
+  const releaseVersion = "0.9.10-map-builder-slot-authority-v315";
   const modulePaths = Object.freeze([
     "drivers/assembly/assembly-model-driver.js",
     "drivers/assembly/assembly-geometry-driver.js",
@@ -23,7 +23,11 @@
     // ready. Waiting for the later workspace bootstrap allowed controls to
     // render correctly while having no live mutation owner.
     "app/controllers/map-builder-action-controller.js",
-    "app/controllers/map-builder-event-controller.js"
+    "app/controllers/map-builder-event-controller.js",
+    // This can load before the Cold Glue gripper sequence; it waits until that
+    // wrapper exists, then installs outside it so explicit sparse topology stays
+    // authoritative during servo-profile regeneration.
+    "app/cold-glue-slot-topology-guard-v315.js"
   ]);
 
   function matchingScript(path) {
