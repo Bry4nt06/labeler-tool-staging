@@ -18,7 +18,7 @@ const standardDepths = {
   nonOpRoller: -18,
   wipeInner: -4,
   wipeOuter: 16,
-  brushInner: -4,
+  brushInner: -16,
   brushOuter: 16
 };
 
@@ -26,7 +26,10 @@ const sandbox = {
   console,
   Date,
   Math,
-  LabelerDefaultObjectDepths: Object.freeze({ ...standardDepths }),
+  // Simulate the legacy default object table still carrying the former -4
+  // brush depth. The map-schema authority must override it to -16 for all new
+  // machine maps until every legacy caller has been retired.
+  LabelerDefaultObjectDepths: Object.freeze({ ...standardDepths, brushInner: -4 }),
   state: {
     mapLibrary: [{ name: "Map" }],
     headCount: 45,
@@ -70,21 +73,23 @@ vm.runInContext(adapterSource, sandbox);
 
 assert.equal(sandbox.uniqueMapName("Map"), "Map 2");
 assert.equal(sandbox.normalizeBuilderObject({ kind: "sensor", angle: 25 }, "apl", 6).end, 28);
-const map = sandbox.createMachineMap({ id: "map-1", applicationMode: "apl", objects: [] });
+const map = sandbox.createMachineMap({ id: "map-1", applicationMode: "cold-glue", objects: [] });
 assert.equal(map.schemaVersion, 11);
 assert.equal(map.zone, "Zone");
 assert.equal(map.site, "Site");
 assert.deepEqual(JSON.parse(JSON.stringify(map.depths)), standardDepths,
-  "a new map must start from standard object depths, not the active map's user-edited depths");
+  "a new map must start from standard object depths, including inside brush depth -16, not the active map's user-edited depths");
+assert.equal(map.depths.brushInner, -16);
 
 const savedMap = sandbox.createMachineMap({
   id: "saved-map",
-  applicationMode: "apl",
+  applicationMode: "cold-glue",
   objects: [],
-  depths: { ...standardDepths, sensor: 33, brushOuter: 27 }
+  depths: { ...standardDepths, sensor: 33, brushOuter: 27, brushInner: -22 }
 });
 assert.equal(savedMap.depths.sensor, 33, "explicit depths stored on an existing/imported map remain loadable");
 assert.equal(savedMap.depths.brushOuter, 27, "user depth overrides remain map-specific");
+assert.equal(savedMap.depths.brushInner, -22, "an explicitly saved inside brush depth remains map-specific");
 assert.equal(sandbox.LabelerMapSchemaAdapter.driver, "map.schema");
 assert.ok(sandbox.LabelerMapSchemaAdapter.functions.includes("inferAplStationSections"));
 assert.deepEqual(JSON.parse(JSON.stringify(sandbox.LabelerMapSchemaAdapter.standardObjectDepths())), standardDepths);
