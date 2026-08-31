@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "cold-glue-wipe-away-direction-v311-20260831-1222";
-  const buildUpdatedAt = "Aug 31, 2026 12:22 PM ET";
+  const build = "cold-glue-station-topology-v314-20260831-1456";
+  const buildUpdatedAt = "Aug 31, 2026 2:56 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -59,6 +59,7 @@
     "app/controllers/application-controller.js",
     "app/controllers/setup-state-controller.js",
     "app/controllers/workspace-panel-controller.js",
+    "app/map-builder-slot-service.js",
     "app/controllers/map-builder-action-controller.js",
     "app/controllers/map-builder-event-controller.js",
     "app/controllers/map-builder-layout-controller.js",

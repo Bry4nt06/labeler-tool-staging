@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-wipe-away-direction-v311-20260831-1222",
+  "buildId": "cold-glue-station-topology-v314-20260831-1456",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v311 preserves the v310 inside-brush depth of -16 and corrects Cold Glue brush runout behavior. Opposed inside/outside brush contact holds the established bottle angle; when one brush ends first, the remaining one-sided brush rotates the bottle physically away from that brush for the label-length wipe until the wiped label is clear. The gripper/channel generator now delegates wipe direction to the canonical Cold Glue motion driver instead of using a hard-coded sign. APL and 3D runtime behavior are unchanged."
+  "notes": "v314 fixes Cold Glue station topology ownership in Map Builder. Station and aggregate toggles now converge on the canonical machine-slot service before any brush edit, so enabling a sparse Cold Glue station remains enabled when a brush is added. The duplicate layout-level slot mutation is retired, Cold Glue station toggles cannot invoke APL station seeding, and the final-active-slot guard is preserved. Existing v311 Cold Glue brush wipe direction, the -16 inside-brush depth, APL behavior, and 3D runtime behavior are unchanged."
 }
