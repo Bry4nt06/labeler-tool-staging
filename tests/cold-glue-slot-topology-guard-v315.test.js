@@ -34,12 +34,18 @@ function legacyGripperSequenceWrapper() {
 legacyGripperSequenceWrapper.coldGlueThreeGripperWrappedV2 = true;
 legacyGripperSequenceWrapper.originalGenerator = function baseColdGlueProfile() {};
 
+function legacyGripperChannelWrapper(...args) {
+  return legacyGripperSequenceWrapper(...args);
+}
+legacyGripperChannelWrapper.coldGlueGripperChannelWrapped = true;
+legacyGripperChannelWrapper.originalGenerator = legacyGripperSequenceWrapper;
+
 const sandbox = {
   console,
   window: null,
   state,
   activeMachineMap: () => map,
-  generatedColdGlueFixedProfile: legacyGripperSequenceWrapper,
+  generatedColdGlueFixedProfile: legacyGripperChannelWrapper,
   normalizeEnabledSlots(value, fallbackCount = 1) {
     const sourceSlots = Array.isArray(value) ? value : [];
     const fallback = Math.max(1, Math.min(6, Math.round(Number(fallbackCount) || 1)));
@@ -55,7 +61,7 @@ const sandbox = {
       };
     }
   },
-  setInterval() { throw new Error("guard should install immediately once the gripper wrapper exists"); },
+  setInterval() { throw new Error("guard should install immediately once both legacy wrappers exist"); },
   clearInterval() {}
 };
 sandbox.window = sandbox;
@@ -64,6 +70,7 @@ vm.runInContext(source, sandbox);
 
 assert.equal(sandbox.generatedColdGlueFixedProfile.coldGlueSlotTopologyGuardV315, true);
 assert.equal(sandbox.ServoForgeColdGlueSlotTopologyGuard.installed, true);
+assert.equal(sandbox.ServoForgeColdGlueSlotTopologyGuard.coldGlueGeneratorStackReady(legacyGripperChannelWrapper), true);
 
 const rows = sandbox.generatedColdGlueFixedProfile();
 assert.equal(rows.length, 1);
