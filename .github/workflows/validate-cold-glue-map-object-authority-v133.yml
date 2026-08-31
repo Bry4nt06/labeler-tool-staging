@@ -1,6 +1,26 @@
 name: Validate Cold Glue map object authority
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "app/cold-glue-map-service.js"
+      - "app/map-runtime-service.js"
+      - "app/wipe-down-builder.js"
+      - "app/map-builder-slot-service.js"
+      - "app/company-default-map-catalog-integration.js"
+      - "app/map-builder-controls.js"
+      - "app/bootstrap.js"
+      - "app/controllers/map-builder-action-controller.js"
+      - "app/controllers/map-builder-event-controller.js"
+      - "app/controllers/map-builder-layout-controller.js"
+      - "app/map-builder-controller.js"
+      - "tests/cold-glue-map-object-authority-v133.test.js"
+      - "tests/map-builder-add-object-v134.test.js"
+      - "tests/map-builder-machine-slot-v135.test.js"
+      - "tests/optional-label-sensors-v136.test.js"
+      - "tests/map-runtime-service.test.js"
+      - ".github/workflows/validate-cold-glue-map-object-authority-v133.yml"
   push:
     branches: [main]
     paths:
@@ -31,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out staging main
+      - name: Check out staging branch
         uses: actions/checkout@v4
 
       - name: Set up Node
