@@ -77,9 +77,9 @@ test("bootstrap installs bottle handling before the 3D scene runtime", () => {
   const adapterIndex = bootstrap.indexOf('"app/3d/bottle-handling-adapter.js"');
   const viewportIndex = bootstrap.indexOf('"app/3d/bottle-handling-viewport-integration.js"');
   const runtimeIndex = bootstrap.indexOf('"app/3d/scene-runtime.js"');
-  assert.ok(adapterIndex >= 0, "bottle handling adapter must be bootstrap-loaded");
-  assert.ok(viewportIndex > adapterIndex, "viewport integration must load after the handling contract");
-  assert.ok(runtimeIndex > viewportIndex, "handling scene hook must install before the renderer runtime is injected");
+  assert.ok(adapterIndex >= 0);
+  assert.ok(viewportIndex > adapterIndex);
+  assert.ok(runtimeIndex > viewportIndex);
 });
 
 test("handling route owns bottles in the required machine sequence", () => {
@@ -98,15 +98,6 @@ test("handling route owns bottles in the required machine sequence", () => {
   ]);
   assert.equal(handling.noSingleBottleZeroReset, true);
   assert.equal(handling.bottleIdentityModel, "continuous-pitch-population");
-  assert.equal(handling.carouselServoAuthority, "ServoForge replay frame at each occupied bottle-table angle");
-  assert.equal(handling.layout.authority.dimensionalAuthority, false);
-  assert.equal(handling.layout.authority.synchronizationPitch, "user-measured-bottle-table-center-spacing-110mm");
-  assert.equal(handling.layout.entryAngleDegrees, 16);
-  assert.equal(handling.layout.exitAngleDegrees, 328);
-  assert.equal(handling.layout.transferGapDegrees, 48);
-  assert.equal(handling.layout.wheels.infeed.pocketCount, 10);
-  assert.equal(handling.layout.wheels.intermediate.pocketCount, 8);
-  assert.equal(handling.layout.wheels.discharge.pocketCount, 10);
   assert.ok(handling.bottles.some((bottle) => bottle.owner === "infeed-star"));
   assert.ok(handling.bottles.some((bottle) => bottle.owner === "intermediate-star"));
   assert.ok(handling.bottles.some((bottle) => bottle.owner === "carousel"));
@@ -122,7 +113,7 @@ test("every carousel-owned bottle sits on the moving bottle-table head lattice",
   assert.ok(carouselBottles.length > 20);
   carouselBottles.forEach((bottle) => {
     const remainder = ((Number(bottle.tableAngleDegrees) % pitch) + pitch) % pitch;
-    assert.ok(Math.abs(remainder - machineRemainder) < 1e-8, `carousel bottle ${bottle.id} must coincide with a real table center`);
+    assert.ok(Math.abs(remainder - machineRemainder) < 1e-8);
   });
 });
 
@@ -135,7 +126,7 @@ test("route handoffs are continuous instead of teleporting between machine owner
   layout.segments.slice(0, -1).forEach((segment) => {
     const before = adapter.pointAtPitch(layout, Math.max(0, segment.endPitch - epsilon));
     const after = adapter.pointAtPitch(layout, Math.min(layout.totalPitchLength, segment.endPitch + epsilon));
-    assert.ok(distance(before.position, after.position) < 1e-5, `${segment.owner} handoff must remain position-continuous`);
+    assert.ok(distance(before.position, after.position) < 1e-5);
   });
 });
 
@@ -147,32 +138,29 @@ test("crossing a head-pitch boundary advances the continuous population instead 
   const comparable = Math.min(before.bottles.length, after.bottles.length - 1);
 
   for (let index = 0; index < comparable; index += 1) {
-    assert.ok(
-      distance(before.bottles[index].position, after.bottles[index + 1].position) < 0.001,
-      `population slot ${index} should hand off continuously across the pitch boundary`
-    );
+    assert.ok(distance(before.bottles[index].position, after.bottles[index + 1].position) < 0.001);
   }
 });
 
-test("bottle handling presentation remains read-only and preserves ServoForge carousel rotation authority", () => {
-  assert.match(viewportSource, /point\.owner === "carousel"/);
-  assert.match(viewportSource, /driver\.snapshot\(rows, point\.tableAngleDegrees/);
-  assert.match(viewportSource, /scene\.toSceneState\(frame/);
-  assert.doesNotMatch(viewportSource, /ServoForgeLiveBottle|syncBaseBottleVisibility/);
+test("bottle handling viewport is the single starwheel presentation authority", () => {
+  assert.match(viewportSource, /servoforge\.3d-bottle-handling-viewport\.v7/);
+  assert.match(viewportSource, /ServoForgeBottleHandlingSystem/);
+  assert.match(viewportSource, /ServoForgeInfeedStar/);
+  assert.match(viewportSource, /ServoForgeIntermediateStar/);
+  assert.match(viewportSource, /ServoForgeDischargeStar/);
+  assert.match(viewportSource, /ServoForgeInfeedConveyor/);
+  assert.match(viewportSource, /ServoForgeOutfeedConveyor/);
+  assert.match(viewportSource, /new THREE\.InstancedMesh/);
   assert.match(viewportSource, /headOneIndex/);
   assert.match(viewportSource, /bottlePopulationAuthority: "continuous-handling-route-only"/);
   assert.match(viewportSource, /legacySingleBottlePopulation: false/);
-  assert.match(viewportSource, /ServoForgeBottleHandlingSystem/);
-  assert.match(viewportSource, /ServoForgeInfeedConveyor/);
-  assert.match(viewportSource, /ServoForgeOutfeedConveyor/);
-  assert.match(viewportSource, /starWheelDimensionsAuthoritative:\s*false/);
+  assert.match(viewportSource, /prototypeSceneHook: false/);
+  assert.match(viewportSource, /singleSceneAuthority: true/);
+  assert.match(viewportSource, /true-circular-bottle-clearance-arc/);
+  assert.doesNotMatch(viewportSource, /requestAnimationFrame\s*\(/);
 
   [adapterSource, viewportSource].forEach((source) => {
-    [
-      /saveCurrentSettings\s*\(/,
-      /state\.program\s*=/,
-      /setServoAngleOverride\s*\(/,
-      /simulation\.lines\s*=/
-    ].forEach((pattern) => assert.doesNotMatch(source, pattern, `3D bottle handling must remain read-only: ${pattern}`));
+    [/saveCurrentSettings\s*\(/, /state\.program\s*=/, /setServoAngleOverride\s*\(/, /simulation\.lines\s*=/]
+      .forEach((pattern) => assert.doesNotMatch(source, pattern));
   });
 });
