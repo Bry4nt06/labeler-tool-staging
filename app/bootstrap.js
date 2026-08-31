@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "top-view-handling-parity-v307-20260831-0820";
-  const buildUpdatedAt = "Aug 31, 2026 8:20 AM ET";
+  const build = "head-one-view-stability-v308-20260831-0832";
+  const buildUpdatedAt = "Aug 31, 2026 8:32 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -122,6 +122,7 @@
     "app/3d/models/index.js",
     "app/3d/models/equipment-model-router-integration.js",
     "app/3d/viewport-ui-controls-integration.js",
+    "app/3d/head-one-view-authority-integration.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
     "app/account-library-sync.js",
