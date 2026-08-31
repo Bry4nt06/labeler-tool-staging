@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "standard-45h-inner-wipe-pads-v310-20260831-0929",
+  "buildId": "label-artwork-orientation-v309-20260831-0912",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v310 carries forward the v309 3D label-artwork correction and updates the Standard 45H TopModul Wipe-Down Pads default mechanical map: Agg 1 outer remains 69-89 degrees with inner 81-101 degrees, and Agg 2 outer remains 109-129 degrees with inner 121-141 degrees. The company/default map catalog is version 13."
+  "notes": "v309 preserves the locked v307 machine geometry, v306 per-bottle servo replay, and v308 Head 1 controls while correcting only the horizontal UV direction of 3D label artwork. Physical label wrap geometry, application angles, progressive application timing, bottle rotation, starwheel placement, and renderer timing are unchanged."
 }
