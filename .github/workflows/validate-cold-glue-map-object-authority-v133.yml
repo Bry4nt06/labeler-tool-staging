@@ -1,4 +1,4 @@
-name: Validate Cold Glue map object authority v133
+name: Validate Cold Glue map object authority
 
 on:
   push:
@@ -10,8 +10,10 @@ on:
       - "app/map-builder-slot-service.js"
       - "app/company-default-map-catalog-integration.js"
       - "app/map-builder-controls.js"
+      - "app/bootstrap.js"
       - "app/controllers/map-builder-action-controller.js"
       - "app/controllers/map-builder-event-controller.js"
+      - "app/controllers/map-builder-layout-controller.js"
       - "app/map-builder-controller.js"
       - "tests/cold-glue-map-object-authority-v133.test.js"
       - "tests/map-builder-add-object-v134.test.js"
@@ -45,11 +47,13 @@ jobs:
           node --check app/wipe-down-builder.js
           node --check app/map-builder-slot-service.js
           node --check app/company-default-map-catalog-integration.js
+          node --check app/bootstrap.js
           node --check app/controllers/map-builder-action-controller.js
           node --check app/controllers/map-builder-event-controller.js
+          node --check app/controllers/map-builder-layout-controller.js
           node --check app/map-builder-controller.js
 
-      - name: Validate map object authority
+      - name: Validate map object and station topology authority
         run: |
           set -euo pipefail
           node tests/cold-glue-map-object-authority-v133.test.js
