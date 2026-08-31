@@ -28,6 +28,11 @@
     }
   }
 
+  function wipeAwayDirection(map, side) {
+    const storedDirection = map?.machineSettings?.direction || state?.direction || "cw";
+    return window.LabelerColdGlueMotionDriver.wipeDirectionForSide(side, storedDirection);
+  }
+
   function nearestEquivalent(target, reference) {
     const base = finite(target, 0);
     const current = finite(reference, base);
@@ -307,7 +312,7 @@
     }
 
     const openSide = segments[firstSingleIndex].stage;
-    const direction = openSide === "inner" ? 1 : -1;
+    const direction = wipeAwayDirection(map, openSide);
     const usable = [];
     let unsafeTransition = false;
     for (let index = firstSingleIndex; index < segments.length; index += 1) {
@@ -458,7 +463,11 @@
 
   function install() {
     if (installed) return true;
-    if (typeof state === "undefined" || typeof window.generatedColdGlueFixedProfile !== "function") return false;
+    if (
+      typeof state === "undefined"
+      || typeof window.generatedColdGlueFixedProfile !== "function"
+      || typeof window.LabelerColdGlueMotionDriver?.wipeDirectionForSide !== "function"
+    ) return false;
     if (!wrapGenerator()) return false;
     installed = true;
     return true;
