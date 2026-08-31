@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "cold-glue-station-topology-v314-20260831-1456";
-  const buildUpdatedAt = "Aug 31, 2026 2:56 PM ET";
+  const build = "cold-glue-slot-stack-guard-v315-20260831-1612";
+  const buildUpdatedAt = "Aug 31, 2026 4:12 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
