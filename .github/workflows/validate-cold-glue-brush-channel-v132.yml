@@ -7,6 +7,7 @@ on:
       - "drivers/mechanical/cold-glue-motion-driver.js"
       - "app/cold-glue-profile-generation.js"
       - "app/cold-glue-gripper-channel-integration.js"
+      - "app/cold-glue-gripper-sequence-integration-v2.js"
       - "app/defaults.js"
       - "app/map-schema-adapter-integration.js"
       - "config/default-programs/*.json"
@@ -16,6 +17,7 @@ on:
       - "service-worker.js"
       - "tests/cold-glue-brush-channel-authority-v132.test.js"
       - "tests/cold-glue-default-brush-depth.test.js"
+      - "tests/cold-glue-station-enable-persistence.test.js"
       - "tests/map-schema-adapter.test.js"
       - "tests/profile-generation-module-boundaries.test.js"
       - "tests/feature-integration-readiness.test.js"
@@ -26,6 +28,7 @@ on:
       - "drivers/mechanical/cold-glue-motion-driver.js"
       - "app/cold-glue-profile-generation.js"
       - "app/cold-glue-gripper-channel-integration.js"
+      - "app/cold-glue-gripper-sequence-integration-v2.js"
       - "app/defaults.js"
       - "app/map-schema-adapter-integration.js"
       - "config/default-programs/*.json"
@@ -35,6 +38,7 @@ on:
       - "service-worker.js"
       - "tests/cold-glue-brush-channel-authority-v132.test.js"
       - "tests/cold-glue-default-brush-depth.test.js"
+      - "tests/cold-glue-station-enable-persistence.test.js"
       - "tests/map-schema-adapter.test.js"
       - "tests/profile-generation-module-boundaries.test.js"
       - "tests/feature-integration-readiness.test.js"
@@ -63,6 +67,7 @@ jobs:
           node --check drivers/mechanical/cold-glue-motion-driver.js
           node --check app/cold-glue-profile-generation.js
           node --check app/cold-glue-gripper-channel-integration.js
+          node --check app/cold-glue-gripper-sequence-integration-v2.js
           node --check app/defaults.js
           node --check app/map-schema-adapter-integration.js
           node --check app/profile-generation.js
@@ -70,11 +75,12 @@ jobs:
           node --check app.js
           node --check service-worker.js
 
-      - name: Validate brush-channel motion, wipe direction, default depth, and startup integrity
+      - name: Validate brush-channel motion, station persistence, default depth, and startup integrity
         run: |
           set -euo pipefail
           node tests/cold-glue-brush-channel-authority-v132.test.js
           node tests/cold-glue-default-brush-depth.test.js
+          node tests/cold-glue-station-enable-persistence.test.js
           node tests/map-schema-adapter.test.js
           node tests/assembly-drivers.test.js
           node tests/profile-generation-module-boundaries.test.js
