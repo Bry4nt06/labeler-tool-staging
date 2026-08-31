@@ -149,6 +149,11 @@
       if (accepted === false) target.value = state.selectedBottle;
       else scheduleBottleSelectionRender();
     }
+    else if (target.id === "neckWrapType") build.updateNeckWrapSetting("wrapType", target.value);
+    else if (target.id === "neckOverlapEdge") build.updateNeckWrapSetting("overlapEdge", target.value);
+    else if (target.id === "neckOverlapTargetMm") build.updateNeckWrapSetting("overlapTargetMm", target.value);
+    else if (target.id === "neckSeamWipeEnabled") build.updateNeckWrapSetting("seamWipeEnabled", target.checked);
+    else if (target.id === "neckSeamOverWipeDeg") build.updateNeckWrapSetting("seamOverWipeDeg", target.value);
     else if (simpleBuildFields.has(target.id)) build.updateField(target.id, target.value);
     else if (target.id === "neckApplication") build.updateNeckApplication(target.value);
     else if (calculatedBuildFields.has(target.id)) build.updateCalculatedField(target.id, target.value);

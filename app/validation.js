@@ -35,6 +35,20 @@ function validate() {
     else if (status.level === "warn") notes.push(["warn", `Wipe-down station ${assembly.station} is near the servo limit at ${fmt(status.ratio, 2)}:1.`]);
   });
   const applications = selectedLabelApplicationState();
+  if (state.applicationMode === "cold-glue" && applications.neck && typeof selectedNeckWrapPlan === "function") {
+    const wrap = selectedNeckWrapPlan();
+    (wrap?.issues || []).forEach((issue) => notes.push([issue.level || "warn", issue.message]));
+    if (wrap?.fullWrapReady) {
+      notes.push(["ok", `Full neck wrap: ${fmt(wrap.targetOverlapMm, 1)} mm / ${fmt(wrap.targetOverlapDeg, 1)} deg overlap, ${wrap.overlapEdge} edge on top${wrap.seamWipeEnabled ? `, followed by ${fmt(wrap.seamOverWipeDeg, 1)} deg seam over-wipe` : ""}.`]);
+      const generated = state.motionPlan?.coldGluePlans?.neck;
+      if (generated && generated.oppositeLabelEdgeProtection?.permittedOverlapEdge !== wrap.overlapEdge) {
+        notes.push(["bad", `The generated neck program does not authorize the selected ${wrap.overlapEdge} overlap edge to cross the seam.`]);
+      }
+      if (generated?.seamWipePlan && !generated.seamWipePlan.fullySeated) {
+        notes.push(["bad", "The available final single-brush window ends before the selected overlap edge and seam wipe are completely seated."]);
+      }
+    }
+  }
   const machineMap = typeof activeMachineMap === "function" ? activeMachineMap() : null;
   const sensorSections = machineMap?.applicationMode === "apl" && typeof inferAplStationSections === "function"
     ? inferAplStationSections(machineMap)

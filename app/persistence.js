@@ -22,6 +22,24 @@ function writeStorage(key, value) {
   }
 }
 
+function normalizeSavedLabelSpec(spec) {
+  const geometry = window.LabelerGeometryDriver;
+  const overlapEdge = geometry?.normalizeOverlapEdge?.(spec?.neckOverlapEdge) ?? null;
+  const target = spec?.neckOverlapTargetMm;
+  const seamOverWipe = Number(spec?.neckSeamOverWipeDeg);
+  return {
+    ...spec,
+    applicationMode: normalizeLabelApplicationMode(spec?.applicationMode),
+    neckWrapType: geometry?.normalizeNeckWrapType?.(spec?.neckWrapType) || "auto",
+    neckOverlapEdge: overlapEdge,
+    neckOverlapTargetMm: target === null || target === undefined || String(target).trim() === ""
+      ? null
+      : Math.max(0, num(target, 0)),
+    neckSeamWipeEnabled: spec?.neckSeamWipeEnabled !== false,
+    neckSeamOverWipeDeg: Number.isFinite(seamOverWipe) ? Math.min(45, Math.max(0, seamOverWipe)) : 5
+  };
+}
+
 function loadSavedSettings() {
   const raw = readStorage(SETTINGS_KEY);
   if (!raw) return;
@@ -42,8 +60,8 @@ function loadSavedSettings() {
     if (saved.buildInputs) state.buildInputs = { ...state.buildInputs, ...saved.buildInputs };
     const legacyBuildInputs = saved.buildInputs || {};
     if (Array.isArray(saved.bottleSpecs)) state.bottleSpecs = saved.bottleSpecs;
-    if (Array.isArray(saved.labelSpecs)) state.labelSpecs = saved.labelSpecs.map((spec) => ({ ...spec, applicationMode: normalizeLabelApplicationMode(spec?.applicationMode) }));
-    else state.labelSpecs = state.labelSpecs.map((spec) => ({ ...spec, applicationMode: normalizeLabelApplicationMode(spec?.applicationMode) }));
+    if (Array.isArray(saved.labelSpecs)) state.labelSpecs = saved.labelSpecs.map(normalizeSavedLabelSpec);
+    else state.labelSpecs = state.labelSpecs.map(normalizeSavedLabelSpec);
     // Repair the known Mahou association saved by the earlier bottle-selection
     // regression. Keep the repair deliberately narrow so user-defined brand
     // and bottle relationships are never guessed or rewritten.

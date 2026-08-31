@@ -177,8 +177,15 @@
     if (!originalUsesChannel) return originalBlock;
 
     const wipePlan = typeof sectionWipePlan === "function" ? sectionWipePlan("neck") : null;
+    const wrapPlan = typeof selectedNeckWrapPlan === "function" ? selectedNeckWrapPlan() : null;
+    // The canonical Cold Glue generator owns overlap-edge crossing and seam
+    // stage splitting. This legacy gripper/channel adapter cannot replace that
+    // block without discarding the selected edge and the final seam wipe.
+    if (wrapPlan?.resolvedMode === "full-wrap-overlap") return originalBlock;
     const labelDeg = Math.max(0, finite(wipePlan?.labelDeg, 0));
-    const requestedBrushTurn = labelDeg;
+    const overWipeDeg = Math.max(0, finite(wipePlan?.overWipeDeg, 0));
+    const oppositeEdgeClearanceDeg = Math.max(overWipeDeg, 3);
+    const requestedBrushTurn = Math.max(0, labelDeg + overWipeDeg - oppositeEdgeClearanceDeg);
     const safeBrushTurn = Math.min(MAX_SAFE_CONTACT_TURN, requestedBrushTurn);
     const hardLimit = Math.max(0.1, finite(state?.maxMoveRatio, 21));
     const safeRatio = Math.max(0.1, hardLimit * 0.9);
@@ -343,7 +350,7 @@
       const span = Math.max(EPSILON, end - start);
       const rotation = Math.min(remaining, span * safeRatio, MAX_SAFE_CONTACT_TURN);
       if (rotation <= EPSILON) return;
-      pushRow(output, 7, start, plate, `Wipe Away from ${openSide === "inner" ? "Inside" : "Outside"} Brush for One Label Length - Agg ${station}`, {
+      pushRow(output, 7, start, plate, `Protected Neck Exit Away from ${openSide === "inner" ? "Inside" : "Outside"} Brush - Agg ${station}`, {
         station,
         section: "neck",
         brushStage: openSide,
@@ -351,11 +358,13 @@
         channelOpenWipe: true,
         wipeAwayFromBrush: true,
         labelLengthRotation: labelDeg,
+        oppositeLabelEdgeProtected: true,
+        oppositeEdgeClearanceDeg,
         plannedRotation: rotation,
         plannedRatio: rotation / span
       });
       plate += direction * rotation;
-      pushRow(output, 3, end, plate, `Cold Glue Neck Label-Length Wipe Complete - Agg ${station}`, {
+      pushRow(output, 3, end, plate, `Cold Glue Neck Protected Exit Complete - Agg ${station}`, {
         station,
         section: "neck",
         brushStage: `${openSide}-complete`,
@@ -363,6 +372,8 @@
         channelOpenWipe: true,
         wipeAwayFromBrush: true,
         labelLengthRotation: labelDeg,
+        oppositeLabelEdgeProtected: true,
+        oppositeEdgeClearanceDeg,
         plannedRotation: rotation,
         plannedRatio: rotation / span
       });
@@ -377,7 +388,7 @@
         station,
         section: "neck",
         side: openSide,
-        message: `Aggregate ${station} ${openSide} brush runout is short by ${remaining.toFixed(1)}° of bottle rotation. The open brush length must support one complete label-length wipe without crossing to the opposite side.`
+        message: `Aggregate ${station} ${openSide} brush runout is short by ${remaining.toFixed(1)}° of bottle rotation. The open brush length must finish the protected exit without allowing the opposite label edge to re-enter the brush.`
       });
     }
 

@@ -2,7 +2,7 @@
 
 (function loadGeometryAndPlanningModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.2";
-  const build = "physical-sensor-visibility-20260806-2336";
+  const build = "cold-glue-neck-wrap-overlap-v316-20260831-1730";
   const modules = Object.freeze([
     "app/geometry-primitives.js",
     "app/label-specification-service.js",

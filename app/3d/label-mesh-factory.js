@@ -122,10 +122,10 @@
     return size;
   }
 
-  function referenceTexture(THREE, brand, sectionName) {
+  function referenceTexture(THREE, brand, sectionName, sectionContract = {}) {
     if (!global.document?.createElement || !THREE?.CanvasTexture) return null;
     const cache = cachesFor(THREE).textures;
-    const cacheKey = `${String(brand || "SERVOFORGE").trim()}|${String(sectionName || "body").toLowerCase()}`;
+    const cacheKey = `${String(brand || "SERVOFORGE").trim()}|${String(sectionName || "body").toLowerCase()}|${sectionContract?.wrapMode || "standard"}|${sectionContract?.overlapEdge || "none"}`;
     if (cache.has(cacheKey)) return cache.get(cacheKey);
     const canvas = global.document.createElement("canvas");
     canvas.width = 768;
@@ -154,6 +154,24 @@
     ctx.fillStyle = "#6b7075";
     ctx.fillText(`${section} LABEL • REFERENCE ART`, canvas.width / 2, canvas.height * 0.72);
 
+    if (section === "NECK" && sectionContract?.wrapMode === "full-wrap-overlap") {
+      const leadingOnTop = sectionContract.overlapEdge === "leading";
+      const trailingOnTop = sectionContract.overlapEdge === "trailing";
+      const leftTop = leadingOnTop;
+      const rightTop = trailingOnTop;
+      ctx.fillStyle = leftTop ? "#ff8a00" : "#2d6bff";
+      ctx.fillRect(0, 0, 34, canvas.height);
+      ctx.fillStyle = rightTop ? "#ff8a00" : "#2d6bff";
+      ctx.fillRect(canvas.width - 34, 0, 34, canvas.height);
+      ctx.font = "700 22px Arial, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillStyle = leftTop ? "#ff8a00" : "#2d6bff";
+      ctx.fillText(`${leftTop ? "TOP" : "UNDER"} • LEADING`, 48, canvas.height - 54);
+      ctx.textAlign = "right";
+      ctx.fillStyle = rightTop ? "#ff8a00" : "#2d6bff";
+      ctx.fillText(`${rightTop ? "TOP" : "UNDER"} • TRAILING`, canvas.width - 48, canvas.height - 54);
+    }
+
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = 4;
@@ -168,7 +186,7 @@
     if (!section?.enabled || number(section.wrapDegrees) <= 0) return null;
     const meshGeometry = curvedLabelGeometry(THREE, section, geometry);
     if (!meshGeometry) return null;
-    const texture = referenceTexture(THREE, labelContract?.brand, sectionName);
+    const texture = referenceTexture(THREE, labelContract?.brand, sectionName, section);
     const material = new THREE.MeshStandardMaterial({
       color: texture ? 0xffffff : 0xf4f2e8,
       map: texture || null,
@@ -192,6 +210,10 @@
       heightAuthority: Boolean(section.heightAuthority),
       verticalPlacementAuthority: Boolean(section.verticalPlacementAuthority),
       artworkAuthority: false,
+      wrapMode: section.wrapMode || "standard",
+      overlapEdge: section.overlapEdge || null,
+      underlyingEdge: section.underlyingEdge || null,
+      overlapDegrees: number(section.overlapDegrees, 0),
       artworkOrientationAuthority: "outside-view-readable-u-reversed"
     });
     return mesh;

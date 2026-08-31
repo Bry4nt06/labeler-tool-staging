@@ -31,6 +31,68 @@ function renderBuildInputs() {
     const selected = normalizeReference(section);
     return `<option value="center-tack"${selected === "center-tack" ? " selected" : ""}>Center Tack</option><option value="leading-edge"${selected === "leading-edge" ? " selected" : ""}>Leading Edge</option>`;
   };
+  const neckWrap = typeof selectedNeckWrapPlan === "function" ? selectedNeckWrapPlan() : null;
+  const wrapType = neckWrap?.requestedType || "auto";
+  const overlapEdge = neckWrap?.overlapEdge || "";
+  const fullWrapControlsVisible = neckWrap?.resolvedMode === "full-wrap-overlap";
+  const calculatedWrapText = Number.isFinite(neckWrap?.calculatedWrapAngleDeg)
+    ? `${fmt(neckWrap.calculatedWrapAngleDeg, 1)}°`
+    : "Needs circumference";
+  const calculatedOverlapText = neckWrap
+    ? `${fmt(neckWrap.calculatedOverlapMm, 1)} mm / ${fmt(neckWrap.calculatedOverlapDeg, 1)}°`
+    : "—";
+  const overlapTargetValue = neckWrap?.hasOverlapTargetOverride ? neckWrap.targetOverlapMm : "";
+  const overlapTargetPlaceholder = neckWrap ? fmt(neckWrap.calculatedOverlapMm, 1) : "0";
+  const seamWipeEnabled = neckWrap?.seamWipeEnabled !== false;
+  const wrapNotice = (() => {
+    if (!neckWrap || neckWrap.detection === "unknown") return { tone: "bad", text: "Enter the effective circumference at the neck-label contact band to calculate the wrap." };
+    if (neckWrap.resolvedMode === "full-wrap-overlap" && !neckWrap.overlapEdge) return { tone: "warn", text: `Full neck wrap detected — ${calculatedOverlapText} overlap. Select which edge finishes on top.` };
+    if (neckWrap.fullWrapReady) return { tone: "ok", text: `Full neck wrap active — ${fmt(neckWrap.targetOverlapMm, 1)} mm / ${fmt(neckWrap.targetOverlapDeg, 1)}° target overlap with the ${neckWrap.overlapEdge} edge on top.` };
+    if (neckWrap.detection === "near-full" && wrapType === "auto") return { tone: "info", text: `Near-full wrap detected at ${calculatedWrapText}. Auto keeps the Standard exit-clearance policy.` };
+    if (neckWrap.detection === "overlap-candidate" && wrapType === "standard") return { tone: "warn", text: `The label calculates to ${calculatedWrapText}, but Standard mode keeps opposite-edge crossing prohibited.` };
+    return { tone: "info", text: `Standard neck label — ${calculatedWrapText}. The opposite edge remains clear of the final single brush.` };
+  })();
+  const edgeTitle = (edge) => edge ? `${edge[0].toUpperCase()}${edge.slice(1)} edge` : "Not selected";
+  const neckWrapSetup = isColdGlue ? `
+        <section class="neck-wrap-setup" aria-labelledby="neckWrapSetupTitle">
+          <div class="neck-wrap-heading">
+            <div><h4 id="neckWrapSetupTitle">Neck Wrap</h4><p>Uses the developed bottom-edge length and the circumference at the actual label contact band.</p></div>
+            <span class="neck-wrap-badge">${calculatedWrapText}</span>
+          </div>
+          <label>Wrap Type
+            <select id="neckWrapType">
+              <option value="auto"${wrapType === "auto" ? " selected" : ""}>Auto</option>
+              <option value="standard"${wrapType === "standard" ? " selected" : ""}>Standard</option>
+              <option value="full-wrap-overlap"${wrapType === "full-wrap-overlap" ? " selected" : ""}>Full Wrap — Overlap</option>
+            </select>
+          </label>
+          <div class="neck-wrap-readout"><span>Calculated overlap</span><strong>${calculatedOverlapText}</strong></div>
+          <p class="neck-wrap-notice is-${wrapNotice.tone}" role="status" aria-live="polite">${wrapNotice.text}</p>
+          ${fullWrapControlsVisible ? `
+            <div class="neck-wrap-overlap-controls">
+              <label>Overlap Edge
+                <select id="neckOverlapEdge" required aria-required="true">
+                  <option value=""${overlapEdge ? "" : " selected"}>Select overlap edge…</option>
+                  <option value="leading"${overlapEdge === "leading" ? " selected" : ""}>Leading Edge on Top</option>
+                  <option value="trailing"${overlapEdge === "trailing" ? " selected" : ""}>Trailing Edge on Top</option>
+                </select>
+              </label>
+              <label>Overlap Target (mm)
+                <input id="neckOverlapTargetMm" type="number" min="0" step="0.1" value="${overlapTargetValue}" placeholder="Auto ${overlapTargetPlaceholder}" aria-describedby="neckOverlapTargetHelp">
+                <small id="neckOverlapTargetHelp">Leave blank to use the calculated overlap.</small>
+              </label>
+              <label class="neck-wrap-switch">Final Seam Wipe
+                <input id="neckSeamWipeEnabled" type="checkbox"${seamWipeEnabled ? " checked" : ""}>
+              </label>
+              <label>Seam Over-Wipe (deg)
+                <input id="neckSeamOverWipeDeg" type="number" min="0" max="45" step="0.1" value="${fmt(neckWrap?.seamOverWipeDeg ?? 5, 1)}"${seamWipeEnabled ? "" : " disabled"}>
+              </label>
+              <div class="neck-wrap-preview" role="img" aria-label="${edgeTitle(neckWrap?.underlyingEdge)} is seated first. ${edgeTitle(neckWrap?.overlapEdge)} crosses the seam and finishes on top.">
+                <div class="neck-wrap-ring ${overlapEdge ? `top-${overlapEdge}` : "edge-unselected"}"><span class="neck-wrap-seam"></span><span class="neck-wrap-arrow">↻</span></div>
+                <div class="neck-wrap-edge-legend"><span class="underlying-edge">Under: ${edgeTitle(neckWrap?.underlyingEdge)}</span><span class="top-edge">Top: ${edgeTitle(neckWrap?.overlapEdge)}</span></div>
+              </div>
+            </div>` : ""}
+        </section>` : "";
   const modeSpecificInputs = isColdGlue
     ? `
         <h3>Cold Glue Program Parameters</h3>
@@ -83,6 +145,7 @@ function renderBuildInputs() {
         <label>Bottle Circ @ Neck Label Bottom (mm) <input id="programNeckCircMm" type="number" min="0.001" step="0.001" value="${label?.neckBottomCircumferenceMm ?? 0}"></label>
         <label>Bottle Body/Back Circumference (mm) <input id="programBodyCircMm" type="number" min="0.001" step="0.001" value="${fmt(bodyCirc, 3)}"></label>
         <label>Neck Label Length (deg) <input id="programNeckLabelDeg" type="number" min="0" step="0.001" value="${fmt(neckLabelDeg, 3)}"></label>
+        ${neckWrapSetup}
         <label>Body Label Length (deg) <input id="programBodyLabelDeg" type="number" min="0" step="0.001" value="${fmt(bodyLabelDeg, 3)}"></label>
         <label>Back Label Length (deg) <input id="programBackLabelDeg" type="number" min="0" step="0.001" value="${fmt(backLabelDeg, 3)}"></label>
         ${modeSpecificInputs}

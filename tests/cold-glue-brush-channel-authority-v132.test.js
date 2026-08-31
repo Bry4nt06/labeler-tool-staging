@@ -21,7 +21,9 @@ assert.equal(driver.channelRunoutWipeAuthority, true);
 
 // Machine-map direction tokens preserve ServoForge's legacy inverted storage
 // convention. Cold Glue must use physical machine travel before choosing which
-// way the bottle turns away from a brush.
+// way the bottle turns away from a brush. The final standard-label runout must
+// stop at the protected edge clearance instead of allowing the opposite edge
+// to re-enter the remaining brush.
 assert.equal(driver.physicalMachineDirection("ccw"), "cw");
 assert.equal(driver.physicalMachineDirection("cw"), "ccw");
 assert.equal(driver.wipeDirectionForSide("outer", "ccw"), 1);
@@ -91,10 +93,11 @@ assert.equal(insideRunout.start, 100);
 assert.equal(insideRunout.end, 113.9);
 assert.equal(insideRunout.direction, -1,
   "stored ccw means physical CW, so an inside-brush runout must turn negative/away from the brush");
-assert.ok(Math.abs(insideRunout.rotation - 65) < 1e-9,
-  "the remaining inside brush must wipe one full label length clear of contact");
-assert.equal(insideRunout.centerTackStage, "edge-to-opposite-edge");
-assert.equal(outsideFirst.totalRotation, 97.5);
+assert.ok(Math.abs(insideRunout.rotation - 62) < 1e-9,
+  "the remaining inside brush must stop at the three-degree opposite-edge guard");
+assert.equal(insideRunout.centerTackStage, "edge-to-opposite-edge-protected");
+assert.equal(insideRunout.oppositeLabelEdgeProtected, true);
+assert.equal(outsideFirst.totalRotation, 94.5);
 assert.equal(outsideFirst.issues.length, 0);
 
 // The physical rule is symmetric. If the outside brush remains after overlap,
@@ -121,7 +124,7 @@ assert.ok(Math.abs(insideFirst.channelMoves[0].rotation - 32.5) < 1e-9);
 assert.equal(insideFirst.channelMoves[1].stage, "opposed");
 assert.equal(insideFirst.channelMoves[2].stage, "outer");
 assert.equal(insideFirst.channelMoves[2].direction, 1);
-assert.ok(Math.abs(insideFirst.channelMoves[2].rotation - 65) < 1e-9);
+assert.ok(Math.abs(insideFirst.channelMoves[2].rotation - 62) < 1e-9);
 
 // Real saved Cold Glue maps currently store separate brush objects rather than
 // a synthetic brush-channel object. Protect the 60H CG MAB1 pattern: outside
@@ -150,7 +153,7 @@ assert.equal(savedMapPattern.channelMoves[2].stage, "inner");
 assert.equal(savedMapPattern.channelMoves[2].start, 125);
 assert.equal(savedMapPattern.channelMoves[2].end, 153);
 assert.equal(savedMapPattern.channelMoves[2].direction, -1);
-assert.ok(Math.abs(savedMapPattern.channelMoves[2].rotation - 65) < 1e-9);
+assert.ok(Math.abs(savedMapPattern.channelMoves[2].rotation - 62) < 1e-9);
 assert.equal(savedMapPattern.issues.length, 0);
 
 // Reversing the stored machine direction mirrors both physical wipe directions.
@@ -173,7 +176,7 @@ assert.equal(reversed.channelMoves[0].direction, -1);
 assert.equal(reversed.channelMoves[1].holdAngle, -90);
 assert.equal(reversed.channelMoves[2].stage, "inner");
 assert.equal(reversed.channelMoves[2].direction, 1);
-assert.ok(Math.abs(reversed.channelMoves[2].rotation - 65) < 1e-9);
+assert.ok(Math.abs(reversed.channelMoves[2].rotation - 62) < 1e-9);
 
 for (const plan of [fullParallel, outsideFirst, insideFirst, savedMapPattern, reversed]) {
   assert.ok(plan.channelMoves.every((move) => move.leadingEdgeWipe !== true));
@@ -185,15 +188,21 @@ for (const plan of [fullParallel, outsideFirst, insideFirst, savedMapPattern, re
 const gripperChannelSource = fs.readFileSync(path.join(root, "app/cold-glue-gripper-channel-integration.js"), "utf8");
 assert.match(gripperChannelSource, /LabelerColdGlueMotionDriver\.wipeDirectionForSide/);
 assert.doesNotMatch(gripperChannelSource, /openSide\s*===\s*["']inner["']\s*\?\s*1\s*:\s*-1/);
-assert.match(gripperChannelSource, /Wipe Away from .* Brush for One Label Length/);
+assert.match(gripperChannelSource, /Protected Neck Exit Away from/);
+assert.match(gripperChannelSource, /wrapPlan\?\.resolvedMode === "full-wrap-overlap"\) return originalBlock/,
+  "the legacy gripper/channel adapter must preserve the canonical full-wrap overlap stages");
+assert.match(gripperChannelSource, /labelDeg \+ overWipeDeg - oppositeEdgeClearanceDeg/,
+  "the legacy adapter must keep the standard opposite-edge clearance after wrapper consolidation");
 
 // Static retirement checks: the behavior belongs to the canonical driver and
 // generator, not a stack of final runtime wrappers.
 const appSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const generatorSource = fs.readFileSync(path.join(root, "app/cold-glue-profile-generation.js"), "utf8");
 const workerSource = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
-assert.match(appSource, /canonical Cold Glue center-tack brush-channel planner/i);
+assert.match(appSource, /canonical Cold Glue brush planner/i);
+assert.match(appSource, /full-wrap seam policy/i);
 assert.doesNotMatch(appSource, /cold-glue-brush-direction-v128|cold-glue-brush-runtime-v131/);
+assert.doesNotMatch(appSource, /cold-glue-brush-exit-clearance-v24/);
 assert.match(generatorSource, /createBrushChannelPlan/);
 assert.match(generatorSource, /Parallel Brush Hold/);
 assert.match(generatorSource, /Brush Opening Center-Out Wipe/);
@@ -202,7 +211,8 @@ for (const retired of [
   "app/cold-glue-brush-direction-v128.js",
   "app/cold-glue-brush-runtime-v131.js",
   "app/cold-glue-center-out-brush-integration.js",
-  "app/cold-glue-neck-left-right-integration.js"
+  "app/cold-glue-neck-left-right-integration.js",
+  "app/cold-glue-brush-exit-clearance-v24.js"
 ]) {
   assert.equal(fs.existsSync(path.join(root, retired)), false, `${retired} must be retired after v132`);
 }

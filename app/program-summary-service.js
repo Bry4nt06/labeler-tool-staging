@@ -21,6 +21,19 @@ function buildProgramSummary() {
     ? Number.isFinite(neckFullDeg) ? state.buildInputs.plateStartPositionDeg + neckFullDeg / 2 : null
     : -(90 - state.buildInputs.neckSpenderPlateDeg) + state.buildInputs.plateStartPositionDeg;
   const centerLineBack = Number.isFinite(centerLineFront) ? centerLineFront + 180 : null;
+  const neckWrap = state.applicationMode === "cold-glue" && typeof selectedNeckWrapPlan === "function"
+    ? selectedNeckWrapPlan()
+    : null;
+  const neckWrapRows = neckWrap ? [
+    ["Neck Wrap Type", neckWrap.requestedType === "full-wrap-overlap" ? "Full Wrap — Overlap" : neckWrap.requestedType === "standard" ? "Standard" : `Auto → ${neckWrap.resolvedMode === "full-wrap-overlap" ? "Full Wrap — Overlap" : "Standard"}`, "Neck label recipe"],
+    ["Calculated Neck Wrap (deg)", fmt(neckWrap.calculatedWrapAngleDeg, 3), "Developed neck-label length / effective contact-band circumference"],
+    ["Calculated Neck Overlap (mm / deg)", `${fmt(neckWrap.calculatedOverlapMm, 3)} / ${fmt(neckWrap.calculatedOverlapDeg, 3)}`, "Neck label wrap length minus effective contact-band circumference"],
+    ...(neckWrap.resolvedMode === "full-wrap-overlap" ? [
+      ["Overlap Edge on Top", neckWrap.overlapEdge ? `${neckWrap.overlapEdge[0].toUpperCase()}${neckWrap.overlapEdge.slice(1)}` : "#REQUIRED", "Neck label recipe"],
+      ["Overlap Target (mm / deg)", `${fmt(neckWrap.targetOverlapMm, 3)} / ${fmt(neckWrap.targetOverlapDeg, 3)}`, neckWrap.hasOverlapTargetOverride ? "Operator target" : "Calculated geometry"],
+      ["Final Seam Wipe", neckWrap.seamWipeEnabled ? `Enabled • ${fmt(neckWrap.seamOverWipeDeg, 3)} deg` : "Disabled", "Neck label recipe"]
+    ] : [["Neck Exit Policy", "Opposite-edge crossing prohibited", "Standard Cold Glue brush policy"]])
+  ] : [];
   return {
     label,
     bottle,
@@ -40,6 +53,7 @@ function buildProgramSummary() {
       ["Center Line Front (deg)", centerLineFront ?? "#N/A", "Workbook W9"],
       ["Center Line Back (deg)", centerLineBack ?? "#N/A", "=CenterLineFront+180"],
       ["Neck Label Length (deg)", neckFullDeg ?? "#N/A", "=NeckCurve/NeckCirc*360"],
+      ...neckWrapRows,
       ["Body Label Length (deg)", degFromMm(label?.bodyLengthMm, bottleCirc) ?? "#N/A", "=(360*BodyLength)/BottleCirc"],
       ["Back Label Length (deg)", degFromMm(label?.backLengthMm, bottleCirc) ?? "#N/A", "=(360*BackLength)/BottleCirc"],
       ["Code Box Center From Left Label Edge (deg)", degFromMm(label?.codeBoxCenterMm, bottleCirc) ?? "#N/A", "=(360*CodeBoxCenterMm)/BottleCirc"],
