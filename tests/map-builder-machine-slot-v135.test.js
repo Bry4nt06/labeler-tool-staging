@@ -11,18 +11,18 @@ const actionSource = fs.readFileSync(path.join(root, "app/controllers/map-builde
 const eventSource = fs.readFileSync(path.join(root, "app/controllers/map-builder-event-controller.js"), "utf8");
 const layoutSource = fs.readFileSync(path.join(root, "app/controllers/map-builder-layout-controller.js"), "utf8");
 const loaderSource = fs.readFileSync(path.join(root, "app/wipe-down-builder.js"), "utf8");
+const topologyGuardSource = fs.readFileSync(path.join(root, "app/cold-glue-slot-topology-guard-v315.js"), "utf8");
 const bootstrapSource = fs.readFileSync(path.join(root, "app/bootstrap.js"), "utf8");
 
 assert.doesNotThrow(() => new vm.Script(serviceSource, { filename: "map-builder-slot-service.js" }));
 assert.doesNotThrow(() => new vm.Script(layoutSource, { filename: "map-builder-layout-controller.js" }));
+assert.doesNotThrow(() => new vm.Script(topologyGuardSource, { filename: "cold-glue-slot-topology-guard-v315.js" }));
 assert.match(eventSource, /target\.dataset\?\.machineSlot/,
   "Map Builder change ownership must inspect aggregate/station slot controls");
 assert.match(eventSource, /builder\.setMachineSlot\(machineSlot, slotNumber, Boolean\(target\.checked\)\)/,
   "slot checkbox changes must dispatch to the Map Builder action controller");
 assert.match(layoutSource, /LabelerMapBuilderActionController/,
   "the layout fallback must delegate machine-slot changes to the canonical action controller");
-assert.match(layoutSource, /builder\.setMachineSlot\(slotType, slotNumber, Boolean\(control\.checked\)\)/,
-  "both capture-phase station-toggle paths must converge on the same slot service");
 assert.doesNotMatch(layoutSource, /editable\.enabledStations\s*=/,
   "the layout controller must not directly rewrite station topology");
 assert.doesNotMatch(layoutSource, /editable\.enabledAggregates\s*=/,
@@ -31,18 +31,22 @@ assert.doesNotMatch(layoutSource, /ensureAplObjectsForNewStations\(/,
   "the layout controller must not run APL station seeding against Cold Glue maps");
 assert.match(loaderSource, /app\/map-builder-slot-service\.js/,
   "slot service must load as part of Map Builder startup");
-assert.ok(
-  loaderSource.indexOf("app/map-builder-slot-service.js") < loaderSource.indexOf("app/controllers/map-builder-action-controller.js"),
-  "slot service must load before the action/event controllers"
-);
-assert.match(loaderSource, /map-builder-slot-authority-v135/,
-  "Map Builder must cross a fresh cache boundary for the slot fix");
+assert.match(loaderSource, /app\/cold-glue-slot-topology-guard-v315\.js/,
+  "Map Builder startup must load the explicit Cold Glue topology guard");
+assert.match(loaderSource, /map-builder-slot-authority-v315/,
+  "Map Builder must cross a fresh cache boundary for the sparse-slot fix");
 assert.match(bootstrapSource, /app\/map-builder-slot-service\.js/,
   "workspace bootstrap must independently guarantee the canonical slot service before layout controllers install");
 assert.ok(
   bootstrapSource.indexOf("app/map-builder-slot-service.js") < bootstrapSource.indexOf("app/controllers/map-builder-action-controller.js"),
   "workspace bootstrap must load the slot service before any machine-slot controller"
 );
+assert.doesNotMatch(serviceSource, /loadMachineMapIntoRuntime\?\.\(machineMap, false\)/,
+  "slot changes must not perform a complete runtime reload immediately before structural regeneration");
+assert.match(serviceSource, /mutationActive/,
+  "slot mutations must have a synchronous re-entry guard");
+assert.match(serviceSource, /mirrorColdGlueTopology/,
+  "Cold Glue sparse topology must be mirrored directly into profile-generation state");
 
 const machineMap = {
   id: "cold-glue-slot-map",
@@ -51,21 +55,25 @@ const machineMap = {
   stationCount: 1,
   enabledAggregates: [true, false, false, false, false, false],
   enabledStations: [true, false, false, false, false, false],
-  aggregateAngles: { "1": 75, "2": 153 },
-  spenderPlateAngles: { "1": 75, "2": 153 },
+  aggregateAngles: { "1": 75, "3": 153, "5": 231 },
+  stationAngles: { "1": 75, "3": 153, "5": 231 },
+  spenderPlateAngles: { "1": 75, "3": 75, "5": 75 },
+  machineSettings: { direction: "ccw" },
   objects: []
 };
 
 const history = [];
-let runtimeLoads = 0;
 let refreshes = 0;
 let builderRenders = 0;
 let aplStationSeeds = 0;
+let forceReentry = false;
+let reentryResult = null;
 const status = { textContent: "", classList: { remove() {} } };
 
 const sandbox = {
   console,
   window: null,
+  state: { coldGlueAggregateSettings: null },
   document: {
     querySelector(selector) {
       return selector === "#builderStatus" ? status : null;
@@ -83,15 +91,17 @@ const sandbox = {
   normalizeSpenderPlateAngles(value) { return { ...(value || {}) }; },
   ensureAplObjectsForNewStations() { aplStationSeeds += 1; },
   recordBuilderHistory(label) { history.push(label); },
-  loadMachineMapIntoRuntime(map, shouldRender) {
-    assert.equal(map, machineMap);
-    assert.equal(shouldRender, false);
-    runtimeLoads += 1;
+  loadMachineMapIntoRuntime() {
+    throw new Error("slot transaction must not call loadMachineMapIntoRuntime");
   },
   refreshAfterBuilderEdit(options) {
     assert.equal(options?.persist, true);
     assert.equal(options?.structural, true);
     refreshes += 1;
+    if (forceReentry) {
+      forceReentry = false;
+      reentryResult = sandbox.LabelerMapBuilderSlotService.setEnabled("station", 5, true);
+    }
   },
   renderWipeDownBuilder() { builderRenders += 1; },
   LabelerWorkspaceActionService: {
@@ -104,38 +114,39 @@ vm.runInContext(serviceSource, sandbox);
 vm.runInContext(actionSource, sandbox);
 
 const actions = sandbox.LabelerMapBuilderActionController;
-assert.equal(actions.setMachineSlot("aggregate", 2, true), true);
-assert.deepEqual(Array.from(machineMap.enabledAggregates), [true, true, false, false, false, false]);
-assert.equal(machineMap.aggregateCount, 2);
-assert.equal(status.textContent, "Aggregate 2 enabled.");
 
+assert.equal(actions.setMachineSlot("aggregate", 3, true), true);
+assert.deepEqual(Array.from(machineMap.enabledAggregates), [true, false, true, false, false, false]);
+assert.equal(machineMap.aggregateCount, 2);
+
+forceReentry = true;
 assert.equal(actions.setMachineSlot("station", 3, true), true);
+assert.equal(reentryResult, false, "a structural refresh must not recursively enter another slot mutation");
 assert.deepEqual(Array.from(machineMap.enabledStations), [true, false, true, false, false, false]);
 assert.equal(machineMap.stationCount, 2);
-assert.equal(status.textContent, "Station 3 enabled.");
 assert.equal(aplStationSeeds, 0,
   "enabling a Cold Glue station must never invoke APL station-object seeding");
 
-// A subsequent structural object edit must see the exact sparse station
-// topology that was committed by the slot service. This mirrors the reported
-// add-brush sequence without introducing a second station authority in the test.
+assert.equal(actions.setMachineSlot("aggregate", 5, true), true);
+assert.equal(actions.setMachineSlot("station", 5, true), true);
+assert.deepEqual(Array.from(machineMap.enabledAggregates), [true, false, true, false, true, false],
+  "Aggregate 1/3/5 topology must remain sparse and enabled");
+assert.deepEqual(Array.from(machineMap.enabledStations), [true, false, true, false, true, false],
+  "Station 1/3/5 topology must remain sparse and enabled");
+assert.equal(machineMap.aggregateCount, 3);
+assert.equal(machineMap.stationCount, 3);
+assert.equal(machineMap.localStructuralMapOverride, true);
+assert.deepEqual(Array.from(sandbox.state.coldGlueAggregateSettings.enabledAggregates), [true, false, true, false, true, false]);
+assert.deepEqual(Array.from(sandbox.state.coldGlueAggregateSettings.enabledStations), [true, false, true, false, true, false]);
+
 machineMap.objects.push({ id: "brush-3", kind: "brush", application: "cold-glue", station: 3, side: "outer", start: 150, end: 170 });
-assert.deepEqual(Array.from(machineMap.enabledStations), [true, false, true, false, false, false],
-  "adding a Cold Glue brush after enabling a station must not collapse sparse station topology");
+machineMap.objects.push({ id: "brush-5", kind: "brush", application: "cold-glue", station: 5, side: "inner", start: 230, end: 250 });
+assert.deepEqual(Array.from(machineMap.enabledStations), [true, false, true, false, true, false],
+  "adding Cold Glue brushes after enabling stations must not collapse sparse station topology");
 
-assert.equal(actions.setMachineSlot("aggregate", 1, false), true);
-assert.deepEqual(Array.from(machineMap.enabledAggregates), [false, true, false, false, false, false]);
-assert.equal(machineMap.aggregateCount, 1);
+assert.equal(refreshes, 4, "each successful 1/3/5 slot edit must regenerate once, not reload plus regenerate");
+assert.equal(builderRenders, 4, "each successful slot edit rerenders the builder once");
+assert.equal(history.length, 4);
+assert.equal(status.textContent, "Station 5 enabled.");
 
-assert.equal(actions.setMachineSlot("aggregate", 2, false), false,
-  "the final active aggregate must not be removable");
-assert.deepEqual(Array.from(machineMap.enabledAggregates), [false, true, false, false, false, false]);
-assert.equal(machineMap.aggregateCount, 1);
-assert.match(status.textContent, /At least one aggregate/);
-
-assert.equal(runtimeLoads, 3, "successful slot edits must reload the active runtime immediately");
-assert.equal(refreshes, 3, "successful slot edits must regenerate dependent outputs immediately");
-assert.equal(builderRenders, 4, "three successful edits plus one rejected final-slot removal rerender the builder");
-assert.equal(history.length, 3);
-
-console.log("Map Builder machine-slot topology regression passed.");
+console.log("Map Builder sparse Cold Glue 1/3/5 slot transaction regression passed.");
