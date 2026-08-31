@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "per-bottle-servo-replay-v306-20260831-0815",
+  "buildId": "top-view-handling-parity-v307-20260831-0820",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v306 preserves the v305 zero-position handling layout and v304 bottle table while restoring bottle servo rotation from the ServoForge generated program at each carousel bottle's own bottle-table angle. The replay program is prepared once and cached, then each visible carousel bottle receives its independent signed servo transform without changing the single-scene renderer, starwheel geometry, animation clock, or instanced bottle performance path."
+  "notes": "v307 removes the incorrect v305 rigid zero-position rotation and restores bottle handling to the same machine-map coordinate authority used by Top View. The measured 16-pocket/600mm starwheel cluster again straddles the 0-degree datum at the established +30/-30 transfer boundaries, preserving the real-world gap between aggregates/coder and bottle handling. The v306 per-bottle Servo Program replay, v304 bottle table, and v303 smooth single-scene renderer remain unchanged."
 }
