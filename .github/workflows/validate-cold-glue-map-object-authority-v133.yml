@@ -8,6 +8,7 @@ on:
       - "app/map-runtime-service.js"
       - "app/wipe-down-builder.js"
       - "app/map-builder-slot-service.js"
+      - "app/cold-glue-slot-topology-guard-v315.js"
       - "app/company-default-map-catalog-integration.js"
       - "app/map-builder-controls.js"
       - "app/bootstrap.js"
@@ -18,6 +19,7 @@ on:
       - "tests/cold-glue-map-object-authority-v133.test.js"
       - "tests/map-builder-add-object-v134.test.js"
       - "tests/map-builder-machine-slot-v135.test.js"
+      - "tests/cold-glue-slot-topology-guard-v315.test.js"
       - "tests/optional-label-sensors-v136.test.js"
       - "tests/map-runtime-service.test.js"
       - ".github/workflows/validate-cold-glue-map-object-authority-v133.yml"
@@ -28,6 +30,7 @@ on:
       - "app/map-runtime-service.js"
       - "app/wipe-down-builder.js"
       - "app/map-builder-slot-service.js"
+      - "app/cold-glue-slot-topology-guard-v315.js"
       - "app/company-default-map-catalog-integration.js"
       - "app/map-builder-controls.js"
       - "app/bootstrap.js"
@@ -38,6 +41,7 @@ on:
       - "tests/cold-glue-map-object-authority-v133.test.js"
       - "tests/map-builder-add-object-v134.test.js"
       - "tests/map-builder-machine-slot-v135.test.js"
+      - "tests/cold-glue-slot-topology-guard-v315.test.js"
       - "tests/optional-label-sensors-v136.test.js"
       - "tests/map-runtime-service.test.js"
       - ".github/workflows/validate-cold-glue-map-object-authority-v133.yml"
@@ -66,6 +70,7 @@ jobs:
           node --check app/map-runtime-service.js
           node --check app/wipe-down-builder.js
           node --check app/map-builder-slot-service.js
+          node --check app/cold-glue-slot-topology-guard-v315.js
           node --check app/company-default-map-catalog-integration.js
           node --check app/bootstrap.js
           node --check app/controllers/map-builder-action-controller.js
@@ -79,6 +84,7 @@ jobs:
           node tests/cold-glue-map-object-authority-v133.test.js
           node tests/map-builder-add-object-v134.test.js
           node tests/map-builder-machine-slot-v135.test.js
+          node tests/cold-glue-slot-topology-guard-v315.test.js
           node tests/optional-label-sensors-v136.test.js
           node tests/map-runtime-service.test.js
           node tests/cold-glue-brush-channel-authority-v132.test.js
