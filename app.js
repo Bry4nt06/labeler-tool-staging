@@ -185,7 +185,7 @@
     await loadScript("app/printed-codebox-left-edge-v121.js", version);
 
     progress?.set(76.5, "Using canonical Cold Glue center-tack brush-channel planner and active map authority…");
-    await loadScript("app/cold-glue-brush-visual-integration.js", version);
+    await loadScript("app/cold-glue-brush-visual-integration.js", `${version}-cold-glue-brush-v21`);
 
     if (typeof initializeLabelerApp !== "function") {
       throw new Error("initializeLabelerApp is not loaded.");
