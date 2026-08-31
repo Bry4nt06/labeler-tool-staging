@@ -1,7 +1,7 @@
 (function installServoForge3DProgressiveLabelFlow(global) {
   "use strict";
 
-  const INTEGRATION_VERSION = "servoforge.3d-progressive-label-flow.v1";
+  const INTEGRATION_VERSION = "servoforge.3d-progressive-label-flow.v2";
   const THREE_VERSION = "0.185.1";
   const THREE_MODULE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
   const SECTION_ORDER = Object.freeze(["neck", "body", "back"]);
@@ -35,10 +35,6 @@
     return threePromise;
   }
 
-  function runtime() {
-    return global.Labeler3DSceneRuntime || null;
-  }
-
   function labelFactory() {
     return global.Labeler3DLabelMeshFactory || null;
   }
@@ -57,16 +53,12 @@
   }
 
   function activeProgramSections(labelContract) {
-    const rows = programRows();
-    const text = rows.map(rowSearchText).join(" ");
+    const text = programRows().map(rowSearchText).join(" ");
     const sections = new Set();
     if (/\bNECK\b/.test(text)) sections.add("neck");
     if (/\bBODY\b|\bFRONT\b/.test(text)) sections.add("body");
     if (/\bBACK\b/.test(text)) sections.add("back");
 
-    // Some older generated programs do not carry semantic section names on
-    // every row. In that case the active label contract is the read-only
-    // fallback, never an invented section.
     if (!sections.size) {
       (Array.isArray(labelContract?.activeSections) ? labelContract.activeSections : [])
         .forEach((section) => sections.add(String(section)));
@@ -98,7 +90,14 @@
       flowContract?.brand,
       ...SECTION_ORDER.flatMap((section) => {
         const item = flowContract?.sections?.[section] || {};
-        return [section, Boolean(item.enabled), number(item.applicationAngleDegrees, -1), number(item.wrapDegrees), number(item.bottomWorld), number(item.topWorld)];
+        return [
+          section,
+          Boolean(item.enabled),
+          number(item.applicationAngleDegrees, -1),
+          number(item.wrapDegrees),
+          number(item.bottomWorld),
+          number(item.topWorld)
+        ];
       }),
       snapshot?.geometry?.bottle?.effectiveDiameterMm,
       snapshot?.geometry?.bottle?.visualHeightWorld,
@@ -126,7 +125,9 @@
   }
 
   function removeBottleLabels(bottle) {
-    const existing = bottle?.children?.filter((child) => child?.name === "ServoForgeProgressiveBottleLabels") || [];
+    const existing = bottle?.children?.filter(
+      (child) => child?.name === "ServoForgeProgressiveBottleLabels"
+    ) || [];
     existing.forEach((group) => {
       bottle.remove(group);
       disposeObject(group);
@@ -135,7 +136,9 @@
 
   function ensureBottleLabels(bottle, flowContract, geometry) {
     if (!bottle || !THREE) return null;
-    const existing = bottle.children?.find((child) => child?.name === "ServoForgeProgressiveBottleLabels");
+    const existing = bottle.children?.find(
+      (child) => child?.name === "ServoForgeProgressiveBottleLabels"
+    );
     if (existing?.userData?.contractSignature === lastContractSignature) return existing;
     removeBottleLabels(bottle);
 
@@ -147,6 +150,7 @@
     labels.userData.contractSignature = lastContractSignature;
     labels.userData.progressiveLabelFlow = true;
     labels.userData.labelMeshes = labels.userData.labelMeshes || {};
+
     Object.values(labels.userData.labelMeshes).forEach((mesh) => {
       if (!mesh) return;
       mesh.visible = false;
@@ -157,6 +161,7 @@
         mesh.material.depthWrite = true;
       }
     });
+
     bottle.add(labels);
     return labels;
   }
@@ -173,8 +178,6 @@
     if (!Number.isFinite(tableAngle)) return 0;
     if (!Number.isFinite(applicationAngle)) return 1;
 
-    // Mirror Head 1's existing staged rule: a section becomes eligible once
-    // the bottle table angle has passed its ServoForge application angle.
     const delta = tableAngle - applicationAngle;
     if (delta < 0) return 0;
     const animationWindowDegrees = Math.max(2.5, number(headPitchDegrees, 8) * 0.85);
@@ -186,22 +189,23 @@
     const p = clamp(progress, 0, 1);
     mesh.visible = p > 0.001;
     mesh.userData.applyProgress = p;
-    mesh.userData.applicationState = p <= 0.001 ? "unapplied" : p >= 0.999 ? "applied" : "wrapping";
+    mesh.userData.applicationState = p <= 0.001
+      ? "unapplied"
+      : p >= 0.999
+        ? "applied"
+        : "wrapping";
 
-    // A short, restrained settle approximates the label entering at the
-    // application point and conforming to the bottle without cartoon motion.
     const entrySign = sectionName === "back" ? -1 : 1;
     mesh.rotation.y = entrySign * (1 - p) * 0.10;
     const radialSettle = 1 + (1 - p) * 0.035;
     mesh.scale.set(radialSettle, 0.985 + p * 0.015, radialSettle);
     mesh.position.x = entrySign * (1 - p) * 0.014;
+
     if (mesh.material) {
       mesh.material.opacity = clamp(0.18 + p * 0.82, 0, 1);
       const transparent = p < 0.999;
       if (mesh.material.transparent !== transparent) {
         mesh.material.transparent = transparent;
-        // Opacity is a uniform update. Recompile only when the transparency
-        // render path actually changes at the end of application.
         mesh.material.needsUpdate = true;
       }
     }
@@ -213,49 +217,68 @@
     SECTION_ORDER.forEach((sectionName) => {
       const section = flowContract?.sections?.[sectionName];
       const mesh = labels.userData?.labelMeshes?.[sectionName];
-      const progress = sectionProgress(bottle, section, headPitchDegrees);
-      applyVisualProgress(mesh, progress, sectionName);
+      applyVisualProgress(mesh, sectionProgress(bottle, section, headPitchDegrees), sectionName);
     });
   }
 
-  function renderFrame() {
-    if (!running) return;
-    try {
-      const activeRuntime = runtime();
-      if (handlingLayer && activeRuntime?.snapshot && labelFactory()?.createBottleLabels) {
-        const snapshot = activeRuntime.latestSnapshot?.() || activeRuntime.snapshot({
-          scene: { tableY: 0.20, bottleLift: 0.155, unitMode: "progressive-label-flow-v1" }
-        });
-        const activeSections = activeProgramSections(snapshot?.labels);
-        const flowContract = contractForFlow(snapshot?.labels, activeSections);
-        const signature = contractSignature(snapshot, flowContract);
-        if (signature !== lastContractSignature) {
-          lastContractSignature = signature;
-          handlingBottles().forEach(removeBottleLabels);
-        }
+  function attachLayer(candidate) {
+    if (candidate?.name !== "ServoForgeBottleHandlingSystem") return false;
+    handlingLayer = candidate;
+    return true;
+  }
 
-        const headCount = Math.max(1, number(snapshot?.geometry?.machine?.headCount, 45));
-        const headPitchDegrees = 360 / headCount;
-        const bottles = handlingBottles();
-        bottles.forEach((bottle) => updateBottleLabels(bottle, flowContract, snapshot.geometry, headPitchDegrees));
-        lastStatus = Object.freeze({
-          integrationVersion: INTEGRATION_VERSION,
-          bottleCount: bottles.length,
-          activeSections: Object.freeze([...activeSections]),
-          applicationAngles: Object.freeze(Object.fromEntries(SECTION_ORDER.map((section) => [section, flowContract?.sections?.[section]?.applicationAngleDegrees ?? null]))),
-          head1ReferenceAuthority: true,
-          programSectionAuthority: true,
-          progressiveWrapAnimation: true,
-          servoWrites: false,
-          plannerWrites: false
-        });
+  function resolveLayerFromContext(context) {
+    if (handlingLayer?.parent) return handlingLayer;
+    const candidate = context?.scene?.getObjectByName?.("ServoForgeBottleHandlingSystem");
+    if (candidate) attachLayer(candidate);
+    return handlingLayer;
+  }
+
+  function renderFrame(context = {}) {
+    try {
+      const snapshot = context.snapshot || global.Labeler3DSceneRuntime?.latestSnapshot?.();
+      if (!snapshot || !labelFactory()?.createBottleLabels) return;
+      if (!resolveLayerFromContext(context)) return;
+
+      const activeSections = activeProgramSections(snapshot.labels);
+      const flowContract = contractForFlow(snapshot.labels, activeSections);
+      const signature = contractSignature(snapshot, flowContract);
+      if (signature !== lastContractSignature) {
+        lastContractSignature = signature;
+        handlingBottles().forEach(removeBottleLabels);
       }
+
+      const headCount = Math.max(1, number(snapshot?.geometry?.machine?.headCount, 45));
+      const headPitchDegrees = 360 / headCount;
+      const bottles = handlingBottles();
+      bottles.forEach((bottle) => {
+        updateBottleLabels(bottle, flowContract, snapshot.geometry, headPitchDegrees);
+      });
+
+      lastStatus = Object.freeze({
+        integrationVersion: INTEGRATION_VERSION,
+        bottleCount: bottles.length,
+        activeSections: Object.freeze([...activeSections]),
+        applicationAngles: Object.freeze(Object.fromEntries(
+          SECTION_ORDER.map((section) => [
+            section,
+            flowContract?.sections?.[section]?.applicationAngleDegrees ?? null
+          ])
+        )),
+        head1ReferenceAuthority: true,
+        programSectionAuthority: true,
+        progressiveWrapAnimation: true,
+        independentAnimationLoop: false,
+        prototypeSceneHook: false,
+        servoWrites: false,
+        plannerWrites: false
+      });
     } catch (error) {
       console.warn("ServoForge progressive label-flow frame skipped", error);
     }
   }
 
-  function startLoop() {
+  function start() {
     if (running) return;
     const coordinator = global.Labeler3DPresentationFrameCoordinator;
     if (!coordinator?.register) {
@@ -266,29 +289,6 @@
     coordinator.register(INTEGRATION_VERSION, renderFrame, { minIntervalMs: 0 });
   }
 
-  function captureHandlingLayer(candidate) {
-    if (candidate?.name !== "ServoForgeBottleHandlingSystem") return;
-    handlingLayer = candidate;
-    startLoop();
-  }
-
-  function installSceneHook() {
-    const prototype = THREE?.Object3D?.prototype;
-    if (!prototype || prototype.__servoforgeProgressiveLabelFlowHookV1) return;
-    const nativeAdd = prototype.add;
-    prototype.add = function servoforgeProgressiveLabelFlowAdd(...objects) {
-      const result = nativeAdd.apply(this, objects);
-      objects.forEach(captureHandlingLayer);
-      return result;
-    };
-    Object.defineProperty(prototype, "__servoforgeProgressiveLabelFlowHookV1", {
-      configurable: false,
-      enumerable: false,
-      writable: false,
-      value: true
-    });
-  }
-
   function status() {
     return lastStatus || Object.freeze({
       integrationVersion: INTEGRATION_VERSION,
@@ -297,6 +297,8 @@
       head1ReferenceAuthority: true,
       programSectionAuthority: true,
       progressiveWrapAnimation: true,
+      independentAnimationLoop: false,
+      prototypeSceneHook: false,
       servoWrites: false,
       plannerWrites: false
     });
@@ -305,11 +307,11 @@
   global.Labeler3DProgressiveLabelFlow = Object.freeze({
     INTEGRATION_VERSION,
     SECTION_ORDER,
+    attachLayer,
     status
   });
 
   ensureThree()
-    .then(() => installSceneHook())
+    .then(start)
     .catch((error) => console.error("ServoForge progressive label-flow integration failed", error));
 })(window);
-
