@@ -61,42 +61,29 @@
   function updateMachineSlot(control) {
     if (!machineSlotControl(control)) return false;
 
-    const editable = typeof editableMachineMap === "function" ? editableMachineMap() : null;
-    const slotType = control.dataset.machineSlot;
+    const slotType = String(control.dataset.machineSlot || "");
     const slotNumber = Math.round(num(control.dataset.slotNumber, NaN));
-    if (!editable
-      || !["aggregate", "station"].includes(slotType)
+    if (![
+      "aggregate",
+      "station"
+    ].includes(slotType)
       || !Number.isFinite(slotNumber)
-      || slotNumber < 1) return false;
+      || slotNumber < 1
+      || slotNumber > 6) return false;
 
-    editable.enabledAggregates = normalizeEnabledSlots(
-      editable.enabledAggregates,
-      editable.aggregateCount
-    );
-    editable.enabledStations = normalizeEnabledSlots(
-      editable.enabledStations,
-      editable.stationCount
-    );
-
-    const slots = slotType === "aggregate"
-      ? editable.enabledAggregates
-      : editable.enabledStations;
-    const slotIndex = slotNumber - 1;
-    if (slotIndex >= slots.length) return false;
-
-    if (!control.checked && slots.filter(Boolean).length === 1) {
-      control.checked = true;
-      global.alert?.(`At least one ${slotType} must remain active.`);
+    // Machine topology has one mutation authority. This layout controller may
+    // receive the capture-phase event before the dedicated Map Builder event
+    // controller, depending on startup timing, but it must never mutate the map
+    // directly. Delegating here makes both event paths converge on the slot
+    // service, which records history, reloads the Cold Glue runtime mirror, and
+    // commits the edit as a structural map change before any brush is added.
+    const builder = global.LabelerMapBuilderActionController;
+    if (typeof builder?.setMachineSlot !== "function") {
+      global.renderWipeDownBuilder?.();
       return true;
     }
 
-    slots[slotIndex] = Boolean(control.checked);
-    editable.aggregateCount = editable.enabledAggregates.filter(Boolean).length;
-    editable.stationCount = editable.enabledStations.filter(Boolean).length;
-    ensureAplObjectsForNewStations(editable);
-    loadMachineMapIntoRuntime(editable, true);
-    saveCurrentSettings();
-    renderWipeDownBuilder();
+    builder.setMachineSlot(slotType, slotNumber, Boolean(control.checked));
     return true;
   }
 
@@ -119,6 +106,7 @@
     machineSlotControl,
     updateAggregateAngle,
     updateSpenderPlateAngle,
-    updateMachineSlot
+    updateMachineSlot,
+    canonicalMachineSlotDelegationV314: true
   });
 })(window);
