@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "bottle-table-orientation-parity-v304-20260831-0748",
+  "buildId": "handling-zero-position-v305-20260831-0812",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v304 restores the bottle table inside the single starwheel 3D environment using one low-cost deck assembly plus instanced measured bottle plates. It also corrects carousel bottle transforms to use the same table-frame bearing plus signed servo rotation as Bottle Orientation Top View while preserving the v302/v303 instanced-bottle rendering path and smooth shared frame loop."
+  "notes": "v305 realigns the complete measured bottle-handling assembly so the intermediate-star/carousel handoff is exactly on the machine 0-degree datum. The correction is a rigid rotation of the existing measured 16-pocket/600mm starwheel layout, preserving the 200mm clear gap, pocket phase, conveyor geometry, transfer continuity, the v304 bottle table and Top View orientation parity, and the smooth single-scene frame loop."
 }
