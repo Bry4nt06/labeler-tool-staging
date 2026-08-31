@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "label-artwork-orientation-v309-20260831-0912";
-  const buildUpdatedAt = "Aug 31, 2026 9:12 AM ET";
+  const build = "cold-glue-channel-clearance-v310-20260831-1148";
+  const buildUpdatedAt = "Aug 31, 2026 11:48 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;

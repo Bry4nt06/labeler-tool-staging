@@ -17,6 +17,7 @@ assert.ok(driver, "Cold Glue motion driver must load");
 assert.equal(driver.centerTackOnly, true);
 assert.equal(driver.leadingEdgeWipeAllowed, false);
 assert.equal(driver.parallelOverlapTurnsBottle, false);
+assert.equal(driver.channelExitHoldAuthority, true);
 
 // Entire brush channel runs parallel: enter facing the channel and hold that
 // angle for the complete channel. No bottle rotation may be allocated here.
@@ -44,42 +45,108 @@ assert.equal(fullParallel.channelMoves[0].rotation, 0);
 assert.equal(fullParallel.totalRotation, 0);
 assert.equal(fullParallel.issues.length, 0, "a fully parallel brush channel is a valid hold zone, not a closed-channel fault");
 
-// Screenshot case: outside brush ends at 100 while inside brush continues to
-// 113.9. Hold 90 degrees through 83.9 -> 100, then consume the remaining
-// center-to-edge rotation over exactly the 13.9-degree inside-only opening.
-const partialOpening = driver.createBrushChannelPlan({
+// If the outside brush begins first, it may perform the center-out wipe before
+// the opposed portion begins. Once both brushes make contact, however, the
+// bottle must hold that established channel angle until the later inside brush
+// also clears. The trailing inside-only contact is NOT another turn window.
+const outsideFirst = driver.createBrushChannelPlan({
   labelDeg: 65,
   overWipeDeg: 0,
   maxRatio: 21,
   safetyFactor: 0.9,
   mapDirection: "ccw",
   channels: [{
-    id: "partial",
+    id: "outside-first",
     outerStart: 83.9,
     outerEnd: 100,
-    innerStart: 83.9,
+    innerStart: 90,
     innerEnd: 113.9
   }]
 });
-assert.equal(partialOpening.channelMoves.length, 2);
-const shared = partialOpening.channelMoves[0];
-const insideOpening = partialOpening.channelMoves[1];
+assert.equal(outsideFirst.channelMoves.length, 3);
+const outsideOpening = outsideFirst.channelMoves[0];
+const shared = outsideFirst.channelMoves[1];
+const insideTailHold = outsideFirst.channelMoves[2];
+assert.equal(outsideOpening.stage, "outer");
+assert.equal(outsideOpening.start, 83.9);
+assert.equal(outsideOpening.end, 90);
+assert.ok(Math.abs(outsideOpening.rotation - 32.5) < 1e-9);
 assert.equal(shared.stage, "opposed");
-assert.equal(shared.start, 83.9);
+assert.equal(shared.start, 90);
 assert.equal(shared.end, 100);
 assert.equal(shared.holdAngle, 90);
 assert.equal(shared.rotation, 0);
-assert.equal(insideOpening.stage, "inner");
-assert.equal(insideOpening.start, 100);
-assert.equal(insideOpening.end, 113.9);
-assert.equal(insideOpening.direction, 1);
-assert.ok(Math.abs(insideOpening.rotation - 32.5) < 1e-9);
-assert.ok(Math.abs(insideOpening.ratio - (32.5 / 13.9)) < 1e-9,
-  "remaining turn speed must be based on the available one-sided opening length");
-assert.equal(insideOpening.centerTackStage, "center-to-first-edge");
-assert.equal(partialOpening.issues.length, 0);
+assert.equal(insideTailHold.stage, "opposed");
+assert.equal(insideTailHold.start, 100);
+assert.equal(insideTailHold.end, 113.9);
+assert.equal(insideTailHold.rotation, 0);
+assert.equal(insideTailHold.parallelBrushHold, false);
+assert.equal(insideTailHold.channelClearanceHold, true);
+assert.equal(insideTailHold.trailingBrushSide, "inner");
+assert.equal(insideTailHold.holdAngle, 90);
+assert.equal(outsideFirst.totalRotation, 32.5);
+assert.equal(outsideFirst.issues.length, 0);
 
-// Reverse machine direction must mirror both brush-facing angle and rotation.
+// The physical rule is symmetric. If the inside brush begins first and the
+// outside brush is the side that remains after overlap, that outside tail also
+// holds until it clears instead of rotating the bottle into/out of the brush.
+const insideFirst = driver.createBrushChannelPlan({
+  labelDeg: 65,
+  overWipeDeg: 0,
+  maxRatio: 21,
+  safetyFactor: 0.9,
+  mapDirection: "ccw",
+  channels: [{
+    id: "inside-first",
+    innerStart: 83.9,
+    innerEnd: 100,
+    outerStart: 90,
+    outerEnd: 113.9
+  }]
+});
+assert.equal(insideFirst.channelMoves.length, 3);
+assert.equal(insideFirst.channelMoves[0].stage, "inner");
+assert.ok(Math.abs(insideFirst.channelMoves[0].rotation - 32.5) < 1e-9);
+assert.equal(insideFirst.channelMoves[1].stage, "opposed");
+assert.equal(insideFirst.channelMoves[2].stage, "opposed");
+assert.equal(insideFirst.channelMoves[2].channelClearanceHold, true);
+assert.equal(insideFirst.channelMoves[2].trailingBrushSide, "outer");
+assert.equal(insideFirst.channelMoves[2].rotation, 0);
+assert.equal(insideFirst.channelMoves[2].holdAngle, 90);
+
+// Real saved Cold Glue maps currently store separate brush objects rather than
+// a synthetic brush-channel object. Protect that path too: the 60H CG MAB1
+// pattern has outside contact 92-125 and inside contact 121-153. Rotation may
+// occur over 92-121, overlap 121-125 holds, and 125-153 must remain held until
+// the final inside brush clears.
+const savedMapPattern = driver.createPlan({
+  labelDeg: 65,
+  overWipeDeg: 0,
+  maxRatio: 24,
+  safetyFactor: 0.9,
+  mapDirection: "ccw",
+  brushes: [
+    { id: "outside", kind: "brush", side: "outer", start: 92, end: 125 },
+    { id: "inside", kind: "brush", side: "inner", start: 121, end: 153 }
+  ]
+});
+assert.equal(savedMapPattern.channelMoves.length, 3);
+assert.equal(savedMapPattern.channelMoves[0].stage, "outer");
+assert.equal(savedMapPattern.channelMoves[0].start, 92);
+assert.equal(savedMapPattern.channelMoves[0].end, 121);
+assert.equal(savedMapPattern.channelMoves[1].stage, "opposed");
+assert.equal(savedMapPattern.channelMoves[1].start, 121);
+assert.equal(savedMapPattern.channelMoves[1].end, 125);
+assert.equal(savedMapPattern.channelMoves[2].stage, "opposed");
+assert.equal(savedMapPattern.channelMoves[2].start, 125);
+assert.equal(savedMapPattern.channelMoves[2].end, 153);
+assert.equal(savedMapPattern.channelMoves[2].channelClearanceHold, true);
+assert.equal(savedMapPattern.channelMoves[2].trailingBrushSide, "inner");
+assert.equal(savedMapPattern.channelMoves[2].rotation, 0);
+
+// Reverse machine direction must mirror the brush-facing angle and the only
+// legal pre-overlap wipe rotation, while the trailing contact still remains a
+// hold zone.
 const reversed = driver.createBrushChannelPlan({
   labelDeg: 65,
   overWipeDeg: 0,
@@ -87,24 +154,27 @@ const reversed = driver.createBrushChannelPlan({
   safetyFactor: 0.9,
   mapDirection: "cw",
   channels: [{
-    id: "partial-reversed",
+    id: "outside-first-reversed",
     outerStart: 83.9,
     outerEnd: 100,
-    innerStart: 83.9,
+    innerStart: 90,
     innerEnd: 113.9
   }]
 });
 assert.equal(reversed.channelEntryAngle, -90);
-assert.equal(reversed.channelMoves[0].holdAngle, -90);
-assert.equal(reversed.channelMoves[1].direction, -1);
+assert.equal(reversed.channelMoves[0].direction, 1);
+assert.equal(reversed.channelMoves[1].holdAngle, -90);
+assert.equal(reversed.channelMoves[2].holdAngle, -90);
+assert.equal(reversed.channelMoves[2].rotation, 0);
+assert.equal(reversed.channelMoves[2].channelClearanceHold, true);
 
-for (const plan of [fullParallel, partialOpening, reversed]) {
+for (const plan of [fullParallel, outsideFirst, insideFirst, savedMapPattern, reversed]) {
   assert.ok(plan.channelMoves.every((move) => move.leadingEdgeWipe !== true));
   assert.ok(plan.channelMoves.every((move) => move.tackMode === "center"));
 }
 
-// Static retirement checks: v132 is core driver/generator behavior, not a
-// stack of final runtime wrappers.
+// Static retirement checks: the behavior belongs to the canonical driver and
+// generator, not a stack of final runtime wrappers.
 const appSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const generatorSource = fs.readFileSync(path.join(root, "app/cold-glue-profile-generation.js"), "utf8");
 const workerSource = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
@@ -123,4 +193,4 @@ for (const retired of [
   assert.equal(fs.existsSync(path.join(root, retired)), false, `${retired} must be retired after v132`);
 }
 
-console.log("Cold Glue canonical brush-channel authority v132 regression passed.");
+console.log("Cold Glue canonical brush-channel authority regression passed.");

@@ -130,7 +130,7 @@ const defaultObjectDepths = Object.freeze({
   nonOpRoller: -18,
   wipeInner: -4,
   wipeOuter: 16,
-  brushInner: -4,
+  brushInner: -16,
   brushOuter: 16
 });
 

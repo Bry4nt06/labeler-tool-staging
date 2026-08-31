@@ -28,9 +28,13 @@
       nonOpRoller: -18,
       wipeInner: -4,
       wipeOuter: 16,
-      brushInner: -4,
+      brushInner: -16,
       brushOuter: 16,
-      ...defaults
+      ...defaults,
+      // Cold Glue inside brushes use the same machine-side inset reference as
+      // the established inside wipe hardware. Keep this final so stale legacy
+      // defaults cannot move a newly created inside brush back into the table.
+      brushInner: -16
     };
   }
 
