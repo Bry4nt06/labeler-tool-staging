@@ -17,7 +17,17 @@ assert.ok(driver, "Cold Glue motion driver must load");
 assert.equal(driver.centerTackOnly, true);
 assert.equal(driver.leadingEdgeWipeAllowed, false);
 assert.equal(driver.parallelOverlapTurnsBottle, false);
-assert.equal(driver.channelExitHoldAuthority, true);
+assert.equal(driver.channelRunoutWipeAuthority, true);
+
+// Machine-map direction tokens preserve ServoForge's legacy inverted storage
+// convention. Cold Glue must use physical machine travel before choosing which
+// way the bottle turns away from a brush.
+assert.equal(driver.physicalMachineDirection("ccw"), "cw");
+assert.equal(driver.physicalMachineDirection("cw"), "ccw");
+assert.equal(driver.wipeDirectionForSide("outer", "ccw"), 1);
+assert.equal(driver.wipeDirectionForSide("inner", "ccw"), -1);
+assert.equal(driver.wipeDirectionForSide("outer", "cw"), -1);
+assert.equal(driver.wipeDirectionForSide("inner", "cw"), 1);
 
 // Entire brush channel runs parallel: enter facing the channel and hold that
 // angle for the complete channel. No bottle rotation may be allocated here.
@@ -45,10 +55,9 @@ assert.equal(fullParallel.channelMoves[0].rotation, 0);
 assert.equal(fullParallel.totalRotation, 0);
 assert.equal(fullParallel.issues.length, 0, "a fully parallel brush channel is a valid hold zone, not a closed-channel fault");
 
-// If the outside brush begins first, it may perform the center-out wipe before
-// the opposed portion begins. Once both brushes make contact, however, the
-// bottle must hold that established channel angle until the later inside brush
-// also clears. The trailing inside-only contact is NOT another turn window.
+// When one brush ends first, the remaining one-sided section is the physical
+// wipe-away runout. The bottle must rotate away from the brush that is still in
+// contact for the remaining label-length wipe; it must never first turn into it.
 const outsideFirst = driver.createBrushChannelPlan({
   labelDeg: 65,
   overWipeDeg: 0,
@@ -66,30 +75,31 @@ const outsideFirst = driver.createBrushChannelPlan({
 assert.equal(outsideFirst.channelMoves.length, 3);
 const outsideOpening = outsideFirst.channelMoves[0];
 const shared = outsideFirst.channelMoves[1];
-const insideTailHold = outsideFirst.channelMoves[2];
+const insideRunout = outsideFirst.channelMoves[2];
 assert.equal(outsideOpening.stage, "outer");
 assert.equal(outsideOpening.start, 83.9);
 assert.equal(outsideOpening.end, 90);
+assert.equal(outsideOpening.direction, 1);
 assert.ok(Math.abs(outsideOpening.rotation - 32.5) < 1e-9);
 assert.equal(shared.stage, "opposed");
 assert.equal(shared.start, 90);
 assert.equal(shared.end, 100);
 assert.equal(shared.holdAngle, 90);
 assert.equal(shared.rotation, 0);
-assert.equal(insideTailHold.stage, "opposed");
-assert.equal(insideTailHold.start, 100);
-assert.equal(insideTailHold.end, 113.9);
-assert.equal(insideTailHold.rotation, 0);
-assert.equal(insideTailHold.parallelBrushHold, false);
-assert.equal(insideTailHold.channelClearanceHold, true);
-assert.equal(insideTailHold.trailingBrushSide, "inner");
-assert.equal(insideTailHold.holdAngle, 90);
-assert.equal(outsideFirst.totalRotation, 32.5);
+assert.equal(insideRunout.stage, "inner");
+assert.equal(insideRunout.start, 100);
+assert.equal(insideRunout.end, 113.9);
+assert.equal(insideRunout.direction, -1,
+  "stored ccw means physical CW, so an inside-brush runout must turn negative/away from the brush");
+assert.ok(Math.abs(insideRunout.rotation - 65) < 1e-9,
+  "the remaining inside brush must wipe one full label length clear of contact");
+assert.equal(insideRunout.centerTackStage, "edge-to-opposite-edge");
+assert.equal(outsideFirst.totalRotation, 97.5);
 assert.equal(outsideFirst.issues.length, 0);
 
-// The physical rule is symmetric. If the inside brush begins first and the
-// outside brush is the side that remains after overlap, that outside tail also
-// holds until it clears instead of rotating the bottle into/out of the brush.
+// The physical rule is symmetric. If the outside brush remains after overlap,
+// the outside runout turns in the opposite physical direction for one label
+// length until the wiped label is clear.
 const insideFirst = driver.createBrushChannelPlan({
   labelDeg: 65,
   overWipeDeg: 0,
@@ -106,19 +116,17 @@ const insideFirst = driver.createBrushChannelPlan({
 });
 assert.equal(insideFirst.channelMoves.length, 3);
 assert.equal(insideFirst.channelMoves[0].stage, "inner");
+assert.equal(insideFirst.channelMoves[0].direction, -1);
 assert.ok(Math.abs(insideFirst.channelMoves[0].rotation - 32.5) < 1e-9);
 assert.equal(insideFirst.channelMoves[1].stage, "opposed");
-assert.equal(insideFirst.channelMoves[2].stage, "opposed");
-assert.equal(insideFirst.channelMoves[2].channelClearanceHold, true);
-assert.equal(insideFirst.channelMoves[2].trailingBrushSide, "outer");
-assert.equal(insideFirst.channelMoves[2].rotation, 0);
-assert.equal(insideFirst.channelMoves[2].holdAngle, 90);
+assert.equal(insideFirst.channelMoves[2].stage, "outer");
+assert.equal(insideFirst.channelMoves[2].direction, 1);
+assert.ok(Math.abs(insideFirst.channelMoves[2].rotation - 65) < 1e-9);
 
 // Real saved Cold Glue maps currently store separate brush objects rather than
-// a synthetic brush-channel object. Protect that path too: the 60H CG MAB1
-// pattern has outside contact 92-125 and inside contact 121-153. Rotation may
-// occur over 92-121, overlap 121-125 holds, and 125-153 must remain held until
-// the final inside brush clears.
+// a synthetic brush-channel object. Protect the 60H CG MAB1 pattern: outside
+// contact 92-125, inside contact 121-153. Once the outside brush ends at 125,
+// the remaining inside brush must drive the label away, not hold or turn into it.
 const savedMapPattern = driver.createPlan({
   labelDeg: 65,
   overWipeDeg: 0,
@@ -134,19 +142,18 @@ assert.equal(savedMapPattern.channelMoves.length, 3);
 assert.equal(savedMapPattern.channelMoves[0].stage, "outer");
 assert.equal(savedMapPattern.channelMoves[0].start, 92);
 assert.equal(savedMapPattern.channelMoves[0].end, 121);
+assert.equal(savedMapPattern.channelMoves[0].direction, 1);
 assert.equal(savedMapPattern.channelMoves[1].stage, "opposed");
 assert.equal(savedMapPattern.channelMoves[1].start, 121);
 assert.equal(savedMapPattern.channelMoves[1].end, 125);
-assert.equal(savedMapPattern.channelMoves[2].stage, "opposed");
+assert.equal(savedMapPattern.channelMoves[2].stage, "inner");
 assert.equal(savedMapPattern.channelMoves[2].start, 125);
 assert.equal(savedMapPattern.channelMoves[2].end, 153);
-assert.equal(savedMapPattern.channelMoves[2].channelClearanceHold, true);
-assert.equal(savedMapPattern.channelMoves[2].trailingBrushSide, "inner");
-assert.equal(savedMapPattern.channelMoves[2].rotation, 0);
+assert.equal(savedMapPattern.channelMoves[2].direction, -1);
+assert.ok(Math.abs(savedMapPattern.channelMoves[2].rotation - 65) < 1e-9);
+assert.equal(savedMapPattern.issues.length, 0);
 
-// Reverse machine direction must mirror the brush-facing angle and the only
-// legal pre-overlap wipe rotation, while the trailing contact still remains a
-// hold zone.
+// Reversing the stored machine direction mirrors both physical wipe directions.
 const reversed = driver.createBrushChannelPlan({
   labelDeg: 65,
   overWipeDeg: 0,
@@ -162,16 +169,23 @@ const reversed = driver.createBrushChannelPlan({
   }]
 });
 assert.equal(reversed.channelEntryAngle, -90);
-assert.equal(reversed.channelMoves[0].direction, 1);
+assert.equal(reversed.channelMoves[0].direction, -1);
 assert.equal(reversed.channelMoves[1].holdAngle, -90);
-assert.equal(reversed.channelMoves[2].holdAngle, -90);
-assert.equal(reversed.channelMoves[2].rotation, 0);
-assert.equal(reversed.channelMoves[2].channelClearanceHold, true);
+assert.equal(reversed.channelMoves[2].stage, "inner");
+assert.equal(reversed.channelMoves[2].direction, 1);
+assert.ok(Math.abs(reversed.channelMoves[2].rotation - 65) < 1e-9);
 
 for (const plan of [fullParallel, outsideFirst, insideFirst, savedMapPattern, reversed]) {
   assert.ok(plan.channelMoves.every((move) => move.leadingEdgeWipe !== true));
   assert.ok(plan.channelMoves.every((move) => move.tackMode === "center"));
 }
+
+// The neck gripper/channel generator must consume the canonical direction rule;
+// it may not keep a second hard-coded inside/outside sign table.
+const gripperChannelSource = fs.readFileSync(path.join(root, "app/cold-glue-gripper-channel-integration.js"), "utf8");
+assert.match(gripperChannelSource, /LabelerColdGlueMotionDriver\.wipeDirectionForSide/);
+assert.doesNotMatch(gripperChannelSource, /openSide\s*===\s*["']inner["']\s*\?\s*1\s*:\s*-1/);
+assert.match(gripperChannelSource, /Wipe Away from .* Brush for One Label Length/);
 
 // Static retirement checks: the behavior belongs to the canonical driver and
 // generator, not a stack of final runtime wrappers.
