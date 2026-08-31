@@ -102,6 +102,15 @@
     return true;
   }
 
+  function currentEnabledSlots(value, count) {
+    const fallbackCount = Math.max(0, Math.min(6, Math.round(finite(count, 0))));
+    return Array.from({ length: 6 }, (_, index) => (
+      Array.isArray(value) && value[index] != null
+        ? Boolean(value[index])
+        : index < fallbackCount
+    ));
+  }
+
   function updateEnabledStations(map) {
     const used = new Set(
       map.objects
@@ -110,18 +119,29 @@
         .filter(Boolean)
     );
     if (!used.size) return false;
-    const enabled = Array.from({ length: 6 }, (_, index) => used.has(index + 1));
+
+    // Hardware is allowed to make its assigned slot active, but it is not the
+    // authority for turning slots off. Preserve every station/aggregate the
+    // operator already enabled, including empty slots being prepared for the
+    // next Cold Glue object, and union in slots that already contain hardware.
+    const enabledAggregates = currentEnabledSlots(map.enabledAggregates, map.aggregateCount);
+    const enabledStations = currentEnabledSlots(map.enabledStations, map.stationCount);
+    used.forEach((station) => {
+      enabledAggregates[station - 1] = true;
+      enabledStations[station - 1] = true;
+    });
+
     let changed = false;
-    if (JSON.stringify(map.enabledAggregates) !== JSON.stringify(enabled)) {
-      map.enabledAggregates = enabled;
+    if (JSON.stringify(map.enabledAggregates) !== JSON.stringify(enabledAggregates)) {
+      map.enabledAggregates = enabledAggregates;
       changed = true;
     }
-    if (JSON.stringify(map.enabledStations) !== JSON.stringify(enabled)) {
-      map.enabledStations = enabled;
+    if (JSON.stringify(map.enabledStations) !== JSON.stringify(enabledStations)) {
+      map.enabledStations = enabledStations;
       changed = true;
     }
-    changed = setValue(map, "aggregateCount", enabled.filter(Boolean).length) || changed;
-    changed = setValue(map, "stationCount", enabled.filter(Boolean).length) || changed;
+    changed = setValue(map, "aggregateCount", enabledAggregates.filter(Boolean).length) || changed;
+    changed = setValue(map, "stationCount", enabledStations.filter(Boolean).length) || changed;
     return changed;
   }
 
