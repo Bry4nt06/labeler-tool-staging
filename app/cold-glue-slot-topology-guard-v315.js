@@ -23,6 +23,17 @@
     return slots;
   }
 
+  function hasGripperSequenceWrapper(candidate) {
+    let current = candidate;
+    let depth = 0;
+    while (typeof current === "function" && depth < 24) {
+      if (current.coldGlueThreeGripperWrappedV2) return true;
+      current = current.originalGenerator;
+      depth += 1;
+    }
+    return false;
+  }
+
   function snapshot(map) {
     if (!map) return null;
     const enabledAggregates = normalizeSlots(map.enabledAggregates, map.aggregateCount);
@@ -67,12 +78,15 @@
     if (typeof original !== "function") return false;
     if (original.coldGlueSlotTopologyGuardV315) return true;
 
+    // This guard must sit outside the legacy gripper-sequence wrapper. Loading
+    // earlier would snapshot topology only after that wrapper had already
+    // inferred enabled slots from its object list, which is exactly the state
+    // ownership collision this integration retires.
+    if (!hasGripperSequenceWrapper(original)) return false;
+
     function generatedColdGlueWithExplicitTopology(...args) {
       const map = activeColdGlueMap();
       const topology = snapshot(map);
-      // Keep the operator-selected topology visible to the map-driven generator
-      // even when an older gripper normalizer tries to infer enabled slots from
-      // the objects currently present on those stations.
       if (map && topology) restore(map, topology);
       try {
         return original.apply(this, args);
@@ -90,7 +104,8 @@
       installed: true,
       version: VERSION,
       snapshot,
-      restore
+      restore,
+      hasGripperSequenceWrapper
     });
     return true;
   }
