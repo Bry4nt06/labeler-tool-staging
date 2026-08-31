@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "bottle-table-orientation-parity-v304-20260831-0748";
-  const buildUpdatedAt = "Aug 31, 2026 7:48 AM ET";
+  const build = "handling-zero-position-v305-20260831-0812";
+  const buildUpdatedAt = "Aug 31, 2026 8:12 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -101,6 +101,7 @@
     "app/3d/bottle-handling-dead-zone-anchor-integration.js",
     "app/3d/bottle-handling-16-pocket-integration.js",
     "app/3d/bottle-handling-measured-star-layout-integration.js",
+    "app/3d/bottle-handling-zero-position-authority-integration.js",
     "app/3d/bottle-handling-direction-authority-integration.js",
     "app/3d/bottle-handling-carousel-table-center-integration.js",
     "app/3d/bottle-handling-transfer-synchronization-integration.js",
