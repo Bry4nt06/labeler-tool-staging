@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "bottle-orientation-live-sync-v302-20260821-1020",
+  "buildId": "starwheel-single-environment-v303-20260831-0715",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v302 makes the shared animation clock the authoritative owner of Bottle Orientation live refreshes. It removes the legacy Bottle Orientation renderAnimationFrame wrapper from the active frame path and refreshes the panel directly from the same frame that advances the table preview angle, preventing a frozen Top View while the rest of the labeler animation continues."
+  "notes": "v303 preserves the v302 Bottle Orientation shared-clock synchronization and the current instanced-bottle/frame-coordinator performance work while making the starwheel bottle-handling system the only 3D mechanical environment. The generic carousel/head scene is no longer constructed, starwheel geometry and inner-hub presentation are consolidated into the canonical handling viewport, and obsolete post-render presentation/prototype-hook modules are removed."
 }
