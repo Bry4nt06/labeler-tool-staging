@@ -1,9 +1,9 @@
-(function (global) {
+(function installServoForge3DSceneRuntime(global) {
   "use strict";
 
-  const RUNTIME_VERSION = "servoforge.3d-runtime.v2";
-  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v08.js?v=0.9.10-3d-v09-singleton-20260820";
-  const VIEWPORT_LOAD_KEY = "__servoforge3DViewportScriptLoadV09";
+  const RUNTIME_VERSION = "servoforge.3d-runtime.v3";
+  const VIEWPORT_SCRIPT = "app/3d/three-scene-renderer-v08.js?v=0.9.10-3d-starwheel-only-v303-20260831";
+  const VIEWPORT_LOAD_KEY = "__servoforge3DViewportScriptLoadV10";
   const VIEWPORT_SINGLETON_KEY = "__servoforge3DViewportSingletonV09";
   const SPACING_OVERLAY_SCRIPT = "app/3d/measured-spacing-overlay.js?v=0.9.10-3d-v04-machine-map-equipment";
 
@@ -73,9 +73,7 @@
   function appState() {
     try {
       if (typeof state !== "undefined" && state && typeof state === "object") return state;
-    } catch {
-      // The lexical application state may not be available in isolated tests.
-    }
+    } catch {}
     return global.state && typeof global.state === "object" ? global.state : null;
   }
 
@@ -88,9 +86,7 @@
     try {
       const fromService = global.LabelerMapRuntimeService?.activeMachineMap?.();
       if (fromService) return fromService;
-    } catch {
-      // Fall through to state mirror.
-    }
+    } catch {}
     const maps = Array.isArray(current?.mapLibrary) ? current.mapLibrary : [];
     return maps.find((map) => map?.id === current?.activeMapId) || maps[0] || null;
   }
@@ -99,14 +95,17 @@
     const current = appState() || {};
     const rows = Array.isArray(options.rows) ? options.rows : generatedProgram();
     const tableAngle = number(options.tableAngle, number(current?.previewAngle, 0));
+
     const frame = frameDriver().snapshot(rows, tableAngle, {
       commandDriver: options.commandDriver || global.LabelerServoCommandDriver,
       plan: options.plan || null,
       preferredHmi: options.preferredHmi
     });
+
     const geometry = geometryAdapter().snapshot(current, {
       worldUnitsPerMm: options.scene?.worldUnitsPerMm
     });
+
     labelGeometryAdapter();
     labelMeshFactory();
     wipePadGeometryAdapter();
@@ -125,6 +124,7 @@
         ? Number(requestedScene.carouselRadius)
         : geometry.machine.pitchRadiusWorld
     };
+
     const scene = sceneAdapter().toSceneState(frame, sceneOptions);
     const carousel = carouselAdapter().snapshot(scene, geometry, {
       carouselDirection,
@@ -179,6 +179,8 @@
       snapshotAuthority: "single-latest-render-snapshot",
       snapshotBuildCount,
       hasLatestSnapshot: Boolean(lastSnapshot),
+      sceneAuthority: "starwheel-bottle-handling-only",
+      legacyCarouselEnvironment: false,
       geometry: "measured-plate-spacing-plus-active-bottle-profile",
       carousel: "machine-head-count-and-user-measured-plate-spacing",
       labels: "active-label-spec-wraps-with-reference-artwork",
@@ -228,7 +230,9 @@
     script.src = `./${SPACING_OVERLAY_SCRIPT}`;
     script.async = true;
     script.dataset.servoforge3dSpacingOverlay = "v1";
-    script.addEventListener("error", () => console.warn("ServoForge measured bottle-plate spacing telemetry could not be loaded."), { once: true });
+    script.addEventListener("error", () => {
+      console.warn("ServoForge measured bottle-plate spacing telemetry could not be loaded.");
+    }, { once: true });
     (documentRef.body || documentRef.head || documentRef.documentElement).appendChild(script);
     return true;
   }
@@ -254,14 +258,14 @@
     const script = documentRef.createElement("script");
     script.src = `./${VIEWPORT_SCRIPT}`;
     script.async = true;
-    script.dataset.servoforge3dViewport = "v0.9";
+    script.dataset.servoforge3dViewport = "v0.10";
     script.addEventListener("load", () => {
       global[VIEWPORT_LOAD_KEY] = "loaded";
       loadMeasuredSpacingOverlay();
     }, { once: true });
     script.addEventListener("error", () => {
       delete global[VIEWPORT_LOAD_KEY];
-      console.warn("ServoForge 3D hardware-reference viewport could not be loaded. Core 3D frame runtime remains available.");
+      console.warn("ServoForge starwheel-only 3D viewport could not be loaded. Core 3D frame runtime remains available.");
     }, { once: true });
     (documentRef.body || documentRef.head || documentRef.documentElement).appendChild(script);
     return true;
