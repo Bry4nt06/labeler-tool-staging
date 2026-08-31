@@ -1,10 +1,8 @@
 (function installServoForgeColdGlueBrushExitClearance(global) {
   "use strict";
 
-  const INTEGRATION_VERSION = "servoforge.cold-glue-brush-exit-clearance.v24";
+  const INTEGRATION_VERSION = "servoforge.cold-glue-brush-exit-clearance.v24.1";
   const DEFAULT_LABEL_EDGE_GUARD_DEG = 3;
-  const DEFAULT_EXIT_CLEARANCE_TABLE_DEG = 3;
-  const MIN_ACTIVE_TABLE_SPAN_DEG = 0.25;
   const EPSILON = 0.001;
 
   function number(value, fallback = 0) {
@@ -108,87 +106,47 @@
       0.5,
       12
     );
-    const requestedClearanceDeg = clamp(
-      number(options.brushExitClearanceDeg, DEFAULT_EXIT_CLEARANCE_TABLE_DEG),
-      0.5,
-      8
-    );
     const labelDeg = Math.max(0, number(plan.labelDeg, options.labelDeg));
     const overWipeDeg = Math.max(0, number(plan.overWipeDeg, options.overWipeDeg));
 
-    // At the beginning of the second center-out phase the first edge has already
-    // wiped through its configured over-wipe. Rotating another full label plus
-    // two over-wipes drives the opposite label edge through the trailing brush
-    // tip. Stop before that edge reaches the brush instead.
-    const protectedRequiredRotation = Math.max(0, labelDeg + overWipeDeg - edgeGuardDeg);
-
-    const activeWindows = trailing.moves.map((move) => ({ ...move }));
-    const lastWindow = activeWindows[activeWindows.length - 1];
-    const originalExitEnd = number(lastWindow.end, number(lastWindow.start) + moveSpan(lastWindow));
-    const originalLastSpan = moveSpan(lastWindow);
-    const appliedClearanceDeg = Math.min(
-      requestedClearanceDeg,
-      Math.max(0, originalLastSpan - MIN_ACTIVE_TABLE_SPAN_DEG)
+    // The first center-out phase already carries the first label edge beyond the
+    // brush by overWipeDeg. The legacy second phase then commanded a full label
+    // plus TWO over-wipes, which necessarily swept the opposite label edge into
+    // and through the trailing end of the remaining single brush.
+    //
+    // On exit, rotate only far enough to wipe one label length while preserving
+    // the larger of the configured over-wipe or the minimum edge guard as
+    // clearance before the opposite label edge reaches the brush contact line.
+    const oppositeEdgeClearanceDeg = Math.max(overWipeDeg, edgeGuardDeg);
+    const protectedRequiredRotation = Math.max(
+      0,
+      labelDeg + overWipeDeg - oppositeEdgeClearanceDeg
     );
-
-    if (appliedClearanceDeg > EPSILON) {
-      lastWindow.end = originalExitEnd - appliedClearanceDeg;
-      lastWindow.span = Math.max(MIN_ACTIVE_TABLE_SPAN_DEG, lastWindow.end - number(lastWindow.start));
-    }
 
     const allocation = allocateProtectedRotation(
       protectedRequiredRotation,
-      activeWindows,
+      trailing.moves,
       options.maxRatio,
       options.safetyFactor
     );
 
-    const replacementMoves = allocation.allocations;
     const protectedMoves = plan.channelMoves.slice();
-    protectedMoves.splice(trailing.startIndex, trailing.moves.length, ...replacementMoves);
-
-    let exitHold = null;
-    if (appliedClearanceDeg > EPSILON) {
-      const protectedExitStart = originalExitEnd - appliedClearanceDeg;
-      const source = trailing.moves[trailing.moves.length - 1];
-      exitHold = {
-        ...source,
-        key: `${source.key || "brush"}:exit-clearance`,
-        stage: "opposed",
-        start: protectedExitStart,
-        end: originalExitEnd,
-        span: appliedClearanceDeg,
-        rotation: 0,
-        ratio: 0,
-        direction: 0,
-        holdCurrent: true,
-        configuredHold: false,
-        parallelBrushHold: false,
-        exitClearanceHold: true,
-        oppositeLabelEdgeProtected: true,
-        protectedBrushSide: trailing.side,
-        centerTackStage: "brush-exit-clearance",
-        wipeOutward: false,
-        leadingEdgeWipe: false,
-        tackMode: "center"
-      };
-      protectedMoves.splice(trailing.startIndex + replacementMoves.length, 0, exitHold);
-    }
-
+    protectedMoves.splice(trailing.startIndex, trailing.moves.length, ...allocation.allocations);
     const byKey = new Map(protectedMoves.map((move) => [move?.key, move]));
     const groupKeys = new Set(trailing.moves.map((move) => move?.key));
+
     const phasePlans = (Array.isArray(plan.phasePlans) ? plan.phasePlans : []).map((phase) => {
       const phaseWindows = Array.isArray(phase?.windows) ? phase.windows : [];
       if (!phaseWindows.some((window) => groupKeys.has(window?.key))) return phase;
       return {
         ...phase,
-        windows: replacementMoves,
+        windows: allocation.allocations,
         requiredRotation: protectedRequiredRotation,
         remaining: allocation.remaining,
         ratio: allocation.requestedRatio,
         oppositeLabelEdgeProtected: true,
-        labelEdgeGuardDeg: edgeGuardDeg,
-        brushExitClearanceDeg: appliedClearanceDeg
+        oppositeEdgeClearanceDeg,
+        labelEdgeGuardDeg: edgeGuardDeg
       };
     });
 
@@ -198,7 +156,7 @@
         level: "bad",
         code: "cold-glue-brush-exit-clearance-capacity",
         side: trailing.side,
-        message: `${trailing.side === "outer" ? "Outside" : "Inside"} brush cannot complete the protected wipe before the ${appliedClearanceDeg.toFixed(1)} deg exit-clearance zone; ${allocation.remaining.toFixed(1)} deg of bottle rotation remains.`
+        message: `${trailing.side === "outer" ? "Outside" : "Inside"} brush cannot complete the protected single-brush wipe without entering the opposite-label-edge clearance; ${allocation.remaining.toFixed(1)} deg of bottle rotation remains.`
       });
     }
 
@@ -225,19 +183,19 @@
         enabled: true,
         brushSide: trailing.side,
         labelEdgeGuardDeg: edgeGuardDeg,
-        requestedExitClearanceDeg: requestedClearanceDeg,
-        appliedExitClearanceDeg,
-        rotationStopsAtTableDeg: exitHold ? exitHold.start : originalExitEnd,
-        brushClearsAtTableDeg: originalExitEnd,
-        protectedRequiredRotation,
-        remainingRotation: allocation.remaining
+        configuredOverWipeDeg: overWipeDeg,
+        oppositeEdgeClearanceDeg,
+        legacyFinalRotationDeg: Math.max(0, labelDeg + overWipeDeg * 2),
+        protectedFinalRotationDeg: protectedRequiredRotation,
+        remainingRotation: allocation.remaining,
+        rule: "single-brush-exit-must-stop-before-opposite-label-edge"
       })
     };
   }
 
   function install() {
     const previous = global.LabelerColdGlueMotionDriver;
-    if (!previous || global.__ServoForgeColdGlueBrushExitClearanceV24Installed) return false;
+    if (!previous || global.__ServoForgeColdGlueBrushExitClearanceV241Installed) return false;
 
     const originalCreateBrushChannelPlan = previous.createBrushChannelPlan?.bind(previous);
     const originalCreatePlan = previous.createPlan?.bind(previous);
@@ -257,10 +215,9 @@
       createBrushChannelPlan,
       createPlan,
       brushExitClearanceVersion: INTEGRATION_VERSION,
-      labelEdgeGuardDeg: DEFAULT_LABEL_EDGE_GUARD_DEG,
-      brushExitClearanceDeg: DEFAULT_EXIT_CLEARANCE_TABLE_DEG
+      labelEdgeGuardDeg: DEFAULT_LABEL_EDGE_GUARD_DEG
     });
-    global.__ServoForgeColdGlueBrushExitClearanceV24Installed = true;
+    global.__ServoForgeColdGlueBrushExitClearanceV241Installed = true;
     return true;
   }
 
@@ -269,7 +226,6 @@
   global.ServoForgeColdGlueBrushExitClearance = Object.freeze({
     INTEGRATION_VERSION,
     DEFAULT_LABEL_EDGE_GUARD_DEG,
-    DEFAULT_EXIT_CLEARANCE_TABLE_DEG,
     protectPlan,
     install
   });
