@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "head-one-view-stability-v308-20260831-0832",
+  "buildId": "label-artwork-orientation-v309-20260831-0912",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v308 locks the v307 Top View/3D bottle-handling placement as the geometry baseline and fixes the Head 1 controls without changing geometry or the renderer frame loop. Follow Head 1 now tracks the physical carousel Head 1 carrier continuously through the full 360-degree table rotation. Head 1 only now selects the bottle whose carrierHead is exactly 1 instead of the first transport bottle entering the carousel; when Head 1 is between discharge and entry with no bottle, no substitute bottle is shown."
+  "notes": "v309 preserves the locked v307 machine geometry, v306 per-bottle servo replay, and v308 Head 1 controls while correcting only the horizontal UV direction of 3D label artwork. Physical label wrap geometry, application angles, progressive application timing, bottle rotation, starwheel placement, and renderer timing are unchanged."
 }
