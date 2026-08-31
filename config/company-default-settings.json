@@ -1,8 +1,8 @@
 {
   "format": "labeler-tool-portable-settings",
   "version": 1,
-  "companyDefaultsVersion": 12,
-  "exportedAt": "2026-08-05T03:29:00.000Z",
+  "companyDefaultsVersion": 13,
+  "exportedAt": "2026-08-31T12:05:00.000Z",
   "settings": {
     "themePreset": "servoforge",
     "headCount": 45,
