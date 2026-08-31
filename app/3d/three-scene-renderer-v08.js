@@ -6,16 +6,12 @@
 
   const staleBackdrops = [...(global.document?.querySelectorAll?.("#servoforge3dBackdrop") || [])];
   staleBackdrops.forEach((backdrop) => {
-    try {
-      backdrop.querySelector?.("#servoforge3dClose")?.click?.();
-    } catch {
-      // Removing the stale viewport still prevents it from remaining interactive.
-    }
+    try { backdrop.querySelector?.("#servoforge3dClose")?.click?.(); } catch {}
     backdrop.remove?.();
   });
 
   const viewportSingleton = {
-    version: "servoforge.3d-viewport-singleton.v1",
+    version: "servoforge.3d-viewport-singleton.v2",
     installing: true,
     installed: false,
     open: false,
@@ -24,11 +20,9 @@
   };
   global[VIEWPORT_SINGLETON_KEY] = viewportSingleton;
 
-  const VIEWPORT_VERSION = "servoforge.3d-viewport.v0.9";
+  const VIEWPORT_VERSION = "servoforge.3d-viewport.v0.10";
   const THREE_VERSION = "0.185.1";
   const THREE_MODULE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
-  const TABLE_Y = 0.20;
-  const BOTTLE_LIFT = 0.155;
 
   let THREE = null;
   let enginePromise = null;
@@ -40,20 +34,11 @@
   let viewportOpen = false;
   let followHead = false;
   let lastSnapshot = null;
-  let lastMachineSignature = "";
-  let lastPopulationSignature = "";
   let lastEquipmentSignature = "";
-  let carouselBody = null;
-  let carouselTop = null;
-  let pathRing = null;
-  let hub = null;
-  let headLayer = null;
   let equipmentLayer = null;
   let aggregateLayer = null;
-  let headAssemblies = [];
   let equipmentAssemblies = [];
   let aggregateAssemblies = [];
-  let activeServoPlate = null;
   let ui = null;
 
   const cameraState = {
@@ -70,11 +55,20 @@
   function runtime() { return global.Labeler3DSceneRuntime || null; }
   function hardwareFactory() { return global.Labeler3DHardwareMeshFactory || null; }
   function hardwareCatalog() { return global.Labeler3DHardwareReferenceCatalog || null; }
-  function labelMeshFactory() { return global.Labeler3DLabelMeshFactory || null; }
-  function number(value, fallback = 0) { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : fallback; }
+  function handlingViewport() { return global.Labeler3DBottleHandlingViewport || null; }
+  function number(value, fallback = 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
   function clamp(value, minimum, maximum) { return Math.max(minimum, Math.min(maximum, value)); }
-  function formatDegrees(value, decimals = 1) { const numeric = Number(value); return Number.isFinite(numeric) ? `${numeric.toFixed(decimals)}°` : "—"; }
-  function formatMillimeters(value, decimals = 1) { const numeric = Number(value); return Number.isFinite(numeric) ? `${numeric.toFixed(decimals)} mm` : "—"; }
+  function formatDegrees(value, decimals = 1) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? `${numeric.toFixed(decimals)}°` : "—";
+  }
+  function formatMillimeters(value, decimals = 1) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? `${numeric.toFixed(decimals)} mm` : "—";
+  }
   function material(options) { return new THREE.MeshStandardMaterial(options); }
 
   function installStyles() {
@@ -99,6 +93,7 @@
     installStyles();
     const toolbar = document.querySelector(".map-toolbar");
     if (!toolbar) return null;
+
     let openButton = document.querySelector("#servoforge3dOpen");
     if (!openButton) {
       openButton = document.createElement("button");
@@ -109,6 +104,10 @@
       openButton.setAttribute("aria-haspopup", "dialog");
       toolbar.appendChild(openButton);
     }
+
+    const existingBackdrop = document.querySelector("#servoforge3dBackdrop");
+    existingBackdrop?.remove?.();
+
     const backdrop = document.createElement("div");
     backdrop.id = "servoforge3dBackdrop";
     backdrop.className = "servoforge-3d-backdrop";
@@ -116,13 +115,13 @@
     backdrop.innerHTML = `
       <section class="servoforge-3d-panel" role="dialog" aria-modal="true" aria-labelledby="servoforge3dTitle">
         <header class="servoforge-3d-head">
-          <div class="servoforge-3d-title"><span class="servoforge-3d-live" aria-hidden="true"></span><div><h2 id="servoforge3dTitle">ServoForge 3D • Hardware Reference</h2><small>Photo-referenced assemblies • measured wipe pads • active sensors/coder • read only • Three.js ${THREE_VERSION}</small></div></div>
+          <div class="servoforge-3d-title"><span class="servoforge-3d-live" aria-hidden="true"></span><div><h2 id="servoforge3dTitle">ServoForge 3D • Bottle Handling</h2><small>Single starwheel environment • active machine-map hardware • read only • Three.js ${THREE_VERSION}</small></div></div>
           <div class="servoforge-3d-controls"><button type="button" data-3d-camera="operator">Operator</button><button type="button" data-3d-camera="top">Top</button><button type="button" data-3d-camera="reset">Reset Camera</button><button type="button" id="servoforge3dFollow" aria-pressed="false">Follow Head 1</button><button type="button" id="servoforge3dClose">Close</button></div>
         </header>
         <div class="servoforge-3d-stage" id="servoforge3dStage">
-          <canvas class="servoforge-3d-canvas" id="servoforge3dCanvas" aria-label="Live ServoForge 3D hardware-reference simulation"></canvas>
-          <div class="servoforge-3d-note"><strong>Hardware authority:</strong> wipe-pad contact dimensions are measured. Spender, roller, coder, sensor mounting shapes are photo-referenced proportions until exact measurements/CAD are captured. Sensor FOV and machine-map angles remain ServoForge runtime data.</div>
-          <div class="servoforge-3d-legend"><b>Hardware</b><br>Cream: applied labels<br>Orange: live Head 1<br>Silver: spender/application arm<br>Brown: measured wipe pad<br>Dark rubber: wipe roller<br>Gray/red: laser coder + beam<br>Green LED/cyan cone: label sensor</div>
+          <canvas class="servoforge-3d-canvas" id="servoforge3dCanvas" aria-label="ServoForge starwheel bottle-handling simulation"></canvas>
+          <div class="servoforge-3d-note"><strong>Scene authority:</strong> the starwheel bottle-handling environment is the only transport scene. The retired generic carousel/head environment is not constructed.</div>
+          <div class="servoforge-3d-legend"><b>Bottle handling</b><br>Starwheels + conveyors: transport path<br>Bottles: synchronized machine flow<br>Silver: application hardware<br>Brown: measured wipe pad<br>Gray/red: coder<br>Green/cyan: label sensor</div>
           <div class="servoforge-3d-telemetry" aria-live="polite">
             <div class="servoforge-3d-metric"><span>Machine angle</span><strong id="servoforge3dMachineAngle">—</strong></div><div class="servoforge-3d-metric"><span>Bottle servo</span><strong id="servoforge3dServoAngle">—</strong></div><div class="servoforge-3d-metric"><span>Active command</span><strong id="servoforge3dCommand">—</strong></div><div class="servoforge-3d-metric live"><span>Live head</span><strong id="servoforge3dLiveHead">Head 1</strong></div><div class="servoforge-3d-metric hardware"><span>Hardware catalog</span><strong id="servoforge3dHardwareCatalog">—</strong></div>
             <div class="servoforge-3d-metric hardware"><span>Machine map</span><strong id="servoforge3dMapName">—</strong></div><div class="servoforge-3d-metric hardware"><span>Equipment</span><strong id="servoforge3dEquipmentCount">—</strong></div><div class="servoforge-3d-metric sensor"><span>Sensors</span><strong id="servoforge3dSensors">—</strong></div><div class="servoforge-3d-metric coder"><span>Coders</span><strong id="servoforge3dCoders">—</strong></div><div class="servoforge-3d-metric physical"><span>Measured wipe pads</span><strong id="servoforge3dMeasuredPads">—</strong></div>
@@ -132,16 +131,47 @@
         </div>
       </section>`;
     document.body.appendChild(backdrop);
+
     ui = {
-      openButton, backdrop, stage: backdrop.querySelector("#servoforge3dStage"), canvas: backdrop.querySelector("#servoforge3dCanvas"), closeButton: backdrop.querySelector("#servoforge3dClose"), followButton: backdrop.querySelector("#servoforge3dFollow"), error: backdrop.querySelector("#servoforge3dError"),
-      machineAngle: backdrop.querySelector("#servoforge3dMachineAngle"), servoAngle: backdrop.querySelector("#servoforge3dServoAngle"), command: backdrop.querySelector("#servoforge3dCommand"), liveHead: backdrop.querySelector("#servoforge3dLiveHead"), hardwareCatalog: backdrop.querySelector("#servoforge3dHardwareCatalog"), mapName: backdrop.querySelector("#servoforge3dMapName"), equipmentCount: backdrop.querySelector("#servoforge3dEquipmentCount"), sensors: backdrop.querySelector("#servoforge3dSensors"), coders: backdrop.querySelector("#servoforge3dCoders"), measuredPads: backdrop.querySelector("#servoforge3dMeasuredPads"), pitchRadius: backdrop.querySelector("#servoforge3dPitchRadius"), bottleDiameter: backdrop.querySelector("#servoforge3dBottleDiameter"), event: backdrop.querySelector("#servoforge3dEvent"), motion: backdrop.querySelector("#servoforge3dMotion"), action: backdrop.querySelector("#servoforge3dAction"), stageName: backdrop.querySelector("#servoforge3dStageName")
+      openButton,
+      backdrop,
+      stage: backdrop.querySelector("#servoforge3dStage"),
+      canvas: backdrop.querySelector("#servoforge3dCanvas"),
+      closeButton: backdrop.querySelector("#servoforge3dClose"),
+      followButton: backdrop.querySelector("#servoforge3dFollow"),
+      error: backdrop.querySelector("#servoforge3dError"),
+      machineAngle: backdrop.querySelector("#servoforge3dMachineAngle"),
+      servoAngle: backdrop.querySelector("#servoforge3dServoAngle"),
+      command: backdrop.querySelector("#servoforge3dCommand"),
+      liveHead: backdrop.querySelector("#servoforge3dLiveHead"),
+      hardwareCatalog: backdrop.querySelector("#servoforge3dHardwareCatalog"),
+      mapName: backdrop.querySelector("#servoforge3dMapName"),
+      equipmentCount: backdrop.querySelector("#servoforge3dEquipmentCount"),
+      sensors: backdrop.querySelector("#servoforge3dSensors"),
+      coders: backdrop.querySelector("#servoforge3dCoders"),
+      measuredPads: backdrop.querySelector("#servoforge3dMeasuredPads"),
+      pitchRadius: backdrop.querySelector("#servoforge3dPitchRadius"),
+      bottleDiameter: backdrop.querySelector("#servoforge3dBottleDiameter"),
+      event: backdrop.querySelector("#servoforge3dEvent"),
+      motion: backdrop.querySelector("#servoforge3dMotion"),
+      action: backdrop.querySelector("#servoforge3dAction"),
+      stageName: backdrop.querySelector("#servoforge3dStageName")
     };
-    openButton.addEventListener("click", openViewport);
-    ui.closeButton.addEventListener("click", closeViewport);
-    ui.followButton.addEventListener("click", () => { followHead = !followHead; ui.followButton.setAttribute("aria-pressed", String(followHead)); if (followHead && lastSnapshot) focusHead(lastSnapshot); });
-    backdrop.querySelectorAll("[data-3d-camera]").forEach((button) => button.addEventListener("click", () => setCameraPreset(button.getAttribute("data-3d-camera"))));
-    backdrop.addEventListener("click", (event) => { if (event.target === backdrop) closeViewport(); });
-    document.addEventListener("keydown", (event) => { if (event.key === "Escape" && viewportOpen) closeViewport(); });
+
+    openButton.onclick = openViewport;
+    ui.closeButton.onclick = closeViewport;
+    ui.followButton.onclick = () => {
+      followHead = !followHead;
+      ui.followButton.setAttribute("aria-pressed", String(followHead));
+      if (followHead) focusHead();
+    };
+    backdrop.querySelectorAll("[data-3d-camera]").forEach((button) => {
+      button.onclick = () => setCameraPreset(button.getAttribute("data-3d-camera"));
+    });
+    backdrop.onclick = (event) => { if (event.target === backdrop) closeViewport(); };
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && viewportOpen) closeViewport();
+    });
     return ui;
   }
 
@@ -151,107 +181,278 @@
     return enginePromise;
   }
 
-  function bottleProfile(geometry) {
-    const supplied = geometry?.bottle?.profilePointsWorld;
-    if (Array.isArray(supplied) && supplied.length >= 4) return supplied.map((point) => new THREE.Vector2(number(point.radius), number(point.y)));
-    return [[0.27,0],[0.31,0.18],[0.31,1.02],[0.18,1.37],[0.12,1.85],[0.13,1.90]].map(([radius,y]) => new THREE.Vector2(radius,y));
-  }
-
-  function createHeadAssembly(headNumber, geometry, labels) {
-    const active = headNumber === 1;
-    const group = new THREE.Group();
-    group.userData.headNumber = headNumber;
-    const plateRadius = number(geometry?.bottleTable?.plateDiameterWorld, 0.42) / 2;
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(plateRadius, plateRadius * 1.025, 0.16, 36), material({ color: active ? 0x30221e : 0x151e23, roughness: 0.30, metalness: 0.82, emissive: active ? 0x351006 : 0x000000, emissiveIntensity: active ? 0.32 : 0 }));
-    base.position.y = 0.08; group.add(base);
-    const plateGroup = new THREE.Group();
-    const plate = new THREE.Mesh(new THREE.CylinderGeometry(plateRadius * 0.92, plateRadius * 0.92, 0.07, 36), material({ color: active ? 0x777d80 : 0x555f64, roughness: 0.24, metalness: 0.90 }));
-    plate.position.y = 0.195; plateGroup.add(plate);
-    const datum = new THREE.Mesh(new THREE.BoxGeometry(Math.max(0.05, plateRadius * 0.52), 0.024, Math.max(0.018, plateRadius * 0.12)), material({ color: active ? 0xff6a3d : 0x9ba8ae, emissive: active ? 0x4a1408 : 0x000000, emissiveIntensity: active ? 0.55 : 0 }));
-    datum.position.set(plateRadius * 0.66, 0.24, 0); plateGroup.add(datum); group.add(plateGroup);
-    if (active) {
-      const halo = new THREE.Mesh(new THREE.TorusGeometry(plateRadius * 1.06, 0.018, 10, 44), material({ color: 0xff6a3d, emissive: 0x8a240d, emissiveIntensity: 0.85, roughness: 0.30 })); halo.rotation.x = Math.PI / 2; halo.position.y = 0.245; group.add(halo);
-      activeServoPlate = plateGroup;
-    }
-    return group;
-  }
-
   function disposeObject3D(object) {
-    object?.traverse?.((child) => { child.geometry?.dispose?.(); const dispose = (entry) => { entry?.map?.dispose?.(); entry?.dispose?.(); }; if (Array.isArray(child.material)) child.material.forEach(dispose); else dispose(child.material); });
+    object?.traverse?.((child) => {
+      child.geometry?.dispose?.();
+      const dispose = (entry) => { entry?.map?.dispose?.(); entry?.dispose?.(); };
+      if (Array.isArray(child.material)) child.material.forEach(dispose);
+      else dispose(child.material);
+    });
   }
-  function clearLayer(layer, collection) { collection.forEach((assembly) => { layer?.remove(assembly); disposeObject3D(assembly); }); collection.length = 0; }
 
-  function populationSignature(snapshot) { return [snapshot?.carousel?.headCount, snapshot?.geometry?.bottle?.diameterWorld, snapshot?.geometry?.bottle?.visualHeightWorld, snapshot?.labels?.brand, ...(snapshot?.labels?.activeSections || [])].join("|"); }
-  function rebuildHeads(snapshot) {
-    const signature = populationSignature(snapshot); if (signature === lastPopulationSignature && headAssemblies.length === number(snapshot?.carousel?.headCount)) return;
-    lastPopulationSignature = signature; clearLayer(headLayer, headAssemblies); activeServoPlate = null;
-    const count = Math.max(1, Math.round(number(snapshot?.carousel?.headCount, 1)));
-    for (let head = 1; head <= count; head += 1) { const assembly = createHeadAssembly(head, snapshot.geometry, snapshot.labels); headAssemblies.push(assembly); headLayer.add(assembly); }
+  function clearLayer(layer, collection) {
+    collection.forEach((assembly) => {
+      layer?.remove(assembly);
+      disposeObject3D(assembly);
+    });
+    collection.length = 0;
   }
 
   function equipmentSignature(snapshot) {
     const equipment = snapshot?.equipment || {};
-    return [equipment.mapId, equipment.mapName, snapshot?.geometry?.bottle?.diameterWorld, snapshot?.geometry?.bottle?.visualHeightWorld, ...(equipment.aggregates || []).map((item) => `${item.aggregate}:${item.angleDegrees}`), ...(equipment.objects || []).map((item) => [item.id,item.kind,item.angleDegrees,item.mapDepthUnits,item.spanDegrees,item.sensorFieldOfViewDegrees,item.wipePad?.contactFaceRadiusWorld].join(":"))].join("|");
+    return [
+      equipment.mapId,
+      equipment.mapName,
+      snapshot?.geometry?.bottle?.diameterWorld,
+      snapshot?.geometry?.bottle?.visualHeightWorld,
+      ...(equipment.aggregates || []).map((item) => `${item.aggregate}:${item.angleDegrees}`),
+      ...(equipment.objects || []).map((item) => [
+        item.id,
+        item.kind,
+        item.angleDegrees,
+        item.mapDepthUnits,
+        item.spanDegrees,
+        item.sensorFieldOfViewDegrees,
+        item.wipePad?.contactFaceRadiusWorld
+      ].join(":"))
+    ].join("|");
   }
 
   function rebuildEquipment(snapshot) {
-    const signature = equipmentSignature(snapshot); if (signature === lastEquipmentSignature) return;
-    lastEquipmentSignature = signature; clearLayer(aggregateLayer, aggregateAssemblies); clearLayer(equipmentLayer, equipmentAssemblies);
+    const signature = equipmentSignature(snapshot);
+    if (signature === lastEquipmentSignature) return;
+    lastEquipmentSignature = signature;
+    clearLayer(aggregateLayer, aggregateAssemblies);
+    clearLayer(equipmentLayer, equipmentAssemblies);
     const factory = hardwareFactory();
-    (snapshot?.equipment?.aggregates || []).forEach((item) => { const assembly = factory?.createAggregateAssembly?.(THREE, item, snapshot.geometry); if (!assembly) return; aggregateAssemblies.push(assembly); aggregateLayer.add(assembly); });
-    (snapshot?.equipment?.objects || []).forEach((item) => { const assembly = factory?.createEquipmentAssembly?.(THREE, item, snapshot.geometry); if (!assembly) return; equipmentAssemblies.push(assembly); equipmentLayer.add(assembly); });
+    (snapshot?.equipment?.aggregates || []).forEach((item) => {
+      const assembly = factory?.createAggregateAssembly?.(THREE, item, snapshot.geometry);
+      if (!assembly) return;
+      aggregateAssemblies.push(assembly);
+      aggregateLayer.add(assembly);
+    });
+    (snapshot?.equipment?.objects || []).forEach((item) => {
+      const assembly = factory?.createEquipmentAssembly?.(THREE, item, snapshot.geometry);
+      if (!assembly) return;
+      equipmentAssemblies.push(assembly);
+      equipmentLayer.add(assembly);
+    });
   }
 
   function createMachineScene() {
-    scene = new THREE.Scene(); scene.background = new THREE.Color(0x071117); scene.fog = new THREE.Fog(0x071117, 12, 24); camera = new THREE.PerspectiveCamera(42, 1, 0.05, 60); cameraState.target = new THREE.Vector3(0, 0.72, 0);
-    renderer = new THREE.WebGLRenderer({ canvas: ui.canvas, antialias: true, powerPreference: "high-performance" }); renderer.setPixelRatio(Math.min(global.devicePixelRatio || 1, 1.5)); renderer.shadowMap.enabled = false; renderer.outputColorSpace = THREE.SRGBColorSpace;
-    scene.add(new THREE.HemisphereLight(0xa9d8ef, 0x101519, 1.5)); const key = new THREE.DirectionalLight(0xffffff, 2.1); key.position.set(5,8,4); key.castShadow = false; scene.add(key); const fill = new THREE.DirectionalLight(0xff8a5c, 0.55); fill.position.set(-5,3,-4); scene.add(fill);
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(8.5, 96), material({ color: 0x0b171d, roughness: 0.86, metalness: 0.05 })); floor.rotation.x = -Math.PI / 2; floor.position.y = -0.02; floor.receiveShadow = false; scene.add(floor); const grid = new THREE.GridHelper(16,32,0x36505b,0x1e3038); grid.position.y = 0.002; scene.add(grid);
-    carouselBody = new THREE.Mesh(new THREE.CylinderGeometry(1,1.035,0.20,96), material({ color: 0x202b31, roughness: 0.42, metalness: 0.72 })); carouselBody.position.y = 0.10; scene.add(carouselBody); carouselTop = new THREE.Mesh(new THREE.CylinderGeometry(1,1,0.035,96), material({ color: 0x35434a, roughness: 0.34, metalness: 0.78 })); carouselTop.position.y = 0.218; scene.add(carouselTop); pathRing = new THREE.Mesh(new THREE.TorusGeometry(1,0.024,10,160), material({ color: 0xff6a3d, emissive: 0x4a1408, emissiveIntensity: 0.42, roughness: 0.35 })); pathRing.rotation.x = Math.PI / 2; pathRing.position.y = 0.247; scene.add(pathRing); hub = new THREE.Mesh(new THREE.CylinderGeometry(0.72,0.82,0.34,64), material({ color: 0x10191e, roughness: 0.3, metalness: 0.82 })); hub.position.y = 0.34; scene.add(hub);
-    headLayer = new THREE.Group(); headLayer.name = "ServoForgeBottleTablePopulation"; scene.add(headLayer); aggregateLayer = new THREE.Group(); aggregateLayer.name = "ServoForgePhotoReferencedApplicationAssemblies"; scene.add(aggregateLayer); equipmentLayer = new THREE.Group(); equipmentLayer.name = "ServoForgePhotoReferencedMachineHardware"; scene.add(equipmentLayer); const axes = new THREE.AxesHelper(0.72); axes.position.y = 0.24; scene.add(axes);
-    bindCameraControls(); setCameraPreset("operator"); resizeObserver = new ResizeObserver(resizeRenderer); resizeObserver.observe(ui.stage); resizeRenderer();
+    scene = new THREE.Scene();
+    scene.name = "ServoForgeCanonicalBottleHandlingScene";
+    scene.userData.sceneAuthority = "starwheel-bottle-handling-only";
+    scene.userData.legacyCarouselEnvironment = false;
+    scene.background = new THREE.Color(0x071117);
+    scene.fog = new THREE.Fog(0x071117, 12, 24);
+
+    camera = new THREE.PerspectiveCamera(42, 1, 0.05, 60);
+    cameraState.target = new THREE.Vector3(0, 0.72, 0);
+
+    renderer = new THREE.WebGLRenderer({ canvas: ui.canvas, antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(global.devicePixelRatio || 1, 1.5));
+    renderer.shadowMap.enabled = false;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    scene.add(new THREE.HemisphereLight(0xa9d8ef, 0x101519, 1.5));
+    const key = new THREE.DirectionalLight(0xffffff, 2.1);
+    key.position.set(5, 8, 4);
+    key.castShadow = false;
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0xff8a5c, 0.55);
+    fill.position.set(-5, 3, -4);
+    scene.add(fill);
+
+    const floor = new THREE.Mesh(
+      new THREE.CircleGeometry(8.5, 96),
+      material({ color: 0x0b171d, roughness: 0.86, metalness: 0.05 })
+    );
+    floor.name = "ServoForgeBottleHandlingFloor";
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.02;
+    floor.receiveShadow = false;
+    scene.add(floor);
+
+    const grid = new THREE.GridHelper(16, 32, 0x36505b, 0x1e3038);
+    grid.name = "ServoForgeBottleHandlingGrid";
+    grid.position.y = 0.002;
+    scene.add(grid);
+
+    aggregateLayer = new THREE.Group();
+    aggregateLayer.name = "ServoForgePhotoReferencedApplicationAssemblies";
+    scene.add(aggregateLayer);
+
+    equipmentLayer = new THREE.Group();
+    equipmentLayer.name = "ServoForgePhotoReferencedMachineHardware";
+    scene.add(equipmentLayer);
+
+    bindCameraControls();
+    setCameraPreset("operator");
+    resizeObserver = new ResizeObserver(resizeRenderer);
+    resizeObserver.observe(ui.stage);
+    resizeRenderer();
   }
 
-  function machineSignature(snapshot) { return [snapshot?.geometry?.machine?.physicalPitchRadiusWorld, snapshot?.geometry?.machine?.carouselOuterRadiusWorld].join("|"); }
-  function syncMachineGeometry(snapshot) {
-    const signature = machineSignature(snapshot); if (signature === lastMachineSignature) return; lastMachineSignature = signature;
-    const pitchWorld = number(snapshot?.geometry?.machine?.physicalPitchRadiusWorld, 3.50); const outerWorld = number(snapshot?.geometry?.machine?.carouselOuterRadiusWorld, pitchWorld + 0.30); carouselBody.scale.set(outerWorld,1,outerWorld); carouselTop.scale.set(Math.max(0.1,outerWorld-0.18),1,Math.max(0.1,outerWorld-0.18)); pathRing.scale.set(pitchWorld,1,pitchWorld); hub.scale.set(Math.max(0.8,pitchWorld/2.55),1,Math.max(0.8,pitchWorld/2.55));
-  }
-
-  function applyHeadLayout(snapshot) {
-    (snapshot?.carousel?.heads || []).forEach((head,index) => { const assembly = headAssemblies[index]; if (!assembly) return; assembly.position.set(number(head.position?.x), number(head.position?.y,TABLE_Y), number(head.position?.z)); assembly.rotation.y = number(head.rotationY); });
-    if (activeServoPlate) activeServoPlate.rotation.y = number(snapshot?.scene?.bottleTable?.servoRotationY);
-  }
   function updateActivityHighlight(snapshot) {
-    const activeAggregate = Number(snapshot?.scene?.activity?.aggregate); const activeStage = String(snapshot?.scene?.activity?.stage || "").toLowerCase();
-    aggregateAssemblies.forEach((assembly) => { const active = Number.isFinite(activeAggregate) && Number(assembly.userData.aggregate) === activeAggregate; (assembly.userData.highlightMaterials || []).forEach((entry) => { entry.emissive?.setHex?.(active ? 0x4c2a12 : 0x000000); entry.emissiveIntensity = active ? 0.58 : 0; }); });
-    equipmentAssemblies.forEach((assembly) => { const sameStation = Number.isFinite(activeAggregate) && Number(assembly.userData.station) === activeAggregate; const kind = String(assembly.userData.kind || ""); const active = sameStation && ((activeStage === "wipe" && (kind === "pad" || kind === "roller")) || (activeStage.includes("sensor") && kind === "sensor") || (activeStage.includes("cod") && kind === "coding")); (assembly.userData.contactMaterials || assembly.userData.highlightMaterials || []).forEach((entry) => { entry.emissive?.setHex?.(active ? 0x4f1708 : 0x000000); entry.emissiveIntensity = active ? 0.42 : 0; }); });
+    const activeAggregate = Number(snapshot?.scene?.activity?.aggregate);
+    const activeStage = String(snapshot?.scene?.activity?.stage || "").toLowerCase();
+    aggregateAssemblies.forEach((assembly) => {
+      const active = Number.isFinite(activeAggregate) && Number(assembly.userData.aggregate) === activeAggregate;
+      (assembly.userData.highlightMaterials || []).forEach((entry) => {
+        entry.emissive?.setHex?.(active ? 0x4c2a12 : 0x000000);
+        entry.emissiveIntensity = active ? 0.58 : 0;
+      });
+    });
+    equipmentAssemblies.forEach((assembly) => {
+      const sameStation = Number.isFinite(activeAggregate) && Number(assembly.userData.station) === activeAggregate;
+      const kind = String(assembly.userData.kind || "");
+      const active = sameStation && (
+        (activeStage === "wipe" && (kind === "pad" || kind === "roller"))
+        || (activeStage.includes("sensor") && kind === "sensor")
+        || (activeStage.includes("cod") && kind === "coding")
+      );
+      (assembly.userData.contactMaterials || assembly.userData.highlightMaterials || []).forEach((entry) => {
+        entry.emissive?.setHex?.(active ? 0x4f1708 : 0x000000);
+        entry.emissiveIntensity = active ? 0.42 : 0;
+      });
+    });
   }
 
   function bindCameraControls() {
-    const canvas = ui.canvas; canvas.addEventListener("pointerdown", (event) => { if (event.button !== 0) return; cameraState.dragging = true; cameraState.pointerId = event.pointerId; cameraState.lastX = event.clientX; cameraState.lastY = event.clientY; canvas.setPointerCapture?.(event.pointerId); });
-    canvas.addEventListener("pointermove", (event) => { if (!cameraState.dragging || event.pointerId !== cameraState.pointerId) return; const dx = event.clientX - cameraState.lastX; const dy = event.clientY - cameraState.lastY; cameraState.lastX = event.clientX; cameraState.lastY = event.clientY; cameraState.azimuth -= dx * 0.006; cameraState.polar = clamp(cameraState.polar + dy * 0.006, 0.07, Math.PI * 0.49); applyCamera(); });
-    const release = (event) => { if (event.pointerId !== cameraState.pointerId) return; cameraState.dragging = false; cameraState.pointerId = null; canvas.releasePointerCapture?.(event.pointerId); }; canvas.addEventListener("pointerup", release); canvas.addEventListener("pointercancel", release); canvas.addEventListener("wheel", (event) => { event.preventDefault(); cameraState.distance = clamp(cameraState.distance * Math.exp(event.deltaY * 0.0011), 2.2, 20); applyCamera(); }, { passive: false });
+    const canvas = ui.canvas;
+    canvas.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      cameraState.dragging = true;
+      cameraState.pointerId = event.pointerId;
+      cameraState.lastX = event.clientX;
+      cameraState.lastY = event.clientY;
+      canvas.setPointerCapture?.(event.pointerId);
+    });
+    canvas.addEventListener("pointermove", (event) => {
+      if (!cameraState.dragging || event.pointerId !== cameraState.pointerId) return;
+      const dx = event.clientX - cameraState.lastX;
+      const dy = event.clientY - cameraState.lastY;
+      cameraState.lastX = event.clientX;
+      cameraState.lastY = event.clientY;
+      cameraState.azimuth -= dx * 0.006;
+      cameraState.polar = clamp(cameraState.polar + dy * 0.006, 0.07, Math.PI * 0.49);
+      applyCamera();
+    });
+    const release = (event) => {
+      if (event.pointerId !== cameraState.pointerId) return;
+      cameraState.dragging = false;
+      cameraState.pointerId = null;
+      canvas.releasePointerCapture?.(event.pointerId);
+    };
+    canvas.addEventListener("pointerup", release);
+    canvas.addEventListener("pointercancel", release);
+    canvas.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      cameraState.distance = clamp(cameraState.distance * Math.exp(event.deltaY * 0.0011), 2.2, 20);
+      applyCamera();
+    }, { passive: false });
   }
-  function applyCamera() { if (!camera || !cameraState.target) return; const sinPolar = Math.sin(cameraState.polar); camera.position.set(cameraState.target.x + cameraState.distance * sinPolar * Math.cos(cameraState.azimuth), cameraState.target.y + cameraState.distance * Math.cos(cameraState.polar), cameraState.target.z + cameraState.distance * sinPolar * Math.sin(cameraState.azimuth)); camera.lookAt(cameraState.target); }
-  function setCameraPreset(name) { if (!cameraState.target || !THREE) return; const outerWorld = number(lastSnapshot?.geometry?.machine?.carouselOuterRadiusWorld,3.8); if (name === "top") { cameraState.target.set(0,0.30,0); cameraState.azimuth = Math.PI*0.5; cameraState.polar = 0.07; cameraState.distance = Math.max(10.5,outerWorld*2.75); } else { cameraState.target.set(0,0.76,0); cameraState.azimuth = Math.PI*0.22; cameraState.polar = Math.PI*0.31; cameraState.distance = Math.max(9.5,outerWorld*2.45); if (name === "reset") followHead = false; } if (ui?.followButton) ui.followButton.setAttribute("aria-pressed",String(followHead)); applyCamera(); }
-  function focusHead(snapshot = lastSnapshot) { const head = snapshot?.carousel?.heads?.[0]; if (!head?.position || !cameraState.target) return; cameraState.target.set(number(head.position.x),0.76,number(head.position.z)); cameraState.distance = Math.min(cameraState.distance,4.6); applyCamera(); }
-  function resizeRenderer() { if (!renderer || !camera || !ui?.stage) return; const width = Math.max(1,ui.stage.clientWidth); const height = Math.max(1,ui.stage.clientHeight); renderer.setSize(width,height,false); camera.aspect = width/height; camera.updateProjectionMatrix(); }
+
+  function applyCamera() {
+    if (!camera || !cameraState.target) return;
+    const sinPolar = Math.sin(cameraState.polar);
+    camera.position.set(
+      cameraState.target.x + cameraState.distance * sinPolar * Math.cos(cameraState.azimuth),
+      cameraState.target.y + cameraState.distance * Math.cos(cameraState.polar),
+      cameraState.target.z + cameraState.distance * sinPolar * Math.sin(cameraState.azimuth)
+    );
+    camera.lookAt(cameraState.target);
+  }
+
+  function setCameraPreset(name) {
+    if (!cameraState.target || !THREE) return;
+    const outerWorld = number(lastSnapshot?.geometry?.machine?.carouselOuterRadiusWorld, 3.8);
+    if (name === "top") {
+      camera.up.set(0, 0, -1);
+      cameraState.target.set(0, 0.30, 0);
+      cameraState.azimuth = Math.PI * 0.5;
+      cameraState.polar = 0.07;
+      cameraState.distance = Math.max(10.5, outerWorld * 2.75);
+    } else {
+      camera.up.set(0, 1, 0);
+      cameraState.target.set(0, 0.76, 0);
+      cameraState.azimuth = Math.PI * 0.22;
+      cameraState.polar = Math.PI * 0.31;
+      cameraState.distance = Math.max(9.5, outerWorld * 2.45);
+      if (name === "reset") followHead = false;
+    }
+    if (ui?.followButton) ui.followButton.setAttribute("aria-pressed", String(followHead));
+    applyCamera();
+  }
+
+  function focusHead() {
+    if (!cameraState.target) return;
+    const handling = handlingViewport()?.latestSnapshot?.();
+    const bottle = handling?.bottles?.find?.((entry) => entry?.owner === "carousel");
+    const fallback = lastSnapshot?.carousel?.heads?.[0];
+    const point = bottle?.position || fallback?.position;
+    if (!point) return;
+    cameraState.target.set(number(point.x), 0.76, number(point.z));
+    cameraState.distance = Math.min(cameraState.distance, 4.6);
+    applyCamera();
+  }
+
+  function resizeRenderer() {
+    if (!renderer || !camera || !ui?.stage) return;
+    const width = Math.max(1, ui.stage.clientWidth);
+    const height = Math.max(1, ui.stage.clientHeight);
+    renderer.setSize(width, height, false);
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+  }
 
   function updateTelemetry(snapshot) {
-    const active = snapshot?.scene?.activeServo; const activity = snapshot?.scene?.activity || {}; const flags = snapshot?.scene?.flags || {}; const geometry = snapshot?.geometry || {}; const equipment = snapshot?.equipment || {}; const counts = equipment.counts || {}; const catalogStatus = hardwareCatalog()?.status?.();
-    const setText = (node, value) => { const next = String(value); if (node && node.textContent !== next) node.textContent = next; };
-    setText(ui.machineAngle, formatDegrees(snapshot?.scene?.carousel?.machineAngleDegrees)); setText(ui.servoAngle, formatDegrees(snapshot?.scene?.bottle?.servoAngleDegrees)); setText(ui.command, active ? `HMI ${active.hmi} • CMD ${active.command}` : "No active row"); setText(ui.liveHead, `Head ${snapshot?.carousel?.activeHead || 1}`); setText(ui.hardwareCatalog, catalogStatus ? `${catalogStatus.profileCount} profiles • photo ref` : "Unavailable"); setText(ui.mapName, equipment.mapName || "—"); setText(ui.equipmentCount, `${equipment?.aggregates?.length || 0} spender • ${equipment?.objects?.length || 0} map objects`); setText(ui.sensors, `${number(counts.sensors)} visible`); setText(ui.coders, `${number(counts.coding)} visible`); setText(ui.measuredPads, `${number(counts.measuredPads)}/${number(counts.pads)} measured`); setText(ui.pitchRadius, formatMillimeters(geometry.machine?.physicalPitchRadiusMm,3)); setText(ui.bottleDiameter, formatMillimeters(geometry.bottle?.effectiveDiameterMm,2)); setText(ui.event, activity.eventId || "—"); setText(ui.motion, flags.executesRotation ? "Rotating" : flags.hold ? "Holding" : "Idle"); setText(ui.action, active?.action || "Waiting for Servo Program"); setText(ui.stageName, [activity.section,activity.stage].filter(Boolean).join(" / ") || "—");
+    const active = snapshot?.scene?.activeServo;
+    const activity = snapshot?.scene?.activity || {};
+    const flags = snapshot?.scene?.flags || {};
+    const geometry = snapshot?.geometry || {};
+    const equipment = snapshot?.equipment || {};
+    const counts = equipment.counts || {};
+    const catalogStatus = hardwareCatalog()?.status?.();
+    const setText = (node, value) => {
+      const next = String(value);
+      if (node && node.textContent !== next) node.textContent = next;
+    };
+    setText(ui.machineAngle, formatDegrees(snapshot?.scene?.carousel?.machineAngleDegrees));
+    setText(ui.servoAngle, formatDegrees(snapshot?.scene?.bottle?.servoAngleDegrees));
+    setText(ui.command, active ? `HMI ${active.hmi} • CMD ${active.command}` : "No active row");
+    setText(ui.liveHead, `Head ${snapshot?.carousel?.activeHead || 1}`);
+    setText(ui.hardwareCatalog, catalogStatus ? `${catalogStatus.profileCount} profiles • photo ref` : "Unavailable");
+    setText(ui.mapName, equipment.mapName || "—");
+    setText(ui.equipmentCount, `${equipment?.aggregates?.length || 0} spender • ${equipment?.objects?.length || 0} map objects`);
+    setText(ui.sensors, `${number(counts.sensors)} visible`);
+    setText(ui.coders, `${number(counts.coding)} visible`);
+    setText(ui.measuredPads, `${number(counts.measuredPads)}/${number(counts.pads)} measured`);
+    setText(ui.pitchRadius, formatMillimeters(geometry.machine?.physicalPitchRadiusMm, 3));
+    setText(ui.bottleDiameter, formatMillimeters(geometry.bottle?.effectiveDiameterMm, 2));
+    setText(ui.event, activity.eventId || "—");
+    setText(ui.motion, flags.executesRotation ? "Rotating" : flags.hold ? "Holding" : "Idle");
+    setText(ui.action, active?.action || "Waiting for Servo Program");
+    setText(ui.stageName, [activity.section, activity.stage].filter(Boolean).join(" / ") || "—");
   }
 
-  function applySnapshot(snapshot) { if (!snapshot?.scene || !snapshot?.carousel || !snapshot?.equipment || !snapshot?.labels) return; syncMachineGeometry(snapshot); rebuildHeads(snapshot); rebuildEquipment(snapshot); applyHeadLayout(snapshot); updateActivityHighlight(snapshot); const handlingViewport = global.Labeler3DBottleHandlingViewport; handlingViewport?.attach?.(scene); handlingViewport?.sync?.(snapshot); if (followHead) focusHead(snapshot); updateTelemetry(snapshot); }
+  function applySnapshot(snapshot) {
+    if (!snapshot?.scene || !snapshot?.carousel || !snapshot?.equipment || !snapshot?.labels) return;
+    rebuildEquipment(snapshot);
+    updateActivityHighlight(snapshot);
+    handlingViewport()?.sync?.(snapshot);
+    if (followHead) focusHead();
+    updateTelemetry(snapshot);
+  }
+
   function renderFrame(timestamp) {
     if (!viewportOpen || !renderer || !scene || !camera) return;
     try {
       const activeRuntime = runtime();
       if (!activeRuntime?.snapshot) throw new Error("3D scene runtime is unavailable.");
       lastSnapshot = activeRuntime.snapshot({
-        scene: { tableY: TABLE_Y, bottleLift: BOTTLE_LIFT, unitMode: "physical-mm-hardware-reference-v0.8" }
+        scene: { tableY: 0.20, bottleLift: 0.155, unitMode: "physical-mm-starwheel-only-v303" }
       });
       applySnapshot(lastSnapshot);
       global.Labeler3DPresentationFrameCoordinator?.frame?.({
@@ -269,11 +470,90 @@
     }
     animationFrame = global.requestAnimationFrame(renderFrame);
   }
-  async function openViewport() { installUi(); ui.backdrop.hidden = false; viewportOpen = true; viewportSingleton.open = true; try { await ensureThree(); if (!hardwareFactory()?.createEquipmentAssembly) throw new Error("3D hardware mesh factory is unavailable."); if (!renderer) createMachineScene(); resizeRenderer(); ui.error.hidden = true; if (animationFrame !== null) global.cancelAnimationFrame(animationFrame); animationFrame = global.requestAnimationFrame(renderFrame); } catch (error) { ui.error.hidden = false; ui.error.textContent = `Unable to start the 3D hardware renderer. ${error?.message || error}`; console.error("ServoForge 3D hardware renderer failed", error); } }
-  function closeViewport() { if (!ui) return; viewportOpen = false; viewportSingleton.open = false; ui.backdrop.hidden = true; if (animationFrame !== null) { global.cancelAnimationFrame(animationFrame); animationFrame = null; } }
-  function status() { return Object.freeze({ version: VIEWPORT_VERSION, threeVersion: THREE_VERSION, installed: Boolean(ui), engineReady: Boolean(THREE && renderer), open: viewportOpen, followHead, hardwareCatalog: hardwareCatalog()?.CATALOG_VERSION || null, hardwareFactory: hardwareFactory()?.FACTORY_VERSION || null, sensorsRendered: true, coderRendered: true, measuredWipePads: true, spenderPhotoReference: true, readOnly: true, sensorLogicUntouched: true, coderLogicUntouched: true, plannerPitchGeometryUntouched: true, source: "Labeler3DSceneRuntime.snapshot" }); }
-  function installWhenReady(attempt = 0) { if (!runtime()?.snapshot || !hardwareFactory()?.createEquipmentAssembly) { if (attempt < 160) global.setTimeout(() => installWhenReady(attempt + 1),25); return; } if (!installUi() && attempt < 160) { global.setTimeout(() => installWhenReady(attempt + 1),25); return; } global.Labeler3DViewport = Object.freeze({ VIEWPORT_VERSION, THREE_VERSION, open: openViewport, close: closeViewport, status, resetCamera: () => setCameraPreset("reset"), topCamera: () => setCameraPreset("top"), focusHead }); viewportSingleton.api = global.Labeler3DViewport; viewportSingleton.installing = false; viewportSingleton.installed = true; }
+
+  async function openViewport() {
+    installUi();
+    ui.backdrop.hidden = false;
+    viewportOpen = true;
+    viewportSingleton.open = true;
+    try {
+      await ensureThree();
+      if (!hardwareFactory()?.createEquipmentAssembly) throw new Error("3D hardware mesh factory is unavailable.");
+      if (!handlingViewport()?.attachScene) throw new Error("3D bottle-handling viewport is unavailable.");
+      if (!renderer) createMachineScene();
+      await handlingViewport().attachScene(scene);
+      resizeRenderer();
+      ui.error.hidden = true;
+      if (animationFrame !== null) global.cancelAnimationFrame(animationFrame);
+      animationFrame = global.requestAnimationFrame(renderFrame);
+    } catch (error) {
+      ui.error.hidden = false;
+      ui.error.textContent = `Unable to start the 3D bottle-handling renderer. ${error?.message || error}`;
+      console.error("ServoForge 3D bottle-handling renderer failed", error);
+    }
+  }
+
+  function closeViewport() {
+    if (!ui) return;
+    viewportOpen = false;
+    viewportSingleton.open = false;
+    ui.backdrop.hidden = true;
+    if (animationFrame !== null) {
+      global.cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+    }
+  }
+
+  function status() {
+    return Object.freeze({
+      version: VIEWPORT_VERSION,
+      threeVersion: THREE_VERSION,
+      installed: Boolean(ui),
+      engineReady: Boolean(THREE && renderer),
+      open: viewportOpen,
+      followHead,
+      sceneName: scene?.name || null,
+      sceneAuthority: "starwheel-bottle-handling-only",
+      legacyCarouselEnvironment: false,
+      genericCarouselConstructed: false,
+      handlingAttached: Boolean(handlingViewport()?.status?.().installed),
+      hardwareCatalog: hardwareCatalog()?.CATALOG_VERSION || null,
+      hardwareFactory: hardwareFactory()?.FACTORY_VERSION || null,
+      sensorsRendered: true,
+      coderRendered: true,
+      measuredWipePads: true,
+      spenderPhotoReference: true,
+      readOnly: true,
+      sensorLogicUntouched: true,
+      coderLogicUntouched: true,
+      plannerPitchGeometryUntouched: true,
+      source: "Labeler3DSceneRuntime.snapshot"
+    });
+  }
+
+  function installWhenReady(attempt = 0) {
+    if (!runtime()?.snapshot || !hardwareFactory()?.createEquipmentAssembly || !handlingViewport()?.attachScene) {
+      if (attempt < 160) global.setTimeout(() => installWhenReady(attempt + 1), 25);
+      return;
+    }
+    if (!installUi() && attempt < 160) {
+      global.setTimeout(() => installWhenReady(attempt + 1), 25);
+      return;
+    }
+    global.Labeler3DViewport = Object.freeze({
+      VIEWPORT_VERSION,
+      THREE_VERSION,
+      open: openViewport,
+      close: closeViewport,
+      status,
+      resetCamera: () => setCameraPreset("reset"),
+      topCamera: () => setCameraPreset("top"),
+      focusHead
+    });
+    viewportSingleton.api = global.Labeler3DViewport;
+    viewportSingleton.installing = false;
+    viewportSingleton.installed = true;
+  }
 
   installWhenReady();
 })(window);
-
