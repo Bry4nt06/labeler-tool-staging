@@ -187,6 +187,7 @@
     progress?.set(76.5, "Using canonical Cold Glue center-tack brush-channel planner and active map authority…");
     await loadScript("app/cold-glue-brush-visual-integration.js", `${version}-cold-glue-brush-v21`);
     await loadScript("app/cold-glue-brush-white-bristles-v22.js", `${version}-cold-glue-brush-white-v22`);
+    await loadScript("app/cold-glue-brush-bevel-back-panel-v23.js", `${version}-cold-glue-brush-bevel-panel-v23`);
 
     if (typeof initializeLabelerApp !== "function") {
       throw new Error("initializeLabelerApp is not loaded.");
