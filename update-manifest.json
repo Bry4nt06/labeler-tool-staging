@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-channel-clearance-v310-20260831-1148",
+  "buildId": "cold-glue-wipe-away-direction-v311-20260831-1222",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v310 keeps the validated v309 APL and 3D runtime unchanged while moving the default Cold Glue inside brush depth to -16 and holding bottle orientation after opposed brush contact until both brush sides have fully cleared. A trailing one-sided brush section no longer creates a new servo-turn window."
+  "notes": "v311 preserves the v310 inside-brush depth of -16 and corrects Cold Glue brush runout behavior. Opposed inside/outside brush contact holds the established bottle angle; when one brush ends first, the remaining one-sided brush rotates the bottle physically away from that brush for the label-length wipe until the wiped label is clear. The gripper/channel generator now delegates wipe direction to the canonical Cold Glue motion driver instead of using a hard-coded sign. APL and 3D runtime behavior are unchanged."
 }
