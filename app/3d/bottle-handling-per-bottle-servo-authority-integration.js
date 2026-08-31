@@ -17,6 +17,7 @@
   let correctedBottleCount = 0;
   let correctedFrameCount = 0;
   let lastServoAngles = [];
+  let replayFallbackCount = 0;
 
   const THREE_VERSION = "0.185.1";
   const THREE_MODULE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
@@ -55,7 +56,7 @@
       row?.plateEnd,
       row?.eventId,
       row?.processId
-    ].join(":" )).join("|");
+    ].join(":")).join("|");
   }
 
   function preparedReplay() {
@@ -76,19 +77,26 @@
   }
 
   function servoRotationForTableAngle(tableAngleDegrees, handling, snapshot) {
-    const prepared = preparedReplay();
-    if (!prepared?.frames?.length || !Number.isFinite(Number(tableAngleDegrees))) {
-      return number(snapshot?.scene?.bottle?.servoRotationY, 0);
-    }
+    const fallback = number(snapshot?.scene?.bottle?.servoRotationY, 0);
+    if (!Number.isFinite(Number(tableAngleDegrees))) return fallback;
 
-    const replayFrame = frameDriver.snapshotPrepared(prepared, Number(tableAngleDegrees));
-    const servoAngleUnwrapped = number(replayFrame?.container?.servoAngleUnwrapped, 0);
-    const direction = handling?.layout?.carouselDirection
-      || snapshot?.carousel?.carouselDirection
-      || appState()?.direction
-      || "ccw";
-    const servoMapRadians = servoAngleUnwrapped * Math.PI / 180 * directionSign(direction);
-    return sceneAdapter.mapRadiansToThreeRotationY(servoMapRadians);
+    try {
+      const prepared = preparedReplay();
+      if (!prepared?.frames?.length) return fallback;
+      const replayFrame = frameDriver.snapshotPrepared(prepared, Number(tableAngleDegrees));
+      const servoAngleUnwrapped = number(replayFrame?.container?.servoAngleUnwrapped, 0);
+      const direction = handling?.layout?.carouselDirection
+        || appState()?.direction
+        || "ccw";
+      const servoMapRadians = servoAngleUnwrapped * Math.PI / 180 * directionSign(direction);
+      return sceneAdapter.mapRadiansToThreeRotationY(servoMapRadians);
+    } catch (error) {
+      replayFallbackCount += 1;
+      if (replayFallbackCount <= 3) {
+        console.warn("ServoForge per-bottle servo replay fell back to the active shared servo angle.", error);
+      }
+      return fallback;
+    }
   }
 
   function handlingBottleGroups(layer) {
@@ -191,7 +199,11 @@
       return result;
     }
 
-    applyPerBottleServo(snapshot);
+    try {
+      applyPerBottleServo(snapshot);
+    } catch (error) {
+      console.warn("ServoForge per-bottle servo correction skipped one frame; base viewport remains active.", error);
+    }
     return result;
   }
 
@@ -206,6 +218,7 @@
       preparedProgramCached: Boolean(preparedProgram),
       correctedBottleCount,
       correctedFrameCount,
+      replayFallbackCount,
       lastServoAngles: Object.freeze([...lastServoAngles]),
       rendererUntouched: true,
       handlingGeometryUntouched: true,
