@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "bottle-orientation-live-sync-v302-20260821-1020";
-  const buildUpdatedAt = "Aug 21, 2026 10:20 AM ET";
+  const build = "starwheel-single-environment-v303-20260831-0715";
+  const buildUpdatedAt = "Aug 31, 2026 7:15 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -119,16 +119,6 @@
     "app/3d/models/coder.js",
     "app/3d/models/index.js",
     "app/3d/models/equipment-model-router-integration.js",
-    "app/3d/bottle-handling-measured-star-presentation-integration.js",
-    "app/3d/bottle-handling-photo-presentation-integration.js",
-    "app/3d/bottle-handling-pocket-phase-presentation-integration.js",
-    "app/3d/bottle-handling-pocket-clearance-label-restore-integration.js",
-    "app/3d/bottle-handling-progressive-label-authority-integration.js",
-    "app/3d/three-d-direction-parity-presentation-integration.js",
-    "app/3d/dashboard-top-view-parity-integration.js",
-    "app/3d/bottle-handling-unified-star-height-thickness-integration.js",
-    "app/3d/bottle-handling-rounded-pocket-inner-hub-integration.js",
-    "app/3d/bottle-handling-visible-inner-hub-integration.js",
     "app/3d/viewport-ui-controls-integration.js",
     "app/3d/scene-runtime.js",
     "app/animation-runtime.js",
