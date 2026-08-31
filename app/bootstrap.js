@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "starwheel-single-environment-v303-20260831-0715";
-  const buildUpdatedAt = "Aug 31, 2026 7:15 AM ET";
+  const build = "bottle-table-orientation-parity-v304-20260831-0748";
+  const buildUpdatedAt = "Aug 31, 2026 7:48 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -105,6 +105,7 @@
     "app/3d/bottle-handling-carousel-table-center-integration.js",
     "app/3d/bottle-handling-transfer-synchronization-integration.js",
     "app/3d/bottle-handling-viewport-integration.js",
+    "app/3d/bottle-table-orientation-correction-integration.js",
     "app/3d/bottle-label-coder-visual-polish-integration.js",
     "app/3d/presentation-frame-coordinator.js",
     "app/3d/bottle-handling-progressive-label-flow-integration.js",
