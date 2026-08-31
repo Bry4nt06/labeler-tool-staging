@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-station-topology-v314-20260831-1456",
+  "buildId": "cold-glue-slot-stack-guard-v315-20260831-1612",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v314 fixes Cold Glue station topology ownership in Map Builder. Station and aggregate toggles now converge on the canonical machine-slot service before any brush edit, so enabling a sparse Cold Glue station remains enabled when a brush is added. The duplicate layout-level slot mutation is retired, Cold Glue station toggles cannot invoke APL station seeding, and the final-active-slot guard is preserved. Existing v311 Cold Glue brush wipe direction, the -16 inside-brush depth, APL behavior, and 3D runtime behavior are unchanged."
+  "notes": "v315 fixes the Cold Glue Map Builder stack overflow exposed by sparse Aggregate/Station 1/3/5 layouts. Machine-slot changes now run as one guarded structural transaction instead of a full runtime reload followed by a second refresh, and the operator-selected Cold Glue topology is preserved through legacy gripper-sequence profile normalization. Aggregate/Station 3 and 5 can remain explicitly enabled before their brush objects are added. Existing brush exit-clearance behavior, the -16 inside-brush depth, APL behavior, and 3D runtime behavior are unchanged."
 }
