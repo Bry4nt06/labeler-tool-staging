@@ -1,7 +1,7 @@
 (function installServoForge3DLabelMeshFactory(global) {
   "use strict";
 
-  const FACTORY_VERSION = "servoforge.3d-label-mesh.v1";
+  const FACTORY_VERSION = "servoforge.3d-label-mesh.v2";
   const assetCaches = new WeakMap();
 
   function cachesFor(THREE) {
@@ -62,7 +62,8 @@
       number(section?.centerAngleDegrees),
       radialOffset,
       number(geometry?.bottle?.radiusWorld),
-      profile.map((point) => [number(point?.radius), number(point?.y)])
+      profile.map((point) => [number(point?.radius), number(point?.y)]),
+      "outside-view-u-reversed-v2"
     ]);
     const cache = cachesFor(THREE).geometries;
     if (cache.has(cacheKey)) return cache.get(cacheKey);
@@ -85,12 +86,14 @@
       for (let xIndex = 0; xIndex < angularSegments; xIndex += 1) {
         const u0 = xIndex / angularSegments;
         const u1 = (xIndex + 1) / angularSegments;
+        const textureU0 = 1 - u0;
+        const textureU1 = 1 - u1;
         const a = vertex(u0, v0);
         const b = vertex(u1, v0);
         const c = vertex(u1, v1);
         const d = vertex(u0, v1);
-        pushTriangle(positions, uvs, a, b, c, [u0, v0], [u1, v0], [u1, v1]);
-        pushTriangle(positions, uvs, a, c, d, [u0, v0], [u1, v1], [u0, v1]);
+        pushTriangle(positions, uvs, a, b, c, [textureU0, v0], [textureU1, v0], [textureU1, v1]);
+        pushTriangle(positions, uvs, a, c, d, [textureU0, v0], [textureU1, v1], [textureU0, v1]);
       }
     }
 
@@ -100,7 +103,11 @@
     meshGeometry.computeVertexNormals();
     meshGeometry.computeBoundingBox();
     meshGeometry.computeBoundingSphere();
-    meshGeometry.userData = { ...(meshGeometry.userData || {}), servoforgeSharedLabelAsset: true };
+    meshGeometry.userData = {
+      ...(meshGeometry.userData || {}),
+      servoforgeSharedLabelAsset: true,
+      artworkOrientationAuthority: "outside-view-readable-u-reversed"
+    };
     cache.set(cacheKey, meshGeometry);
     return meshGeometry;
   }
@@ -184,7 +191,8 @@
       wrapAuthority: section.wrapAuthority,
       heightAuthority: Boolean(section.heightAuthority),
       verticalPlacementAuthority: Boolean(section.verticalPlacementAuthority),
-      artworkAuthority: false
+      artworkAuthority: false,
+      artworkOrientationAuthority: "outside-view-readable-u-reversed"
     });
     return mesh;
   }
@@ -203,6 +211,7 @@
     group.userData.labelMeshes = meshes;
     group.userData.brand = labelContract.brand;
     group.userData.artworkAuthority = false;
+    group.userData.artworkOrientationAuthority = "outside-view-readable-u-reversed";
     return group;
   }
 
@@ -224,4 +233,3 @@
     createBottleLabels
   });
 })(window);
-
