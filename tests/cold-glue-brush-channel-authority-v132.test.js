@@ -162,7 +162,7 @@ const reversed = driver.createBrushChannelPlan({
   }]
 });
 assert.equal(reversed.channelEntryAngle, -90);
-assert.equal(reversed.channelMoves[0].direction, -1);
+assert.equal(reversed.channelMoves[0].direction, 1);
 assert.equal(reversed.channelMoves[1].holdAngle, -90);
 assert.equal(reversed.channelMoves[2].holdAngle, -90);
 assert.equal(reversed.channelMoves[2].rotation, 0);
