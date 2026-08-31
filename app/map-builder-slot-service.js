@@ -3,6 +3,8 @@
 (function installMapBuilderSlotService(global) {
   if (global.LabelerMapBuilderSlotService?.installed) return;
 
+  let mutationActive = false;
+
   function slotConfiguration(kind) {
     if (kind === "aggregate") {
       return {
@@ -28,64 +30,112 @@
     status.classList?.remove?.("status-bad");
   }
 
+  function normalizedSlots(machineMap, configuration) {
+    return global.normalizeEnabledSlots(
+      machineMap[configuration.enabledKey],
+      machineMap[configuration.countKey]
+    );
+  }
+
+  function mirrorColdGlueTopology(machineMap) {
+    if (machineMap?.applicationMode !== "cold-glue" || !global.state) return;
+    const existing = global.state.coldGlueAggregateSettings
+      && typeof global.state.coldGlueAggregateSettings === "object"
+      ? global.state.coldGlueAggregateSettings
+      : {};
+    const enabledAggregates = global.normalizeEnabledSlots(
+      machineMap.enabledAggregates,
+      machineMap.aggregateCount
+    );
+    const enabledStations = global.normalizeEnabledSlots(
+      machineMap.enabledStations,
+      machineMap.stationCount
+    );
+    global.state.coldGlueAggregateSettings = {
+      ...existing,
+      machineSettings: { ...(machineMap.machineSettings || existing.machineSettings || {}) },
+      aggregateAngles: { ...(machineMap.aggregateAngles || existing.aggregateAngles || {}) },
+      stationAngles: { ...(machineMap.stationAngles || existing.stationAngles || {}) },
+      enabledAggregates: [...enabledAggregates],
+      enabledStations: [...enabledStations]
+    };
+  }
+
   function setEnabled(kind, slotNumber, enabled) {
     const configuration = slotConfiguration(String(kind || ""));
     const slot = Math.round(Number(slotNumber));
     const machineMap = global.editableMachineMap?.();
     if (!configuration || !machineMap || slot < 1 || slot > 6) return false;
 
-    const slots = global.normalizeEnabledSlots(
-      machineMap[configuration.enabledKey],
-      machineMap[configuration.countKey]
-    );
+    const slots = normalizedSlots(machineMap, configuration);
     const nextEnabled = Boolean(enabled);
     const index = slot - 1;
 
     if (slots[index] === nextEnabled) return true;
 
     // Every machine map must retain at least one aggregate and one station.
-    // If the user tries to remove the final active slot, restore the checkbox
-    // through the normal Map Builder rerender instead of allowing an invalid map.
     if (!nextEnabled && slots[index] && slots.filter(Boolean).length <= 1) {
       setStatus(`At least one ${configuration.label.toLowerCase()} must remain active.`);
       global.renderWipeDownBuilder?.();
       return false;
     }
 
-    global.recordBuilderHistory?.(`${nextEnabled ? "Enable" : "Disable"} ${configuration.label} ${slot}`);
-    slots[index] = nextEnabled;
-    machineMap[configuration.enabledKey] = slots;
-    machineMap[configuration.countKey] = slots.filter(Boolean).length;
+    // A structural rerender can touch the same checkbox path while this change
+    // is still being committed. Treat that as the same transaction instead of
+    // entering the slot mutation stack again.
+    if (mutationActive) return false;
+    mutationActive = true;
 
-    if (kind === "aggregate") {
-      machineMap.aggregateAngles = global.normalizeAggregateAngles?.(
-        machineMap.aggregateAngles,
-        machineMap.applicationMode,
-        machineMap.objects || []
-      ) || machineMap.aggregateAngles;
-      machineMap.spenderPlateAngles = global.normalizeSpenderPlateAngles?.(
-        machineMap.spenderPlateAngles
-      ) || machineMap.spenderPlateAngles;
+    try {
+      global.recordBuilderHistory?.(`${nextEnabled ? "Enable" : "Disable"} ${configuration.label} ${slot}`);
+      slots[index] = nextEnabled;
+      machineMap[configuration.enabledKey] = slots;
+      machineMap[configuration.countKey] = slots.filter(Boolean).length;
+      machineMap.localStructuralMapOverride = true;
+
+      if (kind === "aggregate") {
+        machineMap.aggregateAngles = global.normalizeAggregateAngles?.(
+          machineMap.aggregateAngles,
+          machineMap.applicationMode,
+          machineMap.objects || []
+        ) || machineMap.aggregateAngles;
+        machineMap.spenderPlateAngles = global.normalizeSpenderPlateAngles?.(
+          machineMap.spenderPlateAngles
+        ) || machineMap.spenderPlateAngles;
+      }
+
+      if (kind === "station" && nextEnabled && machineMap.applicationMode === "apl") {
+        global.ensureAplObjectsForNewStations?.(machineMap);
+      }
+
+      // Topology is the only runtime datum changed by this control. Do not run a
+      // complete loadMachineMapIntoRuntime() and then immediately run the full
+      // structural refresh again. Mirroring the Cold Glue topology here gives
+      // the profile generator the new slots while keeping this one transaction.
+      mirrorColdGlueTopology(machineMap);
+      global.refreshAfterBuilderEdit?.({ persist: true, structural: true });
+
+      // A legacy Cold Glue normalizer may inspect map objects while the profile
+      // is being regenerated. Re-assert the explicit operator-selected topology
+      // after generation so it cannot silently collapse sparse 1/3/5 layouts.
+      machineMap[configuration.enabledKey] = slots;
+      machineMap[configuration.countKey] = slots.filter(Boolean).length;
+      mirrorColdGlueTopology(machineMap);
+
+      global.renderWipeDownBuilder?.();
+      setStatus(`${configuration.label} ${slot} ${nextEnabled ? "enabled" : "disabled"}.`);
+      return true;
+    } finally {
+      mutationActive = false;
     }
-
-    if (kind === "station" && nextEnabled && machineMap.applicationMode === "apl") {
-      global.ensureAplObjectsForNewStations?.(machineMap);
-    }
-
-    // Reload the edited map into runtime before regeneration so Cold Glue's
-    // aggregate settings mirror and all downstream planners see the new slot
-    // immediately, not on the next page load.
-    global.loadMachineMapIntoRuntime?.(machineMap, false);
-    global.refreshAfterBuilderEdit?.({ persist: true, structural: true });
-    global.renderWipeDownBuilder?.();
-    setStatus(`${configuration.label} ${slot} ${nextEnabled ? "enabled" : "disabled"}.`);
-    return true;
   }
 
   global.LabelerMapBuilderSlotService = Object.freeze({
     installed: true,
-    version: 1,
+    version: 2,
     setEnabled,
-    machineSlotAuthorityV135: true
+    mirrorColdGlueTopology,
+    machineSlotAuthorityV135: true,
+    sparseSlotTransactionGuardV315: true
   });
 })(typeof window !== "undefined" ? window : globalThis);
