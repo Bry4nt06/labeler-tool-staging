@@ -9,7 +9,6 @@
   link.href = "./mobile.css?v=mobile-20260807-1";
   document.head.appendChild(link);
 })();
-
 (function optimizeMobileNumberInputs() {
   const applyInputModes = () => {
     document.querySelectorAll('input[type="number"]').forEach((input) => {
@@ -209,4 +208,3 @@
     else console.error("ServoForge startup is unavailable.", error);
   }
 })();
-

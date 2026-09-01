@@ -137,4 +137,3 @@ assert.equal(lateContext.LabelerWipeComponentVisualRenderer.innerPadLongEdgeInsi
 assert.equal(lateContext.renderMapCalls, 1, "The map rerenders immediately after the corrected inside-pad renderer is installed.");
 
 console.log("Compact layout, default settings, bottle center, and wipe orientation regression passed.");
-

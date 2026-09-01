@@ -62,4 +62,3 @@ assert.deepEqual(
 assert.equal(context.window.els, context.els, "Modular controllers must see the same binding registry as legacy renderers.");
 
 console.log("Startup DOM binding guard regression passed.");
-
