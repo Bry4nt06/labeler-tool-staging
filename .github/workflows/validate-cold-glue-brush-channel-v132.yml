@@ -5,8 +5,16 @@ on:
     branches: [main]
     paths:
       - "drivers/mechanical/cold-glue-motion-driver.js"
+      - "drivers/geometry/label-geometry-driver.js"
       - "app/cold-glue-profile-generation.js"
       - "app/cold-glue-gripper-channel-integration.js"
+      - "app/build-inputs-renderer.js"
+      - "app/controllers/build-inputs-controller.js"
+      - "app/controllers/setup-event-controller-integration.js"
+      - "app/label-specification-service.js"
+      - "app/persistence.js"
+      - "app/program-summary-service.js"
+      - "app/validation.js"
       - "app/defaults.js"
       - "app/map-schema-adapter-integration.js"
       - "config/default-programs/*.json"
@@ -15,6 +23,11 @@ on:
       - "app.js"
       - "service-worker.js"
       - "tests/cold-glue-brush-channel-authority-v132.test.js"
+      - "tests/cold-glue-neck-wrap-policy.test.js"
+      - "tests/neck-wrap-geometry.test.js"
+      - "tests/neck-wrap-build-input-controller.test.js"
+      - "tests/neck-wrap-build-input-renderer.test.js"
+      - "tests/neck-wrap-ui-and-profile.test.js"
       - "tests/cold-glue-default-brush-depth.test.js"
       - "tests/map-schema-adapter.test.js"
       - "tests/profile-generation-module-boundaries.test.js"
@@ -24,8 +37,16 @@ on:
     branches: [main]
     paths:
       - "drivers/mechanical/cold-glue-motion-driver.js"
+      - "drivers/geometry/label-geometry-driver.js"
       - "app/cold-glue-profile-generation.js"
       - "app/cold-glue-gripper-channel-integration.js"
+      - "app/build-inputs-renderer.js"
+      - "app/controllers/build-inputs-controller.js"
+      - "app/controllers/setup-event-controller-integration.js"
+      - "app/label-specification-service.js"
+      - "app/persistence.js"
+      - "app/program-summary-service.js"
+      - "app/validation.js"
       - "app/defaults.js"
       - "app/map-schema-adapter-integration.js"
       - "config/default-programs/*.json"
@@ -34,6 +55,11 @@ on:
       - "app.js"
       - "service-worker.js"
       - "tests/cold-glue-brush-channel-authority-v132.test.js"
+      - "tests/cold-glue-neck-wrap-policy.test.js"
+      - "tests/neck-wrap-geometry.test.js"
+      - "tests/neck-wrap-build-input-controller.test.js"
+      - "tests/neck-wrap-build-input-renderer.test.js"
+      - "tests/neck-wrap-ui-and-profile.test.js"
       - "tests/cold-glue-default-brush-depth.test.js"
       - "tests/map-schema-adapter.test.js"
       - "tests/profile-generation-module-boundaries.test.js"
@@ -61,8 +87,16 @@ jobs:
         run: |
           set -euo pipefail
           node --check drivers/mechanical/cold-glue-motion-driver.js
+          node --check drivers/geometry/label-geometry-driver.js
           node --check app/cold-glue-profile-generation.js
           node --check app/cold-glue-gripper-channel-integration.js
+          node --check app/build-inputs-renderer.js
+          node --check app/controllers/build-inputs-controller.js
+          node --check app/controllers/setup-event-controller-integration.js
+          node --check app/label-specification-service.js
+          node --check app/persistence.js
+          node --check app/program-summary-service.js
+          node --check app/validation.js
           node --check app/defaults.js
           node --check app/map-schema-adapter-integration.js
           node --check app/profile-generation.js
@@ -74,6 +108,11 @@ jobs:
         run: |
           set -euo pipefail
           node tests/cold-glue-brush-channel-authority-v132.test.js
+          node tests/cold-glue-neck-wrap-policy.test.js
+          node tests/neck-wrap-geometry.test.js
+          node tests/neck-wrap-build-input-controller.test.js
+          node tests/neck-wrap-build-input-renderer.test.js
+          node tests/neck-wrap-ui-and-profile.test.js
           node tests/cold-glue-default-brush-depth.test.js
           node tests/map-schema-adapter.test.js
           node tests/assembly-drivers.test.js
