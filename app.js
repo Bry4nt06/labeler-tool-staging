@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "map-drag-cold-glue-overwipe-v318-20260831-2230";
+  const build = window.ServoForgeBootstrapBuild || "rpc-program-community-v319-20260901-1003";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

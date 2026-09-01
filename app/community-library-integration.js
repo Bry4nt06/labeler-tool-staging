@@ -19,6 +19,7 @@
 
   let activePreview = null;
   let browseItems = [];
+  let pendingRpcProgramId = "";
 
   function runtimeState() {
     try { return typeof state !== "undefined" ? state : global.state; }
@@ -101,6 +102,13 @@
     return source?.labelSpecs?.find?.((row) => String(row?.brand || "") === String(source?.selectedBrand || "")) || null;
   }
 
+  function selectedRpcProgram(id = "") {
+    const source = runtimeState();
+    const programs = Array.isArray(source?.servoProfileLibrary) ? source.servoProfileLibrary : [];
+    const selectedId = String(id || pendingRpcProgramId || document.getElementById("communityRpcProgram")?.value || source?.activeServoProfileId || "");
+    return programs.find((entry) => entry.id === selectedId) || programs[0] || null;
+  }
+
   function validationSummary() {
     const panel = document.querySelector("#validation, .validation, .validation-panel");
     const text = String(panel?.textContent || "").replace(/\s+/g, " ").trim().slice(0, 800);
@@ -132,6 +140,18 @@
       if (!brand) throw new Error("Select a Brand before uploading.");
       return { payload: { brand: deepClone(brand) }, name: brand.brand || "Community Brand", map, bottle, brand };
     }
+    if (type === "rpc_program") {
+      const rpcProgram = selectedRpcProgram();
+      if (!rpcProgram) throw new Error("Save or select an RPC program before uploading.");
+      return {
+        payload: { rpcProgram: deepClone(rpcProgram) },
+        name: rpcProgram.name || "Community RPC Program",
+        map,
+        bottle,
+        brand,
+        rpcProgram
+      };
+    }
     if (!map || !bottle || !brand) throw new Error("A complete setup requires the current Map, Bottle, and Brand.");
     return {
       payload: { map: deepClone(map), bottle: deepClone(bottle), brand: deepClone(brand) },
@@ -147,7 +167,7 @@
   }
 
   function typeLabel(type) {
-    return ({ map: "Machine Map", bottle: "Bottle", brand: "Brand / Label", bundle: "Complete Setup" })[type] || type;
+    return ({ map: "Machine Map", bottle: "Bottle", brand: "Brand / Label", bundle: "Complete Setup", rpc_program: "RPC Program" })[type] || type;
   }
 
   function stars(value, editable = false, packageId = "") {
@@ -219,18 +239,19 @@
       dialog.className = "sf-community-dialog";
       dialog.innerHTML = `
         <div class="sf-community-shell">
-          <header class="sf-community-head"><div><h2>ServoForge Community Library</h2><p>Share approved maps, bottles, brands, and complete setup packages. No account required.</p></div><button type="button" class="sf-community-close" data-community-close>Close</button></header>
+          <header class="sf-community-head"><div><h2>ServoForge Community Library</h2><p>Share approved maps, bottles, brands, RPC programs, and complete setup packages. No account required.</p></div><button type="button" class="sf-community-close" data-community-close>Close</button></header>
           <nav class="sf-community-tabs" aria-label="Community Library sections"><button type="button" class="active" data-community-tab="browse">Browse</button><button type="button" data-community-tab="upload">Upload</button><button type="button" data-community-tab="mine">My Uploads</button><button type="button" data-community-tab="admin">Community Admin</button></nav>
           <div class="sf-community-body">
             <section class="sf-community-pane" data-community-pane="browse">
-              <div class="sf-community-toolbar"><input id="communitySearch" type="search" placeholder="Search maps, brands, bottles, machine types…" /><select id="communityTypeFilter"><option value="">All package types</option><option value="bundle">Complete Setups</option><option value="map">Machine Maps</option><option value="bottle">Bottles</option><option value="brand">Brands / Labels</option></select><button id="communityRefresh" type="button">Refresh</button></div>
+              <div class="sf-community-toolbar"><input id="communitySearch" type="search" placeholder="Search maps, brands, bottles, machine types…" /><select id="communityTypeFilter"><option value="">All package types</option><option value="bundle">Complete Setups</option><option value="map">Machine Maps</option><option value="bottle">Bottles</option><option value="brand">Brands / Labels</option><option value="rpc_program">RPC Programs</option></select><button id="communityRefresh" type="button">Refresh</button></div>
               <div id="communityBrowseList" class="sf-community-list"><div class="sf-community-empty">Loading Community Library…</div></div>
               <div id="communityPreviewHost"></div>
             </section>
             <section class="sf-community-pane" data-community-pane="upload" hidden>
               <form id="communityUploadForm">
                 <div class="sf-community-grid">
-                  <label class="sf-community-field"><span>Package type</span><select name="type"><option value="bundle">Complete Setup — Map + Bottle + Brand</option><option value="map">Machine Map</option><option value="bottle">Bottle</option><option value="brand">Brand / Label</option></select></label>
+                  <label class="sf-community-field"><span>Package type</span><select name="type"><option value="bundle">Complete Setup — Map + Bottle + Brand</option><option value="map">Machine Map</option><option value="bottle">Bottle</option><option value="brand">Brand / Label</option><option value="rpc_program">RPC Program</option></select></label>
+                  <label id="communityRpcProgramField" class="sf-community-field" hidden><span>Saved RPC program</span><select id="communityRpcProgram" name="rpcProgramId"></select></label>
                   <label class="sf-community-field"><span>Display name <small>(optional)</small></span><input name="authorName" maxlength="60" placeholder="Anonymous" /></label>
                   <label class="sf-community-field full"><span>Listing name</span><input name="name" maxlength="160" required /></label>
                   <label class="sf-community-field full"><span>Description</span><textarea name="description" maxlength="600" placeholder="Describe where this setup is used, machine/application notes, or anything another user should know."></textarea></label>
@@ -302,10 +323,24 @@
     const form = document.getElementById("communityUploadForm");
     const host = document.getElementById("communityUploadSummary");
     if (!form || !host) return;
+    const rpcField = document.getElementById("communityRpcProgramField");
+    const rpcSelect = document.getElementById("communityRpcProgram");
+    const rpcMode = form.elements.type.value === "rpc_program";
+    if (rpcField) rpcField.hidden = !rpcMode;
+    if (rpcSelect && rpcMode) {
+      const programs = Array.isArray(runtimeState()?.servoProfileLibrary) ? runtimeState().servoProfileLibrary : [];
+      const requested = pendingRpcProgramId || rpcSelect.value || runtimeState()?.activeServoProfileId || "";
+      rpcSelect.innerHTML = programs.length
+        ? programs.map((entry) => `<option value="${esc(entry.id)}"${entry.id === requested ? " selected" : ""}>${esc(entry.name)}</option>`).join("")
+        : '<option value="">No saved RPC programs</option>';
+      pendingRpcProgramId = rpcSelect.value || "";
+    }
     try {
       const current = currentPackage(form.elements.type.value);
       if (!form.elements.name.value.trim()) form.elements.name.value = current.name;
-      host.innerHTML = `<strong>${esc(typeLabel(form.elements.type.value))}</strong><div class="sf-community-meta">Map: ${esc(current.map?.name || "—")} • Bottle: ${esc(current.bottle?.bottleType || "—")} • Brand: ${esc(current.brand?.brand || "—")}</div>`;
+      host.innerHTML = rpcMode
+        ? `<strong>RPC Program</strong><div class="sf-community-meta">Program: ${esc(current.rpcProgram?.name || "—")} • Map: ${esc(current.rpcProgram?.mapName || current.map?.name || "—")} • Brand: ${esc(current.rpcProgram?.brand || current.brand?.brand || "—")} • Bottle: ${esc(current.rpcProgram?.bottleType || current.bottle?.bottleType || "—")}</div>`
+        : `<strong>${esc(typeLabel(form.elements.type.value))}</strong><div class="sf-community-meta">Map: ${esc(current.map?.name || "—")} • Bottle: ${esc(current.bottle?.bottleType || "—")} • Brand: ${esc(current.brand?.brand || "—")}</div>`;
     } catch (error) { host.innerHTML = `<div class="notice bad">${esc(error.message)}</div>`; }
   }
 
@@ -324,8 +359,8 @@
         authorName: form.elements.authorName.value,
         machineType: current.map?.machineType || source?.machineType || "",
         application: current.map?.applicationMode || source?.applicationMode || "",
-        brandName: current.brand?.brand || "",
-        bottleName: current.bottle?.bottleType || "",
+        brandName: current.rpcProgram?.brand || current.brand?.brand || "",
+        bottleName: current.rpcProgram?.bottleType || current.bottle?.bottleType || "",
         schemaVersion: 1,
         servoforgeVersion: String(global.SERVOFORGE_RELEASE_VERSION || document.querySelector('meta[name="application-version"]')?.content || ""),
         configPayload: sanitize(current.payload),
@@ -355,12 +390,13 @@
     if (payload.map?.name && source?.mapLibrary?.some?.((row) => row.name === payload.map.name)) conflicts.push(`Map: ${payload.map.name}`);
     if (payload.bottle?.bottleType && source?.bottleSpecs?.some?.((row) => row.bottleType === payload.bottle.bottleType)) conflicts.push(`Bottle: ${payload.bottle.bottleType}`);
     if (payload.brand?.brand && source?.labelSpecs?.some?.((row) => row.brand === payload.brand.brand)) conflicts.push(`Brand: ${payload.brand.brand}`);
+    if (payload.rpcProgram?.name && source?.servoProfileLibrary?.some?.((row) => row.name === payload.rpcProgram.name)) conflicts.push(`RPC Program: ${payload.rpcProgram.name}`);
     return conflicts;
   }
 
   function previewHtml(pkg) {
     const conflicts = conflictsFor(pkg);
-    return `<section class="sf-community-preview" data-community-preview-id="${esc(pkg.id)}"><h3>Import Preview · ${esc(pkg.name)}</h3><div class="sf-community-meta">${esc(metadata(pkg))}</div><p>This package will add ${pkg.type === "bundle" ? "a Map, Bottle, and Brand" : `a ${typeLabel(pkg.type)}`} to this browser's local ServoForge workspace.</p>${conflicts.length ? `<strong>Name conflicts detected:</strong><ul class="sf-community-conflicts">${conflicts.map((item) => `<li>${esc(item)}</li>`).join("")}</ul><p class="sf-community-note">Add as New automatically creates unique names. Replace Existing overwrites only matching Map/Bottle/Brand records.</p>` : `<p class="sf-community-note">No matching local configuration names were found.</p>`}<div class="sf-community-import-actions"><button type="button" data-community-import="add">Add as New</button><button type="button" data-community-import="replace" class="secondary-button">Replace Existing</button><button type="button" data-community-import="cancel" class="secondary-button">Cancel</button></div></section>`;
+    return `<section class="sf-community-preview" data-community-preview-id="${esc(pkg.id)}"><h3>Import Preview · ${esc(pkg.name)}</h3><div class="sf-community-meta">${esc(metadata(pkg))}</div><p>This package will add ${pkg.type === "bundle" ? "a Map, Bottle, and Brand" : `a ${typeLabel(pkg.type)}`} to this browser's local ServoForge workspace.</p>${conflicts.length ? `<strong>Name conflicts detected:</strong><ul class="sf-community-conflicts">${conflicts.map((item) => `<li>${esc(item)}</li>`).join("")}</ul><p class="sf-community-note">Add as New automatically creates unique names. Replace Existing overwrites only matching Map/Bottle/Brand/RPC Program records.</p>` : `<p class="sf-community-note">No matching local configuration names were found.</p>`}<div class="sf-community-import-actions"><button type="button" data-community-import="add">Add as New</button><button type="button" data-community-import="replace" class="secondary-button">Replace Existing</button><button type="button" data-community-import="cancel" class="secondary-button">Cancel</button></div></section>`;
   }
 
   async function previewPackage(id) {
@@ -405,6 +441,25 @@
     source.mapLibrary = Array.isArray(source.mapLibrary) ? source.mapLibrary : [];
     source.bottleSpecs = Array.isArray(source.bottleSpecs) ? source.bottleSpecs : [];
     source.labelSpecs = Array.isArray(source.labelSpecs) ? source.labelSpecs : [];
+    source.servoProfileLibrary = Array.isArray(source.servoProfileLibrary) ? source.servoProfileLibrary : [];
+
+    if (payload.rpcProgram) {
+      const incoming = sanitize(payload.rpcProgram);
+      const requestedName = String(incoming.name || pkg.name || "Community RPC Program");
+      const index = source.servoProfileLibrary.findIndex((row) => row.name === requestedName);
+      if (mode === "replace" && index >= 0) {
+        incoming.id = source.servoProfileLibrary[index].id;
+        incoming.name = requestedName;
+        source.servoProfileLibrary[index] = incoming;
+        source.activeServoProfileId = incoming.id;
+      } else {
+        incoming.name = uniqueName(requestedName, source.servoProfileLibrary.map((row) => row.name));
+        incoming.id = `rpc-community-${global.crypto?.randomUUID?.() || Date.now()}`;
+        incoming.savedAt = new Date().toISOString();
+        source.servoProfileLibrary.push(incoming);
+        source.activeServoProfileId = incoming.id;
+      }
+    }
 
     let importedBottleName = payload.bottle?.bottleType || "";
 
@@ -482,7 +537,9 @@
     const backup = {
       mapLibrary: deepClone(source.mapLibrary),
       bottleSpecs: deepClone(source.bottleSpecs),
-      labelSpecs: deepClone(source.labelSpecs)
+      labelSpecs: deepClone(source.labelSpecs),
+      servoProfileLibrary: deepClone(source.servoProfileLibrary),
+      activeServoProfileId: source.activeServoProfileId
     };
 
     try {
@@ -491,6 +548,8 @@
       source.mapLibrary = backup.mapLibrary;
       source.bottleSpecs = backup.bottleSpecs;
       source.labelSpecs = backup.labelSpecs;
+      source.servoProfileLibrary = backup.servoProfileLibrary;
+      source.activeServoProfileId = backup.activeServoProfileId;
       throw error;
     }
 
@@ -602,11 +661,36 @@
     document.getElementById("communityRefresh")?.addEventListener("click", loadBrowse);
     document.getElementById("communitySearch")?.addEventListener("input", () => { clearTimeout(global.__sfCommunitySearchTimer); global.__sfCommunitySearchTimer = setTimeout(loadBrowse, 250); });
     document.getElementById("communityTypeFilter")?.addEventListener("change", loadBrowse);
-    document.getElementById("communityUploadForm")?.addEventListener("change", (event) => { if (event.target?.name === "type") { event.currentTarget.elements.name.value = ""; refreshUploadSummary(); } });
+    document.getElementById("communityUploadForm")?.addEventListener("change", (event) => {
+      if (event.target?.name === "type") {
+        pendingRpcProgramId = "";
+        event.currentTarget.elements.name.value = "";
+        refreshUploadSummary();
+      } else if (event.target?.name === "rpcProgramId") {
+        pendingRpcProgramId = event.target.value;
+        event.currentTarget.elements.name.value = "";
+        refreshUploadSummary();
+      }
+    });
     document.getElementById("communityUploadForm")?.addEventListener("submit", (event) => { event.preventDefault(); submitUpload(event.currentTarget); });
     document.getElementById("communityAdminUnlockButton")?.addEventListener("click", () => unlockAdmin(document.getElementById("communityAdminKey")?.value || ""));
     document.getElementById("communityAdminRefresh")?.addEventListener("click", refreshAdmin);
     document.getElementById("communityAdminFilter")?.addEventListener("change", refreshAdmin);
+
+    global.addEventListener?.("servoforge:rpc-program-saved", (event) => {
+      const profile = event?.detail?.profile;
+      if (!profile?.id) return;
+      pendingRpcProgramId = profile.id;
+      dialog.showModal();
+      switchPane("upload");
+      const form = document.getElementById("communityUploadForm");
+      if (form) {
+        form.elements.type.value = "rpc_program";
+        form.elements.name.value = profile.name || "";
+        form.elements.description.value = profile.description || "";
+      }
+      refreshUploadSummary();
+    });
 
     removeLegacySettingsActions();
   }
@@ -626,6 +710,7 @@
     importPackages,
     removeLegacySettingsActions,
     loadBrowse,
-    loadMine
+    loadMine,
+    selectedRpcProgram
   });
 })(typeof window !== "undefined" ? window : globalThis);
