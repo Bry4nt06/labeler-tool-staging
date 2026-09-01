@@ -104,7 +104,9 @@ function generatedColdGlueFixedProfile() {
     if (!wipe || !coldGlueDriver) return null;
     const common = {
       labelDeg: wipe.labelDeg,
-      overWipeDeg: wipe.overWipeDeg,
+      // neckOverWipeDeg is an APL pad setting. Cold Glue neck motion uses the
+      // physical label length plus the dedicated full-wrap seam-wipe setting.
+      overWipeDeg: section === "neck" ? 0 : wipe.overWipeDeg,
       maxRatio: state.maxMoveRatio,
       safetyFactor: 0.9,
       mapDirection,

@@ -176,14 +176,14 @@
     });
 
     const program = currentProgram();
-    const moveDistanceLayer = add("g", { "aria-label": "Active servo move distance overlay" });
+    const moveDistanceLayer = add("g", { "aria-label": "Active servo move distance overlay", "pointer-events": "none" });
     drawMoveDistanceOverlay(add, moveDistanceLayer, program);
-    const allMovesLayer = add("g", { "aria-label": "All servo program moves overlay" });
+    const allMovesLayer = add("g", { "aria-label": "All servo program moves overlay", "pointer-events": "none" });
     drawAllProgramMovesOverlay(add, allMovesLayer, program);
 
     const aggregateLayer = add("g", { "aria-label": "Enabled machine aggregates" });
     drawIndependentAggregates(add, aggregateLayer);
-    const aggregateSpacingLayer = add("g", { "aria-label": "Aggregate centerline table-distance overlay" });
+    const aggregateSpacingLayer = add("g", { "aria-label": "Aggregate centerline table-distance overlay", "pointer-events": "none" });
     drawAggregateSpacingOverlay(add, aggregateSpacingLayer);
 
     const configuredAssemblyLayer = add("g", { "aria-label": "Configured wipe-down assemblies" });
@@ -200,7 +200,7 @@
     add("text", { x: 0, y: -3, fill: "var(--map-text)", "font-size": centerAngleFontSize, "font-weight": 700, "text-anchor": "middle", "data-animation-center": "true" }, centerReadout).textContent = `${fmt(state.previewAngle, 1)} deg`;
     add("text", { x: 0, y: 15, fill: "var(--map-muted)", "font-size": 10, "text-anchor": "middle" }, centerReadout).textContent = "TABLE ANGLE";
 
-    const faultLayer = add("g", { "aria-label": "Servo move fault overlay" });
+    const faultLayer = add("g", { "aria-label": "Servo move fault overlay", "pointer-events": "none" });
     drawFaultOverlay(add, faultLayer, program);
     svg.dataset.animationSegment = String(activeSegmentForProgram(program, state.previewAngle)?.hmi ?? "none");
     renderLabelerMapReference();

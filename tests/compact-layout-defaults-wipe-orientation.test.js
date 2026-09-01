@@ -11,7 +11,7 @@ const bootstrapSource = fs.readFileSync(path.join(root, "app", "bootstrap.js"), 
 const companyDefaults = JSON.parse(fs.readFileSync(path.join(root, "config", "company-default-settings.json"), "utf8"));
 
 assert.doesNotThrow(() => new vm.Script(integrationSource, { filename: "compact-layout-defaults-wipe-orientation-integration.js" }));
-assert.match(bootstrapSource, /cold-glue-runtime-authority-v317-20260831-2210/);
+assert.match(bootstrapSource, /map-drag-cold-glue-overwipe-v318-20260831-2230/);
 assert.match(bootstrapSource, /app\/compact-layout-defaults-wipe-orientation-integration\.js/);
 assert.equal(companyDefaults.settings.themePreset, "servoforge");
 assert.equal(companyDefaults.settings.showAllProgramMovesOverlay, true);

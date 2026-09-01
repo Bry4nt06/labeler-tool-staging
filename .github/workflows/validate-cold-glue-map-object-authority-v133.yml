@@ -82,6 +82,7 @@ jobs:
         run: |
           set -euo pipefail
           node tests/cold-glue-map-object-authority-v133.test.js
+          node tests/map-object-drag-and-cold-glue-overwipe-v318.test.js
           node tests/map-builder-add-object-v134.test.js
           node tests/map-builder-machine-slot-v135.test.js
           node tests/cold-glue-slot-topology-guard-v315.test.js

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-runtime-authority-v317-20260831-2210",
+  "buildId": "map-drag-cold-glue-overwipe-v318-20260831-2230",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v317 fixes four Cold Glue staging authority defects. Equal-length inside/outside brush channels now hold the bottle at 90 degrees through both the channel entrance and exit so animation cannot interpolate away from the red centerline. Explicit Aggregate and Station Setup selections remain authoritative before objects are added and are no longer collapsed by gripper-sequence normalization. An enabled aggregate's mapped spender position is accepted as the application centerline reference, removing the false missing Gripper / Spender Plate warning. Build Inputs now lists all brands, while APL/Cold Glue catalog metadata no longer replaces or regenerates the active build recipe. The v316 full-neck-wrap overlap and seam-wipe policy remains active."
+  "notes": "v318 restores direct map selection and dragging for configured station objects. Diagnostic and program overlays no longer intercept pointer input, underlying station geometry is resolved through the SVG hit stack, and persisted numeric or text object IDs share one identity rule. Cold Glue neck motion now always ignores the APL-only Neck Over-Wipe input in both canonical and channel-adapter planning; dedicated full-wrap seam wipe remains independent. The v317 station, gripper, brand, and equal-channel corrections remain active."
 }

@@ -176,10 +176,24 @@
     return state.direction === "cw" ? normalize(180 + state.zeroAngle - raw) : normalize(raw - state.zeroAngle);
   }
 
+  function mapObjectNodeAtPointer(event) {
+    const direct = event.target?.closest?.("[data-map-object-id]");
+    if (direct && els.mapSvg?.contains(direct)) return direct;
+    const stacked = document.elementsFromPoint?.(event.clientX, event.clientY) || [];
+    return stacked
+      .map((node) => node?.closest?.("[data-map-object-id]"))
+      .find((node) => node && els.mapSvg?.contains(node)) || null;
+  }
+
+  function editableObjectById(objectId) {
+    const id = String(objectId || "");
+    return actions.call("editableMachineMap")?.objects?.find((entry) => String(entry?.id || "") === id) || null;
+  }
+
   function beginPointer(event) {
     const svg = els.mapSvg;
     if (!svg || !svg.contains(event.target) || event.button !== 0) return false;
-    const objectNode = event.target.closest?.("[data-map-object-id]");
+    const objectNode = mapObjectNodeAtPointer(event);
     const rotatorNode = event.target.closest?.("[data-map-rotator-handle]");
     if (rotatorNode) {
       drag = { kind: "rotator", pointerId: event.pointerId, moved: false };
@@ -190,7 +204,7 @@
     }
     if (objectNode && state.mapLocked === false) {
       const objectId = objectNode.dataset.mapObjectId;
-      const item = actions.call("editableMachineMap")?.objects?.find((entry) => entry.id === objectId);
+      const item = editableObjectById(objectId);
       if (!item) return false;
       actions.call("recordBuilderHistory", `Move ${item.name || "map object"}`);
       state.selectedMapObjectId = objectId;
@@ -232,7 +246,7 @@
     }
     if (drag.kind === "object") {
       const map = actions.call("editableMachineMap");
-      const item = map?.objects?.find((entry) => entry.id === drag.objectId);
+      const item = map?.objects?.find((entry) => String(entry?.id || "") === String(drag.objectId));
       if (!item) return false;
       const difference = global.signedAngleDifference || ((left, right) => left - right);
       const normalize = global.norm || ((value) => ((value % 360) + 360) % 360);
