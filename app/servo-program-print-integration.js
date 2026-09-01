@@ -66,8 +66,43 @@
     return sections;
   }
 
-  function programRows() {
-    const rows = Array.isArray(state?.program) ? state.program : [];
+  function activeSourceKind() {
+    return state?.activeTab === "simulation" ? "simulation" : "program";
+  }
+
+  function activeProfileSnapshot() {
+    const profiles = Array.isArray(state?.servoProfileLibrary) ? state.servoProfileLibrary : [];
+    return profiles.find((profile) => String(profile?.id) === String(state?.activeServoProfileId || "")) || null;
+  }
+
+  function comparableSimulation(value) {
+    if (!value || typeof value !== "object") return null;
+    const snapshot = JSON.parse(JSON.stringify(value));
+    delete snapshot.draftName;
+    delete snapshot.draftDescription;
+    return snapshot;
+  }
+
+  function profileMatchesCurrentSimulation(profile) {
+    if (!profile?.simulation || !state?.simulation) return false;
+    return JSON.stringify(comparableSimulation(profile.simulation))
+      === JSON.stringify(comparableSimulation(state.simulation));
+  }
+
+  function sourceRows(sourceKind = activeSourceKind()) {
+    if (sourceKind === "simulation") {
+      const rows = Array.isArray(state?.simulation?.lines) ? state.simulation.lines : [];
+      return rows.map((row, index) => ({
+        ...row,
+        hmi: Number.isFinite(Number(row?.hmi)) ? Number(row.hmi) : index + 1,
+        plc: Number.isFinite(Number(row?.plc)) ? Number(row.plc) : index
+      }));
+    }
+    return Array.isArray(state?.program) ? state.program : [];
+  }
+
+  function programRows(sourceKind = activeSourceKind()) {
+    const rows = sourceRows(sourceKind);
     try {
       if (typeof programSegments === "function") return programSegments(rows);
     } catch { }
@@ -85,11 +120,19 @@
     });
   }
 
-  function printModel() {
+  function printModel(sourceKind = activeSourceKind()) {
     const map = activeMapSnapshot();
     const label = selectedLabelSnapshot();
     const bottle = selectedBottleSnapshot();
-    const rows = programRows();
+    const rows = programRows(sourceKind);
+    const profile = sourceKind === "simulation" ? activeProfileSnapshot() : null;
+    const profileSaved = sourceKind === "simulation" && profileMatchesCurrentSimulation(profile);
+    const profileName = sourceKind === "simulation"
+      ? String(state?.simulation?.draftName || "").trim() || profile?.name || "Unsaved Draft"
+      : "";
+    const profileDescription = sourceKind === "simulation"
+      ? profile?.description || String(state?.simulation?.draftDescription || "").trim()
+      : "";
     const sections = activeLabelSections(label);
     const maxSpeed = rows.reduce((best, row) => Math.max(best, number(row?.absSpeed, 0)), 0);
     const speedFaults = rows.filter((row) => row?.moveFault === true).length;
@@ -97,6 +140,18 @@
     const application = state?.applicationMode || map?.applicationMode || label?.applicationMode || "";
 
     return {
+      sourceKind,
+      sheetTitle: sourceKind === "simulation" ? "Custom Simulation Profile" : "Servo Program Build Sheet",
+      sectionTitle: sourceKind === "simulation" ? "RPC Simulation Program" : "Servo Program",
+      sectionNote: sourceKind === "simulation"
+        ? `${profileSaved ? "Saved RPC program" : "Unsaved custom draft"} • HMI grouped in blocks of 8`
+        : "Generated program • HMI grouped in blocks of 8",
+      footerLabel: sourceKind === "simulation"
+        ? "Custom RPC simulation profile"
+        : "Generated servo program build sheet",
+      profileName,
+      profileDescription,
+      profileSaved,
       version: global.SERVOFORGE_RELEASE_VERSION || document.querySelector('meta[name="application-version"]')?.content || "—",
       build: global.ServoForgeBootstrapBuild || "—",
       buildUpdatedAt: global.SERVOFORGE_BUILD_UPDATED_AT || "—",
@@ -157,7 +212,15 @@
 
   function printHtml(model) {
     const parameters = model.parameters.map(([label, value]) => summaryItem(label, value)).join("");
+    const profileSummary = model.sourceKind === "simulation"
+      ? [
+          summaryItem("RPC Program", model.profileName, true),
+          summaryItem("Profile Source", model.profileSaved ? "Saved RPC Program" : "Unsaved Custom Draft", true),
+          ...(model.profileDescription ? [summaryItem("Description", model.profileDescription, true)] : [])
+        ]
+      : [];
     const summary = [
+      ...profileSummary,
       summaryItem("Bottle Type", model.bottleType),
       summaryItem("Brand / Label", model.brand, true),
       summaryItem("Spec #", model.specNumber),
@@ -177,7 +240,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ServoForge Servo Program — ${escapeHtml(model.brand)}</title>
+<title>ServoForge ${escapeHtml(model.sheetTitle)} — ${escapeHtml(model.brand)}</title>
 <style>
   :root { color-scheme:light; --ink:#14201d; --muted:#61706b; --line:#cfd9d5; --soft:#f3f7f5; --brand:#173f35; --brand2:#245e4f; --accent:#ef5b37; --ok:#138a57; --bad:#c63d45; }
   * { box-sizing:border-box; }
@@ -238,28 +301,31 @@
   <div class="screen-actions"><button class="close-now" onclick="window.close()">Close</button><button class="print-now" onclick="window.print()">Print Program</button></div>
   <main class="sheet">
     <header class="hero">
-      <div><div class="wordmark"><span>S</span> SERVOFORGE</div><h1>Servo Program Build Sheet</h1></div>
+      <div><div class="wordmark"><span>S</span> SERVOFORGE</div><h1>${escapeHtml(model.sheetTitle)}</h1></div>
       <div class="build"><strong>Version ${escapeHtml(model.version)} • ${escapeHtml(model.build)}</strong><div>Build updated ${escapeHtml(model.buildUpdatedAt)}</div><div>Generated ${escapeHtml(model.generatedAt)}</div></div>
     </header>
     <section class="summary">${summary}</section>
     <section class="program-section">
-      <div class="section-head"><h2>Servo Program</h2><small>Generated program • HMI grouped in blocks of 8</small></div>
+      <div class="section-head"><h2>${escapeHtml(model.sectionTitle)}</h2><small>${escapeHtml(model.sectionNote)}</small></div>
       <table>
         <thead><tr><th>HMI</th><th>CMD</th><th>Table Angle</th><th>Bottle Angle</th><th>Table Travel</th><th>Bottle Travel</th><th>Turn Speed</th><th>Status</th><th>Action</th></tr></thead>
         <tbody>${printRowsHtml(model.rows)}</tbody>
       </table>
     </section>
     <section class="parameters"><h2>Build Parameters</h2><div class="parameter-grid">${parameters}</div></section>
-    <footer class="footer"><span>ServoForge Labeler Tool • Generated servo program build sheet</span><span>${escapeHtml(model.bottleDiameter)} bottle target diameter</span></footer>
+    <footer class="footer"><span>ServoForge Labeler Tool • ${escapeHtml(model.footerLabel)}</span><span>${escapeHtml(model.bottleDiameter)} bottle target diameter</span></footer>
   </main>
 </body>
 </html>`;
   }
 
   function openPrintView() {
-    const model = printModel();
+    const sourceKind = activeSourceKind();
+    const model = printModel(sourceKind);
     if (!model.rows.length) {
-      global.alert?.("Build the Servo Program before printing.");
+      global.alert?.(sourceKind === "simulation"
+        ? "Create or load a custom simulation before printing."
+        : "Build the Servo Program before printing.");
       return false;
     }
 
@@ -312,16 +378,26 @@
     const button = document.getElementById(BUTTON_ID);
     if (!button) return;
     const programTab = document.querySelector('.tab[data-tab="program"]');
-    const active = programTab?.classList.contains("active") || state?.activeTab === "program";
+    const simulationTab = document.querySelector('.tab[data-tab="simulation"]');
+    const sourceKind = activeSourceKind();
+    const targetTab = sourceKind === "simulation" ? simulationTab : programTab;
+    const active = Boolean(targetTab?.classList.contains("active") || ["program", "simulation"].includes(state?.activeTab));
     button.hidden = !active;
-    button.disabled = !(Array.isArray(state?.program) && state.program.length);
+    button.disabled = !sourceRows(sourceKind).length;
+    button.title = sourceKind === "simulation" ? "Print Simulation Profile" : "Print Servo Program";
+    button.setAttribute("aria-label", sourceKind === "simulation" ? "Print Simulation Profile" : "Print Program");
+    if (active && targetTab?.nextElementSibling !== button) targetTab?.insertAdjacentElement("afterend", button);
   }
 
-  function observeProgramTab(programTab) {
+  function observeWorkspaceTabs(programTab) {
     tabObserver?.disconnect?.();
     if (typeof MutationObserver !== "function" || !programTab) return;
     tabObserver = new MutationObserver(syncButton);
-    tabObserver.observe(programTab, { attributes:true, attributeFilter:["class"] });
+    tabObserver.observe(programTab.parentElement || programTab, {
+      attributes:true,
+      subtree:true,
+      attributeFilter:["class"]
+    });
   }
 
   function installButton() {
@@ -339,7 +415,7 @@
     button.addEventListener("click", openPrintView);
     programTab.insertAdjacentElement("afterend", button);
 
-    observeProgramTab(programTab);
+    observeWorkspaceTabs(programTab);
     document.addEventListener("input", syncButton);
     document.addEventListener("change", syncButton);
     syncButton();
@@ -353,7 +429,9 @@
 
   global.LabelerServoProgramPrint = Object.freeze({
     installed:true,
-    version:4,
+    version:5,
+    activeSourceKind,
+    sourceRows,
     printModel,
     printHtml,
     printRowsHtml,

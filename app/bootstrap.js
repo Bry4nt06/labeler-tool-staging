@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "rpc-program-community-v319-20260901-1003";
-  const buildUpdatedAt = "Sep 1, 2026 10:03 AM ET";
+  const build = "simulation-draft-print-v320-20260901-1814";
+  const buildUpdatedAt = "Sep 1, 2026 6:14 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -27,7 +27,6 @@
     "app/controllers/settings-controller.js",
     "app/feedback-center-integration.js",
     "app/community-library-integration.js",
-    "app/rpc-program-library-integration.js",
     "app/community-library-v104-metadata-integration.js",
     "app/community-library-v103-integration.js",
     "app/top-action-icons-integration.js",

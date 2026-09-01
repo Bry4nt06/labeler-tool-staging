@@ -9,7 +9,25 @@
   }
 
   function renderAll(mutate) {
-    return actions.execute({ mutate, render: "all" });
+    return actions.execute({ mutate, persist: true, render: "all" });
+  }
+
+  function clone(value) {
+    return actions.call("deepClone", value) || JSON.parse(JSON.stringify(value));
+  }
+
+  function updateDraftMetadata(field, value) {
+    if (!["name", "description"].includes(field)) return false;
+    const key = field === "name" ? "draftName" : "draftDescription";
+    const maximum = field === "name" ? 80 : 180;
+    actions.execute({
+      mutate() {
+        if (!state.simulation || typeof state.simulation !== "object") state.simulation = {};
+        state.simulation[key] = String(value || "").slice(0, maximum);
+      },
+      persist: true
+    });
+    return true;
   }
 
   function updateCommand(sourceIndex, value) {
@@ -44,9 +62,14 @@
   function updateAction(sourceIndex, value) {
     const current = line(sourceIndex);
     if (!current) return;
-    state.simulation.useCustom = true;
-    state.simulation.lines[sourceIndex] = { ...current, action: String(value ?? "") };
-    actions.render(["map", "simulation-map"]);
+    actions.execute({
+      mutate() {
+        state.simulation.useCustom = true;
+        state.simulation.lines[sourceIndex] = { ...current, action: String(value ?? "") };
+      },
+      persist: true,
+      render: ["map", "simulation-map"]
+    });
   }
 
   function deleteLine(sourceIndex) {
@@ -74,30 +97,44 @@
     if (!name) {
       global.alert("Enter a profile name before saving.");
       document.querySelector("#servoProfileName")?.focus();
-      return;
+      return null;
     }
-    actions.execute({
+    const profile = actions.execute({
       mutate() {
         const profile = {
-          id: `servo-profile-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          id: `rpc-${global.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`}`,
           name,
           description: String(descriptionValue || "").trim(),
           savedAt: new Date().toISOString(),
+          schemaVersion: 1,
           ...profileContext(),
-          simulation: actions.call("deepClone", state.simulation) || JSON.parse(JSON.stringify(state.simulation))
+          simulation: clone(state.simulation)
         };
         if (!Array.isArray(state.servoProfileLibrary)) state.servoProfileLibrary = [];
         state.servoProfileLibrary.push(profile);
         state.activeServoProfileId = profile.id;
+        state.simulation.draftName = name;
+        state.simulation.draftDescription = profile.description;
+        return profile;
       },
       persist: true,
       render: "all"
     });
+    global.LabelerLocalPersistenceController?.flush?.();
+    global.dispatchEvent?.(new CustomEvent("servoforge:rpc-program-saved", {
+      detail: { profile: clone(profile) }
+    }));
+    return profile;
   }
 
   function selectProfile(profileId) {
-    state.activeServoProfileId = String(profileId || "");
-    actions.render("simulation");
+    actions.execute({
+      mutate() {
+        state.activeServoProfileId = String(profileId || "");
+      },
+      persist: true,
+      render: "simulation"
+    });
   }
 
   function loadProfile(profileId) {
@@ -118,7 +155,9 @@
         if (profile.applicationMode) state.applicationMode = profile.applicationMode;
         if (state.labelSpecs.some((entry) => entry.brand === profile.brand)) state.selectedBrand = profile.brand;
         if (state.bottleSpecs.some((entry) => entry.bottleType === profile.bottleType)) state.selectedBottle = profile.bottleType;
-        state.simulation = actions.call("deepClone", profile.simulation) || JSON.parse(JSON.stringify(profile.simulation));
+        state.simulation = clone(profile.simulation);
+        state.simulation.draftName = profile.name || "";
+        state.simulation.draftDescription = profile.description || "";
         actions.call("ensureSimulationRows");
         state.activeServoProfileId = profile.id;
       },
@@ -141,6 +180,7 @@
   }
 
   global.LabelerSimulationEditorController = Object.freeze({
+    updateDraftMetadata,
     updateCommand,
     updateTableAngle,
     updatePlateAngle,

@@ -27,6 +27,8 @@ function currentServoProfileContext() {
 
 function servoProfileLibraryMarkup() {
   const context = currentServoProfileContext();
+  const draftName = String(state.simulation?.draftName || "");
+  const draftDescription = String(state.simulation?.draftDescription || "");
   const profiles = Array.isArray(state.servoProfileLibrary) ? state.servoProfileLibrary : [];
   const selectedId = profiles.some((entry) => entry.id === state.activeServoProfileId)
     ? state.activeServoProfileId
@@ -34,16 +36,16 @@ function servoProfileLibraryMarkup() {
   const selected = profiles.find((entry) => entry.id === selectedId);
   const options = profiles.length
     ? profiles.map((entry) => `<option value="${escapeServoProfileHtml(entry.id)}"${entry.id === selectedId ? " selected" : ""}>${escapeServoProfileHtml(entry.name)}</option>`).join("")
-    : '<option value="">No saved profiles</option>';
+    : '<option value="">No saved RPC programs</option>';
   const details = selected
     ? `<div class="servo-profile-details"><strong>${escapeServoProfileHtml(selected.name)}</strong><span>${escapeServoProfileHtml(selected.brand)} • ${escapeServoProfileHtml(selected.bottleType)} • ${escapeServoProfileHtml(selected.mapName)}</span>${selected.description ? `<small>${escapeServoProfileHtml(selected.description)}</small>` : ""}<time datetime="${escapeServoProfileHtml(selected.savedAt)}">Saved ${escapeServoProfileHtml(servoProfileSavedDate(selected.savedAt))}</time></div>`
-    : '<div class="servo-profile-details empty"><span>Save the current custom simulation lines and angles for reuse.</span></div>';
+    : '<div class="servo-profile-details empty"><span>Save the current custom simulation lines and angles as an RPC program.</span></div>';
   return `<section class="servo-profile-library" aria-labelledby="servoProfileLibraryTitle">
-    <div class="servo-profile-library-head"><div><h2 id="servoProfileLibraryTitle">Custom Simulation Library</h2><p>Save and restore custom simulation settings by brand, bottle, and map.</p></div><span>${profiles.length} saved</span></div>
+    <div class="servo-profile-library-head"><div><h2 id="servoProfileLibraryTitle">RPC Program Library</h2><p>Save and restore custom simulation settings by brand, bottle, and map.</p></div><span>${profiles.length} saved</span></div>
     <div class="servo-profile-save-grid">
-      <label>Profile name<input id="servoProfileName" type="text" maxlength="80" placeholder="Example: Bud Light Lime production"></label>
-      <label>Description<input id="servoProfileDescription" type="text" maxlength="180" placeholder="Optional notes about this setup"></label>
-      <button id="saveServoProfile" type="button">Save Simulation Settings</button>
+      <label>Profile name<input id="servoProfileName" type="text" maxlength="80" value="${escapeServoProfileHtml(draftName)}" placeholder="Example: Bud Light Lime production"></label>
+      <label>Description<input id="servoProfileDescription" type="text" maxlength="180" value="${escapeServoProfileHtml(draftDescription)}" placeholder="Optional notes about this setup"></label>
+      <button id="saveServoProfile" type="button">Save Custom Simulation</button>
     </div>
     <div class="servo-profile-context"><span>Brand <strong>${escapeServoProfileHtml(context.brand)}</strong></span><span>Bottle <strong>${escapeServoProfileHtml(context.bottleType)}</strong></span><span>Map <strong>${escapeServoProfileHtml(context.mapName)}</strong></span></div>
     <div class="servo-profile-library-grid"><label>Saved profile<select id="servoProfileLibrarySelect"${profiles.length ? "" : " disabled"}>${options}</select></label><div class="servo-profile-actions"><button id="loadServoProfile" class="secondary-button" type="button"${selected ? "" : " disabled"}>Load</button><button id="deleteServoProfile" class="danger" type="button"${selected ? "" : " disabled"}>Delete</button></div>${details}</div>
