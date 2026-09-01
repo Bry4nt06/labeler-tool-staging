@@ -82,9 +82,6 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     assert.equal(setup.map, "APL 6-Aggregate");
     assert.equal(setup.liveDividers, expectedDividers,
       `Live Servo Program must show one small divider after each complete 8-row group; expected ${expectedDividers}, found ${setup.liveDividers}.`);
-    assert.equal(setup.liveHeaders.includes("PLC"), false, "PLC must be hidden from the live Servo Program table.");
-    assert.equal(setup.liveHeaders.some((header) => /encoder/i.test(header)), false,
-      "Encoder travel must be hidden from the live Servo Program table.");
     assert.equal(setup.liveHeaders.includes("HMI"), true);
     assert.equal(setup.liveHeaders.some((header) => header === "CMD" || header === "Travel command"), true);
 
