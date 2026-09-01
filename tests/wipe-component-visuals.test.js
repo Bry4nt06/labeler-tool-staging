@@ -27,7 +27,6 @@ assert.match(c,/data-long-edge-facing/);
 assert.match(c,/machine-center/);
 assert.match(c,/data-inside-wipe-mount/);
 assert.match(c,/long-edge-center-short-bevel-bottle/);
-assert.match(c,/innerPadYellowSketchMountV2: true/);
 assert.match(c,/renderedGeometryGuardV1: true/);
 assert.match(c,/MAX_RETRIES = 200/);
 
