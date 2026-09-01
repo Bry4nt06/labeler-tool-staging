@@ -49,6 +49,16 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       state.selectedBottle = "SSNR - 12 Oz";
       applyGeneratedServoProfile();
       renderProgram();
+      window.__servoForgePrintFixture = JSON.parse(JSON.stringify({
+        labelSpecs,
+        bottleSpecs,
+        machineMap,
+        program: state.program,
+        applicationMode: state.applicationMode,
+        activeMapId: state.activeMapId,
+        selectedBrand: state.selectedBrand,
+        selectedBottle: state.selectedBottle
+      }));
 
       const liveHeaders = [...document.querySelectorAll("#programTable th, #program th")]
         .map((node) => node.textContent.trim())
@@ -127,6 +137,16 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     assert.ok(programTab.height <= 32, `Print icon control should match toolbar height; height was ${programTab.height}px.`);
 
     await page.evaluate(() => {
+      const fixture = window.__servoForgePrintFixture;
+      state.labelSpecs = fixture.labelSpecs;
+      state.bottleSpecs = fixture.bottleSpecs;
+      state.mapLibrary = [fixture.machineMap];
+      state.program = fixture.program;
+      state.applicationMode = fixture.applicationMode;
+      state.activeMapId = fixture.activeMapId;
+      state.selectedBrand = fixture.selectedBrand;
+      state.selectedBottle = fixture.selectedBottle;
+      window.LabelerServoProgramPrint.syncButton();
       window.__servoForgePrintHtml = "";
       window.__servoForgePrintCalled = false;
       window.open = () => ({
