@@ -193,6 +193,10 @@ assert.match(gripperChannelSource, /wrapPlan\?\.resolvedMode === "full-wrap-over
   "the legacy gripper/channel adapter must preserve the canonical full-wrap overlap stages");
 assert.match(gripperChannelSource, /labelDeg \+ overWipeDeg - oppositeEdgeClearanceDeg/,
   "the legacy adapter must keep the standard opposite-edge clearance after wrapper consolidation");
+assert.match(gripperChannelSource, /Hold 90° to Opposed Brush Channel Exit/,
+  "an equal-length opposed channel must emit an explicit 90-degree exit hold");
+assert.match(gripperChannelSource, /source: "aggregate-spender"/,
+  "an enabled aggregate spender datum must satisfy the application reference");
 
 // Static retirement checks: the behavior belongs to the canonical driver and
 // generator, not a stack of final runtime wrappers.
@@ -205,6 +209,8 @@ assert.doesNotMatch(appSource, /cold-glue-brush-direction-v128|cold-glue-brush-r
 assert.doesNotMatch(appSource, /cold-glue-brush-exit-clearance-v24/);
 assert.match(generatorSource, /createBrushChannelPlan/);
 assert.match(generatorSource, /Parallel Brush Hold/);
+assert.match(generatorSource, /Equal-Length Channel Exit Hold/,
+  "the canonical profile must pin an opposed-only channel at 90 degrees through its exit");
 assert.match(generatorSource, /Brush Opening Center-Out Wipe/);
 assert.doesNotMatch(workerSource, /cold-glue-center-out-brush-integration|cold-glue-neck-left-right-integration/);
 for (const retired of [

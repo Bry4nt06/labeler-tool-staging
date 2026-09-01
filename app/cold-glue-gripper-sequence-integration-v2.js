@@ -103,6 +103,10 @@
   }
 
   function updateEnabledStations(map) {
+    // Station Setup is explicit operator topology. Once a map has a structural
+    // override, an empty enabled slot must remain enabled until the operator
+    // turns it off; object inference must not collapse it on the next render.
+    if (map?.localStructuralMapOverride) return false;
     const used = new Set(
       map.objects
         .filter((item) => isColdGlueObject(item) && item.kind !== "coding")

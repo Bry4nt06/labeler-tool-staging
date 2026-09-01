@@ -7,7 +7,11 @@ const vm = require("node:vm");
 
 const root = path.join(__dirname, "..");
 const source = fs.readFileSync(path.join(root, "app/cold-glue-slot-topology-guard-v315.js"), "utf8");
+const sequenceSource = fs.readFileSync(path.join(root, "app/cold-glue-gripper-sequence-integration-v2.js"), "utf8");
 assert.doesNotThrow(() => new vm.Script(source, { filename: "cold-glue-slot-topology-guard-v315.js" }));
+assert.doesNotThrow(() => new vm.Script(sequenceSource, { filename: "cold-glue-gripper-sequence-integration-v2.js" }));
+assert.match(sequenceSource, /if \(map\?\.localStructuralMapOverride\) return false/,
+  "the gripper sequence must not collapse explicit Station Setup selections from object inference");
 
 const map = {
   id: "eli-mab1",

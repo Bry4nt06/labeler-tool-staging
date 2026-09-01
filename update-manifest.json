@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-neck-wrap-overlap-v316-20260831-1730",
+  "buildId": "cold-glue-runtime-authority-v317-20260831-2210",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v316 adds a dedicated Cold Glue full-neck-wrap overlap policy. Build Inputs now detects wrap angle from the developed neck-label bottom edge and the effective contact-band circumference, keeps near-full labels on the protected Standard policy, and expands Full Wrap controls when overlap is required. Operators can choose the leading or trailing edge on top, override the calculated overlap in millimeters, enable the final seam wipe, and set seam over-wipe. Generated motion distinguishes first-edge wipe, circumference wipe, overlap-edge crossing, seam wipe, and exit rest; only the designated overlap edge may cross. Standard labels retain opposite-edge clearance protection. The selected edge and overlap are exposed in the preview, program summary, validation, and persisted label recipe."
+  "notes": "v317 fixes four Cold Glue staging authority defects. Equal-length inside/outside brush channels now hold the bottle at 90 degrees through both the channel entrance and exit so animation cannot interpolate away from the red centerline. Explicit Aggregate and Station Setup selections remain authoritative before objects are added and are no longer collapsed by gripper-sequence normalization. An enabled aggregate's mapped spender position is accepted as the application centerline reference, removing the false missing Gripper / Spender Plate warning. Build Inputs now lists all brands, while APL/Cold Glue catalog metadata no longer replaces or regenerates the active build recipe. The v316 full-neck-wrap overlap and seam-wipe policy remains active."
 }
