@@ -167,7 +167,9 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     assert.doesNotMatch(printed.html, /<th>Encoder(?: Travel)?<\/th>/i,
       "Encoder must be hidden from the printed Servo Program.");
 
-    const printDividerCount = (printed.html.match(/class="hmi-group-divider"/g) || []).length;
+    const printDividerCount = (
+      printed.html.match(/class="(?:hmi-group-divider|program-eight-row-divider)"/g) || []
+    ).length;
     assert.equal(printDividerCount, expectedDividers,
       `Printed Servo Program must show the same small divider after each 8-row group; expected ${expectedDividers}, found ${printDividerCount}.`);
 
