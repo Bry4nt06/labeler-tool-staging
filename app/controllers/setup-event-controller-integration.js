@@ -165,7 +165,13 @@
   document.addEventListener("input", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
-    if (target.dataset?.simulationField === "action" && els.simulation?.contains(target)) {
+    if (target.id === "servoProfileName" && els.simulation?.contains(target)) {
+      simulationEditor.updateDraftMetadata("name", target.value);
+    }
+    else if (target.id === "servoProfileDescription" && els.simulation?.contains(target)) {
+      simulationEditor.updateDraftMetadata("description", target.value);
+    }
+    else if (target.dataset?.simulationField === "action" && els.simulation?.contains(target)) {
       const sourceIndex = Number(target.closest?.("tr[data-simulation-source-index]")?.dataset.simulationSourceIndex);
       if (Number.isInteger(sourceIndex)) simulationEditor.updateAction(sourceIndex, target.value);
       else return;

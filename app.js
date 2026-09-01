@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "rpc-program-community-v319-20260901-1003";
+  const build = window.ServoForgeBootstrapBuild || "simulation-draft-print-v320-20260901-1814";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -209,3 +209,4 @@
     else console.error("ServoForge startup is unavailable.", error);
   }
 })();
+

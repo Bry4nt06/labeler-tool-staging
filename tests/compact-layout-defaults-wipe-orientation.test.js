@@ -11,7 +11,7 @@ const bootstrapSource = fs.readFileSync(path.join(root, "app", "bootstrap.js"), 
 const companyDefaults = JSON.parse(fs.readFileSync(path.join(root, "config", "company-default-settings.json"), "utf8"));
 
 assert.doesNotThrow(() => new vm.Script(integrationSource, { filename: "compact-layout-defaults-wipe-orientation-integration.js" }));
-assert.match(bootstrapSource, /rpc-program-community-v319-20260901-1003/);
+assert.match(bootstrapSource, /simulation-draft-print-v320-20260901-1814/);
 assert.match(bootstrapSource, /app\/compact-layout-defaults-wipe-orientation-integration\.js/);
 assert.equal(companyDefaults.settings.themePreset, "servoforge");
 assert.equal(companyDefaults.settings.showAllProgramMovesOverlay, true);
@@ -137,3 +137,4 @@ assert.equal(lateContext.LabelerWipeComponentVisualRenderer.innerPadLongEdgeInsi
 assert.equal(lateContext.renderMapCalls, 1, "The map rerenders immediately after the corrected inside-pad renderer is installed.");
 
 console.log("Compact layout, default settings, bottle center, and wipe orientation regression passed.");
+

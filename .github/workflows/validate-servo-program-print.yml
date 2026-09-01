@@ -6,9 +6,25 @@ on:
     paths:
       - "app/servo-program-table-renderer.js"
       - "app/servo-program-print-integration.js"
+      - "app/controllers/simulation-editor-controller.js"
+      - "app/controllers/setup-event-controller-integration.js"
+      - "app/simulation-table-renderer.js"
       - "app/servo-program-eight-row-grouping-integration.js"
       - "app/bootstrap.js"
       - "tests/servo-program-print-browser.test.cjs"
+      - "tests/simulation-draft-persistence-and-print.test.js"
+      - ".github/workflows/validate-servo-program-print.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "app/servo-program-table-renderer.js"
+      - "app/servo-program-print-integration.js"
+      - "app/controllers/simulation-editor-controller.js"
+      - "app/controllers/setup-event-controller-integration.js"
+      - "app/simulation-table-renderer.js"
+      - "app/bootstrap.js"
+      - "tests/servo-program-print-browser.test.cjs"
+      - "tests/simulation-draft-persistence-and-print.test.js"
       - ".github/workflows/validate-servo-program-print.yml"
   workflow_dispatch:
 
@@ -36,3 +52,5 @@ jobs:
         run: python3 -m http.server 8000 >/tmp/servoforge-http.log 2>&1 &
       - name: Verify eight-row grouping, printer icon, and print sheet
         run: node tests/servo-program-print-browser.test.cjs
+      - name: Verify simulation draft persistence and shared print path
+        run: node --test tests/simulation-draft-persistence-and-print.test.js

@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-rpc-program-community-v319-20260901-1003";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-simulation-draft-print-v320-20260901-1814";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -165,7 +165,6 @@ const CORE_ASSETS = Object.freeze([
   "./app/update-manager.js",
   "./app/feedback-center-integration.js",
   "./app/community-library-integration.js",
-  "./app/rpc-program-library-integration.js",
   "./app.js"
 ]);
 

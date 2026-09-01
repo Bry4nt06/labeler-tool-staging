@@ -174,14 +174,85 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     assert.equal(printDividerCount, expectedDividers,
       `Printed Servo Program must show the same small divider after each 8-row group; expected ${expectedDividers}, found ${printDividerCount}.`);
 
+    await page.evaluate(() => {
+      state.simulation = {
+        useCustom: true,
+        turns: [],
+        rows: [],
+        deletedRows: [],
+        lines: state.program.map((row) => ({ ...row }))
+      };
+      state.simulation.lines[0].action = "Custom simulation print marker";
+      window.LabelerTabsController.activate("simulation", document.querySelector('.tab[data-tab="simulation"]'));
+      renderSimulation();
+
+      const name = document.querySelector("#servoProfileName");
+      const description = document.querySelector("#servoProfileDescription");
+      name.value = "Operator click-away draft";
+      name.dispatchEvent(new Event("input", { bubbles: true }));
+      description.value = "Must survive leaving and returning to Servo Simulation";
+      description.dispatchEvent(new Event("input", { bubbles: true }));
+
+      window.LabelerTabsController.activate("specs", document.querySelector('.tab[data-tab="specs"]'));
+      window.LabelerTabsController.activate("simulation", document.querySelector('.tab[data-tab="simulation"]'));
+      renderSimulation();
+      window.LabelerServoProgramPrint.syncButton();
+    });
+    await sleep(250);
+
+    const simulationTab = await page.evaluate(() => {
+      const button = document.querySelector("#printServoProgram");
+      const saved = JSON.parse(localStorage.getItem("labelerToolSettings") || "{}");
+      return {
+        activeTab: state.activeTab,
+        draftName: state.simulation.draftName,
+        draftDescription: state.simulation.draftDescription,
+        renderedName: document.querySelector("#servoProfileName")?.value,
+        renderedDescription: document.querySelector("#servoProfileDescription")?.value,
+        storedName: saved.simulation?.draftName,
+        hidden: button?.hidden,
+        disabled: button?.disabled,
+        title: button?.title,
+        ariaLabel: button?.getAttribute("aria-label"),
+        followsSimulationTab: button?.previousElementSibling?.dataset?.tab === "simulation"
+      };
+    });
+    assert.equal(simulationTab.activeTab, "simulation");
+    assert.equal(simulationTab.draftName, "Operator click-away draft");
+    assert.equal(simulationTab.renderedName, "Operator click-away draft");
+    assert.equal(simulationTab.storedName, "Operator click-away draft");
+    assert.equal(simulationTab.renderedDescription, simulationTab.draftDescription);
+    assert.equal(simulationTab.hidden, false);
+    assert.equal(simulationTab.disabled, false);
+    assert.equal(simulationTab.title, "Print Simulation Profile");
+    assert.equal(simulationTab.ariaLabel, "Print Simulation Profile");
+    assert.equal(simulationTab.followsSimulationTab, true);
+
+    await page.evaluate(() => {
+      window.__servoForgePrintHtml = "";
+      window.__servoForgePrintCalled = false;
+    });
+    await page.click("#printServoProgram");
+    await sleep(400);
+
+    const simulationPrinted = await page.evaluate(() => ({
+      html: window.__servoForgePrintHtml,
+      printCalled: window.__servoForgePrintCalled
+    }));
+    assert.equal(simulationPrinted.printCalled, true);
+    assert.match(simulationPrinted.html, /Custom Simulation Profile/);
+    assert.match(simulationPrinted.html, /Operator click-away draft/);
+    assert.match(simulationPrinted.html, /Unsaved Custom Draft/);
+    assert.match(simulationPrinted.html, /Custom simulation print marker/);
+
     const meaningfulErrors = pageErrors.filter((error) =>
       !/favicon/i.test(error)
       && !/normalizeAssembly is not defined/i.test(error)
     );
     assert.deepEqual(meaningfulErrors, [], `Print-feature browser errors were emitted:\n${meaningfulErrors.join("\n\n")}`);
 
-    console.log("Servo Program compact-column, eight-row grouping, and print regression passed.");
-    console.log(JSON.stringify({ setup, expectedDividers, programTab, printDividerCount, printedLength: printed.html.length }, null, 2));
+    console.log("Servo Program and custom simulation shared print regression passed.");
+    console.log(JSON.stringify({ setup, expectedDividers, programTab, simulationTab, printDividerCount, printedLength: printed.html.length, simulationPrintedLength: simulationPrinted.html.length }, null, 2));
   } finally {
     await browser.close();
   }
