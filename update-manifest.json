@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "map-drag-cold-glue-overwipe-v318-20260831-2230",
+  "buildId": "rpc-program-community-v319-20260901-1003",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v318 restores direct map selection and dragging for configured station objects. Diagnostic and program overlays no longer intercept pointer input, underlying station geometry is resolved through the SVG hit stack, and persisted numeric or text object IDs share one identity rule. Cold Glue neck motion now always ignores the APL-only Neck Over-Wipe input in both canonical and channel-adapter planning; dedicated full-wrap seam wipe remains independent. The v317 station, gripper, brand, and equal-channel corrections remain active."
+  "notes": "v319 adds a local RPC Program library for custom simulation lines and angles, then opens the Community Hub Upload pane with the newly saved program preselected. Community Browse, Upload, My Uploads, review, download, conflict detection, and local import now support RPC Programs as a validated JSON-only package type. Local save completes before the optional Community prompt. v318 map dragging and Cold Glue over-wipe isolation remain active."
 }
