@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "cold-glue-neck-wrap-overlap-v316-20260831-1730";
-  const buildUpdatedAt = "Aug 31, 2026 5:30 PM ET";
+  const build = "cold-glue-runtime-authority-v317-20260831-2210";
+  const buildUpdatedAt = "Aug 31, 2026 10:10 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;

@@ -62,7 +62,7 @@
 
   function selectBrand(value) {
     const requested = String(value ?? "");
-    const available = actions.call("labelSpecsForApplication") || state.labelSpecs || [];
+    const available = state.labelSpecs || [];
     const selected = available.find((row) => String(row?.brand ?? "") === requested);
     if (!selected) return false;
     const requestedBrand = String(selected.brand);

@@ -156,9 +156,22 @@
     };
 
     const settings = state?.coldGlueAggregateSettings || {};
+    const aggregateAngle = settings?.aggregateAngles?.[String(station)]
+      ?? map?.aggregateAngles?.[String(station)]
+      ?? map?.stationAngles?.[String(station)];
+    const enabledAggregates = typeof normalizeEnabledSlots === "function"
+      ? normalizeEnabledSlots(map?.enabledAggregates, map?.aggregateCount)
+      : Array.isArray(map?.enabledAggregates) ? map.enabledAggregates : [];
+    if (enabledAggregates[Number(station) - 1] && Number.isFinite(Number(aggregateAngle))) {
+      return {
+        tableAngle: atOrAfter(Number(aggregateAngle), minimumTable),
+        source: "aggregate-spender",
+        gripper: null
+      };
+    }
     const fallback = finite(
-      settings?.aggregateAngles?.[String(station)],
-      finite(map?.aggregateAngles?.[String(station)], finite(map?.stationAngles?.[String(station)], finite(originalBlock.find((row) => Number(row.cmd) === 3)?.tableAngle, minimumTable)))
+      aggregateAngle,
+      finite(originalBlock.find((row) => Number(row.cmd) === 3)?.tableAngle, minimumTable)
     );
     return { tableAngle: atOrAfter(fallback, minimumTable), source: "aggregate-fallback", gripper: null };
   }
@@ -198,7 +211,7 @@
     const gripperPlate = nearestEquivalent(GRIPPER_CENTERLINE_ANGLE, plate);
     const gripperRotation = gripperPlate - plate;
 
-    if (!gripperReference.gripper) {
+    if (gripperReference.source === "aggregate-fallback") {
       appendIssue({
         level: "warn",
         code: "cold-glue-gripper-centerline-fallback",
@@ -275,16 +288,16 @@
         plannedRotation: entryRotation,
         plannedRatio: Math.abs(entryRotation) / entryActualSpan
       });
-      plate = entryPlate;
-      pushRow(output, 3, brushEntryTable, plate, `Hold 90° Through Opposed Cold Glue Brush Channel - Agg ${station}`, {
-        station,
-        section: "neck",
-        brushStage: "opposed",
-        channelHold: true,
-        holdAngle: CHANNEL_ENTRY_ANGLE,
-        channelEntryAngle: CHANNEL_ENTRY_ANGLE
-      });
     }
+    plate = entryPlate;
+    pushRow(output, 3, brushEntryTable, plate, `Hold 90° Through Opposed Cold Glue Brush Channel - Agg ${station}`, {
+      station,
+      section: "neck",
+      brushStage: "opposed",
+      channelHold: true,
+      holdAngle: CHANNEL_ENTRY_ANGLE,
+      channelEntryAngle: CHANNEL_ENTRY_ANGLE
+    });
     lastTable = brushEntryTable;
 
     if (entryRequiredSpan > entryAvailableSpan + EPSILON) {
@@ -308,12 +321,17 @@
     }
 
     if (firstSingleIndex < 0) {
-      appendIssue({
-        level: "bad",
-        code: "cold-glue-center-out-runout-missing",
+      const channelExitTable = segments
+        .filter((segment) => segment.stage === "opposed")
+        .reduce((latest, segment) => Math.max(latest, segment.end), brushEntryTable);
+      pushRow(output, 3, channelExitTable, plate, `Hold 90° to Opposed Brush Channel Exit - Agg ${station}`, {
         station,
         section: "neck",
-        message: `Aggregate ${station} has no one-sided brush runout after the opposed channel. Extend one brush beyond the other so the bottle can rotate away from the remaining brush by the label length.`
+        brushStage: "opposed-exit",
+        channelHold: true,
+        holdAngle: CHANNEL_ENTRY_ANGLE,
+        channelEntryAngle: CHANNEL_ENTRY_ANGLE,
+        equalLengthChannel: true
       });
       return output;
     }

@@ -15,7 +15,7 @@ assert.doesNotThrow(() => new vm.Script(guardSource, { filename: "startup-dom-bi
 assert.match(specRendererSource, /els\.bottleSpecs\.innerHTML/);
 assert.match(specRendererSource, /els\.labelSpecs\.innerHTML/);
 assert.match(machineRendererSource, /els\.heads\.innerHTML/);
-assert.match(bootstrapSource, /cold-glue-neck-wrap-overlap-v316-20260831-1730/);
+assert.match(bootstrapSource, /cold-glue-runtime-authority-v317-20260831-2210/);
 assert.ok(
   bootstrapSource.indexOf("app/startup-dom-binding-guard-integration.js")
     < bootstrapSource.indexOf("app/controllers/workspace-action-service.js"),

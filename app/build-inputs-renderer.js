@@ -3,7 +3,7 @@
 function renderBuildInputs() {
   ensureSelectedZoneAndSite();
   window.LabelerLabelCenterlinePolicy?.ensureApplicationReferenceDefaults?.(state);
-  const availableLabels = labelSpecsForApplication();
+  const availableLabels = Array.isArray(state.labelSpecs) ? state.labelSpecs : [];
   const brandOptions = availableLabels.map((spec) => spec.brand).filter(Boolean);
   const bottleOptions = state.bottleSpecs.map((spec) => spec.bottleType).filter(Boolean);
   const summary = buildProgramSummary();
@@ -131,12 +131,12 @@ function renderBuildInputs() {
     <div class="build-grid">
       <div class="build-card">
         <h2>Build Program Inputs</h2>
-        <div class="application-filter-note">Showing ${state.applicationMode === "cold-glue" ? "Cold Glue" : "APL"} brand profiles only.</div>
+        <div class="application-filter-note">Program type: ${state.applicationMode === "cold-glue" ? "Cold Glue" : "APL"} from the active machine map. All brands are available.</div>
         <div class="zone-site-selection">
           <label>Zone <select id="zoneSelect">${optionList(zoneNames(), state.selectedZone)}</select></label>
           <label>Site <select id="siteSelect"${sitesForZone(state.selectedZone).length ? "" : " disabled"}>${sitesForZone(state.selectedZone).length ? optionList(sitesForZone(state.selectedZone), state.selectedSite) : '<option value="">No sites configured</option>'}</select></label>
         </div>
-        <label>Brand <select id="brandSelect"${brandOptions.length ? "" : " disabled"}>${brandOptions.length ? optionList(brandOptions, state.selectedBrand) : `<option value="">No ${state.applicationMode === "cold-glue" ? "Cold Glue" : "APL"} brands assigned</option>`}</select></label>
+        <label>Brand <select id="brandSelect"${brandOptions.length ? "" : " disabled"}>${brandOptions.length ? optionList(brandOptions, state.selectedBrand) : '<option value="">No brands configured</option>'}</select></label>
         <label>Bottle Type <select id="bottleSelect">${optionList(bottleOptions, state.selectedBottle)}</select></label>
         <h3>Label &amp; Bottle Geometry</h3>
         <label>Neck Label Bottom Curvature (mm) <input id="programNeckCurveMm" type="number" min="0" step="0.001" value="${label?.neckBottomCurveMm ?? 0}"></label>

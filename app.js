@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "cold-glue-neck-wrap-overlap-v316-20260831-1730";
+  const build = window.ServoForgeBootstrapBuild || "cold-glue-runtime-authority-v317-20260831-2210";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-cold-glue-neck-wrap-overlap-v316-20260831-1730";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-cold-glue-runtime-authority-v317-20260831-2210";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -293,4 +293,3 @@ self.addEventListener("fetch", (event) => {
       })
   );
 });
-

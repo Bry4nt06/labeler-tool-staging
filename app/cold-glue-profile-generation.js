@@ -203,6 +203,8 @@ function generatedColdGlueFixedProfile() {
       }
 
       if (Array.isArray(stationPlan.channelMoves)) {
+        const opposedOnlyChannel = stationPlan.channelMoves.length > 0
+          && stationPlan.channelMoves.every((allocation) => allocation.stage === "opposed");
         stationPlan.channelMoves.forEach((allocation) => {
           const edgeLabel = allocation.permittedOverlapEdge
             ? `${allocation.permittedOverlapEdge[0].toUpperCase()}${allocation.permittedOverlapEdge.slice(1)}`
@@ -257,6 +259,18 @@ function generatedColdGlueFixedProfile() {
                 currentRest.tackMode = "center";
                 currentRest.leadingEdgeWipe = false;
               }
+            }
+            if (opposedOnlyChannel) {
+              add(3, allocation.end, holdAngle, `${action} - Equal-Length Channel Exit Hold`, {
+                ...commonExtra,
+                brushStage: "opposed-exit",
+                channelHold: true,
+                parallelBrushHold: true,
+                equalLengthChannel: true,
+                holdAngle,
+                brushHoldFrom: finishAngle(allocation.start),
+                brushHoldUntil: finishAngle(allocation.end)
+              });
             }
             return;
           }

@@ -58,7 +58,10 @@ function ensureBottleReferenceForLabel(label = null) {
 }
 
 function ensureSelectedBrandForApplication() {
-  const available = labelSpecsForApplication();
+  // Legacy name retained for callers. Build recipe selection is independent of
+  // the label catalog's APL/Cold Glue metadata; the active machine map owns the
+  // generated program type.
+  const available = Array.isArray(state.labelSpecs) ? state.labelSpecs : [];
   const selected = available.find((spec) => spec.brand === state.selectedBrand);
   if (selected) {
     if (!bottleTypeExists(selected.bottleType)) ensureBottleReferenceForLabel(selected);

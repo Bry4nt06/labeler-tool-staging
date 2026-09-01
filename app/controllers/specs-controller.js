@@ -110,15 +110,12 @@
     const spec = state.labelSpecs[index];
     if (!spec || key === "specNumber") return;
     const selectedBeforeUpdate = state.selectedBrand === spec.brand;
-    const affectsSelectedProgram = selectedBeforeUpdate
-      && (labelNumericFields.has(key) || key === "applicationMode");
+    const affectsSelectedProgram = selectedBeforeUpdate && labelNumericFields.has(key);
 
     return actions.execute({
       mutate() {
         if (key === "applicationMode") {
           spec.applicationMode = actions.call("normalizeLabelApplicationMode", value) || value;
-          actions.call("ensureSelectedBrandForApplication");
-          actions.call("applyLabelLengthStationRules");
           return;
         }
         const oldBrand = spec.brand;
