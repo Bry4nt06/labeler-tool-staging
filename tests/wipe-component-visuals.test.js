@@ -21,13 +21,14 @@ assert.match(s,/drawConfiguredAssemblies\(add, configuredAssemblyLayer\)/);
 // compared with the outside pad. The long edge stays toward table center and
 // the short/beveled edge faces the bottle path, while the tangential bevel end
 // remains unchanged.
-assert.match(c,/outerStartAngle = isInner \? start \+ bevelDeg : start/);
-assert.match(c,/innerStartAngle = isInner \? start : start \+ bevelDeg/);
+assert.match(c,/outerStartAngle = start \+ bevelDeg/);
+assert.match(c,/innerStartAngle = start/);
 assert.match(c,/data-long-edge-facing/);
 assert.match(c,/machine-center/);
 assert.match(c,/data-inside-wipe-mount/);
 assert.match(c,/long-edge-center-short-bevel-bottle/);
-assert.match(c,/innerPadYellowSketchMountV1: true/);
+assert.match(c,/innerPadYellowSketchMountV2: true/);
+assert.match(c,/renderedGeometryGuardV1: true/);
 assert.match(c,/MAX_RETRIES = 200/);
 
 const compactIndex=b.indexOf("app/compact-layout-defaults-wipe-orientation-integration.js");
