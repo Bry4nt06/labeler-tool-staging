@@ -196,7 +196,9 @@
     // block without discarding the selected edge and the final seam wipe.
     if (wrapPlan?.resolvedMode === "full-wrap-overlap") return originalBlock;
     const labelDeg = Math.max(0, finite(wipePlan?.labelDeg, 0));
-    const overWipeDeg = Math.max(0, finite(wipePlan?.overWipeDeg, 0));
+    // The shared neck wipe plan also serves APL. Its neck over-wipe input must
+    // never extend a Cold Glue brush-channel move.
+    const overWipeDeg = 0;
     const oppositeEdgeClearanceDeg = Math.max(overWipeDeg, 3);
     const requestedBrushTurn = Math.max(0, labelDeg + overWipeDeg - oppositeEdgeClearanceDeg);
     const safeBrushTurn = Math.min(MAX_SAFE_CONTACT_TURN, requestedBrushTurn);
