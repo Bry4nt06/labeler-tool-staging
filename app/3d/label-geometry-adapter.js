@@ -43,10 +43,34 @@
   }
 
   function sectionLengthMm(spec, section) {
-    if (section === "neck") return positive(spec?.neckLengthMm);
+    if (section === "neck") return positive(spec?.neckBottomCurveMm, positive(spec?.neckLengthMm));
     if (section === "body") return positive(spec?.bodyLengthMm);
     if (section === "back") return positive(spec?.backLengthMm);
     return null;
+  }
+
+  function neckWrapContract(spec) {
+    const planner = global.LabelerGeometryDriver?.neckWrapPlan;
+    if (typeof planner === "function") return planner({
+      labelLengthMm: spec?.neckBottomCurveMm ?? spec?.neckLengthMm,
+      circumferenceMm: spec?.neckBottomCircumferenceMm,
+      wrapType: spec?.neckWrapType,
+      overlapEdge: spec?.neckOverlapEdge,
+      overlapTargetMm: spec?.neckOverlapTargetMm,
+      seamWipeEnabled: spec?.neckSeamWipeEnabled,
+      seamOverWipeDeg: spec?.neckSeamOverWipeDeg
+    });
+    const circumference = positive(spec?.neckBottomCircumferenceMm);
+    const length = sectionLengthMm(spec, "neck");
+    const calculatedWrapAngleDeg = length && circumference ? (length / circumference) * 360 : 0;
+    return {
+      resolvedMode: calculatedWrapAngleDeg > 360 ? "full-wrap-overlap" : "standard",
+      calculatedWrapAngleDeg,
+      calculatedOverlapDeg: Math.max(0, calculatedWrapAngleDeg - 360),
+      overlapEdge: null,
+      underlyingEdge: null,
+      fullWrapReady: false
+    };
   }
 
   function sectionEnabled(spec, section) {
@@ -83,8 +107,8 @@
     const length = sectionLengthMm(spec, section);
     if (!length) return 0;
     if (section === "neck") {
-      const circumference = positive(spec?.neckBottomCircumferenceMm);
-      if (circumference) return clamp((length / circumference) * 360, 8, 330);
+      const wrap = neckWrapContract(spec);
+      if (Number.isFinite(Number(wrap?.calculatedWrapAngleDeg))) return clamp(number(wrap.calculatedWrapAngleDeg), 8, 360);
     }
     const diameter = positive(geometry?.bottle?.effectiveDiameterMm);
     if (!diameter) return 90;
@@ -132,12 +156,19 @@
       const enabled = sectionEnabled(spec, section);
       const vertical = verticalPlacement(spec, section, geometry);
       const applicationAngleDegrees = applicationAngleForSection(machineMap, section);
+      const wrapContract = section === "neck" ? neckWrapContract(spec) : null;
       sections[section] = freeze({
         section,
         enabled,
         applied: enabled && bottleHasPassedApplication(tableAngle, applicationAngleDegrees),
         centerAngleDegrees: CENTER_ANGLES[section],
         wrapDegrees: enabled ? wrapDegrees(spec, section, geometry) : 0,
+        actualWrapDegrees: section === "neck" && enabled ? number(wrapContract?.calculatedWrapAngleDeg, 0) : enabled ? wrapDegrees(spec, section, geometry) : 0,
+        wrapMode: section === "neck" ? wrapContract?.resolvedMode || "standard" : "standard",
+        overlapDegrees: section === "neck" ? number(wrapContract?.targetOverlapDeg, wrapContract?.calculatedOverlapDeg) : 0,
+        overlapEdge: section === "neck" ? wrapContract?.overlapEdge || null : null,
+        underlyingEdge: section === "neck" ? wrapContract?.underlyingEdge || null : null,
+        overlapReady: section === "neck" ? Boolean(wrapContract?.fullWrapReady) : false,
         sourceLengthMm: sectionLengthMm(spec, section),
         applicationAngleDegrees,
         applicationAngleAuthority: Number.isFinite(Number(applicationAngleDegrees)),
@@ -179,6 +210,7 @@
     REFERENCE_VERTICALS,
     selectedLabelSpec,
     applicationAngleForSection,
+    neckWrapContract,
     wrapDegrees,
     verticalPlacement,
     bottleHasPassedApplication,

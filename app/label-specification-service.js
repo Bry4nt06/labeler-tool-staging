@@ -8,6 +8,21 @@ function selectedLabelSpec() {
   return state.labelSpecs.find((spec) => spec.brand === state.selectedBrand) ?? null;
 }
 
+function selectedNeckWrapPlan() {
+  const label = selectedLabelSpec();
+  const geometry = window.LabelerGeometryDriver;
+  if (!label || typeof geometry?.neckWrapPlan !== "function") return null;
+  return geometry.neckWrapPlan({
+    labelLengthMm: label.neckBottomCurveMm,
+    circumferenceMm: label.neckBottomCircumferenceMm,
+    wrapType: label.neckWrapType,
+    overlapEdge: label.neckOverlapEdge,
+    overlapTargetMm: label.neckOverlapTargetMm,
+    seamWipeEnabled: label.neckSeamWipeEnabled,
+    seamOverWipeDeg: label.neckSeamOverWipeDeg
+  });
+}
+
 function normalizeLabelApplicationMode(value) {
   const normalized = String(value ?? "")
     .trim()

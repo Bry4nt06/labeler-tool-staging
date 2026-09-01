@@ -90,6 +90,11 @@
           neckLengthMm: null,
           neckBottomCurveMm: null,
           neckBottomCircumferenceMm: null,
+          neckWrapType: "auto",
+          neckOverlapEdge: null,
+          neckOverlapTargetMm: null,
+          neckSeamWipeEnabled: true,
+          neckSeamOverWipeDeg: 5,
           codeBoxCenterMm: null
         });
         state.selectedBrand = brand;

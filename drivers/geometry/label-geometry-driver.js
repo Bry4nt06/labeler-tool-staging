@@ -264,6 +264,97 @@
   function bodyCircumferenceMm(bottle) { return circumferenceFromDiameterMm(effectiveDiameterMm(bottle)); }
   function degreesFromMm(lengthMm, circumferenceMm) { const c = positive(circumferenceMm); const l = Number(lengthMm); return c && Number.isFinite(l) ? (l / c) * 360 : null; }
   function mmFromDegrees(degrees, circumferenceMm) { const c = positive(circumferenceMm); const d = Number(degrees); return c && Number.isFinite(d) ? (d / 360) * c : null; }
+  function normalizeNeckWrapType(value) {
+    const normalized = String(value ?? "auto").trim().toLowerCase().replace(/[\s_]+/g, "-");
+    if (normalized === "standard") return "standard";
+    if (normalized === "full-wrap-overlap" || normalized === "full-wrap" || normalized === "overlap") return "full-wrap-overlap";
+    return "auto";
+  }
+  function normalizeOverlapEdge(value) {
+    const normalized = String(value ?? "").trim().toLowerCase().replace(/[\s_]+/g, "-");
+    if (normalized === "leading" || normalized === "leading-edge") return "leading";
+    if (normalized === "trailing" || normalized === "trailing-edge") return "trailing";
+    return null;
+  }
+  function neckWrapPlan(options = {}) {
+    const labelLengthMm = Math.max(0, finite(options.labelLengthMm, 0));
+    const circumferenceMm = positive(options.circumferenceMm);
+    const calculatedWrapAngleDeg = circumferenceMm ? degreesFromMm(labelLengthMm, circumferenceMm) : null;
+    const calculatedOverlapMm = circumferenceMm ? Math.max(0, labelLengthMm - circumferenceMm) : 0;
+    const calculatedOverlapDeg = circumferenceMm ? Math.max(0, finite(calculatedWrapAngleDeg, 0) - 360) : 0;
+    const requestedType = normalizeNeckWrapType(options.wrapType);
+    const detection = !Number.isFinite(calculatedWrapAngleDeg)
+      ? "unknown"
+      : calculatedWrapAngleDeg > 360 + 0.001
+        ? "overlap-candidate"
+        : calculatedWrapAngleDeg >= 350
+          ? "near-full"
+          : "standard";
+    const resolvedMode = requestedType === "full-wrap-overlap"
+      || (requestedType === "auto" && detection === "overlap-candidate")
+      ? "full-wrap-overlap"
+      : "standard";
+    const overlapEdge = normalizeOverlapEdge(options.overlapEdge);
+    const underlyingEdge = overlapEdge === "leading" ? "trailing" : overlapEdge === "trailing" ? "leading" : null;
+    const rawTarget = options.overlapTargetMm;
+    const hasOverlapTargetOverride = rawTarget !== null
+      && rawTarget !== undefined
+      && String(rawTarget).trim() !== ""
+      && Number.isFinite(Number(rawTarget));
+    const targetOverlapMm = hasOverlapTargetOverride
+      ? Math.max(0, Number(rawTarget))
+      : calculatedOverlapMm;
+    const targetOverlapDeg = circumferenceMm
+      ? Math.max(0, finite(degreesFromMm(targetOverlapMm, circumferenceMm), 0))
+      : 0;
+    const seamWipeEnabled = options.seamWipeEnabled !== false;
+    const seamOverWipeDeg = seamWipeEnabled ? Math.min(45, Math.max(0, finite(options.seamOverWipeDeg, 5))) : 0;
+    const motionWrapAngleDeg = resolvedMode === "full-wrap-overlap"
+      ? 360 + targetOverlapDeg
+      : Math.max(0, finite(calculatedWrapAngleDeg, 0));
+    const fullWrapReady = resolvedMode === "full-wrap-overlap"
+      && Boolean(overlapEdge)
+      && targetOverlapMm > 0
+      && Boolean(circumferenceMm);
+
+    const issues = [];
+    if (!circumferenceMm && labelLengthMm > 0) {
+      issues.push({ level: "bad", code: "neck-wrap-circumference-required", message: "Enter the effective bottle circumference at the neck-label contact band before planning the wrap." });
+    }
+    if (requestedType === "standard" && detection === "overlap-candidate") {
+      issues.push({ level: "warn", code: "neck-wrap-standard-overlength", message: `The neck label calculates to ${calculatedWrapAngleDeg.toFixed(1)}°, but Wrap Type is Standard.` });
+    }
+    if (resolvedMode === "full-wrap-overlap" && !overlapEdge) {
+      issues.push({ level: "bad", code: "neck-wrap-overlap-edge-required", message: "Select whether the leading or trailing edge finishes on top before generating the overlap wipe." });
+    }
+    if (resolvedMode === "full-wrap-overlap" && targetOverlapMm <= 0) {
+      issues.push({ level: "bad", code: "neck-wrap-positive-overlap-required", message: "Full Wrap — Overlap requires a positive overlap target." });
+    }
+    if (hasOverlapTargetOverride && targetOverlapMm > calculatedOverlapMm + 0.5) {
+      issues.push({ level: "warn", code: "neck-wrap-target-exceeds-nominal", message: `The ${targetOverlapMm.toFixed(1)} mm overlap target exceeds the ${calculatedOverlapMm.toFixed(1)} mm nominal label overlap. Confirm the measured contact-band circumference.` });
+    }
+
+    return Object.freeze({
+      requestedType,
+      detection,
+      resolvedMode,
+      labelLengthMm,
+      circumferenceMm,
+      calculatedWrapAngleDeg,
+      calculatedOverlapMm,
+      calculatedOverlapDeg,
+      overlapEdge,
+      underlyingEdge,
+      hasOverlapTargetOverride,
+      targetOverlapMm,
+      targetOverlapDeg,
+      motionWrapAngleDeg,
+      seamWipeEnabled,
+      seamOverWipeDeg,
+      fullWrapReady,
+      issues: Object.freeze(issues)
+    });
+  }
   function tableDegreesFromArcMm(arcMm, pitchRadiusMm) { const r = positive(pitchRadiusMm); const a = Number(arcMm); return r && Number.isFinite(a) ? (a / (2 * Math.PI * r)) * 360 : null; }
   function tableArcMmFromDegrees(degrees, pitchRadiusMm) { const r = positive(pitchRadiusMm); const d = Number(degrees); return r && Number.isFinite(d) ? (d / 360) * 2 * Math.PI * r : null; }
   function scaleTableAngle(angle, options) { const current = positive(options?.currentPitchRadiusMm); const reference = positive(options?.referencePitchRadiusMm); const zero = finite(options?.zeroAngle, 0); const raw = Number(angle); return Number.isFinite(raw) && current && reference && options?.enabled !== false ? zero + (raw - zero) * (reference / current) : raw; }
@@ -382,5 +473,5 @@
       issues
     };
   }
-  global.LabelerGeometryDriver = { effectiveDiameterMm, circumferenceFromDiameterMm, bodyCircumferenceMm, degreesFromMm, mmFromDegrees, tableDegreesFromArcMm, tableArcMmFromDegrees, scaleTableAngle, encoderCountsFromPlateDegrees, solveSection, planTwoSurfaceWipe, planColdGlueSection };
+  global.LabelerGeometryDriver = { effectiveDiameterMm, circumferenceFromDiameterMm, bodyCircumferenceMm, degreesFromMm, mmFromDegrees, normalizeNeckWrapType, normalizeOverlapEdge, neckWrapPlan, tableDegreesFromArcMm, tableArcMmFromDegrees, scaleTableAngle, encoderCountsFromPlateDegrees, solveSection, planTwoSurfaceWipe, planColdGlueSection };
 })(window);

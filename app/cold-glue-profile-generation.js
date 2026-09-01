@@ -94,9 +94,10 @@ function generatedColdGlueFixedProfile() {
     // open table travel. Start the next Correction at the brush itself; adding
     // a synthetic hold pair creates duplicate CMD 7/3 rows and zero-travel
     // faults on Autocol profiles.
-    add(7, start, plate, `${action} - Turn`, extra);
+    const { restAction, ...rowExtra } = extra;
+    add(7, start, plate, `${action} - Turn`, rowExtra);
     plate += direction * rotation;
-    add(3, end, plate, `${action} - Rest`, extra);
+    add(3, end, plate, restAction || `${action} - Rest`, rowExtra);
   };
   const pairedBrushPlan = (section, stationObjects) => {
     const wipe = sectionWipePlan(section);
@@ -106,7 +107,10 @@ function generatedColdGlueFixedProfile() {
       overWipeDeg: wipe.overWipeDeg,
       maxRatio: state.maxMoveRatio,
       safetyFactor: 0.9,
-      mapDirection
+      mapDirection,
+      wrapPlan: section === "neck" && typeof selectedNeckWrapPlan === "function"
+        ? selectedNeckWrapPlan()
+        : null
     };
     const channels = stationObjects.filter((item) => item.kind === "brush-channel");
     if (channels.length && typeof coldGlueDriver.createBrushChannelPlan === "function") {
@@ -200,6 +204,18 @@ function generatedColdGlueFixedProfile() {
 
       if (Array.isArray(stationPlan.channelMoves)) {
         stationPlan.channelMoves.forEach((allocation) => {
+          const edgeLabel = allocation.permittedOverlapEdge
+            ? `${allocation.permittedOverlapEdge[0].toUpperCase()}${allocation.permittedOverlapEdge.slice(1)}`
+            : "";
+          const wrapAction = allocation.wrapStage === "first-edge-wipe"
+            ? "Full Neck Wrap - First Edge Wipe"
+            : allocation.wrapStage === "circumference-wipe"
+              ? "Full Neck Wrap - Circumference Wipe"
+              : allocation.wrapStage === "overlap-edge-crossing"
+                ? `Full Neck Wrap - ${edgeLabel} Edge Crossing`
+                : allocation.wrapStage === "seam-wipe"
+                  ? "Full Neck Wrap - Seam Wipe"
+                  : null;
           const commonExtra = {
             station,
             section,
@@ -208,7 +224,13 @@ function generatedColdGlueFixedProfile() {
             tackMode: "center",
             centerTackOnly: true,
             centerOutFromApplication: true,
-            leadingEdgeWipe: false
+            leadingEdgeWipe: false,
+            wrapMode: stationPlan.wrapPlan?.resolvedMode || "standard",
+            wrapStage: allocation.wrapStage || null,
+            overlapEdge: allocation.permittedOverlapEdge || stationPlan.wrapPlan?.overlapEdge || null,
+            underlyingEdge: allocation.underlyingEdge || stationPlan.wrapPlan?.underlyingEdge || null,
+            designatedOverlapEdgeCrossing: allocation.wrapStage === "overlap-edge-crossing",
+            finalSeamWipe: allocation.wrapStage === "seam-wipe"
           };
           if (allocation.stage === "opposed") {
             const holdAngle = allocation.holdCurrent ? plate : num(allocation.holdAngle, stationPlan.channelEntryAngle ?? 90);
@@ -244,14 +266,15 @@ function generatedColdGlueFixedProfile() {
               allocation.end,
               allocation.rotation,
               allocation.direction,
-              `${sectionLabel(section)} ${allocation.stage === "outer" ? "Outside" : "Inside"} Brush Opening Center-Out Wipe`,
+              wrapAction || `${sectionLabel(section)} ${allocation.stage === "outer" ? "Outside" : "Inside"} Brush Opening Center-Out Wipe`,
               {
                 ...commonExtra,
                 singleSideOpening: true,
                 wipeOutward: true,
                 plannedRotation: allocation.rotation,
                 plannedRatio: allocation.ratio,
-                centerTackStage: allocation.centerTackStage
+                centerTackStage: allocation.centerTackStage,
+                restAction: allocation.wrapStage === "seam-wipe" ? "Full Neck Wrap - Exit Rest" : null
               }
             );
           }

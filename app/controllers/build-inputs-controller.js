@@ -245,6 +245,37 @@
     }, { syncMap: true });
   }
 
+  function updateNeckWrapSetting(field, rawValue) {
+    const label = selectedLabel();
+    if (!label) return false;
+    const geometry = global.LabelerGeometryDriver;
+    return actions.execute({
+      mutate() {
+        if (field === "wrapType") {
+          label.neckWrapType = geometry?.normalizeNeckWrapType?.(rawValue) || "auto";
+        } else if (field === "overlapEdge") {
+          label.neckOverlapEdge = geometry?.normalizeOverlapEdge?.(rawValue) || null;
+        } else if (field === "overlapTargetMm") {
+          label.neckOverlapTargetMm = rawValue === null
+            || rawValue === undefined
+            || String(rawValue).trim() === ""
+            ? null
+            : Math.max(0, actions.number(rawValue, 0));
+        } else if (field === "seamWipeEnabled") {
+          label.neckSeamWipeEnabled = Boolean(rawValue);
+        } else if (field === "seamOverWipeDeg") {
+          label.neckSeamOverWipeDeg = Math.min(45, Math.max(0, actions.number(rawValue, 5)));
+        } else {
+          return;
+        }
+      },
+      syncMap: true,
+      regenerate: true,
+      persist: true,
+      render: "all"
+    });
+  }
+
   global.LabelerBuildInputsController = Object.freeze({
     selectZone,
     selectSite,
@@ -253,6 +284,7 @@
     updateField,
     updateApplicationReference,
     updateNeckApplication,
-    updateCalculatedField
+    updateCalculatedField,
+    updateNeckWrapSetting
   });
 })(window);

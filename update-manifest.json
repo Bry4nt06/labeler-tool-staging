@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-slot-stack-guard-v315-20260831-1612",
+  "buildId": "cold-glue-neck-wrap-overlap-v316-20260831-1730",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v315 fixes the Cold Glue Map Builder stack overflow exposed by sparse Aggregate/Station 1/3/5 layouts. Machine-slot changes now run as one guarded structural transaction instead of a full runtime reload followed by a second refresh, and the operator-selected Cold Glue topology is preserved through legacy gripper-sequence profile normalization. Aggregate/Station 3 and 5 can remain explicitly enabled before their brush objects are added. Existing brush exit-clearance behavior, the -16 inside-brush depth, APL behavior, and 3D runtime behavior are unchanged."
+  "notes": "v316 adds a dedicated Cold Glue full-neck-wrap overlap policy. Build Inputs now detects wrap angle from the developed neck-label bottom edge and the effective contact-band circumference, keeps near-full labels on the protected Standard policy, and expands Full Wrap controls when overlap is required. Operators can choose the leading or trailing edge on top, override the calculated overlap in millimeters, enable the final seam wipe, and set seam over-wipe. Generated motion distinguishes first-edge wipe, circumference wipe, overlap-edge crossing, seam wipe, and exit rest; only the designated overlap edge may cross. Standard labels retain opposite-edge clearance protection. The selected edge and overlap are exposed in the preview, program summary, validation, and persisted label recipe."
 }

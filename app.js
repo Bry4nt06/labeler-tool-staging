@@ -47,7 +47,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "apl-neck-wipe-orientation-marriage-v146-20260817-1319";
+  const build = window.ServoForgeBootstrapBuild || "cold-glue-neck-wrap-overlap-v316-20260831-1730";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -184,11 +184,10 @@
     progress?.set(76, "Aligning printed code-box artwork…");
     await loadScript("app/printed-codebox-left-edge-v121.js", version);
 
-    progress?.set(76.5, "Using canonical Cold Glue center-tack brush-channel planner and active map authority…");
+    progress?.set(76.5, "Using canonical Cold Glue brush planner with standard edge protection and full-wrap seam policy…");
     await loadScript("app/cold-glue-brush-visual-integration.js", `${version}-cold-glue-brush-v21`);
     await loadScript("app/cold-glue-brush-white-bristles-v22.js", `${version}-cold-glue-brush-white-v22`);
     await loadScript("app/cold-glue-brush-bevel-back-panel-v23.js", `${version}-cold-glue-brush-bevel-panel-v23`);
-    await loadScript("app/cold-glue-brush-exit-clearance-v24.js", `${version}-cold-glue-brush-exit-clearance-v241`);
 
     if (typeof initializeLabelerApp !== "function") {
       throw new Error("initializeLabelerApp is not loaded.");

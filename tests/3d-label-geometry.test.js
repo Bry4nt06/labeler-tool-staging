@@ -83,7 +83,7 @@ assert.ok(labels.sections.neck.wrapDegrees > 175 && labels.sections.neck.wrapDeg
 const afterBack = adapter.snapshot(state, geometry, map, 210);
 assert.equal(afterBack.sections.back.applied, true, "Back label must appear after its application aggregate.");
 
-assert.match(meshSource, /servoforge\.3d-label-mesh\.v1/);
+assert.match(meshSource, /servoforge\.3d-label-mesh\.v2/);
 assert.match(meshSource, /curvedLabelGeometry/);
 assert.match(meshSource, /radiusAtY/);
 assert.match(meshSource, /new THREE\.CanvasTexture/);
