@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "troubleshooting-circuit-trace-v328-20260903-1425";
-  const buildUpdatedAt = "Sep 3, 2026 2:25 PM ET";
+  const build = "troubleshooting-exact-circuit-v329-20260903-1920";
+  const buildUpdatedAt = "Sep 3, 2026 7:20 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
