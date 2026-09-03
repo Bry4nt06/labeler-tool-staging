@@ -64,7 +64,9 @@ test("troubleshooting page loads the TopModul extension after the base library a
   const html = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/index.html"), "utf8");
   const baseIndex = html.indexOf("./diagnostic-library.js");
   const liveIndex = html.indexOf("./topmodul-live-diagnostics.js");
+  const dataIndex = html.indexOf("./topmodul-plc-fault-data.js");
+  const catalogIndex = html.indexOf("./topmodul-plc-fault-catalog.js");
   const appIndex = html.indexOf("./troubleshooting-app.js");
-  assert.ok(baseIndex >= 0 && liveIndex > baseIndex && appIndex > liveIndex);
-  assert.match(html, /Example: 00067/);
+  assert.ok(baseIndex >= 0 && liveIndex > baseIndex && dataIndex > liveIndex && catalogIndex > dataIndex && appIndex > catalogIndex);
+  assert.match(html, /00067/);
 });
