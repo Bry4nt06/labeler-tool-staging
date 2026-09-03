@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-exact-circuit-v329-20260903-1920",
+  "buildId": "troubleshooting-station-hardware-v330-20260903-1940",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v329 promotes the supplied K407039 TopModul/Labeller and K605163 APL Cart electrical drawings to machine-specific circuit authority where they agree with the readable PLC exports. Faults 669/670 now trace ENC101 -> CVTR101 -> I/O031/Local:7 fine-clock feedback exactly; faults 482/490 bind C101/C102 command and feedback I/O; fault 640 binds PS101 machine-air monitoring; Station fault 025 adds PE631/PE632 end-of-reel hardware while preserving the SS631 PLC vs SS633 drawing designation mismatch. Shared Station methods remain parameterized across Stations 1-6."
+  "notes": "v330 expands the shared TopModul Station electrical troubleshooting method with exact K605163 hardware paths for the station main contactor C101, CB104 servo logic breaker, the CB211/CB202 series feed-rewind breaker check-back, P602 rewinder dancer analog feedback for web-jam/web-break faults, and the CN131/OPTO131/OPTO132 station encoder circuit. Station instances 1-6 continue to reuse one diagnostic method while retaining their exact Labeler-side fault addresses."
 }

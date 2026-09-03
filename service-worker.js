@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-troubleshooting-exact-circuit-v329-20260903-1920";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-troubleshooting-station-hardware-v330-20260903-1940";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -177,6 +177,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/troubleshooting/topmodul-station-cause-model.js",
   "./app/troubleshooting/topmodul-labeler-cause-model.js",
   "./app/troubleshooting/topmodul-circuit-trace.js",
+  "./app/troubleshooting/topmodul-station-hardware-v330.js",
   "./app/troubleshooting/troubleshooting-app.js",
   "./app/troubleshooting/topmodul-fault-drilldown-ui.js",
   "./app.js"
