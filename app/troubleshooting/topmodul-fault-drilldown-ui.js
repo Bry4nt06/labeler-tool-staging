@@ -83,10 +83,11 @@
   }
 
   function causeEvidenceMarkup(entry) {
-    const evidence = entry.stationRungEvidence;
+    const evidence = entry.stationRungEvidence || entry.labelerRungEvidence;
     if (!evidence) return "";
+    const scope = entry.stationRungEvidence ? "Station controller" : "Labeler";
     return `<section class="sf-result-section sf-cause-evidence" data-topmodul-cause-evidence>
-      <h4>PLC cause evidence</h4>
+      <h4>PLC cause evidence — ${esc(scope)}</h4>
       <div class="sf-cause-evidence-grid">
         <div class="sf-plc-binding-cell"><small>Producer routine</small><code>${esc(evidence.routine)}</code></div>
         <div class="sf-plc-binding-cell"><small>Logic type</small><strong>${esc(evidence.logicType)}</strong></div>
