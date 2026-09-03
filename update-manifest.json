@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-library-v321-20260903-1043",
+  "buildId": "troubleshooting-circuit-trace-v328-20260903-1425",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v321 adds the separate ServoForge Troubleshooting Library with exact fault and symptom search, guided diagnostic trees, read-only machine context, source provenance for all 36 supplied troubleshooting archive files, and explicit safety boundaries. Offline navigation now caches the Labeler Tool and Troubleshooting page independently so one page cannot replace the other application shell."
+  "notes": "v328 extends the ServoForge Troubleshooting Library with a separate electrical-circuit evidence layer. Verified archived APL Cart device, cable, terminal, and drawing locations are linked to PLC producer signals for LS143, P133, PE603, PE621, PE622, PE641, MTR601, and MTR611. Cross-machine references remain explicitly scoped: Autocol encoder/fine-clock wiring is shown only as corroborative Krones architecture until an exact TopModul Labeler electrical drawing is supplied. No safety bypass, forcing, or defeated-interlock guidance is introduced."
 }
