@@ -8,8 +8,8 @@ const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 const CORE_ASSETS = Object.freeze([
   "./",
   "./index.html",
-  "./troubleshooting.html",
-  "./troubleshooting.css",
+  "./app/troubleshooting/index.html",
+  "./app/troubleshooting/troubleshooting.css",
   "./styles.css",
   "./manifest.webmanifest",
   "./assets/labeler-tool-icon.svg",
