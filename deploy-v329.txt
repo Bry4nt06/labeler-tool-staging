@@ -1,0 +1,5 @@
+ServoForge staging troubleshooting exact-circuit v329
+build: troubleshooting-exact-circuit-v329-20260903-1920
+source: staging main after PR #58
+purpose: explicit Railway source refresh for exact K407039/K605163 circuit authority
+production: untouched
