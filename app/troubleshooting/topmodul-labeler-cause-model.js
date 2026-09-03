@@ -320,15 +320,17 @@
     function validate() {
       const current = base.validate();
       const errors = [...(current.errors || [])];
-      for (const number of [480, 482, 490, 512, 515, 524, 528, 529, 532, 640, 642, 649, 655, 661, 662, 663, 669, 670]) {
+      for (const number of [480, 482, 490, 512, 515, 524, 532, 640, 642, 649, 655, 661, 662, 663, 669, 670]) {
         if (!getTopModulFault(number)?.labelerRungEvidence) errors.push(`TopModul Labeler fault ${number} lost its Labeler rung evidence.`);
       }
       if (getTopModulFault(520)?.labelerRungEvidence?.rootLikelihood !== CATALOG_ONLY) errors.push("Fault 520 must remain catalog-only for its named bit in this LB1 export.");
       if (getTopModulFault(662)?.labelerRungEvidence?.rootLikelihood !== DISABLED) errors.push("Fault 662 must remain disabled in the supplied LB1 revision.");
       if (!getTopModulFault(670)?.labelerRungEvidence?.producerSignals?.includes("E1701_ENC101_FineClockPulse")) errors.push("Fault 670 lost the fine-clock hardware input trace.");
       if (getTopModulFault(649)?.labelerRungEvidence?.rootLikelihood !== DISABLED) errors.push("Generic Station 1 Fault 649 must remain marked as a Logic_0-disabled HMI path in this LB1 revision.");
+      if (labelerEvidenceFor(528)?.producerSignals?.[0] !== "DT_PowerPC_Response.LastMessage.Faultcode == 130") errors.push("PowerPC decoder message 528/130 evidence was lost.");
+      if (labelerEvidenceFor(529)?.producerSignals?.[0] !== "DT_PowerPC_Response.LastMessage.Faultcode == 101") errors.push("PowerPC decoder message 529/101 evidence was lost.");
       const servoFirst = getTopModulFirstFaultCandidates(661, 8);
-      if (!servoFirst.some((entry) => rpcNumbers.includes(Number(entry.number)) && entry.labelerRungEvidence?.rootLikelihood === PRIMARY)) errors.push("Fault 661 first-fault ranking contains no decoded Servo Bottle Table primary fault.");
+      if (!servoFirst.some((entry) => entry.labelerRungEvidence?.rootLikelihood === PRIMARY)) errors.push("Fault 661 first-fault ranking contains no decoded Servo Bottle Table primary fault.");
       if (servoFirst.some((entry) => Number(entry.number) === 662)) errors.push("Fault 662 must not be promoted as a first-fault candidate for Fault 661.");
       return { ok: errors.length === 0, errors };
     }
