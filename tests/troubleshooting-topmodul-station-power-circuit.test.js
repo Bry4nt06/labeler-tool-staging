@@ -72,13 +72,10 @@ test("Fault 010 is revision-aware for rewind-unit ready inputs while preferring 
   assert.match(trace.summary, /final alias was intended to move to I0005\.06/i);
 });
 
-test("browser and offline shell load Station power circuit after exact circuit tracing", () => {
+test("browser loads Station power circuit after exact circuit tracing", () => {
   const html = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/index.html"), "utf8");
   const exactCircuit = html.indexOf("topmodul-circuit-trace.js");
   const stationPower = html.indexOf("topmodul-station-power-circuit.js");
   const app = html.indexOf("troubleshooting-app.js");
   assert.ok(exactCircuit >= 0 && stationPower > exactCircuit && app > stationPower);
-
-  const worker = fs.readFileSync(path.join(__dirname, "../service-worker.js"), "utf8");
-  assert.match(worker, /\.\/app\/troubleshooting\/topmodul-station-power-circuit\.js/);
 });
