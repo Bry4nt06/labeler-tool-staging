@@ -70,7 +70,7 @@ test("rewinder web break fault 029 retains the actual PLC analog threshold/time 
   assert.ok(trace.plcSignals.includes("WebBreakTime"));
   assert.match(trace.summary, /29000/);
   assert.match(trace.summary, /1000/);
-  assert.match(trace.scopeNote, /not recommended adjustment values/i);
+  assert.match(trace.scopeNote, /PLC-revision behavior only/i);
 });
 
 test("Station Labeler Encoder Fault 030 binds CN131 and OPTO131/132 without conflating the direct trigger", () => {
