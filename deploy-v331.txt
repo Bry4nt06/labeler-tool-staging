@@ -1,0 +1,5 @@
+ServoForge staging troubleshooting Station encoder/reference phase v331
+source: staging main after PR #61
+merge: 91e68271b8f841ba896b592a06d0b5bdec626d70
+purpose: explicit Railway source refresh for P141 reference, OPTO131 clock-monitor, and 1756-M02AE AQB feedback fault tracing
+production: untouched
