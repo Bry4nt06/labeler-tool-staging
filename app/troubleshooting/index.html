@@ -52,7 +52,7 @@
           <span id="recentDiagnosis" class="sf-recent-status"></span>
         </div>
         <div class="sf-fault-search-row">
-          <input id="faultSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Example: 00067, SERVOCOUNT, main contactor, bottle orientation, CAN LED red…" aria-label="Search fault code, alarm text, or symptom" />
+          <input id="faultSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Example: 1091, 670, 00067, SERVOCOUNT, main contactor…" aria-label="Search fault code, alarm text, or symptom" />
           <button id="faultSearchButton" type="button">Find fault</button>
         </div>
         <div id="searchResults" class="sf-search-results" aria-live="polite"></div>
@@ -81,21 +81,23 @@
           <div><span class="sf-eyebrow">Evidence layer</span><h2 id="referenceHeading">Reference library</h2></div>
           <span id="sourceCount" class="sf-reference-count"></span>
         </div>
-        <p class="sf-reference-intro">Every file in the supplied troubleshooting archive is indexed here. Binary PLC projects, scanned figures, shortcuts, temporary files, and field-observed validation cases remain visible as separate evidence types.</p>
+        <p class="sf-reference-intro">The supplied troubleshooting archive, TopModul electrical drawings, readable PLC export, and field-observed validation cases remain separate evidence types. PLC fault-number binding does not imply a rung or schematic page is fully traced until that mapping is verified.</p>
         <div class="sf-reference-toolbar">
-          <input id="sourceSearch" type="search" placeholder="Search manuals, schematics, PLC projects, RPC, DART, APL, TopModul…" aria-label="Search reference library" />
+          <input id="sourceSearch" type="search" placeholder="Search manuals, schematics, PLC projects, RPC, APL, TopModul…" aria-label="Search reference library" />
           <select id="sourceKindFilter" aria-label="Filter reference type"></select>
         </div>
         <div id="sourceList" class="sf-source-grid"></div>
       </section>
 
       <footer class="sf-troubleshooting-footer">
-        <p><strong>Source discipline:</strong> archived OEM/procedure content and field observations are kept separate from diagnostic interpretation. Recommendations that involve energized electrical work, stored energy, servo motion, guards, or safety circuits retain an explicit safety boundary.</p>
+        <p><strong>Source discipline:</strong> archived OEM/procedure content, PLC exports, schematics, and field observations are kept separate from diagnostic interpretation. Recommendations involving energized electrical work, stored energy, servo motion, guards, or safety circuits retain an explicit safety boundary.</p>
       </footer>
     </main>
     <script src="../auth-client.js?v=0.9.10&amp;build=troubleshooting-library-v321-20260903-1043"></script>
     <script src="./diagnostic-library.js?v=0.9.10&amp;build=troubleshooting-library-v321-20260903-1043"></script>
     <script src="./topmodul-live-diagnostics.js?v=0.9.10&amp;build=troubleshooting-library-v321-20260903-1043"></script>
+    <script src="./topmodul-plc-fault-data.js?v=0.9.10&amp;build=troubleshooting-library-v321-20260903-1043"></script>
+    <script src="./topmodul-plc-fault-catalog.js?v=0.9.10&amp;build=troubleshooting-library-v321-20260903-1043"></script>
     <script src="./troubleshooting-app.js?v=0.9.10&amp;build=troubleshooting-library-v321-20260903-1043"></script>
   </body>
 </html>
