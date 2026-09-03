@@ -1,6 +1,6 @@
 {
   "name": "servoforge-labeler-tool",
-  "version": "0.9.11-auth.3",
+  "version": "0.9.10-auth.3",
   "private": true,
   "description": "ServoForge Labeler Tool with shared Supabase authentication, environment access control, account portability, and an evidence-backed troubleshooting library.",
   "scripts": {
