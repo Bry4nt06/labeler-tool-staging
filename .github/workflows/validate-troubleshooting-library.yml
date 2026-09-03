@@ -5,8 +5,6 @@ on:
     paths:
       - "app.js"
       - "app/troubleshooting/**"
-      - "troubleshooting.html"
-      - "troubleshooting.css"
       - "service-worker.js"
       - "update-manifest.json"
       - "package.json"
@@ -18,8 +16,6 @@ on:
     paths:
       - "app.js"
       - "app/troubleshooting/**"
-      - "troubleshooting.html"
-      - "troubleshooting.css"
       - "service-worker.js"
       - "update-manifest.json"
       - "package.json"
