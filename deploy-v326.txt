@@ -1,0 +1,16 @@
+ServoForge staging TopModul station rung causality v326
+Published: 2026-09-03 ET
+Source: staging main after PR #55
+Purpose: explicit Railway source refresh
+
+Includes:
+- station PLC producing-routine classification
+- 58 Cart 1 station alarm positions located in PLC logic
+- 56 active producer/supervision conditions
+- 2 Logic_0 inactive placeholders
+- 4 Cart 1 catalog-only alarm positions
+- first-fault/upstream ranking
+- PLC cause evidence panel
+- shared Labeler vs Station diagnostic architecture
+
+Production is not changed.
