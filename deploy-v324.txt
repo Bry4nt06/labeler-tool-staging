@@ -1,0 +1,15 @@
+ServoForge staging troubleshooting library v324
+Build focus: TopModul shared Labeler/Station diagnostic scope
+Published: 2026-09-03 ET
+Source: staging main after PR #53
+Purpose: explicit Railway source refresh
+
+Validated:
+- 6 station alarm blocks
+- 62 named alarm positions per station
+- 60 exact shared templates
+- 2 retained wording exceptions
+- same ETH_ComSend station routine pattern for Stations 1-6
+- exact PLC fault numbers still resolve exact station and Faults_LB1 bit
+- generic symptom searches collapse duplicate station instances into one Station method
+- Labeler remains a separate diagnostic scope
