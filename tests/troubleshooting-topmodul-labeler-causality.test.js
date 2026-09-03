@@ -33,15 +33,21 @@ test("main drive and contactor faults bind to their actual Labeler producer path
   assert.ok(timer.producerSignals.includes("ElectrBrake.O_HWTimerFault"));
 });
 
-test("servo bottle table alarm bits bind to decoded PowerPC message codes", () => {
+test("named servo bottle table alarms and decoder-only messages retain separate source truth", () => {
   const power = library.getTopModulFault(512).labelerRungEvidence;
   const feedback = library.getTopModulFault(515).labelerRungEvidence;
   const encoder = library.getTopModulFault(524).labelerRungEvidence;
-  const can = library.getTopModulFault(528).labelerRungEvidence;
+  const lag = library.getTopModulFault(532).labelerRungEvidence;
+  const canDecoder = library.getTopModulLabelerRungEvidence(528);
+  const versionDecoder = library.getTopModulLabelerRungEvidence(529);
   assert.ok(power.producerSignals.includes("DT_PowerPC_Response.LastMessage.Faultcode == 16"));
   assert.ok(feedback.producerSignals.includes("DT_PowerPC_Response.LastMessage.Faultcode == 33"));
   assert.ok(encoder.producerSignals.includes("DT_PowerPC_Response.LastMessage.Faultcode == 120"));
-  assert.ok(can.producerSignals.includes("DT_PowerPC_Response.LastMessage.Faultcode == 130"));
+  assert.ok(lag.producerSignals.includes("DT_PowerPC_Response.LastMessage.Faultcode == 110"));
+  assert.ok(canDecoder.producerSignals.includes("DT_PowerPC_Response.LastMessage.Faultcode == 130"));
+  assert.ok(versionDecoder.producerSignals.includes("DT_PowerPC_Response.LastMessage.Faultcode == 101"));
+  assert.equal(library.getTopModulFault(528), null, "Decoder message 528 has no named HMI alarm entry in the supplied table");
+  assert.equal(library.getTopModulFault(529), null, "Decoder message 529 has no named HMI alarm entry in the supplied table");
   assert.equal(power.evidenceStatus, "message-code-and-bitfield-bound");
 });
 
@@ -69,7 +75,7 @@ test("APL station synchronization summary records that Cart 1 forces the sync tr
   assert.match(sync.logicSummary, /Logic_1/i);
 });
 
-test("Servo Bottle Table summary ranks decoded message faults ahead of summary-only evidence", () => {
+test("Servo Bottle Table summary ranks decoded named message faults ahead of summary-only evidence", () => {
   const candidates = library.getTopModulFirstFaultCandidates(661, 8);
   assert.ok(candidates.some((entry) => entry.number >= 512 && entry.number <= 532 && entry.labelerRungEvidence?.rootLikelihood === "primary"));
   assert.equal(candidates.some((entry) => entry.number === 662), false);
