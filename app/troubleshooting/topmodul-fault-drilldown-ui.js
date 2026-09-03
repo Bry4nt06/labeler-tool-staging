@@ -20,6 +20,10 @@
       .sf-plc-binding-cell small { color:var(--muted); font-size:9px; text-transform:uppercase; letter-spacing:.07em; }
       .sf-plc-binding-cell strong, .sf-plc-binding-cell code { overflow-wrap:anywhere; font-size:11px; }
       .sf-trace-status { margin-top:8px; color:var(--muted); font-size:11px; line-height:1.45; }
+      .sf-station-trace-path { display:grid; gap:7px; margin-top:8px; }
+      .sf-station-trace-step { display:grid; grid-template-columns:84px minmax(0,1fr); gap:9px; align-items:start; padding:8px 10px; border:1px solid var(--line); border-radius:7px; background:var(--input); }
+      .sf-station-trace-step small { color:var(--muted); text-transform:uppercase; font-size:9px; letter-spacing:.07em; }
+      .sf-station-trace-step code, .sf-station-trace-step strong { overflow-wrap:anywhere; font-size:11px; }
       .sf-related-fault-grid { display:grid; gap:7px; margin-top:8px; }
       .sf-related-fault { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:10px; align-items:center; width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:7px; background:var(--input); color:var(--ink); text-align:left; box-shadow:none; }
       .sf-related-fault:hover { border-color:var(--green); background:var(--panel-hi); }
@@ -29,14 +33,16 @@
       .sf-related-fault-copy span { color:var(--muted); font-size:10px; line-height:1.35; }
       .sf-related-fault-arrow { color:var(--muted); }
       @media (max-width:760px) { .sf-plc-binding-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-      @media (max-width:480px) { .sf-plc-binding-grid { grid-template-columns:1fr; } .sf-related-fault { grid-template-columns:auto minmax(0,1fr); } .sf-related-fault-arrow { display:none; } }
-      @media print { body.sf-print-diagnosis .sf-related-fault { break-inside:avoid; border-color:#bbb; background:transparent!important; color:#000!important; } }
+      @media (max-width:480px) { .sf-plc-binding-grid { grid-template-columns:1fr; } .sf-related-fault { grid-template-columns:auto minmax(0,1fr); } .sf-related-fault-arrow { display:none; } .sf-station-trace-step { grid-template-columns:1fr; gap:3px; } }
+      @media print { body.sf-print-diagnosis .sf-related-fault, body.sf-print-diagnosis .sf-station-trace-step { break-inside:avoid; border-color:#bbb; background:transparent!important; color:#000!important; } }
     `;
     document.head.appendChild(style);
   }
 
   function traceStatusLabel(status) {
     if (status === "fault-bit-and-text-bound") return "Fault number, alarm text, and PLC source bit are verified. Rung-level cause and exact schematic page/component trace are not yet marked verified.";
+    if (status === "station-local-trigger-and-transport-bound") return "Station-local fault bit, direct controller trigger tag, station-to-Labeler transport, and Labeler fault bit are bound. Physical I/O/component trace is still pending.";
+    if (status === "station-local-fault-and-transport-bound") return "Station-local fault bit and station-to-Labeler transport are bound. The exact producing rung/condition and physical I/O/component trace are still pending.";
     return String(status || "Trace status not recorded.");
   }
 
@@ -47,10 +53,28 @@
       <div class="sf-plc-binding-grid">
         <div class="sf-plc-binding-cell"><small>Fault</small><strong>${esc(entry.code)}</strong></div>
         <div class="sf-plc-binding-cell"><small>PLC source</small><code>${esc(plc.address)}</code></div>
-        <div class="sf-plc-binding-cell"><small>Station</small><strong>${plc.station ? `Labeling Station ${esc(plc.station)}` : "Main machine"}</strong></div>
+        <div class="sf-plc-binding-cell"><small>Scope</small><strong>${esc(entry.diagnosticScope || (plc.station ? "Station" : "Labeler"))}</strong></div>
+        <div class="sf-plc-binding-cell"><small>Instance</small><strong>${plc.station ? `Station ${esc(plc.station)}` : "Main Labeler"}</strong></div>
         <div class="sf-plc-binding-cell"><small>Diagnostic family</small><strong>${esc(plc.family)}</strong></div>
       </div>
-      <p class="sf-trace-status"><strong>Trace status:</strong> ${esc(traceStatusLabel(plc.traceStatus))}</p>
+      <p class="sf-trace-status"><strong>Trace status:</strong> ${esc(traceStatusLabel(entry.stationControllerTrace?.traceStatus || plc.traceStatus))}</p>
+    </section>`;
+  }
+
+  function stationTraceMarkup(entry) {
+    const trace = entry.stationControllerTrace;
+    if (!trace) return "";
+    return `<section class="sf-result-section sf-station-controller-trace" data-topmodul-station-controller-trace>
+      <h4>Station controller → Labeler fault path</h4>
+      <div class="sf-station-trace-path">
+        ${trace.directTriggerTag ? `<div class="sf-station-trace-step"><small>Controller trigger</small><code>${esc(trace.directTriggerTag)}</code></div>` : ""}
+        <div class="sf-station-trace-step"><small>Local cart fault</small><code>${esc(trace.localFaultAddress)} — Fault ${esc(trace.localFaultNumber)}</code></div>
+        <div class="sf-station-trace-step"><small>Cart transfer</small><code>${esc(trace.cartDataWord)}</code></div>
+        <div class="sf-station-trace-step"><small>Labeler receive</small><code>${esc(trace.labelerReceiveWord)}</code></div>
+        <div class="sf-station-trace-step"><small>Block copy</small><code>${esc(trace.labelerCopy)}</code></div>
+        ${trace.labelerFaultAddress ? `<div class="sf-station-trace-step"><small>Labeler fault bit</small><code>${esc(trace.labelerFaultAddress)}</code></div>` : ""}
+      </div>
+      <p class="sf-trace-status">The transport path is PLC-source evidence, not a recommendation to force or bypass any bit. Use normal diagnostics and approved safe-work procedures.</p>
     </section>`;
   }
 
@@ -84,11 +108,11 @@
     if (!entry) return;
     if (result.dataset.topmodulDrilldownEntry === entry.id && result.querySelector("[data-topmodul-plc-binding]")) return;
     result.dataset.topmodulDrilldownEntry = entry.id;
-    result.querySelectorAll("[data-topmodul-plc-binding],[data-topmodul-related-faults]").forEach((node) => node.remove());
+    result.querySelectorAll("[data-topmodul-plc-binding],[data-topmodul-station-controller-trace],[data-topmodul-related-faults]").forEach((node) => node.remove());
     const drillDown = library.getTopModulFaultDrillDown(entry, 8);
     const summary = result.querySelector(".sf-result-summary");
     if (!summary) return;
-    summary.insertAdjacentHTML("afterend", `${bindingMarkup(entry)}${relatedMarkup(drillDown)}`);
+    summary.insertAdjacentHTML("afterend", `${bindingMarkup(entry)}${stationTraceMarkup(entry)}${relatedMarkup(drillDown)}`);
   }
 
   function openFault(code) {
