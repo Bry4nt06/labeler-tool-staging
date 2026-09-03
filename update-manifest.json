@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "simulation-draft-print-v320-20260901-1814",
+  "buildId": "troubleshooting-library-v321-20260903-1043",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v320 keeps custom simulation rows, angles, actions, profile name, and description as a durable local draft when the user leaves and returns to Servo Simulation. RPC save, load, delete, selection, persistence, and Community upload handoff now share the authoritative simulation editor instead of competing listeners. The existing printer action follows the active Servo Program or Servo Simulation tab and prints either the unchanged generated build sheet or a clearly labeled custom RPC simulation profile. v319 Community RPC packages remain supported."
+  "notes": "v321 adds the separate ServoForge Troubleshooting Library with exact fault and symptom search, guided diagnostic trees, read-only machine context, source provenance for all 36 supplied troubleshooting archive files, and explicit safety boundaries. Offline navigation now caches the Labeler Tool and Troubleshooting page independently so one page cannot replace the other application shell."
 }

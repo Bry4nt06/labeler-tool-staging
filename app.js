@@ -22,6 +22,23 @@
   }
 })();
 
+(function installTroubleshootingNavigation() {
+  const install = () => {
+    if (document.getElementById("troubleshootingLibraryButton")) return;
+    const settings = document.querySelector(".top-settings-menu");
+    if (!settings?.parentElement) return;
+    const button = document.createElement("button");
+    button.id = "troubleshootingLibraryButton";
+    button.type = "button";
+    button.textContent = "Troubleshooting";
+    button.title = "Open the ServoForge Troubleshooting Library";
+    button.addEventListener("click", () => { window.location.href = "./app/troubleshooting/index.html"; });
+    settings.parentElement.insertBefore(button, settings);
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
+  else install();
+})();
+
 (function seedDefaultWorkspacePanelVisibility() {
   const preferencesKey = "servoforge-developer-preferences-v1";
   const migrationKey = "servoforge-default-hidden-panels-v2-applied";

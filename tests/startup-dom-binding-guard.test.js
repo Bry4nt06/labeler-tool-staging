@@ -8,6 +8,7 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const guardSource = fs.readFileSync(path.join(root, "app", "startup-dom-binding-guard-integration.js"), "utf8");
 const bootstrapSource = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
+const releaseManifest = JSON.parse(fs.readFileSync(path.join(root, "update-manifest.json"), "utf8"));
 const specRendererSource = fs.readFileSync(path.join(root, "app", "specification-table-renderer.js"), "utf8");
 const machineRendererSource = fs.readFileSync(path.join(root, "app", "machine-data-table-renderer.js"), "utf8");
 
@@ -15,7 +16,10 @@ assert.doesNotThrow(() => new vm.Script(guardSource, { filename: "startup-dom-bi
 assert.match(specRendererSource, /els\.bottleSpecs\.innerHTML/);
 assert.match(specRendererSource, /els\.labelSpecs\.innerHTML/);
 assert.match(machineRendererSource, /els\.heads\.innerHTML/);
-assert.match(bootstrapSource, /simulation-draft-print-v320-20260901-1814/);
+assert.ok(
+  bootstrapSource.includes(`const build = "${releaseManifest.buildId}";`),
+  "Bootstrap build identity must match update-manifest.json."
+);
 assert.ok(
   bootstrapSource.indexOf("app/startup-dom-binding-guard-integration.js")
     < bootstrapSource.indexOf("app/controllers/workspace-action-service.js"),

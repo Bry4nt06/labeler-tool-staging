@@ -1,13 +1,15 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-simulation-draft-print-v320-20260901-1814";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-troubleshooting-library-v321-20260903-1043";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
 const CORE_ASSETS = Object.freeze([
   "./",
   "./index.html",
+  "./app/troubleshooting/index.html",
+  "./app/troubleshooting/troubleshooting.css",
   "./styles.css",
   "./manifest.webmanifest",
   "./assets/labeler-tool-icon.svg",
@@ -165,6 +167,8 @@ const CORE_ASSETS = Object.freeze([
   "./app/update-manager.js",
   "./app/feedback-center-integration.js",
   "./app/community-library-integration.js",
+  "./app/troubleshooting/diagnostic-library.js",
+  "./app/troubleshooting/troubleshooting-app.js",
   "./app.js"
 ]);
 
@@ -279,10 +283,7 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
   event.respondWith(
     fetch(event.request, { cache: "no-store" })
-      .then((response) => cacheResponse(
-        event.request.mode === "navigate" ? APP_SHELL_URL : url.href,
-        response
-      ))
+      .then((response) => cacheResponse(url.href, response))
       .catch(async () => {
         const cached = await cachedFallback(
           url.href,

@@ -8,10 +8,14 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const integrationSource = fs.readFileSync(path.join(root, "app", "compact-layout-defaults-wipe-orientation-integration.js"), "utf8");
 const bootstrapSource = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
+const releaseManifest = JSON.parse(fs.readFileSync(path.join(root, "update-manifest.json"), "utf8"));
 const companyDefaults = JSON.parse(fs.readFileSync(path.join(root, "config", "company-default-settings.json"), "utf8"));
 
 assert.doesNotThrow(() => new vm.Script(integrationSource, { filename: "compact-layout-defaults-wipe-orientation-integration.js" }));
-assert.match(bootstrapSource, /simulation-draft-print-v320-20260901-1814/);
+assert.ok(
+  bootstrapSource.includes(`const build = "${releaseManifest.buildId}";`),
+  "Bootstrap build identity must match update-manifest.json."
+);
 assert.match(bootstrapSource, /app\/compact-layout-defaults-wipe-orientation-integration\.js/);
 assert.equal(companyDefaults.settings.themePreset, "servoforge");
 assert.equal(companyDefaults.settings.showAllProgramMovesOverlay, true);
