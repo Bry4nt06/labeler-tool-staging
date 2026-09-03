@@ -80,101 +80,71 @@
       sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #2 – SERVOENABLE_TIMEOUT" }]
     },
     {
-      id: "servo-power-loss", code: "SERVOPOWERLOSS", number: 3, category: "Servo / Bottle Plate", aliases: ["servo power loss", "power removed during operation"],
-      title: "Servo power was removed during operation", summary: "ServoPower had been present and was then removed by the PLC during operation.",
-      probableCauses: ["PLC removed ServoPower because another machine condition changed", "Power path to drives became unavailable"],
-      checks: ["Check current and historical ServoPower state.", "Review drive diagnostic state for the point at which power was lost."],
-      actions: ["Resolve the upstream condition that removed power before attempting restart."], safety: [safety.observe, safety.electrical],
-      sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #3 – SERVOPOWERLOSS" }]
+      id: "servo-power-loss", code: "SERVOPOWERLOSS", number: 3, category: "Servo / Bottle Plate", aliases: ["servo power loss", "power removed", "servo drops out"],
+      title: "ServoPower was removed during operation", summary: "The master detected ServoPower dropping after the servo system had already been running.", probableCauses: ["Servo power path opened", "DC/DC converter or supply dropped", "Safety/control condition removed ServoPower"], checks: ["Determine whether ServoPower dropped for the complete servo system or only a branch.", "Review DC/DC converter/drive diagnostics and the control condition that supplies ServoPower."], actions: ["Correct the cause of the power removal before repeated resets."], safety: [safety.observe, safety.electrical], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #3 – SERVOPOWERLOSS" }]
     },
     {
-      id: "servo-feedback", code: "SERVOFEEDBACK", number: 4, category: "Servo / Bottle Plate", aliases: ["servo feedback", "drive missing", "sync message", "no response"],
-      title: "One or more drives stopped responding", summary: "A drive did not respond to the periodic synchronization message and is no longer available to the RPC.",
-      probableCauses: ["Servo voltage is missing even though ServoPower status remains high", "Blown fuse or failed DC/DC converter path", "Disconnected servo/CAN line", "Loose or incorrectly seated plugs", "Internal drive defect"],
-      checks: ["Determine whether one drive, one line, or multiple lines disappeared.", "Verify converter output and drive-side supply using the approved electrical procedure.", "Check Y-box/line fuses and the physical line connection.", "Inspect that servo/CAN plugs are correctly secured."],
-      actions: ["Correct the common power/line issue first when multiple drives are affected.", "When one drive remains isolated after power/cabling checks, continue with drive-specific diagnostics."],
-      safety: [safety.loto, safety.electrical, safety.servo],
-      sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #4 – SERVOFEEDBACK" }, { sourceId: "rpc-dts5-2011", locator: "Hardware CAN structure; RPC diagnostics servomotor / AC-DC power supply" }]
+      id: "servo-feedback", code: "SERVOFEEDBACK", number: 4, category: "Servo / Bottle Plate", aliases: ["servo feedback", "servo not answering", "sync response", "drive missing", "multiple drives missing"],
+      title: "One or more servo drives do not answer synchronization", summary: "The master is not receiving expected drive responses. The fault can be local to one drive or common to a power/CAN group.",
+      probableCauses: ["Drive power missing or fuse open", "Disconnected or loose servo/CAN connection", "DC/DC supply fault", "Y-box fuse or common-line issue", "Internal drive fault"],
+      checks: ["Identify whether one drive, one group, or all drives are missing.", "Compare the missing drive/group with a known-good RPC diagnostic view.", "Check common DC/DC power and Y-box fuse paths before replacing multiple drives.", "Under the approved electrical procedure, inspect the affected line/plugs and drive power."],
+      actions: ["Restore the common power/communication path when several drives share the failure.", "If one drive remains absent after power/cabling checks, isolate that drive per the OEM replacement procedure."], safety: [safety.observe, safety.loto, safety.electrical, safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #4 – SERVOFEEDBACK" }, { sourceId: "danfoss-servo-bottle-plate-system", locator: "Servo System Diagnostics / Y-box / drive power" }, { sourceId: "rpc-dts5-2011", locator: "RPC diagnostics and servo cabling" }]
     },
     {
-      id: "servo-malfunction", code: "SERVOMALFUNCTION", number: 5, category: "Servo / Bottle Plate", aliases: ["servo malfunction", "drive error state", "low voltage"],
-      title: "Drive entered an error state", summary: "One or more drives reported a malfunction; the source procedure calls out low voltage as a possible cause.",
-      probableCauses: ["Low drive voltage", "Drive-specific internal fault"],
-      checks: ["Read the drive-specific error message before resetting.", "Check whether the fault is isolated to one drive or affects a shared power group."],
-      actions: ["After recording the drive error, use the normal machine procedure to remove and restore PowerEnable or restart the drive system.", "If the malfunction immediately returns, escalate to the affected drive and its power/cabling path rather than repeatedly resetting."],
-      safety: [safety.observe, safety.electrical], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #5 – SERVOMALFUNCTION" }]
+      id: "servo-malfunction", code: "SERVOMALFUNCTION", number: 5, category: "Servo / Bottle Plate", aliases: ["servo malfunction", "drive error", "drive fault"],
+      title: "Servo drive is reporting an error state", summary: "The drive is communicating but reports a malfunction. The field reference notes low voltage as one possible cause and directs the technician to read the drive error.", probableCauses: ["Drive error state", "Low supply voltage", "Persistent internal drive fault"], checks: ["Read the individual drive error in RPC/drive diagnostics.", "Check whether the error clears with the normal approved reset/restart sequence.", "If voltage-related, investigate the supply rather than replacing the drive first."], actions: ["Follow the specific drive error path.", "Replace a drive only after the persistent drive fault is isolated and replacement is authorized."], safety: [safety.observe, safety.electrical, safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #5 – SERVOMALFUNCTION" }]
     },
     {
-      id: "servo-transition", code: "SERVOTRANSITION", number: 6, category: "Servo / Bottle Plate", aliases: ["servo transition", "CANopen state machine"],
-      title: "Drive could not change CANopen state", summary: "A drive did not transition correctly through the CANopen state machine.",
-      probableCauses: ["Internal drive malfunction", "Firmware state problem"], checks: ["Identify the affected drive and compare its firmware/state to known-good drives."],
-      actions: ["Use the approved firmware/service procedure; replace the drive if the internal malfunction persists."], safety: [safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #6 – SERVOTRANSITION" }, { sourceId: "rpc-dts5-2011", locator: "RPC diagnostics servomotor" }]
+      id: "servo-transition", code: "SERVOTRANSITION", number: 6, category: "Servo / Bottle Plate", aliases: ["servo transition", "CANopen transition"], title: "Drive could not complete the requested CANopen transition", summary: "The drive did not move to the expected CANopen state during initialization/operation.", probableCauses: ["Internal drive fault", "Drive firmware problem"], checks: ["Confirm the affected drive and compare its status/firmware with known-good drives."], actions: ["Follow the OEM firmware/replacement path when the transition failure persists."], safety: [safety.observe, safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #6 – SERVOTRANSITION" }]
     },
     {
-      id: "servo-status", code: "SERVOSTATUS", number: 7, category: "Servo / Bottle Plate", aliases: ["servo status", "wrong state", "CANopen state"],
-      title: "Drive is in the wrong CANopen state", summary: "A drive changed state but is not in the state expected by the RPC.",
-      probableCauses: ["Internal drive malfunction", "Firmware mismatch/state problem"], checks: ["Identify the drive and compare diagnostic state/firmware with the other drives."],
-      actions: ["Use the approved firmware/service procedure; replace the drive if the state fault persists."], safety: [safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #7 – SERVOSTATUS" }]
+      id: "servo-status", code: "SERVOSTATUS", number: 7, category: "Servo / Bottle Plate", aliases: ["servo status", "wrong CANopen state"], title: "Drive is in the wrong CANopen state", summary: "The RPC detected a drive in an unexpected CANopen state.", probableCauses: ["Drive firmware issue", "Internal drive problem"], checks: ["Identify the drive/state in RPC diagnostics.", "Compare firmware/status against a known-good drive."], actions: ["Use the approved firmware or drive replacement procedure if the wrong state persists."], safety: [safety.observe, safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #7 – SERVOSTATUS" }]
     },
     {
-      id: "servo-count", code: "SERVOCOUNT", number: 8, category: "Servo / Bottle Plate", aliases: ["servo count", "drive count", "missing motor", "id 127", "duplicate drive id"],
-      title: "Configured and detected drive counts do not match", summary: "One or more drives did not respond, or the detected drive IDs do not match the configured bottle-table population.",
-      probableCauses: ["Duplicate drive IDs", "Drive ID outside the expected range", "Replacement drive still at ID 127", "Interrupted servo power/CAN cabling"],
-      checks: ["Check the drive IDs shown in the RPC diagnostic window.", "Compare missing IDs with the physical bottle-table motor labels.", "Check common power and CAN cabling before changing IDs."],
-      actions: ["Run the approved ID-distribution procedure only after confirming power and communication are stable."], safety: [safety.observe, safety.servo],
-      sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #8 – SERVOCOUNT" }, { sourceId: "rpc-dts5-2011", locator: "CAN structure and RPC diagnostics" }]
+      id: "servo-count", code: "SERVOCOUNT", number: 8, category: "Servo / Bottle Plate", aliases: ["servo count", "servo enumeration", "number of servos", "drive count mismatch", "ID duplicate", "ID 127"],
+      title: "Configured and detected servo counts do not match", summary: "The RPC sees a different number of drives than configured. Duplicate/out-of-range IDs and interrupted power/CAN lines are documented causes.",
+      probableCauses: ["Duplicate servo ID", "Servo ID outside the valid distribution", "Replacement drive still at default ID 127", "Power/cable interruption hides one or more drives", "CAN/ID distribution incomplete"],
+      checks: ["Compare configured count with detected drives in RPC diagnostics.", "Identify the first missing or duplicate ID instead of renumbering blindly.", "Check power/CAN continuity around the first missing drive/group.", "Confirm replacement drives have been through the documented ID-distribution procedure."],
+      actions: ["Correct the missing communication/power path or execute the documented ID distribution when numbering is the cause."], safety: [safety.observe, safety.loto, safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #8 – SERVOCOUNT" }, { sourceId: "rpc-dts5-2011", locator: "Servo replacement / ID distribution / RPC diagnostics" }]
     },
     {
-      id: "servo-reset", code: "SERVORESET", number: 9, category: "Servo / Bottle Plate", aliases: ["servo reset", "reset command", "CAN reset"],
-      title: "Drive reset command failed", summary: "An error occurred while the RPC sent the reset command over CAN.",
-      probableCauses: ["CAN communication/cabling issue", "Drive firmware issue", "Drive power state did not reset correctly"],
-      checks: ["Check the affected CAN line and cable connections.", "Check whether other drives on the same line respond normally."], actions: ["Use the approved drive power-cycle and firmware procedure if communication is intact."], safety: [safety.loto, safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #9 – SERVORESET" }]
+      id: "servo-reset", code: "SERVORESET", number: 9, category: "Servo / Bottle Plate", aliases: ["servo reset", "CAN reset failed"], title: "Drive reset over CAN failed", summary: "The master could not reset the drive over CAN.", probableCauses: ["CAN/cable problem", "Drive firmware problem", "Drive did not restart correctly"], checks: ["Check the affected drive's CAN/cable path.", "Compare firmware/status to a known-good drive."], actions: ["Use the documented drive power-cycle/reset procedure after cable checks; follow firmware/replacement procedure if persistent."], safety: [safety.loto, safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #9 – SERVORESET" }]
     },
     {
-      id: "servo-enumeration", code: "SERVOENUMERATION", number: 10, category: "Servo / Bottle Plate", aliases: ["servo enumeration", "wrong numbering", "id 127", "id distribution"],
-      title: "Servo numbering is incorrect", summary: "The drive numbering found by the RPC is not correct, commonly because ID distribution was not completed or a replacement drive is still ID 127.",
-      probableCauses: ["ID distribution not carried out", "Replacement drive at ID 127"], checks: ["Compare detected drive IDs with bottle-table motor labels."], actions: ["Execute the approved ID-distribution process until the drive IDs match the physical bottle-table labels."], safety: [safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #10 – SERVOENUMERATION" }]
+      id: "servo-enumeration", code: "SERVOENUMERATION", number: 10, category: "Servo / Bottle Plate", aliases: ["servo enumeration", "numbering wrong", "id distribution", "drive id 127"], title: "Servo numbering is not valid", summary: "The documented case is an incomplete ID distribution or a replacement drive remaining at ID 127.", probableCauses: ["ID distribution was not executed", "Replacement drive is still ID 127", "Servo numbering is invalid"], checks: ["Review the detected IDs in RPC diagnostics.", "Check whether a replacement drive is still at default ID 127."], actions: ["Execute the documented ID distribution procedure under the servo motion/replacement controls."], safety: [safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #10 – SERVOENUMERATION" }, { sourceId: "rpc-dts5-2011", locator: "Servo replacement / ID distribution" }]
     },
     {
-      id: "servo-mode-switch", code: "SERVOMODESWITCH", number: 11, category: "Servo / Bottle Plate", aliases: ["servo mode switch", "curve speed inertia", "work mode"],
-      title: "Drive cannot enter the commanded work mode", summary: "A drive cannot switch into its operating mode such as curve, speed, or inertia mode.", probableCauses: ["Internal drive malfunction", "Firmware issue"], checks: ["Identify the drive and compare firmware/diagnostic state with known-good drives."], actions: ["Update firmware through the approved service process or replace the drive if required."], safety: [safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #11 – SERVOMODESWITCH" }]
+      id: "servo-mode-switch", code: "SERVOMODESWITCH", number: 11, category: "Servo / Bottle Plate", aliases: ["servo mode switch", "curve mode", "speed mode", "inertia mode"], title: "Drive cannot enter the requested motion mode", summary: "The drive did not switch into Curve, Speed or Inertia mode as requested.", probableCauses: ["Firmware issue", "Internal drive fault"], checks: ["Identify the affected drive and requested mode.", "Compare its firmware with the other drives."], actions: ["Use approved firmware/replacement path if persistent."], safety: [safety.observe, safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #11 – SERVOMODESWITCH" }]
     },
     {
-      id: "servo-version", code: "SERVOVERSION", number: 12, category: "Servo / Bottle Plate", aliases: ["servo version", "firmware version mismatch", "different firmware"],
-      title: "Servo firmware versions differ", summary: "One or more drives have a different firmware version from the rest of the bottle-table population.", probableCauses: ["Replacement motor/drive has a different firmware version", "Previous service left mixed firmware"], checks: ["Read and compare firmware versions across all drives; identify the outlier before programming."], actions: ["Program the drives to the approved common firmware version for that machine."], safety: [safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #12 – SERVOVERSION" }, { sourceId: "rpc-dts5-2011", locator: "RPC diagnostics servomotor: firmware should be the same for all motors, p. 32" }]
+      id: "servo-version", code: "SERVOVERSION", number: 12, category: "Servo / Bottle Plate", aliases: ["servo version", "mixed firmware", "firmware mismatch"], title: "Servo drives do not share the required firmware version", summary: "A mixed servo firmware population is detected.", probableCauses: ["Replacement drive has a different firmware version", "Drives were programmed inconsistently"], checks: ["Compare firmware versions across all detected drives."], actions: ["Program the drives to the machine-required common firmware version using the approved procedure."], safety: [safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #12 – SERVOVERSION" }, { sourceId: "rpc-dts5-2011", locator: "Servo diagnostics / firmware" }]
     },
     {
-      id: "servo-config", code: "SERVOCONFIG", number: 13, category: "Servo / Bottle Plate", aliases: ["servo config", "servo configuration"],
-      title: "Servo configuration cannot be adapted", summary: "The servo configuration is inadequate or cannot be adapted by the system.", probableCauses: ["Drive/firmware configuration issue", "Internal drive problem"], checks: ["Compare the drive configuration and firmware against a known-good drive/machine standard."], actions: ["Use the approved firmware/configuration procedure; replace the drive if configuration remains invalid."], safety: [safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #13 – SERVOCONFIG" }]
+      id: "servo-config", code: "SERVOCONFIG", number: 13, category: "Servo / Bottle Plate", aliases: ["servo config", "configuration inadequate", "config cannot adapt"], title: "Drive configuration could not be applied", summary: "The RPC could not adapt the expected configuration to the drive.", probableCauses: ["Firmware/configuration incompatibility", "Internal drive fault"], checks: ["Compare the drive firmware/configuration with a known-good drive."], actions: ["Use the approved firmware/replacement path when configuration remains incompatible."], safety: [safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #13 – SERVOCONFIG" }]
     },
     {
-      id: "encoder-continuity", code: "ENCODERCONTINUITY", number: 14, category: "Encoder / Timing", aliases: ["encoder continuity", "encoder skipped values", "encoder faulty", "timing"],
-      title: "Encoder values are missing or discontinuous", summary: "The encoder left out values or the master did not detect them.", probableCauses: ["Faulty encoder", "Loose mechanical encoder coupling", "Poor electrical connection between encoder and master", "Master timing problem"], checks: ["Inspect the encoder mechanical connection/coupling.", "Inspect the encoder electrical connection and connector condition.", "Compare the fault behavior against a stable machine speed/known-good encoder if available."], actions: ["Correct mechanical/electrical connection defects; replace the encoder when the fault cannot be reset after those checks."], safety: [safety.loto, safety.electrical], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #14 – ENCODERCONTINUITY" }, { sourceId: "rpc-dts5-2011", locator: "SSI encoder / encoder option hardware" }]
+      id: "encoder-continuity", code: "ENCODERCONTINUITY", number: 14, category: "Encoder / Timing", aliases: ["encoder continuity", "encoder skipped", "missed counts", "timing jumps", "orientation jumps"], title: "Encoder values are discontinuous", summary: "The master detected skipped/missed encoder values rather than a smooth count sequence.", probableCauses: ["Encoder mechanical/electrical issue", "Loose encoder connection", "Timing/reference problem", "Encoder beginning to fail"], checks: ["Observe whether the discontinuity repeats at the same physical position.", "Inspect encoder mechanics/coupling and electrical connection under the appropriate safety state.", "Compare encoder/timing behavior with RPC synchronization and table-cam data when orientation is also affected."], actions: ["Correct the mechanical/electrical cause; replace the encoder only if the discontinuity persists after connection/mechanical checks."], safety: [safety.observe, safety.loto, safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #14 – ENCODERCONTINUITY" }, { sourceId: "rpc-dts5-2011", locator: "SSI encoder / synchronization" }]
     },
     {
-      id: "encoder-direction", code: "ENCODERDIRECTION", number: 15, category: "Encoder / Timing", aliases: ["encoder direction", "descending encoder values", "table runs backward", "wrong direction"],
-      title: "Encoder direction disagrees with configured machine direction", summary: "The encoder is providing descending values relative to the selected machine direction, or the table is running backward.", probableCauses: ["Configured machine direction is wrong", "Actual table rotation is opposite the configured direction"], checks: ["Verify actual table direction against the selected machine direction in setup mode."], actions: ["Correct the machine running-direction setting rather than masking the encoder signal."], safety: [safety.observe], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #15 – ENCODERDIRECTION" }]
+      id: "encoder-direction", code: "ENCODERDIRECTION", number: 15, category: "Encoder / Timing", aliases: ["encoder direction", "encoder counts backwards", "descending encoder"], title: "Encoder count direction does not match machine direction", summary: "The encoder values descend when the control expects the opposite direction.", probableCauses: ["Running direction/reference mismatch", "Encoder setup changed during service"], checks: ["Confirm actual machine direction versus the displayed encoder count direction.", "Review whether encoder or direction configuration was changed during service."], actions: ["Correct the machine/encoder running-direction configuration according to the OEM setup procedure."], safety: [safety.observe, safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #15 – ENCODERDIRECTION" }]
     },
     {
-      id: "io-box-communication", code: "IOBOXCOMM", number: 16, category: "Electrical / Communication", aliases: ["io box comm", "CAN IO box", "CAN 5", "CAN LED red"],
-      title: "Communication with the CAN-IO box failed", summary: "The RPC has a communication error with the CAN-IO box on CAN 5.", probableCauses: ["CAN 5 wiring break", "CAN-IO box not initialized", "Faulty CAN-IO box"], checks: ["Check the connection between the master PC and CAN-IO box.", "Check the CAN LED on the CAN-IO box; a red CAN LED indicates a communication problem."], actions: ["Repair the CAN connection or set up/replace the CAN-IO box according to the machine procedure."], safety: [safety.observe, safety.loto], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #16 – IOBOXCOMM" }, { sourceId: "danfoss-servo-bottle-plate-system", locator: "CAN-IO-BOX hardware section" }]
+      id: "io-box-communication", code: "IOBOXCOMM", number: 16, category: "Electrical / Communication", aliases: ["io box comm", "CAN IO", "CAN5", "red CAN LED", "IO box communication"], title: "CAN-IO communication on CAN5 is missing", summary: "The RPC cannot communicate correctly with the CAN-IO box.", probableCauses: ["CAN5 wiring/connection problem", "CAN-IO initialization problem", "CAN-IO hardware fault"], checks: ["Check CAN-IO status LEDs; the source notes a red CAN LED as communication evidence.", "Check CAN5 wiring/connectors and CAN-IO power under the approved procedure.", "Confirm the box is initialized/configured for the machine."], actions: ["Restore the CAN5/power/init path before replacing the CAN-IO box."], safety: [safety.observe, safety.loto, safety.electrical], sourceRefs: [{ sourceId: "danfoss-servo-fault-messages", locator: "Fault #16 – IOBOXCOMM" }, { sourceId: "danfoss-servo-bottle-plate-system", locator: "CAN-IO hardware overview" }]
     },
     {
       id: "apl-main-contactor", code: "APL MAIN CONTACTOR", category: "APL / Aggregate", aliases: ["main contactor fault", "aggregate contactor", "contactor", "apl contactor", "station stopped"],
-      title: "APL aggregate main contactor fault", summary: "Intermittent main-contactor faults can be driven by aggregate connections, guard/safety switches, servo/rewind connections, component binding, or another active machine condition.",
-      probableCauses: ["Harting connector not fully seated", "Servo-drive cover guard switch/safety switch not made", "Docking/safety sensor condition", "Loose servo-motor or rewind cable connection", "Rewind motor binding/failure", "Loose/pinched main-drive connection", "Another machine condition preventing the safety/main-contactor chain"],
-      checks: ["Record other active HMI/safety conditions before disturbing connections.", "With the machine safely stopped, inspect/reseat the aggregate Harting connection and guard/safety devices referenced by the procedure.", "Inspect rewind and table-servo cable connections and signs of binding.", "Inspect main-drive plugs/terminals for loose or pinched wiring under the approved maintenance procedure."],
-      actions: ["Correct the failed connection/safety condition instead of repeatedly resetting.", "Use the station-off / normal machine restart process after the underlying condition is corrected."],
-      safety: [safety.loto, safety.electrical, safety.servo],
+      title: "APL main contactor fault", summary: "Treat the contactor message as a system condition first: connector, guard/docking safety, servo cables, rewind binding, drive connections and other active faults can prevent the contactor from staying in.",
+      probableCauses: ["Aggregate Harting connector not seated", "Servo-drive cover guard switch not seated", "Docking/guard/safety switch condition", "Loose rewind/table servo motor connection", "Rewind motor binding", "Loose/pinched main drive wiring", "Another active condition is withholding the contactor"],
+      checks: ["Review the HMI for any other active conditions before touching hardware.", "Confirm labeling station state matches the documented recovery sequence.", "Under LOTO, reseat/check the aggregate Harting and documented servo/guard connections.", "Inspect the rewind for binding and the rewind/table servo motor cable connections.", "Inspect main drive terminals/ports for loose or pinched wiring under the approved electrical procedure.", "Use the normal safety-circuit reset/restart sequence only after the underlying condition is corrected."],
+      actions: ["Correct the specific connection/mechanical/safety cause found.", "Use the documented station-off / safety reset / power-cycle recovery sequence; do not bypass the safety circuit."], safety: [safety.observe, safety.loto, safety.electrical],
       sourceRefs: [{ sourceId: "apl-main-contactor-remedy", locator: "Main Contactor Faults – remedy checklist" }, { sourceId: "apl-contactor-figure-1", locator: "Reference figure" }, { sourceId: "apl-contactor-figure-2", locator: "Reference figure" }, { sourceId: "apl-contactor-figure-3", locator: "Reference figure" }, { sourceId: "apl-contactor-figure-4", locator: "Reference figure" }, { sourceId: "apl-schematic-605576", locator: "APL electrical reference" }]
     },
     {
       id: "orientation-inaccurate", code: "ORIENTATION INACCURATE", category: "Bottle Orientation", aliases: ["bottle orientation", "false orientation", "orientation off", "label alignment", "orientation inconsistent", "embossing"],
-      title: "Container orientation is inaccurate or inconsistent", summary: "Krones troubleshooting starts with camera distance, standstill timing, label placement consistency, container slip, centering, and optical cleanliness before changing recipe logic.",
-      probableCauses: ["Camera/protective-panel distance is not 80 mm to the target characteristic", "Bottle has not reached standstill before the first labeling position", "Container slips on the rotary plate", "Container is not centered consistently in the camera field", "Optics are contaminated", "RPC synchronization/table cam changed after encoder work"],
-      checks: ["Verify the 80 mm distance to the actual orientation characteristic.", "Verify plate standstill is achieved before the first labeling position.", "Compare label spacing/position consistency before blaming the orientation camera.", "Mark the bottle and plate to check for slip during a controlled diagnostic run per site procedure.", "Check bottle centering and optical cleanliness.", "If encoder/table-cam work occurred, compare RPC synchronization; the Krones manual calls for re-synchronization when deviation exceeds 0.1°."],
-      actions: ["Correct mechanical centering/slip/optics first.", "Only after those checks, correct synchronization, motor assignment, or orientation parameters using the approved setup process."], safety: [safety.observe, safety.loto],
-      sourceRefs: [{ sourceId: "dartplus-11-en-000-965", locator: "18.1 Inaccuracies during orientation, p. 51; 18.2 Basic problems, p. 52" }, { sourceId: "orientation-hardware-rpc", locator: "Camera focus/distance, pp. 8–9" }, { sourceId: "gop-embossing-orientation", locator: "Commissioning a new bottle/orientation target" }]
+      title: "Bottle orientation is inaccurate or inconsistent", summary: "DARTplus/RPC guidance separates optics and bottle slip from synchronization, motor assignment and camera-trigger timing.",
+      probableCauses: ["Camera/characteristic distance is not at the documented target", "Bottle is still rotating before first labeling", "Container slips on the bottle plate", "Centering is not stable", "Dirty optics", "RPC synchronization/table cam shifted", "Wrong RPC camera motor assignment or COM-device offset"],
+      checks: ["Check the characteristic-to-protective-panel/camera target distance; the training uses 80 mm.", "Confirm the container is at standstill before the first labeling operation.", "Mark bottle/plate to prove or rule out slip.", "Check centering and clean optics.", "After encoder replacement, compare RPC synchronization/table cam to the previous value; the source directs full resynchronization when deviation is greater than 0.1°.", "Verify the motor number in RPC Diagnostics/Camera matches the bottle inspected after the camera and check the COM-device offset/trigger relationship."],
+      actions: ["Fix mechanical/optical causes before compensating with offsets.", "If encoder work preceded the issue and synchronization moved, complete the documented synchronization procedure before fine orientation adjustment."], safety: [safety.observe, safety.servo], sourceRefs: [{ sourceId: "dartplus-11-en-000-965", locator: "18.2 Inaccurate container orientation, p. 51; 18.3 Basic orientation troubleshooting, p. 52" }, { sourceId: "orientation-hardware-rpc", locator: "Camera focus target 80 mm, p. 8" }, { sourceId: "gop-embossing-orientation", locator: "Bottle/embossing commissioning reference" }]
     },
     {
       id: "orientation-image-sequence", code: "FAULTY IMAGE SEQUENCE", category: "Bottle Orientation", aliases: ["faulty image sequence", "camera sequence", "framegrabber", "trigger device", "orientation camera fault"],
@@ -209,6 +179,46 @@
       title: "Establish the bottle-plate servo system baseline", summary: "The system reference breaks the bottle-table servo chain into the Power PC/master, Y-box, SSI encoder, servomotors, CAN-IO box, terminal, Ethernet and DC/DC power path.",
       probableCauses: ["Power/supply issue", "CAN communication issue", "Encoder/reference issue", "One drive/motor issue", "Master/terminal communication issue", "Configuration/firmware mismatch"],
       checks: ["Classify the problem first: one motor, one CAN line, all motors, encoder/timing, or master/terminal.", "Use RPC diagnostics to compare the affected device against known-good devices.", "Check common power/communication paths before replacing an individual motor when multiple devices fail together."], actions: ["Branch into the exact SERVO* / ENCODER* diagnostic when a message is available."], safety: [safety.observe, safety.electrical, safety.servo], sourceRefs: [{ sourceId: "danfoss-servo-bottle-plate-system", locator: "Hardware and software overview; Servo System Diagnostics" }, { sourceId: "rpc-dts5-2011", locator: "Hardware and RPC diagnostics" }]
+    },
+    {
+      id: "autocol-orientation-baseline", code: "AUTOCOL ORIENTATION", category: "Autocol / Orientation", aliases: ["autocol", "autocol orientation", "aggregate orientation", "agg orientation", "agg3 orientation", "camera orientation", "bottle orientation at aggregate"],
+      contextHints: ["autocol", "orientation", "camera", "aggregate", "rpc", "dart"],
+      title: "Autocol orientation system baseline", summary: "For Autocol orientation complaints, first separate bottle/plate mechanics from camera image acquisition, trigger/CAN communication, and RPC/table-cam synchronization before changing offsets.",
+      probableCauses: ["Bottle or plate slips before/during camera inspection", "Camera characteristic distance/focus or optics are incorrect", "Trigger-device/CAN communication is not stable", "RPC synchronization/table-cam reference changed", "RPC camera motor assignment does not match the inspected bottle"],
+      checks: ["Verify the bottle is stable on the plate and reaches the first labeling point without slipping.", "Verify the camera characteristic is at the documented 80 mm target distance and clean the optics.", "Check camera/framegrabber/trigger readiness before changing recipe offsets.", "If encoder or timing work preceded the fault, compare RPC synchronization/table-cam against the prior value.", "In RPC Diagnostics/Camera, confirm the motor assignment corresponds to the bottle being inspected after the camera."],
+      actions: ["Branch to ORIENTATION SYNC if the issue started after encoder/table-cam work.", "Branch to FAULTY IMAGE SEQUENCE or TRIGGER/CAN when camera/trigger evidence is abnormal.", "Only adjust orientation recipe/offset values after mechanical, optical, trigger and synchronization evidence is known-good."],
+      safety: [safety.observe, safety.servo],
+      sourceRefs: [{ sourceId: "dartplus-11-en-000-965", locator: "Troubleshooting basic/inaccurate orientation, pp. 51–52" }, { sourceId: "orientation-hardware-rpc", locator: "Camera focus and trigger device, pp. 8, 21–22" }, { sourceId: "rpc-dts5-2011", locator: "RPC diagnostics / encoder / servo reference" }]
+    },
+    {
+      id: "orientation-sync-after-encoder", code: "ORIENTATION SYNC", category: "Encoder / Timing", aliases: ["orientation sync", "rpc sync", "table cam", "encoder replacement orientation", "orientation shifted after encoder", "sync deviation", "0.1 degree"],
+      contextHints: ["autocol", "orientation", "encoder", "rpc", "table cam"],
+      title: "Orientation shifted after encoder or table-cam work", summary: "DARTplus troubleshooting directs the technician to compare RPC synchronization/table-cam against the prior value after encoder replacement; a deviation greater than 0.1° requires complete resynchronization.",
+      probableCauses: ["RPC synchronization/table-cam value changed during encoder work", "Encoder reference is not synchronized to the prior machine datum", "Camera motor assignment/COM-device offset is wrong after the timing change"],
+      checks: ["Compare the current RPC synchronization/table-cam value with the value recorded before encoder work.", "If the deviation is greater than 0.1°, stop offset tuning and perform the documented full synchronization procedure.", "After synchronization, verify the motor number in RPC Diagnostics/Camera matches the bottle inspected after the camera.", "Confirm the COM-device offset/trigger relationship against the machine standard before fine orientation adjustment."],
+      actions: ["Restore synchronization first; use recipe/brand offset only for the remaining process correction after the machine timing datum is correct."],
+      safety: [safety.observe, safety.servo],
+      sourceRefs: [{ sourceId: "dartplus-11-en-000-965", locator: "Basic orientation troubleshooting, p. 52" }, { sourceId: "rpc-dts5-2011", locator: "SSI encoder / RPC synchronization diagnostics" }]
+    },
+    {
+      id: "apl-aggregate-connection", code: "APL AGGREGATE CONNECTION", category: "APL / Aggregate", aliases: ["aggregate connection", "harting", "aggregate harting", "docking sensor", "aggregate disconnected", "station connection"],
+      contextHints: ["apl", "aggregate", "cart", "harting", "docking"],
+      title: "APL aggregate connection / docking path", summary: "An APL station fault can originate in the aggregate Harting connection, docking/safety sensing, servo-drive cover switch, or table/rewind servo connections before the main contactor itself is suspect.",
+      probableCauses: ["Aggregate Harting connector not fully seated", "Docking or guard/safety switch not made", "Servo-drive cover guard switch not seated", "Rewind/table servo connection loose", "Related active condition is preventing station enable"],
+      checks: ["Review the HMI for the first active aggregate, drive, docking, guard or safety condition.", "Under LOTO, inspect/reseat the aggregate Harting and documented servo/guard connections.", "Verify docking and safety devices are correctly made; do not bypass them.", "If the connection path is correct, trace the station enable/contactor path using the APL schematic."],
+      actions: ["Correct the identified connection or safety condition before resetting the station.", "Escalate to the schematic path when all documented connections are verified and the condition persists."],
+      safety: [safety.observe, safety.loto, safety.electrical],
+      sourceRefs: [{ sourceId: "apl-main-contactor-remedy", locator: "Main Contactor Faults – Harting, guard, docking and servo connection checks" }, { sourceId: "apl-schematic-605576", locator: "APL electrical reference" }]
+    },
+    {
+      id: "apl-rewind-servo-binding", code: "APL REWIND / SERVO", category: "APL / Aggregate", aliases: ["rewind", "rewind binding", "rewind motor", "rewind servo", "rewind main contactor", "table servo cable"],
+      contextHints: ["apl", "aggregate", "rewind", "servo"],
+      title: "APL rewind or table-servo condition behind a contactor fault", summary: "The APL field procedure notes that a rewind motor/binding condition or rewind/table servo connection can present as a main contactor fault even when a separate rewind fault is not displayed.",
+      probableCauses: ["Rewind mechanism is binding", "Rewind motor/servo connection is loose", "Table servo motor cable/connection is loose", "Main contactor is being inhibited by the downstream drive condition"],
+      checks: ["Check whether the rewind is mechanically free under the approved stopped/LOTO condition.", "Under LOTO, inspect the rewind and table servo motor connections identified by the field procedure.", "Review the drive diagnostics for a related servo condition even if the HMI only shows main contactor fault."],
+      actions: ["Correct the rewind/mechanical or servo-connection cause before treating the contactor as the failed component."],
+      safety: [safety.loto, safety.servo, safety.electrical],
+      sourceRefs: [{ sourceId: "apl-main-contactor-remedy", locator: "Main Contactor Faults – rewind/table servo checks" }, { sourceId: "apl-contactor-figure-5", locator: "Reference figure" }]
     }
   ]);
 
@@ -227,23 +237,29 @@
       id: "apl-main-contactor-flow", title: "APL main contactor", category: "APL / Aggregate", description: "Start with other conditions and safety/connection evidence before replacing parts.", start: "contactor-start",
       nodes: Object.freeze({
         "contactor-start": { question: "Is there another active drive, guard, docking, safety, or aggregate condition on the HMI?", choices: [{ label: "Yes", next: "contactor-other" }, { label: "No / nothing obvious", next: "contactor-connection" }] },
-        "contactor-other": { question: "Does the other condition identify a specific drive or safety device?", choices: [{ label: "Drive/servo/rewind condition", result: "apl-main-contactor" }, { label: "Guard/docking/safety condition", result: "apl-main-contactor" }, { label: "I need the electrical path", result: "schematic-navigation" }] },
-        "contactor-connection": { question: "Has the aggregate Harting / guard-switch / servo-connection path been inspected under LOTO?", choices: [{ label: "No", result: "apl-main-contactor" }, { label: "Yes, all connections verified", next: "contactor-persistent" }] },
-        "contactor-persistent": { question: "Is the rewind binding or does the fault follow a rewind-related problem?", choices: [{ label: "Yes / possible", result: "apl-main-contactor" }, { label: "No", result: "schematic-navigation" }] }
+        "contactor-other": { question: "Does the other condition identify a specific drive or safety device?", choices: [{ label: "Rewind / table-servo condition", result: "apl-rewind-servo-binding" }, { label: "Guard / docking / aggregate connection", result: "apl-aggregate-connection" }, { label: "Main contactor only", result: "apl-main-contactor" }, { label: "I need the electrical path", result: "schematic-navigation" }] },
+        "contactor-connection": { question: "Has the aggregate Harting / guard-switch / servo-connection path been inspected under LOTO?", choices: [{ label: "No", result: "apl-aggregate-connection" }, { label: "Yes, all connections verified", next: "contactor-persistent" }] },
+        "contactor-persistent": { question: "Is the rewind binding or does the fault follow a rewind-related problem?", choices: [{ label: "Yes / possible", result: "apl-rewind-servo-binding" }, { label: "No", result: "schematic-navigation" }] }
       })
     },
     {
       id: "bottle-orientation-flow", title: "Bottle orientation", category: "Bottle Orientation", description: "Separate mechanical/optical inconsistency from camera/trigger/CAN faults.", start: "orientation-start",
       nodes: Object.freeze({
-        "orientation-start": { question: "What best matches the orientation problem?", choices: [{ label: "Bottle is oriented, but position is inconsistent/off", result: "orientation-inaccurate" }, { label: "Camera/image sequence fault", result: "orientation-image-sequence" }, { label: "Trigger device Ready/Fault LED problem", result: "orientation-trigger-can" }, { label: "Problem started after encoder/table-cam work", next: "orientation-sync" }] },
-        "orientation-sync": { question: "Has RPC synchronization/table cam been checked against the previous value?", choices: [{ label: "No", result: "orientation-inaccurate" }, { label: "Yes, and deviation is > 0.1°", result: "orientation-inaccurate" }, { label: "Yes, deviation is <= 0.1°", next: "orientation-motor" }] },
+        "orientation-start": { question: "What best matches the orientation problem?", choices: [{ label: "Autocol / aggregate orientation — guide me", result: "autocol-orientation-baseline" }, { label: "Bottle is oriented, but position is inconsistent/off", result: "orientation-inaccurate" }, { label: "Camera/image sequence fault", result: "orientation-image-sequence" }, { label: "Trigger device Ready/Fault LED problem", result: "orientation-trigger-can" }, { label: "Problem started after encoder/table-cam work", next: "orientation-sync" }] },
+        "orientation-sync": { question: "Has RPC synchronization/table cam been checked against the previous value?", choices: [{ label: "No / not compared yet", result: "orientation-sync-after-encoder" }, { label: "Yes, and deviation is > 0.1°", result: "orientation-sync-after-encoder" }, { label: "Yes, deviation is <= 0.1°", next: "orientation-motor" }] },
         "orientation-motor": { question: "Does the motor number in RPC Diagnostics match the bottle being inspected after the camera?", choices: [{ label: "No / unsure", result: "orientation-inaccurate" }, { label: "Yes", result: "orientation-image-sequence" }] }
+      })
+    },
+    {
+      id: "autocol-orientation-flow", title: "Autocol / orientation", category: "Autocol / Orientation", description: "Route Autocol orientation symptoms through mechanics, camera/trigger evidence and RPC synchronization before offset tuning.", contextHints: ["autocol", "orientation", "aggregate", "camera", "rpc"], start: "autocol-start",
+      nodes: Object.freeze({
+        "autocol-start": { question: "What changed or what do you see at the orientation aggregate?", choices: [{ label: "Orientation is consistently shifted after encoder/timing work", result: "orientation-sync-after-encoder" }, { label: "Orientation varies bottle-to-bottle", result: "orientation-inaccurate" }, { label: "Camera / image sequence fault", result: "orientation-image-sequence" }, { label: "Trigger Ready flashes / Fault LED is red", result: "orientation-trigger-can" }, { label: "I need a full Autocol orientation baseline", result: "autocol-orientation-baseline" }] }
       })
     },
     {
       id: "encoder-timing-flow", title: "Encoder / timing", category: "Encoder / Timing", description: "Differentiate continuity, direction, synchronization and orientation timing symptoms.", start: "encoder-start",
       nodes: Object.freeze({
-        "encoder-start": { question: "Which symptom is closest?", choices: [{ label: "Skipped / discontinuous encoder values", result: "encoder-continuity" }, { label: "Encoder values count the wrong direction", result: "encoder-direction" }, { label: "Bottle orientation shifted after encoder replacement", result: "orientation-inaccurate" }, { label: "I only know the machine timing is wrong", result: "schematic-navigation" }] }
+        "encoder-start": { question: "Which symptom is closest?", choices: [{ label: "Skipped / discontinuous encoder values", result: "encoder-continuity" }, { label: "Encoder values count the wrong direction", result: "encoder-direction" }, { label: "Bottle orientation shifted after encoder replacement", result: "orientation-sync-after-encoder" }, { label: "Autocol orientation / RPC timing question", result: "autocol-orientation-baseline" }, { label: "I only know the machine timing is wrong", result: "schematic-navigation" }] }
       })
     },
     {
@@ -280,6 +296,19 @@
     ].join(" "));
   }
 
+  function contextSearchText(context = {}) {
+    return normalize([context.site, context.zone, context.mapName, context.machineType, context.applicationMode, context.brand, context.bottle].filter(Boolean).join(" "));
+  }
+
+  function isExplicitForEntry(entry, normalizedQuery) {
+    if (!normalizedQuery) return false;
+    const compactQuery = normalizedQuery.replaceAll(" ", "");
+    const compactCode = normalize(entry.code).replaceAll(" ", "");
+    if (compactQuery && compactQuery === compactCode) return true;
+    if (normalize(entry.title).includes(normalizedQuery)) return true;
+    return (entry.aliases || []).some((alias) => normalize(alias).includes(normalizedQuery) || normalizedQuery.includes(normalize(alias)));
+  }
+
   function scoreEntry(entry, query, context = {}) {
     const normalizedQuery = normalize(query);
     if (!normalizedQuery) return 0;
@@ -287,6 +316,7 @@
     const code = normalize(entry.code);
     const compactCode = code.replaceAll(" ", "");
     const text = entrySearchText(entry);
+    const explicit = isExplicitForEntry(entry, normalizedQuery);
     let score = 0;
     if (compactQuery === compactCode) score += 100;
     if (code.includes(normalizedQuery)) score += 45;
@@ -294,10 +324,39 @@
     for (const term of normalizedQuery.split(" ").filter((term) => term.length > 1)) {
       if (text.includes(term)) score += 4;
     }
+
     const application = normalize(context.applicationMode);
-    if (application === "apl" && /APL/.test(entry.category)) score += 4;
-    if (application === "cold glue" && /APL/.test(entry.category)) score -= 8;
+    const contextText = contextSearchText(context);
+    const entryHints = (entry.contextHints || []).map(normalize).filter(Boolean);
+    for (const hint of entryHints) if (contextText.includes(hint)) score += 6;
+
+    const isApl = /APL/.test(entry.category);
+    const isOrientation = /Orientation/.test(entry.category);
+    if (application === "apl" && isApl) score += 10;
+    if (application === "cold glue" && isApl && !explicit) score -= 12;
+    if (contextText.includes("autocol") && (isOrientation || entryHints.includes("autocol"))) score += 12;
+    if (contextText.includes("orientation") && isOrientation) score += 6;
     return score;
+  }
+
+  function scoreFlow(flow, context = {}) {
+    const contextText = contextSearchText(context);
+    const application = normalize(context.applicationMode);
+    let score = 0;
+    const hints = (flow.contextHints || []).map(normalize).filter(Boolean);
+    for (const hint of hints) if (contextText.includes(hint)) score += 8;
+    if (application === "apl" && /APL/.test(flow.category)) score += 12;
+    if (application === "cold glue" && /APL/.test(flow.category)) score -= 8;
+    if (contextText.includes("autocol") && /Orientation/.test(flow.category)) score += 14;
+    if (contextText.includes("orientation") && /Orientation/.test(flow.category)) score += 8;
+    return score;
+  }
+
+  function recommendFlows(context = {}) {
+    return flows
+      .map((flow, index) => ({ flow, index, contextScore: scoreFlow(flow, context) }))
+      .sort((a, b) => b.contextScore - a.contextScore || a.index - b.index)
+      .map((item) => ({ ...item.flow, contextScore: item.contextScore }));
   }
 
   function searchEntries(query, context = {}, limit = 8) {
@@ -366,7 +425,7 @@
   }
 
   return Object.freeze({
-    version: "troubleshooting-library-v1",
+    version: "troubleshooting-library-v2",
     SOURCE_KIND,
     sources,
     entries,
@@ -377,6 +436,7 @@
     getSource,
     searchEntries,
     searchSources,
+    recommendFlows,
     validate
   });
 });
