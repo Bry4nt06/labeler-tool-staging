@@ -43,10 +43,10 @@ test("symptom search finds APL contactor and orientation guidance", () => {
   assert.equal(orientationMatches.some((entry) => entry.id === "orientation-inaccurate"), true);
 });
 
-test("Cold Glue context does not hide an explicitly requested APL reference", () => {
+test("Cold Glue context does not promote APL-only results without a matching query", () => {
   const results = library.searchEntries("contactor", { applicationMode: "cold-glue" });
   assert.equal(results[0]?.id, "apl-main-contactor");
-  assert.ok(results[0].searchScore > 0);
+  assert.ok(results[0].searchScore > 0, "Exact symptom should still find the APL reference when explicitly requested");
 });
 
 test("guided flows resolve only to valid diagnostic entries", () => {
@@ -64,4 +64,55 @@ test("diagnostic entries retain safety guidance and source provenance", () => {
     assert.ok(entry.safety.length > 0, `${entry.id} missing safety guidance`);
     assert.ok(entry.sourceRefs.length > 0, `${entry.id} missing source references`);
   }
+});
+
+test("Phase 2 adds machine-aware Autocol, encoder-sync and APL aggregate diagnostics", () => {
+  assert.equal(library.version, "troubleshooting-library-v2");
+  assert.ok(library.getEntry("autocol-orientation-baseline"));
+  assert.ok(library.getEntry("orientation-sync-after-encoder"));
+  assert.ok(library.getEntry("apl-aggregate-connection"));
+  assert.ok(library.getEntry("apl-rewind-servo-binding"));
+  assert.ok(library.getFlow("autocol-orientation-flow"));
+});
+
+test("machine context ranks the most relevant guided path without hiding other paths", () => {
+  const autocol = library.recommendFlows({ machineType: "Autocol", applicationMode: "apl" });
+  assert.equal(autocol[0]?.id, "autocol-orientation-flow");
+  assert.ok(autocol.some((flow) => flow.id === "apl-main-contactor-flow"));
+
+  const apl = library.recommendFlows({ applicationMode: "apl" });
+  assert.equal(apl[0]?.id, "apl-main-contactor-flow");
+
+  const coldGlue = library.recommendFlows({ applicationMode: "cold-glue" });
+  assert.notEqual(coldGlue[0]?.id, "apl-main-contactor-flow");
+});
+
+test("Autocol and encoder symptom searches resolve to dedicated Phase 2 outcomes", () => {
+  const orientation = library.searchEntries("orientation", { machineType: "Autocol" });
+  assert.equal(orientation[0]?.id, "autocol-orientation-baseline");
+
+  const encoder = library.searchEntries("encoder replacement orientation", { machineType: "Autocol" });
+  assert.equal(encoder[0]?.id, "orientation-sync-after-encoder");
+
+  const rewind = library.searchEntries("rewind binding", { applicationMode: "apl" });
+  assert.equal(rewind[0]?.id, "apl-rewind-servo-binding");
+});
+
+test("explicit APL fault intent stays authoritative even in Cold Glue context", () => {
+  const results = library.searchEntries("APL main contactor", { applicationMode: "cold-glue", machineType: "Autocol" });
+  assert.equal(results[0]?.id, "apl-main-contactor");
+});
+
+test("Phase 2 browser controller retains local resolution history, guided trail, and printable reports", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const source = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/troubleshooting-app.js"), "utf8");
+  assert.match(source, /servoforge-troubleshooting-resolutions-v1/);
+  assert.match(source, /recommendFlows\(state\.context\)/);
+  assert.match(source, /data-save-resolution/);
+  assert.match(source, /Resolution saved\. It will be suggested on matching future faults\./);
+  assert.match(source, /data-print-diagnosis/);
+  assert.match(source, /global\.print\(\)/);
+  assert.match(source, /Guided path:/);
+  assert.match(source, /Safety boundary:/);
 });
