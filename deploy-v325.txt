@@ -1,0 +1,14 @@
+ServoForge staging troubleshooting library v325
+Build focus: TopModul shared station-controller fault transport trace
+Published: 2026-09-03 ET
+Source: staging main after PR #54
+Purpose: explicit Railway source refresh
+
+Validated:
+- station controller local Faults[0..4] model
+- DataFromLS.Par1[40..42] station fault transport
+- identical Labeler-side receive/copy structure for Stations 1-6
+- exact Labeler fault destination preserved per station
+- 27 direct Cart 1 drive/encoder trigger tags bound where L5K mapping is explicit
+- Station controller -> Labeler path shown in troubleshooting UI
+- no safety/interlock bypass guidance
