@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-circuit-trace-v328-20260903-1425",
+  "buildId": "troubleshooting-exact-circuit-v329-20260903-1920",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v328 extends the ServoForge Troubleshooting Library with a separate electrical-circuit evidence layer. Verified archived APL Cart device, cable, terminal, and drawing locations are linked to PLC producer signals for LS143, P133, PE603, PE621, PE622, PE641, MTR601, and MTR611. Cross-machine references remain explicitly scoped: Autocol encoder/fine-clock wiring is shown only as corroborative Krones architecture until an exact TopModul Labeler electrical drawing is supplied. No safety bypass, forcing, or defeated-interlock guidance is introduced."
+  "notes": "v329 promotes the supplied K407039 TopModul/Labeller and K605163 APL Cart electrical drawings to machine-specific circuit authority where they agree with the readable PLC exports. Faults 669/670 now trace ENC101 -> CVTR101 -> I/O031/Local:7 fine-clock feedback exactly; faults 482/490 bind C101/C102 command and feedback I/O; fault 640 binds PS101 machine-air monitoring; Station fault 025 adds PE631/PE632 end-of-reel hardware while preserving the SS631 PLC vs SS633 drawing designation mismatch. Shared Station methods remain parameterized across Stations 1-6."
 }
