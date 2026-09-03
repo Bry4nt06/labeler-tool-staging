@@ -1,0 +1,54 @@
+name: Validate troubleshooting library
+
+on:
+  pull_request:
+    paths:
+      - "app.js"
+      - "app/troubleshooting/**"
+      - "troubleshooting.html"
+      - "troubleshooting.css"
+      - "service-worker.js"
+      - "update-manifest.json"
+      - "package.json"
+      - "tests/troubleshooting-*.test.js"
+      - ".github/workflows/validate-troubleshooting-library.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "app.js"
+      - "app/troubleshooting/**"
+      - "troubleshooting.html"
+      - "troubleshooting.css"
+      - "service-worker.js"
+      - "update-manifest.json"
+      - "package.json"
+      - "tests/troubleshooting-*.test.js"
+      - ".github/workflows/validate-troubleshooting-library.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out staging change
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check troubleshooting and shell syntax
+        run: |
+          set -euo pipefail
+          node --check app/troubleshooting/diagnostic-library.js
+          node --check app/troubleshooting/troubleshooting-app.js
+          node --check app.js
+          node --check service-worker.js
+      - name: Run troubleshooting regressions
+        run: npm run test:troubleshooting
+      - name: Run startup regressions
+        run: npm run prestart
+      - name: Check patch whitespace
+        run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD || git diff --check
