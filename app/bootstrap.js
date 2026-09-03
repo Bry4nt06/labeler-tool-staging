@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "simulation-draft-print-v320-20260901-1814";
-  const buildUpdatedAt = "Sep 1, 2026 6:14 PM ET";
+  const build = "troubleshooting-library-v321-20260903-1043";
+  const buildUpdatedAt = "Sep 3, 2026 10:43 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
