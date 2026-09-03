@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="application-version" content="0.9.11" />
+    <meta name="theme-color" content="#173f35" />
+    <title>ServoForge Troubleshooting Library — STAGING</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="assets/labeler-tool-icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css?v=0.9.11&amp;build=troubleshooting-library-v1-20260903" />
+    <link rel="stylesheet" href="troubleshooting.css?v=0.9.11&amp;build=troubleshooting-library-v1-20260903" />
+  </head>
+  <body>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — NOT PRODUCTION</div>
+    <main class="app troubleshooting-app">
+      <section class="topbar troubleshooting-topbar">
+        <div>
+          <h1>ServoForge <span class="product-module">Troubleshooting Library</span></h1>
+          <p>Guided fault isolation backed by ServoForge machine context and the archived service references.</p>
+        </div>
+        <nav class="module-navigation" aria-label="ServoForge modules">
+          <a class="module-navigation-link" href="./index.html">Labeler Tool</a>
+          <a class="module-navigation-link active" href="./troubleshooting.html" aria-current="page">Troubleshooting</a>
+        </nav>
+      </section>
+
+      <section class="sf-troubleshooting-hero panel">
+        <div class="sf-hero-copy">
+          <span class="sf-eyebrow">Start with evidence</span>
+          <h2>What is the machine telling you?</h2>
+          <p>Search an exact alarm or describe the symptom. If there is no useful code, use a guided path to narrow the fault by system, scope, power, communication, timing, and machine condition.</p>
+        </div>
+        <div class="sf-library-status">
+          <span>Library status</span>
+          <strong id="libraryValidationStatus">Loading diagnostic library…</strong>
+        </div>
+      </section>
+
+      <section class="sf-context-panel panel" aria-label="Current ServoForge machine context">
+        <div class="sf-section-heading">
+          <div><span class="sf-eyebrow">Machine context</span><h2>Current ServoForge setup</h2></div>
+          <p>The troubleshooting page reads saved context only; it never changes the active machine map or servo program.</p>
+        </div>
+        <div id="troubleshootingContext" class="sf-context-chips"></div>
+      </section>
+
+      <section class="sf-search-panel panel" aria-labelledby="faultSearchHeading">
+        <div class="sf-section-heading">
+          <div><span class="sf-eyebrow">Fastest path</span><h2 id="faultSearchHeading">Fault / symptom search</h2></div>
+          <span id="recentDiagnosis" class="sf-recent-status"></span>
+        </div>
+        <div class="sf-fault-search-row">
+          <input id="faultSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Example: SERVOCOUNT, main contactor, bottle orientation, CAN LED red…" aria-label="Search fault code, alarm text, or symptom" />
+          <button id="faultSearchButton" type="button">Find fault</button>
+        </div>
+        <div id="searchResults" class="sf-search-results" aria-live="polite"></div>
+      </section>
+
+      <section class="sf-guide-panel" aria-labelledby="guidedHeading">
+        <div class="sf-section-heading sf-section-heading-outside">
+          <div><span class="sf-eyebrow">No exact alarm?</span><h2 id="guidedHeading">Guided troubleshooting</h2></div>
+          <p>Choose the system that best matches what you see.</p>
+        </div>
+        <div id="guideCards" class="sf-guide-grid"></div>
+      </section>
+
+      <section id="diagnosticWorkspace" class="sf-diagnostic-workspace panel" hidden>
+        <header class="sf-diagnostic-head">
+          <div><span id="diagnosticBreadcrumb" class="sf-eyebrow"></span><h2 id="diagnosticQuestion"></h2><p id="diagnosticHelp"></p></div>
+          <div class="sf-diagnostic-actions"><button id="diagnosticBack" type="button" class="secondary-button">Back</button><button id="diagnosticReset" type="button" class="secondary-button">Start over</button></div>
+        </header>
+        <div id="diagnosticChoices" class="sf-choice-grid"></div>
+      </section>
+
+      <section id="diagnosticResult" class="sf-diagnostic-result panel" hidden aria-live="polite"></section>
+
+      <section class="sf-reference-panel panel" aria-labelledby="referenceHeading">
+        <div class="sf-section-heading">
+          <div><span class="sf-eyebrow">Evidence layer</span><h2 id="referenceHeading">Reference library</h2></div>
+          <span id="sourceCount" class="sf-reference-count"></span>
+        </div>
+        <p class="sf-reference-intro">Every file in the supplied troubleshooting archive is indexed here. Binary PLC projects, scanned figures, shortcuts, and temporary files remain visible as references even when the browser cannot inspect their internal content.</p>
+        <div class="sf-reference-toolbar">
+          <input id="sourceSearch" type="search" placeholder="Search manuals, schematics, PLC projects, RPC, DART, APL…" aria-label="Search reference library" />
+          <select id="sourceKindFilter" aria-label="Filter reference type"></select>
+        </div>
+        <div id="sourceList" class="sf-source-grid"></div>
+      </section>
+
+      <footer class="sf-troubleshooting-footer">
+        <p><strong>Source discipline:</strong> archived OEM/procedure content is kept separate from diagnostic interpretation. Recommendations that involve energized electrical work, stored energy, servo motion, guards, or safety circuits retain an explicit safety boundary.</p>
+      </footer>
+    </main>
+    <script src="app/troubleshooting/diagnostic-library.js?v=0.9.11&amp;build=troubleshooting-library-v1-20260903"></script>
+    <script src="app/troubleshooting/troubleshooting-app.js?v=0.9.11&amp;build=troubleshooting-library-v1-20260903"></script>
+  </body>
+</html>
