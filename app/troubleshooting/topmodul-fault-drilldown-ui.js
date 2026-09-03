@@ -27,6 +27,14 @@
       .sf-cause-evidence-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:8px; }
       .sf-cause-signal-list { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
       .sf-cause-chip { padding:4px 6px; border:1px solid var(--line); border-radius:999px; background:var(--input); font:10px ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap:anywhere; }
+      .sf-circuit-device-grid { display:grid; gap:7px; margin-top:8px; }
+      .sf-circuit-device { display:grid; grid-template-columns:90px minmax(0,1fr); gap:9px; padding:9px 10px; border:1px solid var(--line); border-radius:7px; background:var(--input); }
+      .sf-circuit-device strong { color:var(--green); overflow-wrap:anywhere; }
+      .sf-circuit-device-copy { display:grid; gap:3px; min-width:0; }
+      .sf-circuit-device-copy span, .sf-circuit-device-copy code { overflow-wrap:anywhere; font-size:10px; line-height:1.4; }
+      .sf-circuit-location-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+      .sf-circuit-location { display:inline-flex; gap:4px; align-items:center; padding:5px 7px; border:1px solid var(--line); border-radius:999px; background:var(--input); font-size:10px; }
+      .sf-circuit-warning { margin-top:8px; padding:8px 10px; border:1px solid var(--line); border-radius:7px; background:var(--input); font-size:10px; line-height:1.45; }
       .sf-first-fault-grid, .sf-related-fault-grid { display:grid; gap:7px; margin-top:8px; }
       .sf-related-fault { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:10px; align-items:center; width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:7px; background:var(--input); color:var(--ink); text-align:left; box-shadow:none; }
       .sf-related-fault:hover { border-color:var(--green); background:var(--panel-hi); }
@@ -37,16 +45,16 @@
       .sf-causal-role { display:inline-flex; width:max-content; max-width:100%; padding:2px 5px; border:1px solid var(--line); border-radius:999px; font-size:9px!important; text-transform:uppercase; letter-spacing:.04em; }
       .sf-related-fault-arrow { color:var(--muted); }
       @media (max-width:760px) { .sf-plc-binding-grid, .sf-cause-evidence-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-      @media (max-width:480px) { .sf-plc-binding-grid, .sf-cause-evidence-grid { grid-template-columns:1fr; } .sf-related-fault { grid-template-columns:auto minmax(0,1fr); } .sf-related-fault-arrow { display:none; } .sf-station-trace-step { grid-template-columns:1fr; gap:3px; } }
-      @media print { body.sf-print-diagnosis .sf-related-fault, body.sf-print-diagnosis .sf-station-trace-step, body.sf-print-diagnosis .sf-plc-binding-cell { break-inside:avoid; border-color:#bbb; background:transparent!important; color:#000!important; } }
+      @media (max-width:480px) { .sf-plc-binding-grid, .sf-cause-evidence-grid { grid-template-columns:1fr; } .sf-related-fault { grid-template-columns:auto minmax(0,1fr); } .sf-related-fault-arrow { display:none; } .sf-station-trace-step, .sf-circuit-device { grid-template-columns:1fr; gap:3px; } }
+      @media print { body.sf-print-diagnosis .sf-related-fault, body.sf-print-diagnosis .sf-station-trace-step, body.sf-print-diagnosis .sf-plc-binding-cell, body.sf-print-diagnosis .sf-circuit-device { break-inside:avoid; border-color:#bbb; background:transparent!important; color:#000!important; } }
     `;
     document.head.appendChild(style);
   }
 
   function traceStatusLabel(status) {
     if (status === "fault-bit-and-text-bound") return "Fault number, alarm text, and PLC source bit are verified. Rung-level cause and exact schematic page/component trace are not yet marked verified.";
-    if (status === "station-local-trigger-and-transport-bound") return "Station-local fault bit, direct controller trigger tag, station-to-Labeler transport, and Labeler fault bit are bound. Physical I/O/component trace is still pending.";
-    if (status === "station-local-fault-and-transport-bound") return "Station-local fault bit and station-to-Labeler transport are bound. Physical I/O/component trace is still pending.";
+    if (status === "station-local-trigger-and-transport-bound") return "Station-local fault bit, direct controller trigger tag, station-to-Labeler transport, and Labeler fault bit are bound. Physical I/O/component trace may be shown separately when schematic evidence exists.";
+    if (status === "station-local-fault-and-transport-bound") return "Station-local fault bit and station-to-Labeler transport are bound. Physical I/O/component trace may be shown separately when schematic evidence exists.";
     return String(status || "Trace status not recorded.");
   }
 
@@ -99,6 +107,36 @@
     </section>`;
   }
 
+  function circuitTraceMarkup(entry) {
+    const trace = entry.circuitTrace;
+    if (!trace) return "";
+    const source = trace.source || {};
+    const sourceLabel = [source.file, source.drawing].filter(Boolean).join(" — ");
+    return `<section class="sf-result-section sf-circuit-trace" data-topmodul-circuit-trace>
+      <h4>Electrical circuit evidence</h4>
+      <div class="sf-cause-evidence-grid">
+        <div class="sf-plc-binding-cell"><small>Drawing</small><strong>${esc(source.drawing || "Not recorded")}</strong></div>
+        <div class="sf-plc-binding-cell"><small>Machine model</small><strong>${esc(source.machineModel || "Not recorded")}</strong></div>
+        <div class="sf-plc-binding-cell"><small>Evidence status</small><strong>${esc(trace.status)}</strong></div>
+        <div class="sf-plc-binding-cell"><small>Confidence</small><strong>${esc(trace.confidence)}</strong></div>
+      </div>
+      ${trace.plcSignals?.length ? `<div class="sf-cause-signal-list">${trace.plcSignals.map((signal) => `<code class="sf-cause-chip">${esc(signal)}</code>`).join("")}</div>` : ""}
+      <div class="sf-circuit-device-grid">${(trace.deviceRows || []).map((row) => `<div class="sf-circuit-device">
+        <strong>${esc(row.device)}</strong>
+        <span class="sf-circuit-device-copy">
+          <span>${esc(row.description)}${row.area ? ` — ${esc(row.area)}` : ""}</span>
+          ${row.cable ? `<code>Cable ${esc(row.cable)}</code>` : ""}
+          ${row.terminals ? `<code>${esc(row.terminals)}</code>` : ""}
+        </span>
+      </div>`).join("")}</div>
+      ${(trace.drawingLocations || []).length ? `<div class="sf-circuit-location-list">${trace.drawingLocations.map((location) => `<span class="sf-circuit-location"><strong>PDF ${esc(location.pdfPage)}</strong><span>${esc(location.section || location.sheet || "")}</span></span>`).join("")}</div>` : ""}
+      <p class="sf-trace-status">${esc(trace.summary)}</p>
+      <div class="sf-circuit-warning"><strong>Source:</strong> ${esc(sourceLabel || trace.sourceId)}${source.revision ? ` · Rev ${esc(source.revision)}` : ""}${source.drawingDate ? ` · ${esc(source.drawingDate)}` : ""}<br>${esc(source.sourceDiscipline || trace.scopeNote || "")}</div>
+      ${trace.scopeNote && trace.scopeNote !== source.sourceDiscipline ? `<div class="sf-circuit-warning"><strong>Scope:</strong> ${esc(trace.scopeNote)}</div>` : ""}
+      ${trace.safetyBoundary ? `<div class="sf-circuit-warning"><strong>Safety boundary:</strong> ${esc(trace.safetyBoundary)}</div>` : ""}
+    </section>`;
+  }
+
   function faultButton(entry) {
     return `<button type="button" class="sf-related-fault" data-topmodul-open-fault="${esc(entry.code)}">
       <span class="sf-related-fault-code">${esc(entry.code)}</span>
@@ -143,11 +181,11 @@
     if (!entry) return;
     if (result.dataset.topmodulDrilldownEntry === entry.id && result.querySelector("[data-topmodul-plc-binding]")) return;
     result.dataset.topmodulDrilldownEntry = entry.id;
-    result.querySelectorAll("[data-topmodul-plc-binding],[data-topmodul-station-controller-trace],[data-topmodul-cause-evidence],[data-topmodul-first-faults],[data-topmodul-related-faults]").forEach((node) => node.remove());
+    result.querySelectorAll("[data-topmodul-plc-binding],[data-topmodul-station-controller-trace],[data-topmodul-cause-evidence],[data-topmodul-circuit-trace],[data-topmodul-first-faults],[data-topmodul-related-faults]").forEach((node) => node.remove());
     const drillDown = library.getTopModulFaultDrillDown(entry, 10);
     const summary = result.querySelector(".sf-result-summary");
     if (!summary) return;
-    summary.insertAdjacentHTML("afterend", `${bindingMarkup(entry)}${stationTraceMarkup(entry)}${causeEvidenceMarkup(entry)}${firstFaultMarkup(drillDown)}${relatedMarkup(drillDown)}`);
+    summary.insertAdjacentHTML("afterend", `${bindingMarkup(entry)}${stationTraceMarkup(entry)}${causeEvidenceMarkup(entry)}${circuitTraceMarkup(entry)}${firstFaultMarkup(drillDown)}${relatedMarkup(drillDown)}`);
   }
 
   function openFault(code) {
