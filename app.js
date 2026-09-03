@@ -32,7 +32,7 @@
     button.type = "button";
     button.textContent = "Troubleshooting";
     button.title = "Open the ServoForge Troubleshooting Library";
-    button.addEventListener("click", () => { window.location.href = "./troubleshooting.html"; });
+    button.addEventListener("click", () => { window.location.href = "./app/troubleshooting/index.html"; });
     settings.parentElement.insertBefore(button, settings);
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
