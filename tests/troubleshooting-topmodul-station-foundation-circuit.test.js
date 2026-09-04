@@ -21,11 +21,13 @@ const communication = require("../app/troubleshooting/topmodul-station-communica
 const process = require("../app/troubleshooting/topmodul-station-process-trace.js")(communication);
 const library = require("../app/troubleshooting/topmodul-station-foundation-circuit.js")(process);
 
-test("Station foundation layer validates exact safety/controller faults and source gaps", () => {
+test("Station foundation layer validates exact safety/controller faults and source coverage", () => {
   const validation = library.validate();
   assert.equal(validation.ok, true, validation.errors.join("\n"));
   assert.match(library.version, /station-foundation-circuit-v1/);
   assert.deepEqual([...library.topModulStationFoundationCircuitOffsets], [1, 2]);
+  assert.deepEqual([...library.topModulStationSearchableGapOffsets], [8, 24, 31]);
+  assert.deepEqual([...library.topModulStationAbsentSourcePositions], [0, 55, 56, 57, 58, 59, 61, 62, 63]);
 });
 
 test("Fault 001 preserves both direct and delayed main-machine E-stop feedback paths", () => {
@@ -49,14 +51,27 @@ test("Fault 002 stays a controller LED-status diagnostic without inventing the v
   assert.match(trace.summary, /does not itself decode the numeric LedStatus value 3/i);
 });
 
-test("unimplemented alarm-table positions remain searchable but explicitly unpromoted", () => {
-  for (const offset of [0, 8, 24, 31, 55, 56, 57, 58, 59, 61, 62, 63]) {
+test("named unimplemented alarms remain searchable and explicitly unpromoted", () => {
+  for (const offset of [8, 24, 31]) {
     const entry = library.getStationFaultTemplate(offset);
+    assert.ok(entry, `Expected named Station template ${offset}`);
     assert.equal(entry.sourceGap.status, "not-promoted-no-producer");
-    assert.match(entry.sourceGap.reason, /no producer|placeholder|Blank/i);
+    assert.equal(entry.sourceGap.searchableTemplate, true);
+    assert.match(entry.sourceGap.reason, /no Faults\[|no producer/i);
   }
   assert.equal(library.getStationFaultTemplate(8).circuitTrace, undefined);
+  assert.equal(library.getStationFaultTemplate(24).circuitTrace, undefined);
   assert.equal(library.getStationFaultTemplate(31).processTrace, undefined);
+});
+
+test("blank or placeholder positions remain coverage metadata instead of fake searchable faults", () => {
+  for (const offset of [0, 55, 56, 57, 58, 59, 61, 62, 63]) {
+    assert.equal(library.getStationFaultTemplate(offset), null, `Position ${offset} should remain absent from the Station template`);
+    const gap = library.getStationSourceGap(offset);
+    assert.equal(gap.status, "not-promoted-no-producer");
+    assert.equal(gap.searchableTemplate, false);
+    assert.match(gap.reason, /not exposed|Blank/i);
+  }
 });
 
 test("browser loads foundation model before app and source-gap UI after other diagnostic UIs", () => {
