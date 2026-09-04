@@ -114,3 +114,12 @@ test("browser loads RPC model before controller and RPC UI after the diagnostic 
   assert.match(ui, /decoder bound, procedure not promoted/);
   assert.match(ui, /PLC-decoder-only RPC methods/);
 });
+
+test("RPC UI rendering is idempotent and cannot self-starve the sequential bootstrap", () => {
+  const ui = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/topmodul-rpc-method-ui.js"), "utf8");
+  assert.match(ui, /data-topmodul-rpc-method-ui/);
+  assert.match(ui, /existing\?\.dataset\.topmodulRpcRenderKey === key/);
+  assert.match(ui, /if \(renderScheduled\) return/);
+  assert.match(ui, /global\.setTimeout\(\(\) =>/);
+  assert.doesNotMatch(ui, /queueMicrotask\(render\)/);
+});

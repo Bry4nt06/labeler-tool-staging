@@ -1,6 +1,9 @@
 "use strict";
 
 (function installTopModulRpcMethodUi(global) {
+  const MANAGED_SELECTOR = "[data-topmodul-rpc-method-ui]";
+  let renderScheduled = false;
+
   function esc(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -75,30 +78,75 @@
     return library.getTopModulFault?.(code) || null;
   }
 
+  function renderKey(entry, drillDown) {
+    const decoderPositions = (drillDown?.rpcDecoderOnlyMethods || [])
+      .map((method) => method.decoderPosition)
+      .join(",");
+    return [
+      entry?.id || "",
+      entry?.rpcMethod?.code || "",
+      entry?.rpcMethodGap?.status || "",
+      decoderPositions
+    ].join("|");
+  }
+
   function render() {
     const library = global.ServoForgeTroubleshootingLibrary;
     const result = document.getElementById("diagnosticResult");
-    if (!library?.topModulRpcMethodFaults || !result || result.hidden) return;
+    if (!library?.topModulRpcMethodFaults || !result) return;
+
+    const existing = result.querySelector(MANAGED_SELECTOR);
+    if (result.hidden) {
+      if (existing) existing.remove();
+      return;
+    }
+
     const entry = currentEntry(result, library);
-    result.querySelectorAll("[data-topmodul-rpc-method],[data-topmodul-rpc-method-gap],[data-topmodul-rpc-decoder-methods]").forEach((node) => node.remove());
-    if (!entry) return;
+    if (!entry) {
+      if (existing) existing.remove();
+      return;
+    }
+
     const drillDown = library.getTopModulFaultDrillDown?.(entry, 12) || null;
-    if (!entry.rpcMethod && !entry.rpcMethodGap && !drillDown?.rpcDecoderOnlyMethods?.length) return;
+    const body = `${methodMarkup(entry)}${gapMarkup(entry)}${decoderOnlyMarkup(drillDown)}`;
+    if (!body) {
+      if (existing) existing.remove();
+      return;
+    }
+
+    const key = renderKey(entry, drillDown);
+    if (existing?.dataset.topmodulRpcRenderKey === key) return;
+    if (existing) existing.remove();
+
     const anchor = result.querySelector("[data-topmodul-circuit-trace]")
       || result.querySelector("[data-topmodul-process-trace]")
       || result.querySelector("[data-topmodul-cause-evidence]")
       || result.querySelector("[data-topmodul-plc-binding]")
       || result.querySelector(".sf-result-summary");
-    if (anchor) anchor.insertAdjacentHTML("afterend", `${methodMarkup(entry)}${gapMarkup(entry)}${decoderOnlyMarkup(drillDown)}`);
+    if (!anchor) return;
+
+    anchor.insertAdjacentHTML(
+      "afterend",
+      `<div data-topmodul-rpc-method-ui data-topmodul-rpc-render-key="${esc(key)}">${body}</div>`
+    );
+  }
+
+  function scheduleRender() {
+    if (renderScheduled) return;
+    renderScheduled = true;
+    global.setTimeout(() => {
+      renderScheduled = false;
+      render();
+    }, 0);
   }
 
   function install() {
     const result = document.getElementById("diagnosticResult");
     if (!result) return;
-    const observer = new MutationObserver(() => queueMicrotask(render));
+    const observer = new MutationObserver(scheduleRender);
     observer.observe(result, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
     document.addEventListener("click", (event) => {
-      if (event.target.closest("[data-topmodul-open-fault],#faultSearchButton,.sf-search-result")) setTimeout(render, 0);
+      if (event.target.closest("[data-topmodul-open-fault],#faultSearchButton,.sf-search-result")) scheduleRender();
     });
     render();
   }
