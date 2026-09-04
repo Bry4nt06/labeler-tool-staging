@@ -16,9 +16,9 @@ function manifestEntries() {
   return JSON.parse(match[1]);
 }
 
-test("v358 troubleshooting shell routes startup through one executable bootstrap", () => {
-  assert.match(html, /data-troubleshooting-version="v358"/);
-  assert.match(html, /TROUBLESHOOTING v358/);
+test("v359 troubleshooting content keeps the v358 responsive bootstrap shell", () => {
+  assert.match(html, /data-troubleshooting-version="v359"/);
+  assert.match(html, /TROUBLESHOOTING v359/);
   assert.match(html, /Preparing diagnostic bootstrap/);
   const executableScripts = [...html.matchAll(/<script(?![^>]*type="application\/json")[^>]*src="([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(executableScripts, ["./troubleshooting-bootstrap.js?v=0.9.10&amp;build=troubleshooting-bootstrap-v358-20260904"]);
