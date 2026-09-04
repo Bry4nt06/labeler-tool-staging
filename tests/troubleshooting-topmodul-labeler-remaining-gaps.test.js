@@ -120,11 +120,12 @@ test("legacy field 00067 separation remains intact after supplemental fault reco
   assert.equal(library.getTopModulFault(67).title, "Labeling Station Change Mode Active");
 });
 
-test("browser loads v345 after operating-state and before the troubleshooting controller", () => {
+test("browser keeps v345 after operating-state and before later troubleshooting phases", () => {
   const html = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/index.html"), "utf8");
   const operatingPos = html.indexOf("topmodul-labeler-operating-state-trace.js");
   const gapsPos = html.indexOf("topmodul-labeler-remaining-gaps-trace.js");
   const appPos = html.indexOf("troubleshooting-app.js");
   assert.ok(operatingPos >= 0 && gapsPos > operatingPos && appPos > gapsPos);
-  assert.match(html, /data-troubleshooting-version="v345"/);
+  const version = Number(html.match(/data-troubleshooting-version="v(\d+)"/)?.[1] || 0);
+  assert.ok(version >= 345, `Expected troubleshooting version >=345, found v${version}.`);
 });
