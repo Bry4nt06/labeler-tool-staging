@@ -35,10 +35,10 @@ const bridge = require("../app/troubleshooting/topmodul-live-00067-source-bridge
 const analyzer = require("../app/troubleshooting/topmodul-alarm-stack-analyzer.js")(bridge);
 const library = require("../app/troubleshooting/topmodul-encoder-isolation.js")(analyzer);
 
-test("v348 encoder isolation validates on top of source-proven 00067 and alarm-stack layers", () => {
+test("v350 encoder isolation validates on top of source-proven 00067 and alarm-stack layers", () => {
   const validation = library.validate();
   assert.equal(validation.ok, true, validation.errors.join("\n"));
-  assert.match(library.version, /encoder-isolation-v1/);
+  assert.match(library.version, /encoder-isolation-v2/);
   assert.deepEqual([...library.topModulEncoderIsolationOffsets], [64, 65, 66, 67, 68, 69]);
 });
 
@@ -93,21 +93,38 @@ test("non-feedback Station encoder subtypes keep their direct motion-axis status
   assert.equal(timerFault.producer, "BaseMachineEncoderAxis.TimerEventFault");
 });
 
-test("Fault 670 receives a separate main-Labeler fine-clock workflow", () => {
+test("Fault 670 receives the exact main-Labeler fine-clock source chain", () => {
   const plan = library.getTopModulEncoderIsolationPlan(670);
   assert.equal(plan.scope, "Main Labeler encoder / fine clock");
-  assert.match(plan.producer, /ElectrBrake\.O_FinePulseFault/);
+  assert.match(plan.producer, /ElectrBrake\.O_FinePulseFault.*Faults_LB1\[41\]\.14/);
   assert.ok(plan.siblings.some((row) => row.number === 480));
   assert.ok(plan.siblings.some((row) => row.number === 482));
   assert.ok(plan.siblings.some((row) => row.number === 669));
   const attachedCircuit = JSON.stringify({ source: plan.circuitTrace?.source?.id || plan.circuitTrace?.sourceId || "", devices: plan.circuitTrace?.deviceRows || [] });
   assert.doesNotMatch(attachedCircuit, /1756-M02AE|CN131/);
   assert.match(plan.steps.map((row) => row.detail).join(" "), /Do not borrow the K605163 1756-M02AE\/CN131 Station path/);
+  assert.equal(plan.sourceEvidence.sourceId, "CO85_LB1_Labeler_1online.L5K");
+  assert.equal(plan.sourceEvidence.rawFineClockInput, "E1701_ENC101_FineClockPulse / Local:7:I.Data.0");
+  assert.equal(plan.sourceEvidence.faultAddress, "Faults_LB1[41].14");
+  assert.match(plan.sourceEvidence.sampleWindow, />= 1000 ms/);
+  assert.match(plan.sourceEvidence.supervision, /FinePulseCon 3000 ms/);
+  assert.match(plan.sourceEvidence.reset, /E1101_PB201_ResetSafetyCircuitFault/);
+  assert.ok(plan.liveChecks.some((row) => /E1701_ENC101_FineClockPulse/.test(row.signal)));
+  assert.ok(plan.liveChecks.some((row) => /Counter\.ACC/.test(row.signal)));
+  assert.ok(plan.liveChecks.some((row) => /SpeedActVal.*ZeroSpeed/.test(row.signal)));
+  assert.ok(plan.liveChecks.some((row) => /FinePulseCon\.ACC/.test(row.signal)));
+  assert.ok(plan.liveChecks.some((row) => /Faults_LB1\[41\]\.14/.test(row.signal)));
   const noMotion = library.evaluateTopModulEncoderIsolation(670, { motion: "no" });
   assert.equal(noMotion.code, "main-no-motion-first");
   const pulses = library.evaluateTopModulEncoderIsolation(670, { motion: "yes", fineClock: "changing" });
   assert.equal(pulses.code, "main-supervision-timing");
+  assert.match(pulses.summary, />=1000 ms/i);
   assert.match(pulses.summary, /3000 ms/i);
+  assert.match(pulses.next, /Counter\.ACC.*SpeedActVal.*ZeroSpeed.*FinePulseCon.*O_FinePulseFault.*E2001_M_ElectrBrakeFaultEncoder/i);
+  const frozen = library.evaluateTopModulEncoderIsolation(670, { motion: "yes", fineClock: "absent" });
+  assert.equal(frozen.code, "main-fine-clock-path");
+  assert.match(frozen.summary, /Local:7:I\.Data\.0/);
+  assert.match(frozen.next, /E1701_ENC101_FineClockPulse.*ElectrBrake\.Counter\.ACC/);
 });
 
 test("Station local Fault 030 clock monitoring is not collapsed into the 064-069 isolation workflow", () => {
@@ -116,7 +133,7 @@ test("Station local Fault 030 clock monitoring is not collapsed into the 064-069
   assert.ok(template.circuitTrace.plcSignals.includes("I0005.09"));
 });
 
-test("browser loads v348 engine after source bridge/analyzer and interactive UI after the app", () => {
+test("browser loads v350 engine after source bridge/analyzer and interactive UI after the app", () => {
   const html = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/index.html"), "utf8");
   const bridgePos = html.indexOf("topmodul-live-00067-source-bridge.js");
   const analyzerPos = html.indexOf("topmodul-alarm-stack-analyzer.js");
@@ -125,7 +142,8 @@ test("browser loads v348 engine after source bridge/analyzer and interactive UI 
   const uiPos = html.indexOf("topmodul-encoder-isolation-ui.js");
   assert.ok(bridgePos >= 0 && analyzerPos > bridgePos && enginePos > analyzerPos && appPos > enginePos && uiPos > appPos);
   const bannerVersion = Number(/data-troubleshooting-version="v(\d+)"/.exec(html)?.[1] || 0);
-  assert.ok(bannerVersion >= 348);
+  assert.ok(bannerVersion >= 350);
+  assert.match(html, /topmodul-encoder-isolation\.js\?v=0\.9\.10&amp;build=troubleshooting-fault-670-source-chain-v350-20260904/);
   const ui = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/topmodul-encoder-isolation-ui.js"), "utf8");
   assert.match(ui, /Observed machine state/);
   assert.match(ui, /data-encoder-open-fault/);
