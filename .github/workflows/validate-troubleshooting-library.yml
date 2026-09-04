@@ -76,6 +76,7 @@ jobs:
           node --check app/troubleshooting/topmodul-encoder-stack-bridge.js
           node --check app/troubleshooting/topmodul-encoder-verification.js
           node --check app/troubleshooting/topmodul-main-drive-isolation.js
+          node --check app/troubleshooting/troubleshooting-search-precedence.js
           node --check app/troubleshooting/troubleshooting-startup-guard.js
           node --check app/troubleshooting/troubleshooting-bootstrap.js
           node --check app/troubleshooting/rpc-danfoss-guides-ui.js
@@ -100,6 +101,7 @@ jobs:
           node --test tests/troubleshooting-topmodul-servo-table-internal-status.test.js
           node --test tests/troubleshooting-apl-cart-foundation.test.js
           node --test tests/troubleshooting-rpc-danfoss-guides.test.js
+          node --test tests/troubleshooting-search-precedence.test.js
           node --test tests/troubleshooting-startup-responsiveness.test.js
           node --test tests/troubleshooting-cache-recovery.test.js
       - name: Run startup regressions
