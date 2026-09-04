@@ -240,7 +240,8 @@
       if (noise?.code !== "feedback-signal-integrity") errors.push("v348 must route intermittent feedback toward signal integrity/noise evidence.");
       const f670 = getTopModulEncoderIsolationPlan(670);
       if (f670?.scope !== "Main Labeler encoder / fine clock") errors.push("v348 lost main Labeler Fault 670 scope.");
-      if (/1756-M02AE|CN131/i.test(String(f670?.steps?.map((row) => row.detail).join(" ")))) errors.push("v348 must not borrow Station encoder hardware into Fault 670.");
+      const f670CircuitText = JSON.stringify({ source: f670?.circuitTrace?.source?.id || f670?.circuitTrace?.sourceId || "", devices: f670?.circuitTrace?.deviceRows || [] });
+      if (/1756-M02AE|CN131/i.test(f670CircuitText)) errors.push("v348 must not attach Station encoder hardware evidence to Fault 670.");
       if (getTopModulEncoderIsolationPlan(67)) errors.push("Base Labeler PLC Fault 067 Change Mode must not receive the Station encoder isolation workflow.");
       return { ok: errors.length === 0, errors };
     }
