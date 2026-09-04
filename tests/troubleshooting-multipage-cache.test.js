@@ -37,3 +37,8 @@ test("the troubleshooting page participates in the existing authentication clien
   assert.match(troubleshootingPage, /\.\.\/auth-client\.js/);
   assert.match(troubleshootingPage, /\.\.\/\.\.\/auth\.css/);
 });
+
+test("the staging banner visibly identifies the active troubleshooting phase", () => {
+  assert.match(troubleshootingPage, /data-troubleshooting-version="v335"/);
+  assert.match(troubleshootingPage, /STAGING \/ TEST BUILD — TROUBLESHOOTING v335 — ServoForge 0\.9\.10 — NOT PRODUCTION/);
+});
