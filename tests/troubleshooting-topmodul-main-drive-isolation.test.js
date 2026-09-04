@@ -122,7 +122,7 @@ test("v352 browser loader places engine after v350 verification and UI after exi
   assert.ok(encoderUiPos > appPos && verificationUiPos > encoderUiPos && mainDriveUiPos > verificationUiPos);
   const bannerVersion = Number(/data-troubleshooting-version="v(\d+)"/.exec(html)?.[1] || 0);
   assert.ok(bannerVersion >= 352);
-  assert.match(html, /topmodul-main-drive-isolation\.js\?v=0\.9\.10&amp;build=troubleshooting-main-drive-isolation-v352-20260904/);
+  assert.match(html, /topmodul-main-drive-isolation\.js\?v=0\.9\.10&build=troubleshooting-main-drive-isolation-v352-20260904&shell=v358/);
   const ui = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/topmodul-main-drive-isolation-ui.js"), "utf8");
   assert.match(ui, /Main-drive isolation — source-backed/);
   assert.match(ui, /These choices only interpret observed PLC\/drive states/);

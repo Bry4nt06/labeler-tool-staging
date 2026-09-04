@@ -104,7 +104,7 @@ test("v355 browser loader and UI are registered after the current v354 diagnosti
   assert.ok(v354Pos >= 0 && enginePos > v354Pos && appPos > enginePos && uiPos > appPos);
   const bannerVersion = Number(/data-troubleshooting-version="v(\d+)"/.exec(html)?.[1] || 0);
   assert.ok(bannerVersion >= 355);
-  assert.match(html, /apl-cart-foundation\.js\?v=0\.9\.10&amp;build=troubleshooting-apl-cart-foundation-v355-20260904/);
+  assert.match(html, /apl-cart-foundation\.js\?v=0\.9\.10&build=troubleshooting-apl-cart-foundation-v355-20260904&shell=v358/);
   const ui = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/apl-cart-foundation-ui.js"), "utf8");
   assert.match(ui, /APL Cart source isolation/);
   assert.match(ui, /interpret observed PLC states only/);

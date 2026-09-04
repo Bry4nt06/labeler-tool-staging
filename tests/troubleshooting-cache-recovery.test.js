@@ -6,41 +6,51 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
-const indexPath = path.join(root, "app", "troubleshooting", "index.html");
-const html = fs.readFileSync(indexPath, "utf8");
+const html = fs.readFileSync(path.join(root, "app", "troubleshooting", "index.html"), "utf8");
+const bootstrap = fs.readFileSync(path.join(root, "app", "troubleshooting", "troubleshooting-bootstrap.js"), "utf8");
+const serviceWorker = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 
-test("v357 troubleshooting shell advertises the recovery build", () => {
-  assert.match(html, /data-troubleshooting-version="v357"/);
-  assert.match(html, /TROUBLESHOOTING v357/);
-  assert.match(html, /troubleshooting-shell-v357-20260904/);
+function manifestEntries() {
+  const match = html.match(/<script id="troubleshootingScriptManifest" type="application\/json">\s*([\s\S]*?)\s*<\/script>/);
+  assert.ok(match, "troubleshooting script manifest missing");
+  return JSON.parse(match[1]);
+}
+
+test("v358 troubleshooting shell routes startup through one executable bootstrap", () => {
+  assert.match(html, /data-troubleshooting-version="v358"/);
+  assert.match(html, /TROUBLESHOOTING v358/);
+  assert.match(html, /Preparing diagnostic bootstrap/);
+  const executableScripts = [...html.matchAll(/<script(?![^>]*type="application\/json")[^>]*src="([^"]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(executableScripts, ["./troubleshooting-bootstrap.js?v=0.9.10&amp;build=troubleshooting-bootstrap-v358-20260904"]);
 });
 
-test("early recovery monitor is installed before external troubleshooting scripts", () => {
-  const monitor = html.indexOf("window.ServoForgeTroubleshootingBoot = state");
-  const firstExternalScript = html.indexOf("<script defer src=");
-  assert.ok(monitor >= 0, "early boot monitor missing");
-  assert.ok(firstExternalScript > monitor, "boot monitor must run before external scripts");
-  assert.match(html, /Startup stalled on this browser/);
-  assert.match(html, /troubleshootingCacheRepair/);
-  assert.match(html, /registration\.unregister\(\)/);
-  assert.match(html, /caches\.delete\(name\)/);
+test("bootstrap preserves the complete troubleshooting module order declaratively", () => {
+  const entries = manifestEntries();
+  assert.ok(entries.length >= 40, `expected full troubleshooting startup manifest, found ${entries.length}`);
+  entries.forEach((src) => assert.match(src, /shell=v358/, `missing v358 shell key: ${src}`));
+  assert.ok(entries.indexOf("./topmodul-main-drive-isolation.js?v=0.9.10&build=troubleshooting-main-drive-isolation-v352-20260904&shell=v358") < entries.indexOf("./troubleshooting-startup-guard.js?v=0.9.10&build=troubleshooting-startup-v356-20260904&shell=v358"));
+  assert.ok(entries.indexOf("./troubleshooting-startup-guard.js?v=0.9.10&build=troubleshooting-startup-v356-20260904&shell=v358") < entries.indexOf("./troubleshooting-app.js?v=0.9.10&build=troubleshooting-exact-circuit-v329-20260903-1920&shell=v358"));
+  assert.equal(entries.at(-1).startsWith("./apl-cart-foundation-ui.js"), true);
 });
 
-test("troubleshooting assets use v357 cache keys and defer parser blocking", () => {
-  const externalScripts = [...html.matchAll(/<script\s+defer\s+src="([^"]+)"/g)].map((match) => match[1]);
-  assert.ok(externalScripts.length >= 40, `expected the full troubleshooting script chain, found ${externalScripts.length}`);
-  externalScripts.forEach((src) => assert.match(src, /shell=v357/, `missing v357 shell key: ${src}`));
-  assert.doesNotMatch(html, /<script\s+src="/);
+test("bootstrap yields a paint before each module executes and exposes the active filename", () => {
+  assert.match(bootstrap, /Starting diagnostics \$\{index \+ 1\}\/\$\{manifest\.length\}: \$\{filename\(src\)\}/);
+  assert.match(bootstrap, /await nextPaint\(\);/);
+  assert.match(bootstrap, /requestAnimationFrame/);
+  assert.match(bootstrap, /await loadScript\(src\);/);
+  assert.match(bootstrap, /Startup file timed out/);
+  assert.match(bootstrap, /Startup error in/);
 });
 
-test("startup guard still precedes the troubleshooting controller", () => {
-  const guard = html.indexOf("troubleshooting-startup-guard.js");
-  const controller = html.indexOf("troubleshooting-app.js");
-  assert.ok(guard >= 0 && controller > guard, "v356 compact-context guard must remain before the controller");
+test("cache repair remains scoped to service workers and ServoForge caches", () => {
+  assert.match(bootstrap, /registration\.unregister\(\)/);
+  assert.match(bootstrap, /name\.startsWith\(CACHE_PREFIX\)/);
+  assert.match(bootstrap, /caches\.delete\(name\)/);
+  assert.doesNotMatch(bootstrap, /localStorage\.clear|indexedDB\.deleteDatabase/);
+  assert.match(bootstrap, /cacheRepair", "v358"/);
 });
 
-test("cache repair stays scoped to runtime cache and service workers", () => {
-  const head = html.slice(0, html.indexOf("</head>"));
-  assert.doesNotMatch(head, /localStorage\.clear|indexedDB\.deleteDatabase/);
-  assert.match(head, /CACHE_PREFIX = "servoforge-labeler-"/);
+test("offline shell carries the v358 bootstrap instead of the stale v329 cache generation", () => {
+  assert.match(serviceWorker, /CACHE_NAME = "servoforge-labeler-staging-v0\.9\.10-troubleshooting-bootstrap-v358-20260904"/);
+  assert.match(serviceWorker, /\.\/app\/troubleshooting\/troubleshooting-bootstrap\.js/);
 });

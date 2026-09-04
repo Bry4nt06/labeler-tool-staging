@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-cache-recovery-v357-20260904",
+  "buildId": "troubleshooting-bootstrap-v358-20260904",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Troubleshooting v357 addresses browser-specific startup stalls caused by mixed or stale troubleshooting assets. The troubleshooting shell now installs its recovery monitor before any external diagnostic script, adds a visible Repair local cache action that unregisters same-origin service workers and deletes ServoForge runtime caches without clearing localStorage or saved ServoForge workspace data, gives every troubleshooting asset a v357 cache key, and loads the troubleshooting script chain with defer so one parser-blocking request cannot leave the rendered shell silently frozen before diagnostics. The v356 compact-context startup guard remains in place before troubleshooting-app.js, and all existing source-backed fault-isolation logic is unchanged."
+  "notes": "Troubleshooting v358 replaces the long browser-managed defer chain with one authoritative responsive bootstrap loader. The bootstrap paints the exact module name before each troubleshooting script executes, yields between modules so slower PCs remain responsive, stops on load/runtime failures with the offending filename visible, and keeps the safe Repair local cache action without clearing saved ServoForge workspace data. The v356 compact-context guard still runs immediately before troubleshooting-app.js, all source-backed fault logic is unchanged, and the offline service-worker cache generation now carries the v358 bootstrap."
 }

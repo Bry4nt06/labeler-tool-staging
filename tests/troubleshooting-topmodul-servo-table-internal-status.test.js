@@ -114,5 +114,5 @@ test("v354 browser loader places internal statuses before live/alarm analysis an
   assert.ok(machineStartPos >= 0 && servoTablePos > machineStartPos && liveBridgePos > servoTablePos && analyzerPos > liveBridgePos);
   const bannerVersion = Number(/data-troubleshooting-version="v(\d+)"/.exec(html)?.[1] || 0);
   assert.ok(bannerVersion >= 354);
-  assert.match(html, /topmodul-servo-table-internal-status\.js\?v=0\.9\.10&amp;build=troubleshooting-servo-table-internal-status-v354-20260904/);
+  assert.match(html, /topmodul-servo-table-internal-status\.js\?v=0\.9\.10&build=troubleshooting-servo-table-internal-status-v354-20260904&shell=v358/);
 });
