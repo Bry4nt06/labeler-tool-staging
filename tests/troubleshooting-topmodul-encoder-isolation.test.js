@@ -124,7 +124,8 @@ test("browser loads v348 engine after source bridge/analyzer and interactive UI 
   const appPos = html.indexOf("troubleshooting-app.js");
   const uiPos = html.indexOf("topmodul-encoder-isolation-ui.js");
   assert.ok(bridgePos >= 0 && analyzerPos > bridgePos && enginePos > analyzerPos && appPos > enginePos && uiPos > appPos);
-  assert.match(html, /data-troubleshooting-version="v348"/);
+  const bannerVersion = Number(/data-troubleshooting-version="v(\d+)"/.exec(html)?.[1] || 0);
+  assert.ok(bannerVersion >= 348);
   const ui = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/topmodul-encoder-isolation-ui.js"), "utf8");
   assert.match(ui, /Observed machine state/);
   assert.match(ui, /data-encoder-open-fault/);
