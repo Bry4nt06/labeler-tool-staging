@@ -42,12 +42,25 @@ test("bootstrap yields a paint before each module executes and exposes the activ
   assert.match(bootstrap, /Startup error in/);
 });
 
+test("bootstrap preserves a controller PASS while later UI modules continue loading", () => {
+  assert.match(bootstrap, /interfaceReady:\s*false/);
+  assert.match(bootstrap, /readyMessage:\s*""/);
+  assert.match(bootstrap, /function captureInterfaceReady\(\)/);
+  assert.match(bootstrap, /element\.dataset\.status !== "pass"/);
+  assert.match(bootstrap, /state\.interfaceReady = true/);
+  assert.match(bootstrap, /function setProgress\(message\)/);
+  assert.match(bootstrap, /captureInterfaceReady\(\);\s*setStatus\(message, "loading"\)/);
+  assert.match(bootstrap, /function restoreReadyStatus\(\)/);
+  assert.match(bootstrap, /setStatus\(state\.readyMessage \|\| "Troubleshooting interface ready\.", "pass"\)/);
+  assert.match(bootstrap, /if \(restoreReadyStatus\(\)\) return;/);
+});
+
 test("cache repair remains scoped to service workers and ServoForge caches", () => {
   assert.match(bootstrap, /registration\.unregister\(\)/);
   assert.match(bootstrap, /name\.startsWith\(CACHE_PREFIX\)/);
   assert.match(bootstrap, /caches\.delete\(name\)/);
   assert.doesNotMatch(bootstrap, /localStorage\.clear|indexedDB\.deleteDatabase/);
-  assert.match(bootstrap, /cacheRepair", "v358"/);
+  assert.match(bootstrap, /cacheRepair", "v359"/);
 });
 
 test("offline shell carries the v358 bootstrap instead of the stale v329 cache generation", () => {
