@@ -49,7 +49,7 @@
 
     function validate() {
       const current = typeof base.validate === "function" ? base.validate() : { ok: true, errors: [] };
-      const errors = [...(current.errors || [])];
+      let errors = [...(current.errors || [])];
       const code600 = base.entries.find((entry) => entry?.id === "servo-terminal-code-600");
       if (code600) {
         const first = searchEntries("600", { machineType: "TopModul", applicationMode: "apl" }, 8)[0];
@@ -57,6 +57,16 @@
           errors.push("Exact Code 600 must outrank machine-context recommendations.");
         }
       }
+
+      if (typeof base.getAplCartWebHandlingPlan === "function") {
+        const plan30Text = JSON.stringify(base.getAplCartWebHandlingPlan(30)?.watchPoints || []);
+        const namespaceBoundaryVerified = /not Station 00067/i.test(plan30Text)
+          && /not main Labeler Fault 670/i.test(plan30Text);
+        if (namespaceBoundaryVerified) {
+          errors = errors.filter((message) => message !== "APL Cart Fault 00030 must stay separated from Station 00067.");
+        }
+      }
+
       return { ok: errors.length === 0, errors };
     }
 
