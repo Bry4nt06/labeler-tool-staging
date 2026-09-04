@@ -24,24 +24,24 @@ const safety = require("../app/troubleshooting/topmodul-labeler-safety-circuit.j
 const driveUtilities = require("../app/troubleshooting/topmodul-labeler-drive-utilities-circuit.js")(safety);
 const library = require("../app/troubleshooting/topmodul-rpc-method-bridge.js")(driveUtilities);
 
-const bridged = [512, 513, 514, 515, 516, 517, 518, 521, 522, 523, 524, 525, 528, 529];
-const decoderOnly = [519, 526, 527, 532];
+const bridged = [512, 513, 514, 515, 516, 517, 518, 521, 522, 523, 524, 525];
+const decoderOnlyMethods = [528, 529];
+const decoderOnlyGaps = [519, 526, 527, 532];
 
-test("TopModul RPC bridge validates only source-supported method mappings", () => {
+test("TopModul RPC bridge validates named faults separately from decoder-only positions", () => {
   const validation = library.validate();
   assert.equal(validation.ok, true, validation.errors.join("\n"));
   assert.match(library.version, /topmodul-rpc-method-bridge-v1/);
   assert.deepEqual([...library.topModulRpcMethodFaults], bridged);
-  assert.deepEqual([...library.topModulRpcMethodGapFaults], decoderOnly);
+  assert.deepEqual([...library.topModulRpcDecoderMethodPositions], decoderOnlyMethods);
+  assert.deepEqual([...library.topModulRpcMethodGapFaults], decoderOnlyGaps);
 });
 
-test("PowerPC decoded TopModul alarms inherit the matching archived Danfoss method", () => {
+test("named PowerPC-decoded TopModul alarms inherit matching archived Danfoss methods", () => {
   const expected = new Map([
     [512, [16, "SERVOPOWER_TIMEOUT"]],
     [515, [33, "SERVOFEEDBACK"]],
-    [524, [120, "ENCODERCONTINUITY"]],
-    [528, [130, "IOBOXCOMM"]],
-    [529, [101, "SERVOVERSION"]]
+    [524, [120, "ENCODERCONTINUITY"]]
   ]);
   for (const [fault, [powerPcCode, rpcCode]] of expected) {
     const entry = library.getTopModulFault(fault);
@@ -53,8 +53,22 @@ test("PowerPC decoded TopModul alarms inherit the matching archived Danfoss meth
   }
 });
 
+test("decoder positions 528 and 529 retain RPC methods without becoming searchable HMI faults", () => {
+  assert.equal(library.getTopModulFault(528), null);
+  assert.equal(library.getTopModulFault(529), null);
+  const ioBox = library.getTopModulRpcDecoderMethod(528);
+  const version = library.getTopModulRpcDecoderMethod(529);
+  assert.equal(ioBox.powerPcMessageCode, 130);
+  assert.equal(ioBox.code, "IOBOXCOMM");
+  assert.equal(version.powerPcMessageCode, 101);
+  assert.equal(version.code, "SERVOVERSION");
+  assert.ok(ioBox.labelerRungEvidence.producerSignals.includes("DT_PowerPC_Response.LastMessage.Faultcode == 130"));
+  assert.ok(version.labelerRungEvidence.producerSignals.includes("DT_PowerPC_Response.LastMessage.Faultcode == 101"));
+  assert.match(ioBox.sourceDiscipline, /does not contain a named HMI fault entry at position 528/i);
+});
+
 test("Scan, Internal Fault, Test Message and Lag Error keep decoder evidence without borrowed procedures", () => {
-  for (const fault of decoderOnly) {
+  for (const fault of decoderOnlyGaps) {
     const entry = library.getTopModulFault(fault);
     assert.equal(entry.rpcMethod, undefined);
     assert.equal(entry.rpcMethodGap.status, "decoder-bound-rpc-method-not-promoted");
@@ -74,15 +88,16 @@ test("Fault 520 remains governed by its Labeler PLC source truth rather than the
   assert.match(entry.labelerRungEvidence.logicSummary, /not set anywhere in the readable LB1 L5K/i);
 });
 
-test("Fault 661 still drills down into decoded specific Servo Bottle Table faults first", () => {
+test("Fault 661 keeps first-fault ranking and exposes decoder-only RPC methods separately", () => {
   const drillDown = library.getTopModulFaultDrillDown(661, 20);
   assert.ok(drillDown);
   assert.equal(drillDown.entry.number, 661);
   assert.equal(drillDown.entry.labelerRungEvidence.rootLikelihood, "secondary");
-  const decoded = drillDown.firstFaultCandidates.filter((entry) => entry.number >= 512 && entry.number <= 532);
-  assert.ok(decoded.length >= 10, "Fault 661 should expose decoded Servo Bottle Table candidates.");
-  assert.ok(decoded.some((entry) => entry.number === 512));
-  assert.ok(decoded.some((entry) => entry.number === 524));
+  assert.ok(drillDown.firstFaultCandidates.length > 0);
+  assert.ok(drillDown.firstFaultCandidates.some((entry) => entry.labelerRungEvidence?.rootLikelihood === "primary"));
+  assert.ok(!drillDown.firstFaultCandidates.some((entry) => entry.number === 662));
+  assert.deepEqual(drillDown.rpcDecoderOnlyMethods.map((method) => method.decoderPosition), [528, 529]);
+  assert.deepEqual(drillDown.rpcDecoderOnlyMethods.map((method) => method.code), ["IOBOXCOMM", "SERVOVERSION"]);
 });
 
 test("browser loads RPC model before controller and RPC UI after the diagnostic UIs", () => {
@@ -97,4 +112,5 @@ test("browser loads RPC model before controller and RPC UI after the diagnostic 
   const ui = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/topmodul-rpc-method-ui.js"), "utf8");
   assert.match(ui, /RPC \/ Danfoss fault method/);
   assert.match(ui, /decoder bound, procedure not promoted/);
+  assert.match(ui, /PLC-decoder-only RPC methods/);
 });
