@@ -37,21 +37,6 @@
     };
   }
 
-  function extractContext(saved) {
-    const safe = saved && typeof saved === "object" ? saved : {};
-    const mapLibrary = Array.isArray(safe.mapLibrary) ? safe.mapLibrary : [];
-    const activeMap = mapLibrary.find((map) => map?.id === safe.activeMapId) || null;
-    return {
-      zone: safe.selectedZone || activeMap?.zone || "",
-      site: safe.selectedSite || activeMap?.site || "",
-      mapName: activeMap?.name || "",
-      machineType: activeMap?.machineType || safe.machineType || "",
-      applicationMode: activeMap?.applicationMode || safe.applicationMode || "",
-      brand: safe.selectedBrand || "",
-      bottle: safe.selectedBottle || ""
-    };
-  }
-
   const storage = (() => {
     try { return global.localStorage; }
     catch { return null; }
@@ -148,7 +133,7 @@
     }, WATCHDOG_MS);
   }
 
-  global.ServoForgeTroubleshootingStartup = Object.freeze(marker);
+  global.ServoForgeTroubleshootingStartup = Object.seal(marker);
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       installWatchdog();
