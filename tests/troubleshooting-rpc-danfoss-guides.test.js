@@ -95,16 +95,19 @@ test("v359 guide UI links to existing records without a self-triggering microtas
   assert.doesNotMatch(uiSource, /queueMicrotask\(render\)/);
 });
 
-test("v359 page keeps the v358 responsive shell while loading the new records before RPC method bridging", () => {
-  assert.match(page, /data-troubleshooting-version="v359"/);
-  assert.match(page, /TROUBLESHOOTING v359/);
+test("v359 records remain loaded under the v360 exact-search fix and v358 responsive shell", () => {
+  assert.match(page, /data-troubleshooting-version="v360"/);
+  assert.match(page, /TROUBLESHOOTING v360/);
   assert.match(page, /troubleshooting-bootstrap-v358-20260904/);
   const baseIndex = page.indexOf("diagnostic-library.js");
   const guideIndex = page.indexOf("rpc-danfoss-guides.js");
   const bridgeIndex = page.indexOf("topmodul-rpc-method-bridge.js");
+  const searchPrecedenceIndex = page.indexOf("troubleshooting-search-precedence.js");
   const appIndex = page.indexOf("troubleshooting-app.js");
   const uiIndex = page.indexOf("rpc-danfoss-guides-ui.js");
   assert.ok(baseIndex >= 0 && guideIndex > baseIndex && bridgeIndex > guideIndex);
-  assert.ok(appIndex >= 0 && uiIndex > appIndex);
+  assert.ok(searchPrecedenceIndex > bridgeIndex && appIndex > searchPrecedenceIndex);
+  assert.ok(uiIndex > appIndex);
   assert.match(page, /rpc-danfoss-guides-v359-20260904&shell=v358/);
+  assert.match(page, /troubleshooting-search-precedence-v360-20260904&shell=v358/);
 });

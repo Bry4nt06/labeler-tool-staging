@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-rpc-danfoss-guides-v359-20260904",
+  "buildId": "troubleshooting-search-precedence-v360-20260904",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Troubleshooting v359 adds three source-backed RPC/Danfoss records: legacy Power-PC terminal Code 600 communication guidance, a qualified-maintenance servomotor replacement guide, and DTS-5 RPC power/monitoring diagnostics. The records link to existing ServoForge fault methods instead of duplicating them, preserve machine-generation and qualified-work gates, and explicitly avoid archived IP addresses, universal CAN settings, invented fuse mappings, connector pins, torque values, firmware values, or replacement specifications. The proven v358 responsive sequential bootstrap, cache recovery, RPC UI loop fix, and ready-state preservation remain unchanged."
+  "notes": "Troubleshooting v360 fixes exact fault/code search precedence across the layered troubleshooting library. Exact code or record-id matches now rank ahead of machine-context recommendations, so searches such as RPC terminal Code 600 open the exact source-backed record even when the saved machine context is TopModul/APL. Existing non-exact context ranking remains intact. The v359 RPC/Danfoss records and the proven v358 responsive bootstrap/startup protections are otherwise unchanged."
 }

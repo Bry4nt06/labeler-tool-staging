@@ -16,9 +16,9 @@ function manifestEntries() {
   return JSON.parse(match[1]);
 }
 
-test("v359 troubleshooting content keeps the v358 responsive bootstrap shell", () => {
-  assert.match(html, /data-troubleshooting-version="v359"/);
-  assert.match(html, /TROUBLESHOOTING v359/);
+test("v360 troubleshooting content keeps the v358 responsive bootstrap shell", () => {
+  assert.match(html, /data-troubleshooting-version="v360"/);
+  assert.match(html, /TROUBLESHOOTING v360/);
   assert.match(html, /Preparing diagnostic bootstrap/);
   const executableScripts = [...html.matchAll(/<script(?![^>]*type="application\/json")[^>]*src="([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(executableScripts, ["./troubleshooting-bootstrap.js?v=0.9.10&amp;build=troubleshooting-bootstrap-v358-20260904"]);
@@ -28,8 +28,13 @@ test("bootstrap preserves the complete troubleshooting module order declarativel
   const entries = manifestEntries();
   assert.ok(entries.length >= 40, `expected full troubleshooting startup manifest, found ${entries.length}`);
   entries.forEach((src) => assert.match(src, /shell=v358/, `missing v358 shell key: ${src}`));
-  assert.ok(entries.indexOf("./topmodul-main-drive-isolation.js?v=0.9.10&build=troubleshooting-main-drive-isolation-v352-20260904&shell=v358") < entries.indexOf("./troubleshooting-startup-guard.js?v=0.9.10&build=troubleshooting-startup-v356-20260904&shell=v358"));
-  assert.ok(entries.indexOf("./troubleshooting-startup-guard.js?v=0.9.10&build=troubleshooting-startup-v356-20260904&shell=v358") < entries.indexOf("./troubleshooting-app.js?v=0.9.10&build=troubleshooting-exact-circuit-v329-20260903-1920&shell=v358"));
+  const drive = "./topmodul-main-drive-isolation.js?v=0.9.10&build=troubleshooting-main-drive-isolation-v352-20260904&shell=v358";
+  const exactSearch = "./troubleshooting-search-precedence.js?v=0.9.10&build=troubleshooting-search-precedence-v360-20260904&shell=v358";
+  const guard = "./troubleshooting-startup-guard.js?v=0.9.10&build=troubleshooting-startup-v356-20260904&shell=v358";
+  const controller = "./troubleshooting-app.js?v=0.9.10&build=troubleshooting-exact-circuit-v329-20260903-1920&shell=v358";
+  assert.ok(entries.indexOf(drive) < entries.indexOf(exactSearch));
+  assert.ok(entries.indexOf(exactSearch) < entries.indexOf(guard));
+  assert.ok(entries.indexOf(guard) < entries.indexOf(controller));
   assert.equal(entries.at(-1).startsWith("./apl-cart-foundation-ui.js"), true);
 });
 
