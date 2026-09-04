@@ -95,11 +95,13 @@ test("lubrication family retains exact K407039 hardware authority", () => {
   }
 });
 
-test("browser loads lubrication model after v341 and before the troubleshooting controller", () => {
+test("browser keeps the lubrication model after v341 and before later troubleshooting phases", () => {
   const html = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/index.html"), "utf8");
   const protectionPos = html.indexOf("topmodul-labeler-electrical-protection.js");
   const lubePos = html.indexOf("topmodul-labeler-lubrication-trace.js");
   const appPos = html.indexOf("troubleshooting-app.js");
   assert.ok(protectionPos >= 0 && lubePos > protectionPos && appPos > lubePos);
-  assert.match(html, /data-troubleshooting-version="v342"/);
+  const phase = html.match(/data-troubleshooting-version="v(\d+)"/);
+  assert.ok(phase, "Troubleshooting banner must expose a numeric phase.");
+  assert.ok(Number(phase[1]) >= 342, `Lubrication requires troubleshooting phase v342 or later; found v${phase[1]}.`);
 });
