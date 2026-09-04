@@ -97,6 +97,7 @@ jobs:
           node --test tests/troubleshooting-topmodul-servo-table-internal-status.test.js
           node --test tests/troubleshooting-apl-cart-foundation.test.js
           node --test tests/troubleshooting-startup-responsiveness.test.js
+          node --test tests/troubleshooting-cache-recovery.test.js
       - name: Run startup regressions
         run: npm run prestart
       - name: Check patch whitespace
