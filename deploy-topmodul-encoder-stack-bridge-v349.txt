@@ -1,0 +1,4 @@
+ServoForge troubleshooting v349 staging deployment trigger
+Alarm-stack to encoder-isolation bridge
+Preserves observed chronology, evidence ranking, Station scope, and no-state-inference discipline
+Production unchanged
