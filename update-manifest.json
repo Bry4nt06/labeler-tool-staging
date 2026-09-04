@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-apl-cart-foundation-v355-20260904",
+  "buildId": "troubleshooting-startup-responsiveness-v356-20260904",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Troubleshooting v355 adds source-backed LB1 APL Cart 1 foundational fault isolation for 00005-00019 from the readable CO85_LB1_APLCart_1.L5K RSLogix 5000 v15.02 export. The release traces the 1500 ms main-contactor supervision, direct servo/feed-rewind protection inputs, feed and rewind 1000 ms ready timers including their installation-phase compatibility input mappings, local 1756-ENBT/A Slot 1/2/4 GSV FaultCode diagnostics, latched Level-3/base-machine communications, Slot 7 1756-OB16E FuseBlown diagnostics, MotionGroup.GroupSynced, MSO feedback-on error logic, and calculated synchronization/movement validity for Faults 00018/00019. Fault 00008 remains catalog-only because the supplied readable export contains its alarm text but no executable Faults[0].8 producer; ServoForge does not invent one. Source thresholds and timer presets are presented as read-only PLC evidence, not recommended adjustment values, and this release does not assume other Cart/controller revisions are identical without source verification."
+  "notes": "Troubleshooting v356 fixes a startup freeze observed when opening the Troubleshooting page from a browser/PWA with a large saved ServoForge workspace. The page now shields its startup path from the full labelerToolSettings payload and uses a compact troubleshooting-context snapshot instead, while a Web Worker refreshes that snapshot off the main UI thread for subsequent visits. Browser startup also uses a lightweight runtime smoke validation rather than the full recursive engineering validation suite; the complete source/library validation remains enforced by CI and is retained as fullValidate for engineering diagnostics. A four-second startup watchdog replaces an indefinite Loading diagnostic library state with an actionable error if initialization ever fails. v355 APL Cart source logic and all existing troubleshooting fault-isolation behavior remain unchanged."
 }
