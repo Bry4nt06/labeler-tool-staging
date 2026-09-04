@@ -46,18 +46,31 @@ test("v355 APL Cart readiness chain validates through the current troubleshootin
   assert.equal(validation.ok, true, validation.errors.join("\n"));
   assert.match(library.version, /cart-readiness-v355/);
   assert.equal(library.topModulCartReadinessSource.file, "CO85_LB1_APLCart_1.L5K");
+  assert.equal(library.topModulCartReadinessStation, 1);
   assert.equal(library.getTopModulCartReadinessPlan().stages.length, 11);
 });
 
-test("v355 preserves existing numbered Cart fault authority instead of redefining fault producers", () => {
-  assert.equal(library.getTopModulFault(5).title, "Main Contactor fault");
-  assert.equal(library.getTopModulFault(16).title, "Motion group not synchronized");
-  assert.equal(library.getTopModulFault(17).title, "Feedback on fault main drive");
-  assert.equal(library.getTopModulFault(20).title, "Carriage not in front position - press Reset button");
+test("v355 preserves Cart-local numbered fault authority in Station scope", () => {
+  const cart005 = library.getStationFaultVariant(5, 1);
+  const cart016 = library.getStationFaultVariant(16, 1);
+  const cart017 = library.getStationFaultVariant(17, 1);
+  const cart020 = library.getStationFaultVariant(20, 1);
+  assert.equal(cart005.number, 1029);
+  assert.equal(cart005.stationTemplateOffset, 5);
+  assert.equal(cart005.diagnosticScope, "Station");
+  assert.match(cart005.title, /Main Contactor fault$/i);
+  assert.equal(cart016.number, 1040);
+  assert.match(cart016.title, /Motion group not synchronized$/i);
+  assert.equal(cart017.number, 1041);
+  assert.match(cart017.title, /Feedback on fault main drive$/i);
+  assert.equal(cart020.number, 1044);
+  assert.match(cart020.title, /Carriage not in front position/i);
+  assert.notEqual(library.getTopModulFault(5).title, cart005.title, "Main Labeler Fault 005 must remain separate from Cart-local Fault 005.");
 });
 
 test("readiness plan preserves exact timing and raw-polarity boundaries", () => {
-  const stages = library.getTopModulCartReadinessPlan().stages;
+  const plan = library.getTopModulCartReadinessPlan();
+  const stages = plan.stages;
   const contactor = stages.find((row) => row.signal === "E2001_C101_ServoPowerSupply");
   const monitor = stages.find((row) => /TON_MonitorMainContactor/.test(row.signal));
   const release = stages.find((row) => row.signal === "StartStop.ReleaseFeedbackOn");
@@ -67,24 +80,37 @@ test("readiness plan preserves exact timing and raw-polarity boundaries", () => 
   assert.match(contactor.sourceLogic, /400 ms/);
   assert.match(monitor.sourceLogic, /both true OR both false/);
   assert.match(monitor.sourceLogic, /1500 ms/);
+  assert.deepEqual([...monitor.handoff], [1029]);
   assert.match(release.sourceLogic, /XIO\(E2001_CB101_ServoPowerSupply\)/);
   assert.match(release.meaning, /raw C101 feedback bit must be false/i);
   assert.match(ready.sourceLogic, /MotionGroup\.GroupSynced/);
   assert.match(ready.sourceLogic, /EnableInputStatus/);
+  assert.deepEqual([...ready.handoff], [1040, 1041]);
   assert.match(command.sourceLogic, /750 ms/);
   assert.match(feedback.sourceLogic, /20 ms/);
+  assert.deepEqual([...plan.upstreamEnableFaults], [1025, 1026, 1027, 1028, 1029, 1030, 1031, 1033, 1034, 1036, 1037, 1038, 1039, 1040, 1041, 1042, 1043, 1044]);
 });
 
-test("v355 isolates the first missing stage instead of jumping to encoder replacement", () => {
+test("v355 isolates the first missing stage and returns Station-instance handoffs", () => {
   assert.equal(library.evaluateTopModulCartReadiness({ enableMachineOn: "no", enableMachineJog: "no" }).code, "cart-enable-inhibited");
   assert.equal(library.evaluateTopModulCartReadiness({ enableMachineOn: "yes", powerAndFeedbackOn: "no" }).code, "power-feedback-permissive-blocked");
-  assert.equal(library.evaluateTopModulCartReadiness({ contactorCommand: "1", contactorFeedback: "1" }).code, "contactor-raw-state-mismatch");
-  assert.equal(library.evaluateTopModulCartReadiness({ powerAndFeedbackOn: "yes", releaseFeedbackOn: "no" }).code, "feedback-release-blocked");
-  assert.equal(library.evaluateTopModulCartReadiness({ releaseFeedbackOn: "yes", readyForFeedbackOn: "no" }).code, "axis-ready-permissive-blocked");
+  const contactor = library.evaluateTopModulCartReadiness({ contactorCommand: "1", contactorFeedback: "1" });
+  assert.equal(contactor.code, "contactor-raw-state-mismatch");
+  assert.deepEqual([...contactor.related], [1029]);
+  const release = library.evaluateTopModulCartReadiness({ powerAndFeedbackOn: "yes", releaseFeedbackOn: "no" });
+  assert.equal(release.code, "feedback-release-blocked");
+  assert.deepEqual([...release.related], [1029]);
+  const axisReady = library.evaluateTopModulCartReadiness({ releaseFeedbackOn: "yes", readyForFeedbackOn: "no" });
+  assert.equal(axisReady.code, "axis-ready-permissive-blocked");
+  assert.deepEqual([...axisReady.related], [1040, 1041]);
   assert.equal(library.evaluateTopModulCartReadiness({ readyForFeedbackOn: "yes", feedbackCommand: "no" }).code, "feedback-command-delay");
-  assert.equal(library.evaluateTopModulCartReadiness({ feedbackCommand: "yes", feedbackIsOn: "no" }).code, "mso-feedback-not-on");
+  const feedback = library.evaluateTopModulCartReadiness({ feedbackCommand: "yes", feedbackIsOn: "no" });
+  assert.equal(feedback.code, "mso-feedback-not-on");
+  assert.deepEqual([...feedback.related], [1041]);
   assert.equal(library.evaluateTopModulCartReadiness({ feedbackIsOn: "yes", stationAutoOn: "no" }).code, "station-auto-not-latched");
-  assert.equal(library.evaluateTopModulCartReadiness({ stationAutoOn: "yes", baseReady: "no" }).code, "base-ready-output-blocked");
+  const baseReady = library.evaluateTopModulCartReadiness({ stationAutoOn: "yes", baseReady: "no" });
+  assert.equal(baseReady.code, "base-ready-output-blocked");
+  assert.deepEqual([...baseReady.related], [1044]);
   assert.equal(library.evaluateTopModulCartReadiness({ baseReady: "yes", noFaultOutput: "no" }).code, "hardware-ready-output-blocked");
 });
 
@@ -103,6 +129,7 @@ test("APL Cart readiness is searchable and exposes a guided flow without inventi
   assert.equal(match.id, "topmodul-apl-cart-readiness");
   assert.equal(match.code, "APL-READY");
   assert.equal(match.number, undefined);
+  assert.match(match.processTrace.scopeNote, /main Labeler faults with the same short numbers are a separate scope/i);
   const flow = library.getFlow("topmodul-apl-cart-readiness");
   assert.ok(flow);
   assert.equal(flow.start, "cart-alarm");
