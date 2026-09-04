@@ -121,7 +121,7 @@ test("v356 guard is loaded after all diagnostic engines and immediately before t
   const finalEngineIndex = page.indexOf("topmodul-main-drive-isolation.js");
   assert.ok(finalEngineIndex >= 0 && guardIndex > finalEngineIndex);
   assert.ok(controllerIndex > guardIndex);
-  assert.match(page, /data-troubleshooting-version="v356"/);
+  assert.match(page, /data-troubleshooting-version="v357"/);
   assert.match(page, /troubleshooting-startup-v356-20260904/);
 });
 
