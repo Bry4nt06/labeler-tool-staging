@@ -65,7 +65,7 @@
       if (Array.isArray(input)) return input.map((value) => String(value || "").trim()).filter(Boolean);
       const text = String(input || "").trim();
       if (!text) return [];
-      const numeric = text.match(/\b00067\b|\b\d{3,4}\b/g) || [];
+      const numeric = text.match(/\b000\d{2}\b|\b\d{3,4}\b/g) || [];
       if (numeric.length) return numeric;
       return text.split(/[\n,;>|]+/).map((value) => value.trim()).filter(Boolean);
     }
@@ -213,6 +213,10 @@
       if (!f663 || !f1091 || f1091.investigationScore >= f663.investigationScore) errors.push("Station encoder producer should rank ahead of Station Not Ready summary.");
       const gaps = analyzeTopModulFaultStack("719, 489, 641, 697");
       if (gaps.recommended[0]?.entry?.number !== 719) errors.push("Verified Fault 719 should rank ahead of source-gap alarms.");
+      if (base.getStationLocalHmiFault) {
+        const locals = analyzeTopModulFaultStack("00025, 00067, 1091");
+        if (locals.observed[0]?.entry?.code !== "00025") errors.push("Alarm stack lost arbitrary five-digit Station-local HMI support.");
+      }
       return { ok: errors.length === 0, errors };
     }
 
