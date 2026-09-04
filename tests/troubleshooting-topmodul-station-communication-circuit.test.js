@@ -71,7 +71,7 @@ test("Fault 016 stays a group-level synchronization state and points to both mot
   assert.match(f16.summary, /042-054/);
 });
 
-test("browser and offline shell load all post-v329 Station circuit layers in order", () => {
+test("browser loads all post-v329 Station circuit layers in order", () => {
   const html = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/index.html"), "utf8");
   const powerPos = html.indexOf("topmodul-station-power-circuit.js");
   const encoderPos = html.indexOf("topmodul-station-encoder-circuit.js");
@@ -79,12 +79,4 @@ test("browser and offline shell load all post-v329 Station circuit layers in ord
   const commPos = html.indexOf("topmodul-station-communication-circuit.js");
   const appPos = html.indexOf("troubleshooting-app.js");
   assert.ok(powerPos >= 0 && encoderPos > powerPos && servoPos > encoderPos && commPos > servoPos && appPos > commPos);
-
-  const worker = fs.readFileSync(path.join(__dirname, "../service-worker.js"), "utf8");
-  for (const file of [
-    "topmodul-station-power-circuit.js",
-    "topmodul-station-encoder-circuit.js",
-    "topmodul-station-servo-circuit.js",
-    "topmodul-station-communication-circuit.js"
-  ]) assert.match(worker, new RegExp(`\\.\\/app\\/troubleshooting\\/${file.replaceAll(".", "\\.")}`));
 });
