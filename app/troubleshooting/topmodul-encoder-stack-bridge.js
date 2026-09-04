@@ -20,6 +20,16 @@
 
     const freeze = (value) => Object.freeze(value);
     const uniqueNumbers = (values) => [...new Set(values.filter(Number.isFinite))].sort((a, b) => a - b);
+    const stationNumber = (value) => {
+      if (value == null || value === "") return null;
+      const n = Number(value);
+      return Number.isInteger(n) && n >= 1 && n <= 6 ? n : null;
+    };
+    const optionalNumber = (value) => {
+      if (value == null || value === "") return null;
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    };
 
     function encoderItem(item) {
       if (!item?.entry) return null;
@@ -32,17 +42,17 @@
         role: item.role,
         roleLabel: item.roleLabel,
         priority: item.priority,
-        investigationScore: Number.isFinite(Number(item.investigationScore)) ? Number(item.investigationScore) : null,
-        station: Number.isFinite(Number(plan.station)) ? Number(plan.station) : null,
+        investigationScore: optionalNumber(item.investigationScore),
+        station: stationNumber(plan.station),
         scope: plan.scope,
-        localOffset: Number.isFinite(Number(plan.localOffset)) ? Number(plan.localOffset) : null,
+        localOffset: optionalNumber(plan.localOffset),
         subtype: plan.subtype?.label || "Encoder supervision",
         producer: plan.producer
       });
     }
 
     function stationContextFor(items) {
-      const stations = uniqueNumbers(items.map((item) => Number(item.station)));
+      const stations = uniqueNumbers(items.map((item) => item.station));
       const hasField00067 = items.some((item) => item.entry?.id === FIELD_00067_ID);
       const hasMain = items.some((item) => /^Main Labeler encoder/i.test(String(item.scope || "")));
       if (stations.length > 1) return freeze({ kind: "multiple", stations: freeze(stations), label: `Multiple Stations (${stations.join(", ")})`, exact: false });
@@ -55,8 +65,8 @@
     function stationGroups(items) {
       const groups = new Map();
       for (const item of items) {
-        if (!Number.isFinite(Number(item.station))) continue;
-        const station = Number(item.station);
+        if (!Number.isFinite(item.station)) continue;
+        const station = item.station;
         if (!groups.has(station)) groups.set(station, []);
         groups.get(station).push(item);
       }
