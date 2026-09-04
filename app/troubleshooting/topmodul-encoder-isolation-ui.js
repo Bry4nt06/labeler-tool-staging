@@ -146,16 +146,19 @@
       existing?.remove();
       return;
     }
-    if (existing?.dataset.topmodulEncoderIsolation === plan.id) {
-      existing.outerHTML = markup(plan);
-      return;
-    }
+    if (existing?.dataset.topmodulEncoderIsolation === plan.id) return;
     existing?.remove();
     const anchor = result.querySelector("[data-topmodul-process-trace]")
       || result.querySelector("[data-topmodul-cause-evidence]")
       || result.querySelector("[data-topmodul-plc-binding]")
       || result.querySelector(".sf-result-summary");
     if (anchor) anchor.insertAdjacentHTML("afterend", markup(plan));
+  }
+
+  function refreshPlan(plan, result) {
+    const existing = result.querySelector("[data-topmodul-encoder-isolation]");
+    if (existing?.dataset.topmodulEncoderIsolation === plan.id) existing.outerHTML = markup(plan);
+    else render();
   }
 
   function openFault(number) {
@@ -181,7 +184,7 @@
         const next = { ...(state.get(plan.id) || {}) };
         next[choice.dataset.encoderGroup] = choice.dataset.encoderValue;
         state.set(plan.id, next);
-        render();
+        refreshPlan(plan, result);
         return;
       }
       const fault = event.target.closest("[data-encoder-open-fault]");
