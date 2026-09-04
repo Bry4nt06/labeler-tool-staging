@@ -68,6 +68,7 @@ jobs:
           node --check app/troubleshooting/topmodul-labeler-remaining-gaps-trace.js
           node --check app/troubleshooting/topmodul-machine-start-isolation.js
           node --check app/troubleshooting/topmodul-servo-table-internal-status.js
+          node --check app/troubleshooting/topmodul-cart-readiness-isolation.js
           node --check app/troubleshooting/topmodul-live-00067-source-bridge.js
           node --check app/troubleshooting/topmodul-alarm-stack-analyzer.js
           node --check app/troubleshooting/topmodul-encoder-isolation.js
@@ -92,6 +93,7 @@ jobs:
           npm run test:troubleshooting
           node --test tests/troubleshooting-topmodul-main-drive-isolation.test.js
           node --test tests/troubleshooting-topmodul-servo-table-internal-status.test.js
+          node --test tests/troubleshooting-topmodul-cart-readiness.test.js
       - name: Run startup regressions
         run: npm run prestart
       - name: Check patch whitespace
