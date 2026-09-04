@@ -65,8 +65,8 @@ test("Faults 673, 674 and 691 retain distinct Heuft inputs on the same interface
   for (const entry of [label, ready, sonic]) {
     assert.ok(entry.circuitTrace.drawingLocations.some((row) => Number(row.pdfPage) === 193));
   }
-  assert.match(label.processTrace.summary, /200 ms/i);
-  assert.match(sonic.processTrace.summary, /200 ms/i);
+  assert.match(label.processTrace.calculationSteps.map((step) => step.value).join(" "), /200 ms/i);
+  assert.match(sonic.processTrace.calculationSteps.map((step) => step.value).join(" "), /200 ms/i);
   assert.match(ready.processTrace.summary, /not reporting Ready/i);
 });
 
