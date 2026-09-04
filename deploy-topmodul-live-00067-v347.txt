@@ -1,0 +1,3 @@
+ServoForge troubleshooting staging deploy trigger: v347 source-proven live HMI 00067 bridge.
+Merged PR #79 at 76196798f645ed9f13df9bfc8bd9ceda1c54904a.
+Production remains untouched.
