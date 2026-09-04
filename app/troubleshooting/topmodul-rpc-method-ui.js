@@ -49,6 +49,25 @@
     </section>`;
   }
 
+  function decoderOnlyMarkup(drillDown) {
+    const methods = drillDown?.rpcDecoderOnlyMethods || [];
+    if (!methods.length) return "";
+    return `<section class="sf-result-section sf-rpc-decoder-methods" data-topmodul-rpc-decoder-methods>
+      <h4>PLC-decoder-only RPC methods</h4>
+      <p class="sf-trace-status">These PowerPC conditions are decoded in the supplied LB1 PLC and match archived RPC procedures, but this alarm table does not contain named HMI faults at those decoder positions. They are shown here under the Servo Bottle Table summary rather than created as searchable faults.</p>
+      <div class="sf-circuit-device-grid">${methods.map((method) => `<div class="sf-circuit-device">
+        <strong>Decoder ${esc(method.decoderPosition)}</strong>
+        <span class="sf-circuit-device-copy">
+          <span><strong>${esc(method.code)}</strong> — ${esc(method.title)}</span>
+          <code>PowerPC message ${esc(method.powerPcMessageCode)} · RPC document fault #${esc(method.number)}</code>
+          <span>${esc(method.summary)}</span>
+          ${method.checks?.length ? `<span><strong>Checks:</strong> ${esc(method.checks.join(" · "))}</span>` : ""}
+        </span>
+      </div>`).join("")}</div>
+      <div class="sf-circuit-warning"><strong>Source discipline:</strong> decoder positions are PLC evidence, not operator-facing fault numbers in this supplied LB1 alarm table.</div>
+    </section>`;
+  }
+
   function currentEntry(result, library) {
     const category = result.querySelector(".sf-entry-category")?.textContent || "";
     if (!/^TopModul PLC\s*\//i.test(category.trim())) return null;
@@ -61,14 +80,16 @@
     const result = document.getElementById("diagnosticResult");
     if (!library?.topModulRpcMethodFaults || !result || result.hidden) return;
     const entry = currentEntry(result, library);
-    result.querySelectorAll("[data-topmodul-rpc-method],[data-topmodul-rpc-method-gap]").forEach((node) => node.remove());
-    if (!entry?.rpcMethod && !entry?.rpcMethodGap) return;
+    result.querySelectorAll("[data-topmodul-rpc-method],[data-topmodul-rpc-method-gap],[data-topmodul-rpc-decoder-methods]").forEach((node) => node.remove());
+    if (!entry) return;
+    const drillDown = library.getTopModulFaultDrillDown?.(entry, 12) || null;
+    if (!entry.rpcMethod && !entry.rpcMethodGap && !drillDown?.rpcDecoderOnlyMethods?.length) return;
     const anchor = result.querySelector("[data-topmodul-circuit-trace]")
       || result.querySelector("[data-topmodul-process-trace]")
       || result.querySelector("[data-topmodul-cause-evidence]")
       || result.querySelector("[data-topmodul-plc-binding]")
       || result.querySelector(".sf-result-summary");
-    if (anchor) anchor.insertAdjacentHTML("afterend", `${methodMarkup(entry)}${gapMarkup(entry)}`);
+    if (anchor) anchor.insertAdjacentHTML("afterend", `${methodMarkup(entry)}${gapMarkup(entry)}${decoderOnlyMarkup(drillDown)}`);
   }
 
   function install() {
