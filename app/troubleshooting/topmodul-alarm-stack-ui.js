@@ -6,6 +6,23 @@
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
   const codeFor = (entry) => entry?.code || (Number.isFinite(Number(entry?.number)) ? String(entry.number).padStart(3, "0") : "—");
 
+  function ensurePanel() {
+    if (document.getElementById("faultStackInput")) return;
+    const searchPanel = document.querySelector(".sf-search-panel");
+    if (!searchPanel) return;
+    const panel = document.createElement("section");
+    panel.className = "sf-search-panel panel sf-stack-panel";
+    panel.setAttribute("aria-labelledby", "faultStackHeading");
+    panel.innerHTML = `<div class="sf-section-heading">
+      <div><span class="sf-eyebrow">Multiple alarms?</span><h2 id="faultStackHeading">Alarm stack / first-fault analyzer</h2></div>
+      <p>Paste alarms in the order they appeared. ServoForge preserves that chronology and separately ranks the strongest verified PLC evidence.</p>
+    </div>
+    <textarea id="faultStackInput" class="sf-stack-input" spellcheck="false" placeholder="Example: 673, 674, 695\nOr: 663, 1091\nField HMI code 00067 stays separate from PLC Fault 067."></textarea>
+    <div class="sf-stack-actions"><button id="faultStackAnalyze" type="button">Analyze alarm stack</button><span class="sf-stack-help">Ctrl/⌘ + Enter also analyzes.</span></div>
+    <div id="faultStackResults" class="sf-stack-results" aria-live="polite"></div>`;
+    searchPanel.insertAdjacentElement("afterend", panel);
+  }
+
   function openDiagnostic(entry) {
     const input = document.getElementById("faultSearch");
     const button = document.getElementById("faultSearchButton");
@@ -65,6 +82,7 @@
   }
 
   function init() {
+    ensurePanel();
     const library = root.ServoForgeTroubleshootingLibrary;
     const input = document.getElementById("faultStackInput");
     const button = document.getElementById("faultStackAnalyze");
@@ -81,6 +99,7 @@
     .sf-stack-input{width:100%;min-height:88px;resize:vertical;padding:12px;border-radius:10px;font:inherit}
     .sf-stack-actions{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
     .sf-stack-help{font-size:.85rem;opacity:.75}
+    .sf-stack-results{margin-top:10px}
     .sf-stack-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:14px}
     .sf-stack-list{display:grid;gap:8px}
     .sf-stack-card{display:grid;gap:4px;width:100%;text-align:left;padding:12px;border-radius:10px;border:1px solid currentColor;background:transparent;cursor:pointer}
