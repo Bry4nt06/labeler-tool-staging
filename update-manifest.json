@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-apl-cart-web-handling-v361-20260904",
+  "buildId": "troubleshooting-apl-cart-servo-status-v362-20260904",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Troubleshooting v361 expands the readable LB1 APL Cart 1 PLC import with Faults 00021-00030 covering reference-run and label-length measurement faults, tear/web-break sensing, end-of-reel detection, feed loop-buffer supervision, rewinder jam/web-break conditions, and Cart base-machine encoder monitoring. Fault 00024 remains catalog/HMI-proven but producer-unresolved because the supplied export has no executable Faults[1].8 writer. PLC scan-count logic for 00026/00029 is kept distinct from millisecond timers, and Cart Fault 00030 remains explicitly separate from Station 00067 AQB feedback and main Labeler Fault 670 fine-clock monitoring. v360 exact-search precedence and the v358 responsive bootstrap/startup fixes remain intact."
+  "notes": "Troubleshooting v362 adds exact Cart-local HMI Faults 00032-00054 for the readable LB1 APL Cart 1 source. Twenty-one active positions bridge directly to the existing shared Station MainDriveAxis producer and K605163 servo-circuit authority rather than duplicating servo logic; Faults 00040 and 00049 remain inactive Logic_0 source positions in this Cart revision. Five-digit Cart-local codes remain explicitly separate from same-number three-digit base-Labeler faults. v361 label-web/encoder handling, v360 exact-search precedence, and the v358 responsive bootstrap/startup safeguards remain intact."
 }
