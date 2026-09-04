@@ -36,7 +36,7 @@ const analyzer = require("../app/troubleshooting/topmodul-alarm-stack-analyzer.j
 const isolation = require("../app/troubleshooting/topmodul-encoder-isolation.js")(analyzer);
 const library = require("../app/troubleshooting/topmodul-encoder-stack-bridge.js")(isolation);
 
-test("v349 encoder-stack bridge validates without changing v348 isolation authority", () => {
+test("v349 encoder-stack bridge validates without changing encoder-isolation authority", () => {
   const validation = library.validate();
   assert.equal(validation.ok, true, validation.errors.join("\n"));
   assert.match(library.version, /encoder-stack-bridge-v1/);
@@ -104,7 +104,7 @@ test("non-encoder stacks do not produce an encoder bridge target", () => {
   assert.equal(result.observed.length, 0);
 });
 
-test("v349 browser loader and UI bridge preserve alarm-stack and v348 ordering", () => {
+test("v350 browser loader preserves v349 stack bridge and encoder-isolation ordering", () => {
   const html = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/index.html"), "utf8");
   const analyzerPos = html.indexOf("topmodul-alarm-stack-analyzer.js");
   const isolationPos = html.indexOf("topmodul-encoder-isolation.js");
@@ -115,7 +115,8 @@ test("v349 browser loader and UI bridge preserve alarm-stack and v348 ordering",
   const isolationUiPos = html.indexOf("topmodul-encoder-isolation-ui.js");
   assert.ok(analyzerPos >= 0 && isolationPos > analyzerPos && bridgePos > isolationPos && appPos > bridgePos);
   assert.ok(stackUiPos > appPos && bridgeUiPos > stackUiPos && isolationUiPos > bridgeUiPos);
-  assert.match(html, /data-troubleshooting-version="v349"/);
+  const bannerVersion = Number(/data-troubleshooting-version="v(\d+)"/.exec(html)?.[1] || 0);
+  assert.ok(bannerVersion >= 350);
   const ui = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/topmodul-encoder-stack-bridge-ui.js"), "utf8");
   assert.match(ui, /Alarm stack → encoder isolation/);
   assert.match(ui, /No machine-state inference/);
