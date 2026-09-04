@@ -143,7 +143,7 @@ test("browser loads v351 engine after source bridge/analyzer and interactive UI 
   assert.ok(bridgePos >= 0 && analyzerPos > bridgePos && enginePos > analyzerPos && appPos > enginePos && uiPos > appPos);
   const bannerVersion = Number(/data-troubleshooting-version="v(\d+)"/.exec(html)?.[1] || 0);
   assert.ok(bannerVersion >= 351);
-  assert.match(html, /topmodul-encoder-isolation\.js\?v=0\.9\.10&amp;build=troubleshooting-fault-670-source-chain-v351-20260904/);
+  assert.match(html, /topmodul-encoder-isolation\.js\?v=0\.9\.10&build=troubleshooting-fault-670-source-chain-v351-20260904&shell=v358/);
   const ui = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/topmodul-encoder-isolation-ui.js"), "utf8");
   assert.match(ui, /Observed machine state/);
   assert.match(ui, /data-encoder-open-fault/);
