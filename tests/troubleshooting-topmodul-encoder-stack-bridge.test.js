@@ -115,7 +115,8 @@ test("v349 browser loader and UI bridge preserve alarm-stack and v348 ordering",
   const isolationUiPos = html.indexOf("topmodul-encoder-isolation-ui.js");
   assert.ok(analyzerPos >= 0 && isolationPos > analyzerPos && bridgePos > isolationPos && appPos > bridgePos);
   assert.ok(stackUiPos > appPos && bridgeUiPos > stackUiPos && isolationUiPos > bridgeUiPos);
-  assert.match(html, /data-troubleshooting-version="v349"/);
+  const versionMatch = html.match(/data-troubleshooting-version="v(\d+)"/);
+  assert.ok(versionMatch && Number(versionMatch[1]) >= 349, "staging banner must remain at v349 or later");
   const ui = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/topmodul-encoder-stack-bridge-ui.js"), "utf8");
   assert.match(ui, /Alarm stack → encoder isolation/);
   assert.match(ui, /No machine-state inference/);

@@ -70,6 +70,7 @@ jobs:
           node --check app/troubleshooting/topmodul-alarm-stack-analyzer.js
           node --check app/troubleshooting/topmodul-encoder-isolation.js
           node --check app/troubleshooting/topmodul-encoder-stack-bridge.js
+          node --check app/troubleshooting/topmodul-encoder-verification.js
           node --check app/troubleshooting/topmodul-rpc-method-ui.js
           node --check app/troubleshooting/topmodul-fault-drilldown-ui.js
           node --check app/troubleshooting/topmodul-process-trace-ui.js
@@ -77,6 +78,7 @@ jobs:
           node --check app/troubleshooting/topmodul-alarm-stack-ui.js
           node --check app/troubleshooting/topmodul-encoder-stack-bridge-ui.js
           node --check app/troubleshooting/topmodul-encoder-isolation-ui.js
+          node --check app/troubleshooting/topmodul-encoder-verification-ui.js
           node --check app/troubleshooting/troubleshooting-app.js
           node --check app.js
           node --check service-worker.js
