@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-main-drive-isolation-v352-20260904",
+  "buildId": "troubleshooting-servo-table-internal-status-v354-20260904",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Troubleshooting v352 adds source-backed main Labeler main-drive and standstill isolation from CO85_LB1_Labeler_1online.L5K for Fault 480 Main Drive Fault, 482 Main Drive Contactor Fault, 490 Safety Circuit Fault Main Drive Time Relay, and 669 Safety Circuit Fault Machine Stop Monitoring. The new read-only workflow traces PF700/Node3 drive status, C101/C102 timed contactor mismatch supervision, electric-brake hardware-delay feedback, and the independent ElectrBrake zero-speed chain. Station encoder feedback faults with no actual motion now hand off to these source-backed upstream branches before the Cart AQB circuit. Fault 670 remains exclusively under the separate v351 main-machine fine-clock workflow; no timers, thresholds, or safety logic are presented as values to change."
+  "notes": "Troubleshooting v354 extends the v353 machine-start work with source-backed internal Servo Bottle Table DataExchange diagnostics from CO85_LB1_Labeler_1online.L5K and K407039 page 142. Internal position 720 is explicitly retained as disabled because AFI blocks its only OTE in the supplied PLC revision. Positions 721-723 are indexed as active-but-unnamed internal statuses without inflating the 515 operator-named alarm count: 721 preserves the exact I0011.00 Encoder Simulation Off / sensor-simulation / OutServoPowerOnline semantic conflict, 722 traces missing System Online through I0011.03, and 723 traces missing Servo Ready through I0011.04 while the executable operating-mode bit is true. These are read-only diagnostic routes; no HMI alarm names are invented and no forcing, bypassing, timer changes, or unsafe recovery actions are recommended."
 }
