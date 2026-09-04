@@ -115,13 +115,13 @@ test("v356 browser validation is a lightweight smoke check and preserves full va
   assert.equal(runtime.getFullValidationCalls(), 1);
 });
 
-test("v356 guard is loaded after all diagnostic engines and immediately before the troubleshooting controller", () => {
+test("v356 guard remains after all diagnostic engines and immediately before the troubleshooting controller in v359", () => {
   const guardIndex = page.indexOf("troubleshooting-startup-guard.js");
   const controllerIndex = page.indexOf("troubleshooting-app.js");
   const finalEngineIndex = page.indexOf("topmodul-main-drive-isolation.js");
   assert.ok(finalEngineIndex >= 0 && guardIndex > finalEngineIndex);
   assert.ok(controllerIndex > guardIndex);
-  assert.match(page, /data-troubleshooting-version="v358"/);
+  assert.match(page, /data-troubleshooting-version="v359"/);
   assert.match(page, /troubleshooting-startup-v356-20260904/);
 });
 
