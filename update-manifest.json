@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-search-precedence-v360-20260904",
+  "buildId": "troubleshooting-apl-cart-web-handling-v361-20260904",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Troubleshooting v360 fixes exact fault/code search precedence across the layered troubleshooting library. Exact code or record-id matches now rank ahead of machine-context recommendations, so searches such as RPC terminal Code 600 open the exact source-backed record even when the saved machine context is TopModul/APL. Existing non-exact context ranking remains intact. The v359 RPC/Danfoss records and the proven v358 responsive bootstrap/startup protections are otherwise unchanged."
+  "notes": "Troubleshooting v361 expands the readable LB1 APL Cart 1 PLC import with Faults 00021-00030 covering reference-run and label-length measurement faults, tear/web-break sensing, end-of-reel detection, feed loop-buffer supervision, rewinder jam/web-break conditions, and Cart base-machine encoder monitoring. Fault 00024 remains catalog/HMI-proven but producer-unresolved because the supplied export has no executable Faults[1].8 writer. PLC scan-count logic for 00026/00029 is kept distinct from millisecond timers, and Cart Fault 00030 remains explicitly separate from Station 00067 AQB feedback and main Labeler Fault 670 fine-clock monitoring. v360 exact-search precedence and the v358 responsive bootstrap/startup fixes remain intact."
 }
