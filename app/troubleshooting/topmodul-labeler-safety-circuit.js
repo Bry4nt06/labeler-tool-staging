@@ -140,7 +140,7 @@
     });
 
     function isLabelerEntry(entry) {
-      return Boolean(entry?.plcFault) && entry.diagnosticScope !== "Station" && !entry.plcFault?.station;
+      return Boolean(entry?.plcFault) && entry.diagnosticScope !== "Station";
     }
 
     function traceForEntry(entry) {
