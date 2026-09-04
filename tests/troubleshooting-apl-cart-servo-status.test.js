@@ -44,7 +44,7 @@ test("v362 bridges Cart-local HMI 00032-00054 without cloning the shared Station
     assert.equal(plan.localAddress, `Faults[${Math.floor(number / 16)}].${number % 16}`);
     assert.equal(plan.stationGlobalMap.length, 6);
   });
-  const validation = servoLocal.validate();
+  const validation = library.validate();
   assert.equal(validation.ok, true, validation.errors.join(" | "));
 });
 
