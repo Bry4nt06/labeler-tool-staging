@@ -55,8 +55,10 @@ jobs:
           node --check app/troubleshooting/topmodul-station-servo-circuit.js
           node --check app/troubleshooting/topmodul-station-communication-circuit.js
           node --check app/troubleshooting/topmodul-station-process-trace.js
+          node --check app/troubleshooting/topmodul-station-foundation-circuit.js
           node --check app/troubleshooting/topmodul-fault-drilldown-ui.js
           node --check app/troubleshooting/topmodul-process-trace-ui.js
+          node --check app/troubleshooting/topmodul-source-gap-ui.js
           node --check app/troubleshooting/troubleshooting-app.js
           node --check app.js
           node --check service-worker.js
