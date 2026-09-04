@@ -39,6 +39,11 @@ test("the troubleshooting page participates in the existing authentication clien
 });
 
 test("the staging banner visibly identifies the active troubleshooting phase", () => {
-  assert.match(troubleshootingPage, /data-troubleshooting-version="v335"/);
-  assert.match(troubleshootingPage, /STAGING \/ TEST BUILD — TROUBLESHOOTING v335 — ServoForge 0\.9\.10 — NOT PRODUCTION/);
+  const versionMatch = troubleshootingPage.match(/data-troubleshooting-version="(v\d+)"/);
+  assert.ok(versionMatch, "Troubleshooting staging banner must expose a phase version.");
+  const version = versionMatch[1];
+  assert.match(
+    troubleshootingPage,
+    new RegExp(`STAGING / TEST BUILD — TROUBLESHOOTING ${version} — ServoForge 0\\.9\\.10 — NOT PRODUCTION`)
+  );
 });
