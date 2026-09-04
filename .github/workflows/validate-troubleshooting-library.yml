@@ -76,6 +76,7 @@ jobs:
           node --check app/troubleshooting/topmodul-encoder-verification.js
           node --check app/troubleshooting/topmodul-main-drive-isolation.js
           node --check app/troubleshooting/troubleshooting-startup-guard.js
+          node --check app/troubleshooting/troubleshooting-bootstrap.js
           node --check app/troubleshooting/topmodul-rpc-method-ui.js
           node --check app/troubleshooting/topmodul-fault-drilldown-ui.js
           node --check app/troubleshooting/topmodul-process-trace-ui.js
