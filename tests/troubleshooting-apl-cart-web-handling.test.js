@@ -122,18 +122,20 @@ test("v361 UI is idempotent/debounced and does not recreate the earlier microtas
   assert.doesNotMatch(uiSource, /queueMicrotask\(render\)/);
 });
 
-test("v361 loader order preserves v360 exact search and v358 bootstrap", () => {
-  assert.match(page, /data-troubleshooting-version="v361"/);
-  assert.match(page, /TROUBLESHOOTING v361/);
+test("v361 web handling remains loaded under v362, v360 exact search, and the v358 bootstrap", () => {
+  assert.match(page, /data-troubleshooting-version="v362"/);
+  assert.match(page, /TROUBLESHOOTING v362/);
   assert.match(page, /troubleshooting-bootstrap-v358-20260904/);
   const foundationIndex = page.indexOf("apl-cart-foundation.js");
   const webIndex = page.indexOf("apl-cart-web-handling.js");
+  const servoIndex = page.indexOf("apl-cart-servo-status.js");
   const exactSearchIndex = page.indexOf("troubleshooting-search-precedence.js");
   const guardIndex = page.indexOf("troubleshooting-startup-guard.js");
   const appIndex = page.indexOf("troubleshooting-app.js");
   const foundationUiIndex = page.indexOf("apl-cart-foundation-ui.js");
   const webUiIndex = page.indexOf("apl-cart-web-handling-ui.js");
-  assert.ok(foundationIndex >= 0 && webIndex > foundationIndex);
-  assert.ok(exactSearchIndex > webIndex && guardIndex > exactSearchIndex && appIndex > guardIndex);
-  assert.ok(webUiIndex > foundationUiIndex);
+  const servoUiIndex = page.indexOf("apl-cart-servo-status-ui.js");
+  assert.ok(foundationIndex >= 0 && webIndex > foundationIndex && servoIndex > webIndex);
+  assert.ok(exactSearchIndex > servoIndex && guardIndex > exactSearchIndex && appIndex > guardIndex);
+  assert.ok(webUiIndex > foundationUiIndex && servoUiIndex > webUiIndex);
 });
