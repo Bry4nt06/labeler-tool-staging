@@ -89,14 +89,15 @@ test("recovered faults 700 and 719 participate in stack analysis", () => {
   assert.equal(result.observed.find((item) => item.entry.number === 719).entry.plcFault.address, "Faults_LB1[44].15");
 });
 
-test("browser loads analyzer after v345 and UI after the main troubleshooting controller", () => {
+test("browser keeps analyzer after v345 and UI after the main troubleshooting controller", () => {
   const html = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/index.html"), "utf8");
   const gapsPos = html.indexOf("topmodul-labeler-remaining-gaps-trace.js");
   const analyzerPos = html.indexOf("topmodul-alarm-stack-analyzer.js");
   const appPos = html.indexOf("troubleshooting-app.js");
   const uiPos = html.indexOf("topmodul-alarm-stack-ui.js");
   assert.ok(gapsPos >= 0 && analyzerPos > gapsPos && appPos > analyzerPos && uiPos > appPos);
-  assert.match(html, /data-troubleshooting-version="v346"/);
+  const version = Number(html.match(/data-troubleshooting-version="v(\d+)"/)?.[1] || 0);
+  assert.ok(version >= 346, `Expected troubleshooting version >=346, found v${version}.`);
   const ui = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/topmodul-alarm-stack-ui.js"), "utf8");
   assert.match(ui, /Alarm stack \/ first-fault analyzer/);
   assert.match(ui, /Observed order/);
