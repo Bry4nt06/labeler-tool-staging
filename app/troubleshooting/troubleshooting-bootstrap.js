@@ -1,7 +1,7 @@
 "use strict";
 
 (function startServoForgeTroubleshootingBootstrap(global) {
-  const BUILD = "troubleshooting-bootstrap-v358-20260904";
+  const BUILD = "troubleshooting-bootstrap-v359-20260904";
   const CACHE_PREFIX = "servoforge-labeler-";
   const MANIFEST_ID = "troubleshootingScriptManifest";
   const STATUS_ID = "libraryValidationStatus";
@@ -16,7 +16,9 @@
     firstFailure: "",
     loaded: [],
     repaired: false,
-    aborted: false
+    aborted: false,
+    interfaceReady: false,
+    readyMessage: ""
   };
   global.ServoForgeTroubleshootingBootstrap = state;
 
@@ -26,12 +28,31 @@
     try { return new URL(value, location.href).pathname.split("/").pop() || String(value || "unknown file"); }
     catch { return String(value || "unknown file"); }
   }
+  function captureInterfaceReady() {
+    const element = statusElement();
+    if (!element || element.dataset.status !== "pass") return false;
+    state.interfaceReady = true;
+    state.readyMessage = element.textContent || "Troubleshooting interface ready.";
+    return true;
+  }
   function setStatus(message, status = "") {
     const element = statusElement();
     if (!element) return;
     element.textContent = message;
     if (status) element.dataset.status = status;
     else delete element.dataset.status;
+  }
+  function setProgress(message) {
+    captureInterfaceReady();
+    setStatus(message, "loading");
+  }
+  function restoreReadyStatus() {
+    captureInterfaceReady();
+    if (!state.interfaceReady) return false;
+    setStatus(state.readyMessage || "Troubleshooting interface ready.", "pass");
+    const repair = repairElement();
+    if (repair) repair.hidden = true;
+    return true;
   }
   function fail(message) {
     if (!state.firstFailure) state.firstFailure = message;
@@ -101,7 +122,7 @@
     const button = event.target.closest?.(`#${REPAIR_ID}`);
     if (!button || button.disabled) return;
     button.disabled = true;
-    setStatus("Repairing local troubleshooting cache…");
+    setStatus("Repairing local troubleshooting cache…", "loading");
     try {
       if ("serviceWorker" in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
@@ -117,7 +138,7 @@
       }
       state.repaired = true;
       const next = new URL("./index.html", location.href);
-      next.searchParams.set("cacheRepair", "v358");
+      next.searchParams.set("cacheRepair", "v359");
       next.searchParams.set("t", Date.now().toString());
       location.replace(next.href);
     } catch (error) {
@@ -139,7 +160,7 @@
       const src = manifest[index];
       state.currentIndex = index;
       state.currentSrc = src;
-      setStatus(`Starting diagnostics ${index + 1}/${manifest.length}: ${filename(src)}`);
+      setProgress(`Starting diagnostics ${index + 1}/${manifest.length}: ${filename(src)}`);
       await nextPaint();
       if (state.aborted) return;
       try {
@@ -149,19 +170,24 @@
         fail(`${error.message || error}. Use Repair local cache, then reload.`);
         return;
       }
+      captureInterfaceReady();
       await new Promise((resolve) => global.setTimeout(resolve, 0));
+      captureInterfaceReady();
     }
 
     state.currentSrc = "";
     state.currentIndex = manifest.length;
+    if (restoreReadyStatus()) return;
+
     const current = statusElement();
-    if (current && /^Starting diagnostics /.test(current.textContent || "")) {
-      setStatus("Diagnostic modules loaded; initializing troubleshooting interface…");
+    if (current && (/^Starting diagnostics /.test(current.textContent || "") || current.dataset.status === "loading")) {
+      setStatus("Diagnostic modules loaded; initializing troubleshooting interface…", "loading");
     }
     global.setTimeout(() => {
       const status = statusElement();
-      if (!status || status.dataset.status === "pass") return;
-      if (/diagnostic modules loaded|starting diagnostics/i.test(status.textContent || "")) {
+      if (!status) return;
+      if (restoreReadyStatus() || status.dataset.status === "pass") return;
+      if (/diagnostic modules loaded|starting diagnostics/i.test(status.textContent || "") || status.dataset.status === "loading") {
         fail("Troubleshooting modules loaded but the interface did not finish initializing. Reload this page; your saved ServoForge workspace was preserved.");
       }
     }, POST_LOAD_WATCHDOG_MS);
