@@ -8,12 +8,85 @@
     <title>ServoForge Troubleshooting Library — STAGING</title>
     <link rel="manifest" href="../../manifest.webmanifest" />
     <link rel="icon" href="../../assets/labeler-tool-icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="../../styles.css?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920" />
-    <link rel="stylesheet" href="../../auth.css?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920" />
-    <link rel="stylesheet" href="./troubleshooting.css?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920" />
+    <link rel="stylesheet" href="../../styles.css?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357" />
+    <link rel="stylesheet" href="../../auth.css?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357" />
+    <link rel="stylesheet" href="./troubleshooting.css?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357" />
+    <script>
+      (() => {
+        const CACHE_PREFIX = "servoforge-labeler-";
+        const BUILD = "troubleshooting-shell-v357-20260904";
+        const state = { build: BUILD, firstFailure: "", repaired: false };
+        window.ServoForgeTroubleshootingBoot = state;
+
+        const filename = (value) => {
+          try { return new URL(value, location.href).pathname.split("/").pop() || value; }
+          catch { return String(value || "unknown file"); }
+        };
+        const setFailure = (message) => {
+          if (!state.firstFailure) state.firstFailure = message;
+          const status = document.getElementById("libraryValidationStatus");
+          const repair = document.getElementById("troubleshootingCacheRepair");
+          if (status && /loading diagnostic library/i.test(status.textContent || "")) {
+            status.textContent = message;
+            status.dataset.status = "fail";
+          }
+          if (repair) repair.hidden = false;
+        };
+
+        window.addEventListener("error", (event) => {
+          const target = event.target;
+          if (target?.tagName === "SCRIPT" && target.src) {
+            setFailure(`Startup file failed: ${filename(target.src)}. Repair the local troubleshooting cache and reload.`);
+            return;
+          }
+          if (event.message) setFailure(`Troubleshooting startup error: ${event.message}`);
+        }, true);
+        window.addEventListener("unhandledrejection", (event) => {
+          const reason = event.reason?.message || event.reason || "Unknown startup failure";
+          setFailure(`Troubleshooting startup error: ${String(reason)}`);
+        });
+
+        window.setTimeout(() => {
+          const status = document.getElementById("libraryValidationStatus");
+          if (status && /loading diagnostic library/i.test(status.textContent || "")) {
+            setFailure("Startup stalled on this browser. Repair the local troubleshooting cache and reload.");
+          }
+        }, 5000);
+
+        document.addEventListener("click", async (event) => {
+          const button = event.target.closest?.("#troubleshootingCacheRepair");
+          if (!button || button.disabled) return;
+          button.disabled = true;
+          const status = document.getElementById("libraryValidationStatus");
+          if (status) status.textContent = "Repairing local troubleshooting cache…";
+          try {
+            if ("serviceWorker" in navigator) {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              await Promise.allSettled(registrations
+                .filter((registration) => registration.scope.startsWith(location.origin))
+                .map((registration) => registration.unregister()));
+            }
+            if ("caches" in window) {
+              const names = await caches.keys();
+              await Promise.allSettled(names
+                .filter((name) => name.startsWith(CACHE_PREFIX))
+                .map((name) => caches.delete(name)));
+            }
+            state.repaired = true;
+            const next = new URL("./index.html", location.href);
+            next.searchParams.set("cacheRepair", "v357");
+            next.searchParams.set("t", Date.now().toString());
+            location.replace(next.href);
+          } catch (error) {
+            button.disabled = false;
+            setFailure(`Cache repair could not complete: ${error?.message || error}`);
+          }
+        });
+      })();
+    </script>
   </head>
   <body>
-    <div class="staging-environment-banner" role="status" data-troubleshooting-version="v356">STAGING / TEST BUILD — TROUBLESHOOTING v356 — ServoForge 0.9.10 — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status" data-troubleshooting-version="v357">STAGING / TEST BUILD — TROUBLESHOOTING v357 — ServoForge 0.9.10 — NOT PRODUCTION</div>
     <main class="app troubleshooting-app">
       <section class="topbar troubleshooting-topbar">
         <div>
@@ -35,6 +108,7 @@
         <div class="sf-library-status">
           <span>Library status</span>
           <strong id="libraryValidationStatus">Loading diagnostic library…</strong>
+          <button id="troubleshootingCacheRepair" type="button" class="secondary-button" hidden>Repair local cache</button>
         </div>
       </section>
 
@@ -93,53 +167,53 @@
         <p><strong>Source discipline:</strong> archived OEM/procedure content, PLC exports, schematics, and field observations are kept separate from diagnostic interpretation. Recommendations involving energized electrical work, stored energy, servo motion, guards, or safety circuits retain an explicit safety boundary.</p>
       </footer>
     </main>
-    <script src="../auth-client.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920"></script>
-    <script src="./diagnostic-library.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920"></script>
-    <script src="./topmodul-live-diagnostics.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920"></script>
-    <script src="./topmodul-plc-fault-data.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920"></script>
-    <script src="./topmodul-plc-fault-catalog.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920"></script>
-    <script src="./topmodul-fault-drilldown.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920"></script>
-    <script src="./topmodul-station-scope.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920"></script>
-    <script src="./topmodul-station-controller-trace.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920"></script>
-    <script src="./topmodul-station-cause-model.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920"></script>
-    <script src="./topmodul-labeler-cause-model.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920"></script>
-    <script src="./topmodul-circuit-trace.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920"></script>
-    <script src="./topmodul-station-power-circuit.js?v=0.9.10&amp;build=troubleshooting-station-power-v330-20260903-1945"></script>
-    <script src="./topmodul-station-encoder-circuit.js?v=0.9.10&amp;build=troubleshooting-station-encoder-v331-20260903-2010"></script>
-    <script src="./topmodul-station-servo-circuit.js?v=0.9.10&amp;build=troubleshooting-station-servo-v332-20260903-2025"></script>
-    <script src="./topmodul-station-communication-circuit.js?v=0.9.10&amp;build=troubleshooting-station-communication-v333-20260903-2035"></script>
-    <script src="./topmodul-station-process-trace.js?v=0.9.10&amp;build=troubleshooting-station-process-v334-20260903-2045"></script>
-    <script src="./topmodul-station-foundation-circuit.js?v=0.9.10&amp;build=troubleshooting-station-foundation-v335-20260903-2055"></script>
-    <script src="./topmodul-labeler-safety-circuit.js?v=0.9.10&amp;build=troubleshooting-labeler-safety-v336-20260903-2046"></script>
-    <script src="./topmodul-labeler-drive-utilities-circuit.js?v=0.9.10&amp;build=troubleshooting-labeler-drive-utilities-v337-20260903-2115"></script>
-    <script src="./topmodul-rpc-method-bridge.js?v=0.9.10&amp;build=troubleshooting-rpc-method-v338-20260903-2125"></script>
-    <script src="./topmodul-labeler-communication-circuit.js?v=0.9.10&amp;build=troubleshooting-labeler-communication-v339-20260903-2205"></script>
-    <script src="./topmodul-labeler-container-flow-trace.js?v=0.9.10&amp;build=troubleshooting-labeler-container-flow-v340-20260903-2215"></script>
-    <script src="./topmodul-labeler-electrical-protection.js?v=0.9.10&amp;build=troubleshooting-labeler-electrical-protection-v341-20260903-2230"></script>
-    <script src="./topmodul-labeler-lubrication-trace.js?v=0.9.10&amp;build=troubleshooting-labeler-lubrication-v342-20260903-2245"></script>
-    <script src="./topmodul-labeler-inspection-coder-trace.js?v=0.9.10&amp;build=troubleshooting-labeler-inspection-coder-v343-20260903-2255"></script>
-    <script src="./topmodul-labeler-operating-state-trace.js?v=0.9.10&amp;build=troubleshooting-labeler-operating-state-v344-20260903-2310"></script>
-    <script src="./topmodul-labeler-remaining-gaps-trace.js?v=0.9.10&amp;build=troubleshooting-labeler-remaining-gaps-v345-20260903-2325"></script>
-    <script src="./topmodul-machine-start-isolation.js?v=0.9.10&amp;build=troubleshooting-machine-start-v353-20260904-0915"></script>
-    <script src="./topmodul-servo-table-internal-status.js?v=0.9.10&amp;build=troubleshooting-servo-table-internal-status-v354-20260904"></script>
-    <script src="./apl-cart-foundation.js?v=0.9.10&amp;build=troubleshooting-apl-cart-foundation-v355-20260904"></script>
-    <script src="./topmodul-live-00067-source-bridge.js?v=0.9.10&amp;build=troubleshooting-live-00067-v347-20260904-0645"></script>
-    <script src="./topmodul-alarm-stack-analyzer.js?v=0.9.10&amp;build=troubleshooting-alarm-stack-v346-20260904-0640"></script>
-    <script src="./topmodul-encoder-isolation.js?v=0.9.10&amp;build=troubleshooting-fault-670-source-chain-v351-20260904"></script>
-    <script src="./topmodul-encoder-stack-bridge.js?v=0.9.10&amp;build=troubleshooting-encoder-stack-v349-20260904-0830"></script>
-    <script src="./topmodul-encoder-verification.js?v=0.9.10&amp;build=troubleshooting-encoder-verification-v350-20260904-0845"></script>
-    <script src="./topmodul-main-drive-isolation.js?v=0.9.10&amp;build=troubleshooting-main-drive-isolation-v352-20260904"></script>
-    <script src="./troubleshooting-startup-guard.js?v=0.9.10&amp;build=troubleshooting-startup-v356-20260904"></script>
-    <script src="./troubleshooting-app.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920"></script>
-    <script src="./topmodul-fault-drilldown-ui.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920"></script>
-    <script src="./topmodul-process-trace-ui.js?v=0.9.10&amp;build=troubleshooting-station-process-v334-20260903-2045"></script>
-    <script src="./topmodul-source-gap-ui.js?v=0.9.10&amp;build=troubleshooting-station-foundation-v335-20260903-2055"></script>
-    <script src="./topmodul-rpc-method-ui.js?v=0.9.10&amp;build=troubleshooting-rpc-method-v338-20260903-2125"></script>
-    <script src="./topmodul-alarm-stack-ui.js?v=0.9.10&amp;build=troubleshooting-alarm-stack-v346-20260904-0640"></script>
-    <script src="./topmodul-encoder-stack-bridge-ui.js?v=0.9.10&amp;build=troubleshooting-encoder-stack-v349-20260904-0830"></script>
-    <script src="./topmodul-encoder-isolation-ui.js?v=0.9.10&amp;build=troubleshooting-encoder-isolation-v348-20260904-0810"></script>
-    <script src="./topmodul-encoder-verification-ui.js?v=0.9.10&amp;build=troubleshooting-encoder-verification-v350-20260904-0845"></script>
-    <script src="./topmodul-main-drive-isolation-ui.js?v=0.9.10&amp;build=troubleshooting-main-drive-isolation-v352-20260904"></script>
-    <script src="./apl-cart-foundation-ui.js?v=0.9.10&amp;build=troubleshooting-apl-cart-foundation-v355-20260904"></script>
+    <script defer src="../auth-client.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357"></script>
+    <script defer src="./diagnostic-library.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357"></script>
+    <script defer src="./topmodul-live-diagnostics.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357"></script>
+    <script defer src="./topmodul-plc-fault-data.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357"></script>
+    <script defer src="./topmodul-plc-fault-catalog.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357"></script>
+    <script defer src="./topmodul-fault-drilldown.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357"></script>
+    <script defer src="./topmodul-station-scope.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357"></script>
+    <script defer src="./topmodul-station-controller-trace.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357"></script>
+    <script defer src="./topmodul-station-cause-model.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357"></script>
+    <script defer src="./topmodul-labeler-cause-model.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357"></script>
+    <script defer src="./topmodul-circuit-trace.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357"></script>
+    <script defer src="./topmodul-station-power-circuit.js?v=0.9.10&amp;build=troubleshooting-station-power-v330-20260903-1945&amp;shell=v357"></script>
+    <script defer src="./topmodul-station-encoder-circuit.js?v=0.9.10&amp;build=troubleshooting-station-encoder-v331-20260903-2010&amp;shell=v357"></script>
+    <script defer src="./topmodul-station-servo-circuit.js?v=0.9.10&amp;build=troubleshooting-station-servo-v332-20260903-2025&amp;shell=v357"></script>
+    <script defer src="./topmodul-station-communication-circuit.js?v=0.9.10&amp;build=troubleshooting-station-communication-v333-20260903-2035&amp;shell=v357"></script>
+    <script defer src="./topmodul-station-process-trace.js?v=0.9.10&amp;build=troubleshooting-station-process-v334-20260903-2045&amp;shell=v357"></script>
+    <script defer src="./topmodul-station-foundation-circuit.js?v=0.9.10&amp;build=troubleshooting-station-foundation-v335-20260903-2055&amp;shell=v357"></script>
+    <script defer src="./topmodul-labeler-safety-circuit.js?v=0.9.10&amp;build=troubleshooting-labeler-safety-v336-20260903-2046&amp;shell=v357"></script>
+    <script defer src="./topmodul-labeler-drive-utilities-circuit.js?v=0.9.10&amp;build=troubleshooting-labeler-drive-utilities-v337-20260903-2115&amp;shell=v357"></script>
+    <script defer src="./topmodul-rpc-method-bridge.js?v=0.9.10&amp;build=troubleshooting-rpc-method-v338-20260903-2125&amp;shell=v357"></script>
+    <script defer src="./topmodul-labeler-communication-circuit.js?v=0.9.10&amp;build=troubleshooting-labeler-communication-v339-20260903-2205&amp;shell=v357"></script>
+    <script defer src="./topmodul-labeler-container-flow-trace.js?v=0.9.10&amp;build=troubleshooting-labeler-container-flow-v340-20260903-2215&amp;shell=v357"></script>
+    <script defer src="./topmodul-labeler-electrical-protection.js?v=0.9.10&amp;build=troubleshooting-labeler-electrical-protection-v341-20260903-2230&amp;shell=v357"></script>
+    <script defer src="./topmodul-labeler-lubrication-trace.js?v=0.9.10&amp;build=troubleshooting-labeler-lubrication-v342-20260903-2245&amp;shell=v357"></script>
+    <script defer src="./topmodul-labeler-inspection-coder-trace.js?v=0.9.10&amp;build=troubleshooting-labeler-inspection-coder-v343-20260903-2255&amp;shell=v357"></script>
+    <script defer src="./topmodul-labeler-operating-state-trace.js?v=0.9.10&amp;build=troubleshooting-labeler-operating-state-v344-20260903-2310&amp;shell=v357"></script>
+    <script defer src="./topmodul-labeler-remaining-gaps-trace.js?v=0.9.10&amp;build=troubleshooting-labeler-remaining-gaps-v345-20260903-2325&amp;shell=v357"></script>
+    <script defer src="./topmodul-machine-start-isolation.js?v=0.9.10&amp;build=troubleshooting-machine-start-v353-20260904-0915&amp;shell=v357"></script>
+    <script defer src="./topmodul-servo-table-internal-status.js?v=0.9.10&amp;build=troubleshooting-servo-table-internal-status-v354-20260904&amp;shell=v357"></script>
+    <script defer src="./apl-cart-foundation.js?v=0.9.10&amp;build=troubleshooting-apl-cart-foundation-v355-20260904&amp;shell=v357"></script>
+    <script defer src="./topmodul-live-00067-source-bridge.js?v=0.9.10&amp;build=troubleshooting-live-00067-v347-20260904-0645&amp;shell=v357"></script>
+    <script defer src="./topmodul-alarm-stack-analyzer.js?v=0.9.10&amp;build=troubleshooting-alarm-stack-v346-20260904-0640&amp;shell=v357"></script>
+    <script defer src="./topmodul-encoder-isolation.js?v=0.9.10&amp;build=troubleshooting-fault-670-source-chain-v351-20260904&amp;shell=v357"></script>
+    <script defer src="./topmodul-encoder-stack-bridge.js?v=0.9.10&amp;build=troubleshooting-encoder-stack-v349-20260904-0830&amp;shell=v357"></script>
+    <script defer src="./topmodul-encoder-verification.js?v=0.9.10&amp;build=troubleshooting-encoder-verification-v350-20260904-0845&amp;shell=v357"></script>
+    <script defer src="./topmodul-main-drive-isolation.js?v=0.9.10&amp;build=troubleshooting-main-drive-isolation-v352-20260904&amp;shell=v357"></script>
+    <script defer src="./troubleshooting-startup-guard.js?v=0.9.10&amp;build=troubleshooting-startup-v356-20260904&amp;shell=v357"></script>
+    <script defer src="./troubleshooting-app.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357"></script>
+    <script defer src="./topmodul-fault-drilldown-ui.js?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v357"></script>
+    <script defer src="./topmodul-process-trace-ui.js?v=0.9.10&amp;build=troubleshooting-station-process-v334-20260903-2045&amp;shell=v357"></script>
+    <script defer src="./topmodul-source-gap-ui.js?v=0.9.10&amp;build=troubleshooting-station-foundation-v335-20260903-2055&amp;shell=v357"></script>
+    <script defer src="./topmodul-rpc-method-ui.js?v=0.9.10&amp;build=troubleshooting-rpc-method-v338-20260903-2125&amp;shell=v357"></script>
+    <script defer src="./topmodul-alarm-stack-ui.js?v=0.9.10&amp;build=troubleshooting-alarm-stack-v346-20260904-0640&amp;shell=v357"></script>
+    <script defer src="./topmodul-encoder-stack-bridge-ui.js?v=0.9.10&amp;build=troubleshooting-encoder-stack-v349-20260904-0830&amp;shell=v357"></script>
+    <script defer src="./topmodul-encoder-isolation-ui.js?v=0.9.10&amp;build=troubleshooting-encoder-isolation-v348-20260904-0810&amp;shell=v357"></script>
+    <script defer src="./topmodul-encoder-verification-ui.js?v=0.9.10&amp;build=troubleshooting-encoder-verification-v350-20260904-0845&amp;shell=v357"></script>
+    <script defer src="./topmodul-main-drive-isolation-ui.js?v=0.9.10&amp;build=troubleshooting-main-drive-isolation-v352-20260904&amp;shell=v357"></script>
+    <script defer src="./apl-cart-foundation-ui.js?v=0.9.10&amp;build=troubleshooting-apl-cart-foundation-v355-20260904&amp;shell=v357"></script>
   </body>
 </html>
