@@ -66,6 +66,7 @@ jobs:
           node --check app/troubleshooting/topmodul-labeler-inspection-coder-trace.js
           node --check app/troubleshooting/topmodul-labeler-operating-state-trace.js
           node --check app/troubleshooting/topmodul-labeler-remaining-gaps-trace.js
+          node --check app/troubleshooting/topmodul-machine-start-isolation.js
           node --check app/troubleshooting/topmodul-live-00067-source-bridge.js
           node --check app/troubleshooting/topmodul-alarm-stack-analyzer.js
           node --check app/troubleshooting/topmodul-encoder-isolation.js
