@@ -100,7 +100,9 @@ test("Fault 670 receives a separate main-Labeler fine-clock workflow", () => {
   assert.ok(plan.siblings.some((row) => row.number === 480));
   assert.ok(plan.siblings.some((row) => row.number === 482));
   assert.ok(plan.siblings.some((row) => row.number === 669));
-  assert.doesNotMatch(plan.steps.map((row) => row.detail).join(" "), /1756-M02AE|CN131/);
+  const attachedCircuit = JSON.stringify({ source: plan.circuitTrace?.source?.id || plan.circuitTrace?.sourceId || "", devices: plan.circuitTrace?.deviceRows || [] });
+  assert.doesNotMatch(attachedCircuit, /1756-M02AE|CN131/);
+  assert.match(plan.steps.map((row) => row.detail).join(" "), /Do not borrow the K605163 1756-M02AE\/CN131 Station path/);
   const noMotion = library.evaluateTopModulEncoderIsolation(670, { motion: "no" });
   assert.equal(noMotion.code, "main-no-motion-first");
   const pulses = library.evaluateTopModulEncoderIsolation(670, { motion: "yes", fineClock: "changing" });
