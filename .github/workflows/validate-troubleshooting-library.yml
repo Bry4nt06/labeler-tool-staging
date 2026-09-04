@@ -61,6 +61,7 @@ jobs:
           node --check app/troubleshooting/topmodul-rpc-method-bridge.js
           node --check app/troubleshooting/topmodul-labeler-communication-circuit.js
           node --check app/troubleshooting/topmodul-labeler-container-flow-trace.js
+          node --check app/troubleshooting/topmodul-labeler-electrical-protection.js
           node --check app/troubleshooting/topmodul-rpc-method-ui.js
           node --check app/troubleshooting/topmodul-fault-drilldown-ui.js
           node --check app/troubleshooting/topmodul-process-trace-ui.js
