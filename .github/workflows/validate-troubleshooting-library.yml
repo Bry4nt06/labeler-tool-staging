@@ -57,6 +57,7 @@ jobs:
           node --check app/troubleshooting/topmodul-station-process-trace.js
           node --check app/troubleshooting/topmodul-station-foundation-circuit.js
           node --check app/troubleshooting/topmodul-labeler-safety-circuit.js
+          node --check app/troubleshooting/topmodul-labeler-drive-utilities-circuit.js
           node --check app/troubleshooting/topmodul-fault-drilldown-ui.js
           node --check app/troubleshooting/topmodul-process-trace-ui.js
           node --check app/troubleshooting/topmodul-source-gap-ui.js
