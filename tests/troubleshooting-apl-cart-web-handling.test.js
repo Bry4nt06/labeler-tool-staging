@@ -30,7 +30,7 @@ test("v361 adds the exact APL Cart 00021-00030 family from the readable Cart 1 e
     assert.equal(plan.source.file, "CO85_LB1_APLCart_1.L5K");
     assert.match(plan.scope, /LB1 APL Cart 1/);
   });
-  assert.equal(web.validate().ok, true, web.validate().errors.join(" | "));
+  assert.equal(library.validate().ok, true, library.validate().errors.join(" | "));
 });
 
 test("00024 remains catalog-only because Faults[1].8 has no executable producer in the supplied export", () => {
@@ -90,7 +90,7 @@ test("00029 preserves source decision value and PLC-cycle counter semantics", ()
   const plan = web.getAplCartWebHandlingPlan(29);
   const text = JSON.stringify(plan);
   assert.match(plan.producer, />29000/);
-  assert.match(plan.producer, />1000 PLC cycles/);
+  assert.match(plan.producer, /WebBreakTime PLC-cycle count >1000/i);
   assert.match(entry.summary, /1000 PLC cycles/i);
   assert.match(text, /not a 1000 ms timer/i);
   assert.match(text, /internal source decision value/i);
