@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-bootstrap-v358-20260904",
+  "buildId": "troubleshooting-rpc-danfoss-guides-v359-20260904",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Troubleshooting v358 replaces the long browser-managed defer chain with one authoritative responsive bootstrap loader. The bootstrap paints the exact module name before each troubleshooting script executes, yields between modules so slower PCs remain responsive, stops on load/runtime failures with the offending filename visible, and keeps the safe Repair local cache action without clearing saved ServoForge workspace data. The v356 compact-context guard still runs immediately before troubleshooting-app.js, all source-backed fault logic is unchanged, and the offline service-worker cache generation now carries the v358 bootstrap."
+  "notes": "Troubleshooting v359 adds three source-backed RPC/Danfoss records: legacy Power-PC terminal Code 600 communication guidance, a qualified-maintenance servomotor replacement guide, and DTS-5 RPC power/monitoring diagnostics. The records link to existing ServoForge fault methods instead of duplicating them, preserve machine-generation and qualified-work gates, and explicitly avoid archived IP addresses, universal CAN settings, invented fuse mappings, connector pins, torque values, firmware values, or replacement specifications. The proven v358 responsive sequential bootstrap, cache recovery, RPC UI loop fix, and ready-state preservation remain unchanged."
 }
