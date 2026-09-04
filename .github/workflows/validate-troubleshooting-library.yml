@@ -65,6 +65,7 @@ jobs:
           node --check app/troubleshooting/topmodul-labeler-lubrication-trace.js
           node --check app/troubleshooting/topmodul-labeler-inspection-coder-trace.js
           node --check app/troubleshooting/topmodul-labeler-operating-state-trace.js
+          node --check app/troubleshooting/topmodul-labeler-remaining-gaps-trace.js
           node --check app/troubleshooting/topmodul-rpc-method-ui.js
           node --check app/troubleshooting/topmodul-fault-drilldown-ui.js
           node --check app/troubleshooting/topmodul-process-trace-ui.js
