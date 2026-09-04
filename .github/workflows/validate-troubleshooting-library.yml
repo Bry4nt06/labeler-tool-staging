@@ -75,6 +75,7 @@ jobs:
           node --check app/troubleshooting/topmodul-encoder-stack-bridge.js
           node --check app/troubleshooting/topmodul-encoder-verification.js
           node --check app/troubleshooting/topmodul-main-drive-isolation.js
+          node --check app/troubleshooting/troubleshooting-startup-guard.js
           node --check app/troubleshooting/topmodul-rpc-method-ui.js
           node --check app/troubleshooting/topmodul-fault-drilldown-ui.js
           node --check app/troubleshooting/topmodul-process-trace-ui.js
@@ -95,6 +96,7 @@ jobs:
           node --test tests/troubleshooting-topmodul-main-drive-isolation.test.js
           node --test tests/troubleshooting-topmodul-servo-table-internal-status.test.js
           node --test tests/troubleshooting-apl-cart-foundation.test.js
+          node --test tests/troubleshooting-startup-responsiveness.test.js
       - name: Run startup regressions
         run: npm run prestart
       - name: Check patch whitespace
