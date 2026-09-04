@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-fault-670-source-chain-v351-20260904",
+  "buildId": "troubleshooting-main-drive-isolation-v352-20260904",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Troubleshooting v351 extends the v350 Station/Cart encoder verification work with the separate main Labeler Fault 670 source-backed PLC observation chain from CO85_LB1_Labeler_1online.L5K: E1701_ENC101_FineClockPulse / Local:7:I.Data.0 -> ElectrBrake.Counter -> >=1000 ms SpeedActVal and ZeroSpeed derivation -> 3000 ms FinePulseCon -> O_FinePulseFault -> E2001_M_ElectrBrakeFaultEncoder -> Faults_LB1[41].14. It preserves Station/Cart 00067 and the v350 read-only Cart encoder matrix as separate scopes and adds regression coverage for the exact 670 live checkpoints."
+  "notes": "Troubleshooting v352 adds source-backed main Labeler main-drive and standstill isolation from CO85_LB1_Labeler_1online.L5K for Fault 480 Main Drive Fault, 482 Main Drive Contactor Fault, 490 Safety Circuit Fault Main Drive Time Relay, and 669 Safety Circuit Fault Machine Stop Monitoring. The new read-only workflow traces PF700/Node3 drive status, C101/C102 timed contactor mismatch supervision, electric-brake hardware-delay feedback, and the independent ElectrBrake zero-speed chain. Station encoder feedback faults with no actual motion now hand off to these source-backed upstream branches before the Cart AQB circuit. Fault 670 remains exclusively under the separate v351 main-machine fine-clock workflow; no timers, thresholds, or safety logic are presented as values to change."
 }
