@@ -429,7 +429,7 @@
       if (!f720?.processTrace?.producerSignals?.includes("AFI()")) errors.push("Fault 720 lost AFI evidence.");
       const f721 = getTopModulFault(721);
       if (!f721?.processTrace?.producerSignals?.includes("XIO(E2301_IO0102_O1_EncoderSimulationOff) OTE(DataExchangeStation.OutServoPowerOnline)")) errors.push("Fault 721 lost inverted Encoder Simulation Off mapping.");
-      if (!/semantic conflict/i.test(f721?.processTrace?.status || "")) errors.push("Fault 721 must preserve its source semantic conflict.");
+      if (!/semantic[- ]conflict/i.test(f721?.processTrace?.status || "")) errors.push("Fault 721 must preserve its source semantic conflict.");
       const f722 = getTopModulFault(722);
       if (!f722?.processTrace?.producerSignals?.includes("XIO(DataExchangeStation.OutSystemOnline) OTE(Faults_LB1[45].2)")) errors.push("Fault 722 lost System Online missing producer.");
       const f723 = getTopModulFault(723);
