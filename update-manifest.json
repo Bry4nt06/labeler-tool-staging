@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-servo-table-internal-status-v354-20260904",
+  "buildId": "troubleshooting-cart-readiness-v355-20260904",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Troubleshooting v354 extends the v353 machine-start work with source-backed internal Servo Bottle Table DataExchange diagnostics from CO85_LB1_Labeler_1online.L5K and K407039 page 142. Internal position 720 is explicitly retained as disabled because AFI blocks its only OTE in the supplied PLC revision. Positions 721-723 are indexed as active-but-unnamed internal statuses without inflating the 515 operator-named alarm count: 721 preserves the exact I0011.00 Encoder Simulation Off / sensor-simulation / OutServoPowerOnline semantic conflict, 722 traces missing System Online through I0011.03, and 723 traces missing Servo Ready through I0011.04 while the executable operating-mode bit is true. These are read-only diagnostic routes; no HMI alarm names are invented and no forcing, bypassing, timer changes, or unsafe recovery actions are recommended."
+  "notes": "Troubleshooting v355 adds a source-backed APL Cart readiness/no-start path from CO85_LB1_APLCart_1.L5K. It follows the shared sequence in order: Control/ControlOut enable snapshot -> StartStop.PowerAndFeedbackOn -> 400 ms C101 contactor command -> Fault 005 raw-state supervision at 1500 ms -> ReleaseFeedbackOn -> MotionGroup/axis ReadyForFeedbackON -> 750 ms FeedbackON command -> MSO and 20 ms Feedback_Is_ON confirmation -> StationAutoOn -> DataFromLS.Par1[0].0 and E9706_OPTO233_NoFault readiness outputs. Existing numbered faults remain authoritative; the new APL-READY entry is a symptom workflow, not a new PLC/HMI alarm. Raw contactor, safety, carriage, and interface polarity is preserved exactly where naming is ambiguous, and no forcing, bypassing, timer changes, or unsafe recovery actions are recommended."
 }
