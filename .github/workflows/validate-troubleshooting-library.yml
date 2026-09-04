@@ -41,6 +41,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check app/troubleshooting/diagnostic-library.js
+          node --check app/troubleshooting/rpc-danfoss-guides.js
           node --check app/troubleshooting/topmodul-live-diagnostics.js
           node --check app/troubleshooting/topmodul-plc-fault-data.js
           node --check app/troubleshooting/topmodul-plc-fault-catalog.js
@@ -77,6 +78,7 @@ jobs:
           node --check app/troubleshooting/topmodul-main-drive-isolation.js
           node --check app/troubleshooting/troubleshooting-startup-guard.js
           node --check app/troubleshooting/troubleshooting-bootstrap.js
+          node --check app/troubleshooting/rpc-danfoss-guides-ui.js
           node --check app/troubleshooting/topmodul-rpc-method-ui.js
           node --check app/troubleshooting/topmodul-fault-drilldown-ui.js
           node --check app/troubleshooting/topmodul-process-trace-ui.js
@@ -97,6 +99,7 @@ jobs:
           node --test tests/troubleshooting-topmodul-main-drive-isolation.test.js
           node --test tests/troubleshooting-topmodul-servo-table-internal-status.test.js
           node --test tests/troubleshooting-apl-cart-foundation.test.js
+          node --test tests/troubleshooting-rpc-danfoss-guides.test.js
           node --test tests/troubleshooting-startup-responsiveness.test.js
           node --test tests/troubleshooting-cache-recovery.test.js
       - name: Run startup regressions
