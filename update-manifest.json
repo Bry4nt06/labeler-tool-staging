@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-exact-circuit-v329-20260903-1920",
+  "buildId": "troubleshooting-fault-670-source-chain-v350-20260904",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v329 promotes the supplied K407039 TopModul/Labeller and K605163 APL Cart electrical drawings to machine-specific circuit authority where they agree with the readable PLC exports. Faults 669/670 now trace ENC101 -> CVTR101 -> I/O031/Local:7 fine-clock feedback exactly; faults 482/490 bind C101/C102 command and feedback I/O; fault 640 binds PS101 machine-air monitoring; Station fault 025 adds PE631/PE632 end-of-reel hardware while preserving the SS631 PLC vs SS633 drawing designation mismatch. Shared Station methods remain parameterized across Stations 1-6."
+  "notes": "Troubleshooting v350 expands main Labeler Fault 670 from a generic fine-clock isolation path into the exact source-backed PLC observation chain from CO85_LB1_Labeler_1online.L5K: E1701_ENC101_FineClockPulse / Local:7:I.Data.0 -> ElectrBrake.Counter -> >=1000 ms SpeedActVal and ZeroSpeed derivation -> 3000 ms FinePulseCon -> O_FinePulseFault -> E2001_M_ElectrBrakeFaultEncoder -> Faults_LB1[41].14. It preserves Station/Cart 00067 as a separate encoder scope and adds regression coverage for the exact live checkpoints."
 }
