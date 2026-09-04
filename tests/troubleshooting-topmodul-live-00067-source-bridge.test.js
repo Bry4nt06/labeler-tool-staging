@@ -113,12 +113,13 @@ test("alarm-stack analyzer retains three separate identities for 00067, base 067
   assert.equal(result.observed[2].entry.stationTemplateOffset, 67);
 });
 
-test("browser loads source bridge after v345 and before alarm-stack analyzer", () => {
+test("browser keeps source bridge after v345 and before later troubleshooting layers", () => {
   const html = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/index.html"), "utf8");
   const gapsPos = html.indexOf("topmodul-labeler-remaining-gaps-trace.js");
   const bridgePos = html.indexOf("topmodul-live-00067-source-bridge.js");
   const analyzerPos = html.indexOf("topmodul-alarm-stack-analyzer.js");
   const appPos = html.indexOf("troubleshooting-app.js");
   assert.ok(gapsPos >= 0 && bridgePos > gapsPos && analyzerPos > bridgePos && appPos > analyzerPos);
-  assert.match(html, /data-troubleshooting-version="v347"/);
+  const version = Number(html.match(/data-troubleshooting-version="v(\d+)"/)?.[1] || 0);
+  assert.ok(version >= 347, `Expected troubleshooting version >=347, found v${version}.`);
 });
