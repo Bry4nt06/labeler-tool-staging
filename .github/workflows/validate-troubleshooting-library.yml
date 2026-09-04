@@ -66,10 +66,12 @@ jobs:
           node --check app/troubleshooting/topmodul-labeler-inspection-coder-trace.js
           node --check app/troubleshooting/topmodul-labeler-operating-state-trace.js
           node --check app/troubleshooting/topmodul-labeler-remaining-gaps-trace.js
+          node --check app/troubleshooting/topmodul-alarm-stack-analyzer.js
           node --check app/troubleshooting/topmodul-rpc-method-ui.js
           node --check app/troubleshooting/topmodul-fault-drilldown-ui.js
           node --check app/troubleshooting/topmodul-process-trace-ui.js
           node --check app/troubleshooting/topmodul-source-gap-ui.js
+          node --check app/troubleshooting/topmodul-alarm-stack-ui.js
           node --check app/troubleshooting/troubleshooting-app.js
           node --check app.js
           node --check service-worker.js
