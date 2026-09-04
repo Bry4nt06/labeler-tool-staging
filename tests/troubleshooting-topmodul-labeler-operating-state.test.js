@@ -114,11 +114,12 @@ test("Fault 648 Glideliner stays searchable without an invented producer", () =>
   assert.match(entry.sourceGap.reason, /no producer occurrence/i);
 });
 
-test("browser loads v344 after inspection/coder and before the troubleshooting controller", () => {
+test("browser keeps v344 loaded after inspection/coder and before later troubleshooting phases", () => {
   const html = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/index.html"), "utf8");
   const inspectionPos = html.indexOf("topmodul-labeler-inspection-coder-trace.js");
   const operatingPos = html.indexOf("topmodul-labeler-operating-state-trace.js");
   const appPos = html.indexOf("troubleshooting-app.js");
   assert.ok(inspectionPos >= 0 && operatingPos > inspectionPos && appPos > operatingPos);
-  assert.match(html, /data-troubleshooting-version="v344"/);
+  const version = Number(html.match(/data-troubleshooting-version="v(\d+)"/)?.[1] || 0);
+  assert.ok(version >= 344, `Expected troubleshooting version >=344, found v${version}.`);
 });
