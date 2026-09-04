@@ -71,20 +71,36 @@
       )
     });
 
-    const UNPROMOTED = Object.freeze({
-      0: "Alarm-table placeholder with no producer reference in the supplied Cart 1 L5K.",
+    const SEARCHABLE_GAPS = Object.freeze({
       8: "Named Carriage Not Pulled Back alarm has no Faults[0].8 producer reference in this Cart revision.",
       24: "Named Reference Sensor No Signal alarm has no Faults[1].8 producer reference in this Cart revision.",
-      31: "Named Synchronization Lost During Run alarm has no Faults[1].15 producer reference in this Cart revision.",
-      55: "Blank Fault 055 position; no producer reference.",
-      56: "Blank Fault 056 position; no producer reference.",
-      57: "Blank Fault 057 position; no producer reference.",
-      58: "Blank Fault 058 position; no producer reference.",
-      59: "Blank Fault 059 position; no producer reference.",
-      61: "Blank Fault 061 position; no producer reference.",
-      62: "Blank Fault 062 position; no producer reference.",
-      63: "Blank Fault 063 position; no producer reference."
+      31: "Named Synchronization Lost During Run alarm has no Faults[1].15 producer reference in this Cart revision."
     });
+
+    const ABSENT_SOURCE_POSITIONS = Object.freeze({
+      0: "Alarm-table placeholder position is not exposed as a shared Station template and has no producer reference in the supplied Cart 1 L5K.",
+      55: "Blank Fault 055 position is not exposed as a shared Station template and has no producer reference.",
+      56: "Blank Fault 056 position is not exposed as a shared Station template and has no producer reference.",
+      57: "Blank Fault 057 position is not exposed as a shared Station template and has no producer reference.",
+      58: "Blank Fault 058 position is not exposed as a shared Station template and has no producer reference.",
+      59: "Blank Fault 059 position is not exposed as a shared Station template and has no producer reference.",
+      61: "Blank Fault 061 position is not exposed as a shared Station template and has no producer reference.",
+      62: "Blank Fault 062 position is not exposed as a shared Station template and has no producer reference.",
+      63: "Blank Fault 063 position is not exposed as a shared Station template and has no producer reference."
+    });
+
+    const SOURCE_GAPS = Object.freeze({ ...SEARCHABLE_GAPS, ...ABSENT_SOURCE_POSITIONS });
+
+    function gapMetadata(offset) {
+      const normalized = Number(offset);
+      const reason = SOURCE_GAPS[normalized];
+      if (!reason) return null;
+      return Object.freeze({
+        status: "not-promoted-no-producer",
+        reason,
+        searchableTemplate: Object.prototype.hasOwnProperty.call(SEARCHABLE_GAPS, normalized)
+      });
+    }
 
     function traceForEntry(entry) {
       if (!entry?.plcFault || entry.diagnosticScope !== "Station") return null;
@@ -95,9 +111,7 @@
       if (!entry?.plcFault) return entry;
       const offset = Number(entry.stationTemplateOffset);
       const trace = traceForEntry(entry);
-      const sourceGap = Object.prototype.hasOwnProperty.call(UNPROMOTED, offset)
-        ? Object.freeze({ status: "not-promoted-no-producer", reason: UNPROMOTED[offset] })
-        : null;
+      const sourceGap = gapMetadata(offset);
       if (trace) return Object.freeze({ ...entry, circuitTrace: trace, sourceGap });
       if (sourceGap) return Object.freeze({ ...entry, sourceGap });
       return entry;
@@ -117,8 +131,7 @@
     }
 
     function getStationSourceGap(offset) {
-      const reason = UNPROMOTED[Number(offset)];
-      return reason ? Object.freeze({ status: "not-promoted-no-producer", reason }) : null;
+      return gapMetadata(offset);
     }
 
     function getTopModulFaultDrillDown(value, limit = 10) {
@@ -144,10 +157,19 @@
       const f2 = getStationFaultTemplate(2)?.circuitTrace;
       if (!f2?.plcSignals?.includes("NEQ(LEDStatus,3)")) errors.push("Fault 002 lost LedStatus != 3 producer evidence.");
       if (!f2?.deviceRows?.some((row) => /1756-L61/.test(row.device))) errors.push("Fault 002 lost 1756-L61 controller evidence.");
-      for (const offset of Object.keys(UNPROMOTED).map(Number)) {
-        if (!getStationFaultTemplate(offset)?.sourceGap) errors.push(`Station source-gap offset ${offset} lost its no-producer status.`);
+
+      for (const offset of Object.keys(SEARCHABLE_GAPS).map(Number)) {
+        const entry = getStationFaultTemplate(offset);
+        if (!entry?.sourceGap || entry.sourceGap.searchableTemplate !== true) errors.push(`Named Station source-gap offset ${offset} lost its searchable no-producer status.`);
       }
+      for (const offset of Object.keys(ABSENT_SOURCE_POSITIONS).map(Number)) {
+        const gap = getStationSourceGap(offset);
+        if (!gap || gap.searchableTemplate !== false) errors.push(`Absent Station source position ${offset} lost coverage metadata.`);
+        if (getStationFaultTemplate(offset) !== null) errors.push(`Absent Station source position ${offset} must not become a searchable Station template.`);
+      }
+
       if (getStationFaultTemplate(8)?.circuitTrace) errors.push("Fault 008 must not gain a circuit trace without a verified producer.");
+      if (getStationFaultTemplate(24)?.circuitTrace) errors.push("Fault 024 must not gain a circuit trace without a verified producer.");
       if (getStationFaultTemplate(31)?.processTrace) errors.push("Fault 031 must remain without a promoted process producer.");
       return { ok: errors.length === 0, errors };
     }
@@ -166,7 +188,9 @@
       getTopModulCircuitTrace,
       getStationSourceGap,
       topModulStationFoundationCircuitOffsets: Object.freeze([1, 2]),
-      topModulStationUnpromotedOffsets: Object.freeze(Object.keys(UNPROMOTED).map(Number)),
+      topModulStationSearchableGapOffsets: Object.freeze(Object.keys(SEARCHABLE_GAPS).map(Number)),
+      topModulStationAbsentSourcePositions: Object.freeze(Object.keys(ABSENT_SOURCE_POSITIONS).map(Number)),
+      topModulStationUnpromotedOffsets: Object.freeze(Object.keys(SOURCE_GAPS).map(Number)),
       validate
     });
   };
