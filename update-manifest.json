@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-servo-table-internal-status-v354-20260904",
+  "buildId": "troubleshooting-apl-cart-foundation-v355-20260904",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Troubleshooting v354 extends the v353 machine-start work with source-backed internal Servo Bottle Table DataExchange diagnostics from CO85_LB1_Labeler_1online.L5K and K407039 page 142. Internal position 720 is explicitly retained as disabled because AFI blocks its only OTE in the supplied PLC revision. Positions 721-723 are indexed as active-but-unnamed internal statuses without inflating the 515 operator-named alarm count: 721 preserves the exact I0011.00 Encoder Simulation Off / sensor-simulation / OutServoPowerOnline semantic conflict, 722 traces missing System Online through I0011.03, and 723 traces missing Servo Ready through I0011.04 while the executable operating-mode bit is true. These are read-only diagnostic routes; no HMI alarm names are invented and no forcing, bypassing, timer changes, or unsafe recovery actions are recommended."
+  "notes": "Troubleshooting v355 adds source-backed LB1 APL Cart 1 foundational fault isolation for 00005-00019 from the readable CO85_LB1_APLCart_1.L5K RSLogix 5000 v15.02 export. The release traces the 1500 ms main-contactor supervision, direct servo/feed-rewind protection inputs, feed and rewind 1000 ms ready timers including their installation-phase compatibility input mappings, local 1756-ENBT/A Slot 1/2/4 GSV FaultCode diagnostics, latched Level-3/base-machine communications, Slot 7 1756-OB16E FuseBlown diagnostics, MotionGroup.GroupSynced, MSO feedback-on error logic, and calculated synchronization/movement validity for Faults 00018/00019. Fault 00008 remains catalog-only because the supplied readable export contains its alarm text but no executable Faults[0].8 producer; ServoForge does not invent one. Source thresholds and timer presets are presented as read-only PLC evidence, not recommended adjustment values, and this release does not assume other Cart/controller revisions are identical without source verification."
 }
