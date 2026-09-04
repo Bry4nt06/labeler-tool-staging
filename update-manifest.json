@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-startup-responsiveness-v356-20260904",
+  "buildId": "troubleshooting-cache-recovery-v357-20260904",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Troubleshooting v356 fixes a startup freeze observed when opening the Troubleshooting page from a browser/PWA with a large saved ServoForge workspace. The page now shields its startup path from the full labelerToolSettings payload and uses a compact troubleshooting-context snapshot instead, while a Web Worker refreshes that snapshot off the main UI thread for subsequent visits. Browser startup also uses a lightweight runtime smoke validation rather than the full recursive engineering validation suite; the complete source/library validation remains enforced by CI and is retained as fullValidate for engineering diagnostics. A four-second startup watchdog replaces an indefinite Loading diagnostic library state with an actionable error if initialization ever fails. v355 APL Cart source logic and all existing troubleshooting fault-isolation behavior remain unchanged."
+  "notes": "Troubleshooting v357 addresses browser-specific startup stalls caused by mixed or stale troubleshooting assets. The troubleshooting shell now installs its recovery monitor before any external diagnostic script, adds a visible Repair local cache action that unregisters same-origin service workers and deletes ServoForge runtime caches without clearing localStorage or saved ServoForge workspace data, gives every troubleshooting asset a v357 cache key, and loads the troubleshooting script chain with defer so one parser-blocking request cannot leave the rendered shell silently frozen before diagnostics. The v356 compact-context startup guard remains in place before troubleshooting-app.js, and all existing source-backed fault-isolation logic is unchanged."
 }
