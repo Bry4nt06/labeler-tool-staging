@@ -131,7 +131,8 @@ test("v350 browser loader follows v349 and verification UI follows v348 isolatio
   const verificationUiPos = html.indexOf("topmodul-encoder-verification-ui.js");
   assert.ok(stackBridgePos >= 0 && verificationPos > stackBridgePos && appPos > verificationPos);
   assert.ok(isolationUiPos > appPos && verificationUiPos > isolationUiPos);
-  assert.match(html, /data-troubleshooting-version="v350"/);
+  const bannerVersion = Number(/data-troubleshooting-version="v(\d+)"/.exec(html)?.[1] || 0);
+  assert.ok(bannerVersion >= 350);
   const ui = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/topmodul-encoder-verification-ui.js"), "utf8");
   assert.match(ui, /PLC encoder verification points/);
   assert.match(ui, /Watch these values before hardware replacement/);

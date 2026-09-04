@@ -25,6 +25,43 @@
       68: Object.freeze({ key: "noise", label: "Feedback Noise Fault", producer: "BaseMachineEncoderAxis.FeedbackNoiseFault", priority: "signal-integrity-first" }),
       69: Object.freeze({ key: "timer", label: "Timer Event Fault", producer: "BaseMachineEncoderAxis.TimerEventFault", priority: "module-event-timing-first" })
     });
+    const MAIN_670_SOURCE = Object.freeze({
+      sourceId: "CO85_LB1_Labeler_1online.L5K",
+      sourceType: "PLC export",
+      faultNumber: 670,
+      faultAddress: "Faults_LB1[41].14",
+      rawFineClockInput: "E1701_ENC101_FineClockPulse / Local:7:I.Data.0",
+      fineClockDescription: "Encoder Fine Clock Pulse (10 Per Pitch)",
+      counter: "ElectrBrake.Counter.ACC",
+      sampleWindow: "ElectrBrake.Timer.ACC >= 1000 ms",
+      speedCalculation: "ElectrBrake.SpeedActVal = ElectrBrake.Counter.ACC * 360 * 1000 / ElectrBrake.Timer.ACC",
+      zeroSpeed: "ElectrBrake.SpeedActVal <= 0 -> ElectrBrake.ZeroSpeed",
+      driveEnable: "E2001_AFD101_MainDriveEnable -> ElectrBrake.I_DriveEnable",
+      monitoringDisable: "Logic_0 -> ElectrBrake.I_DisableClockPulseMonitoring (Logic_0 = 0 in supplied export)",
+      supervision: "I_DriveEnable AND ZeroSpeed AND NOT I_DisableClockPulseMonitoring -> FinePulseCon 3000 ms -> O_FinePulseFault",
+      latch: "ElectrBrake.O_FinePulseFault -> OTL E2001_M_ElectrBrakeFaultEncoder",
+      faultOutput: "E2001_M_ElectrBrakeFaultEncoder AND NOT Labeler_Modulation_Timer_1.DN AND Labeler_Modulation_Timer_Delay.DN -> Faults_LB1[41].14",
+      reset: "E1101_PB201_ResetSafetyCircuitFault -> OTU E2001_M_ElectrBrakeFaultEncoder",
+      sourceRefs: Object.freeze([
+        "L5K 3752: E1701_ENC101_FineClockPulse = Local:7:I.Data.0",
+        "L5K 4874-4875: Logic_0 = 0",
+        "L5K 27479: FinePulseCon.PRE = 3000 ms",
+        "L5K 27486-27493: >=1000 ms speed sample and ZeroSpeed derivation",
+        "L5K 27499: DriveEnable + ZeroSpeed + monitoring-enable fine-pulse supervision",
+        "L5K 27579: encoder fault latch/reset and Faults_LB1[41].14 output gating",
+        "L5K 28073-28076: fine-clock hardware input increments ElectrBrake.Counter",
+        "L5K 4362: Fault 670 = Safety Circuit Fault Fine Clock Pulse Monitoring"
+      ])
+    });
+    const MAIN_670_LIVE_CHECKS = Object.freeze([
+      Object.freeze({ order: 1, signal: "E2001_AFD101_MainDriveEnable / ElectrBrake.I_DriveEnable", purpose: "Confirm the supervision is legitimately enabled by main-drive state." }),
+      Object.freeze({ order: 2, signal: "E1701_ENC101_FineClockPulse", purpose: "Observe the raw Local:7:I.Data.0 fine-clock hardware input." }),
+      Object.freeze({ order: 3, signal: "ElectrBrake.Counter.ACC", purpose: "Confirm raw fine-clock transitions are reaching the speed-detection counter." }),
+      Object.freeze({ order: 4, signal: "ElectrBrake.SpeedActVal / ElectrBrake.ZeroSpeed", purpose: "Confirm the >=1000 ms sample produces the expected motion/zero-speed state." }),
+      Object.freeze({ order: 5, signal: "ElectrBrake.FinePulseCon.ACC / .DN", purpose: "See whether the 3000 ms fine-pulse timer is accumulating while motion should be present." }),
+      Object.freeze({ order: 6, signal: "ElectrBrake.O_FinePulseFault / E2001_M_ElectrBrakeFaultEncoder", purpose: "Separate supervision output from the memorized encoder-fault latch." }),
+      Object.freeze({ order: 7, signal: "Faults_LB1[41].14", purpose: "Confirm the final Fault 670 HMI bit after Labeler modulation gating." })
+    ]);
 
     const OBSERVE = "Use normal HMI/PLC/motion-axis diagnostics only. Do not force motion-axis status, encoder inputs, station fault bits, or Cart-to-Labeler transport words.";
     const LOTO = "Prevent unexpected Station/servo motion and follow site LOTO/stored-energy requirements before hands-on encoder, CN131/W131, module, connector, or cabinet work.";
@@ -115,35 +152,35 @@
         severity: "hold",
         title: "Main machine is not moving",
         summary: "Fault 670 monitors fine-clock behavior in a machine-state context. Resolve the no-motion / main-drive / machine-stop condition before treating missing pulses as a primary encoder fault.",
-        next: "Review Faults 480, 482 and 669 plus main-drive state before opening ENC101 hardware."
+        next: "Review Faults 480, 482 and 669 plus E2001_AFD101_MainDriveEnable before opening ENC101 hardware."
       });
       if (motion !== "yes") return Object.freeze({
         code: "main-confirm-motion",
         severity: "observe",
         title: "Confirm main-machine motion",
         summary: "First establish whether motion is actually occurring when the fine-clock supervision faults.",
-        next: "Observe main-drive/zero-speed state and fine-clock diagnostics without forcing logic."
+        next: "Observe E2001_AFD101_MainDriveEnable, ElectrBrake.SpeedActVal / ZeroSpeed, and the raw fine-clock input without forcing logic."
       });
       if (fineClock === "absent" || fineClock === "frozen") return Object.freeze({
         code: "main-fine-clock-path",
         severity: "direct",
         title: "Motion is present but fine-clock pulses are absent",
-        summary: "This supports the K407039 main-machine encoder/fine-clock path for Fault 670. It is a different circuit and producer from Station HMI 00067 / BaseMachineEncoderAxis.FeedbackFault.",
-        next: "Use the existing Fault 670 circuit trace and qualified diagnostics to isolate ENC101/pulse/input evidence."
+        summary: "The supplied Labeler PLC export binds Fault 670 to E1701_ENC101_FineClockPulse at Local:7:I.Data.0. That hardware input increments ElectrBrake.Counter; if the raw input is frozen during verified motion, stay on the K407039 main-machine encoder/fine-clock path.",
+        next: "Observe E1701_ENC101_FineClockPulse and ElectrBrake.Counter.ACC together. If both are frozen during verified motion, use the Fault 670 circuit trace to isolate ENC101 / converter / input evidence under the approved safe-work boundary."
       });
       if (fineClock === "changing") return Object.freeze({
         code: "main-supervision-timing",
         severity: "observe",
         title: "Fine-clock pulses are changing",
-        summary: "Do not replace the encoder solely from Fault 670. Re-check the ElectricBrake/zero-speed monitoring state, 3000 ms supervision timing, and preceding main-drive/machine-stop faults.",
-        next: "Use Fault 670 process evidence and chronology around 480/482/669."
+        summary: "Do not replace the encoder solely from Fault 670. The PLC derives ElectrBrake.SpeedActVal from the fine-clock counter after a >=1000 ms sample, sets ZeroSpeed at <=0, then requires DriveEnable + ZeroSpeed + monitoring enabled for 3000 ms before O_FinePulseFault is asserted.",
+        next: "Trace ElectrBrake.Counter.ACC -> SpeedActVal -> ZeroSpeed -> FinePulseCon.ACC/.DN -> O_FinePulseFault -> E2001_M_ElectrBrakeFaultEncoder. This separates a real pulse-loss condition from derived-state or supervision timing."
       });
       return Object.freeze({
         code: "main-confirm-fine-clock",
         severity: "observe",
         title: "Confirm fine-clock pulse behavior",
-        summary: "With motion present, determine whether the fine-clock signal is changing or absent/frozen before entering the physical encoder path.",
-        next: "Observe the verified fine-clock input in normal diagnostics."
+        summary: "With motion present, determine whether E1701_ENC101_FineClockPulse is changing or absent/frozen before entering the physical encoder path.",
+        next: "Observe the verified Local:7:I.Data.0 fine-clock input and ElectrBrake.Counter.ACC in normal diagnostics."
       });
     }
 
@@ -189,7 +226,7 @@
         station: null,
         localOffset: null,
         subtype: Object.freeze({ key: "fine-clock", label: "Fine Clock Pulse Monitoring", producer: "ElectrBrake.O_FinePulseFault -> E2001_M_ElectrBrakeFaultEncoder" }),
-        producer: "ElectrBrake.O_FinePulseFault -> E2001_M_ElectrBrakeFaultEncoder -> Fault 670",
+        producer: "ElectrBrake.O_FinePulseFault -> E2001_M_ElectrBrakeFaultEncoder -> Faults_LB1[41].14 / Fault 670",
         entry,
         siblings: Object.freeze([480, 482, 669].map((number) => {
           const candidate = base.getTopModulFault(number);
@@ -197,11 +234,15 @@
         })),
         steps: Object.freeze([
           Object.freeze({ order: 1, label: "Confirm scope", detail: "Fault 670 belongs to the base Labeler main-machine fine-clock supervision. It is not Station/Cart HMI 00067." }),
-          Object.freeze({ order: 2, label: "Confirm main-machine motion", detail: "If the machine is not moving, resolve the main-drive / zero-speed / machine-stop state first." }),
-          Object.freeze({ order: 3, label: "Observe fine-clock pulses", detail: "With actual motion present, determine whether the verified fine-clock input is changing or absent/frozen." }),
-          Object.freeze({ order: 4, label: "Use supervision timing", detail: "The ElectricBrake fine-pulse supervision uses a 3000 ms timer. Changing pulses with Fault 670 active points back toward machine-state/timing evidence rather than automatic encoder replacement." }),
-          Object.freeze({ order: 5, label: "Physical main-encoder route only when supported", detail: "Use the K407039 Fault 670 circuit trace. Do not borrow the K605163 1756-M02AE/CN131 Station path." })
+          Object.freeze({ order: 2, label: "Confirm drive/motion state", detail: "The supplied PLC maps E2001_AFD101_MainDriveEnable into ElectrBrake.I_DriveEnable. If actual machine motion is absent, resolve the main-drive / zero-speed / machine-stop state first." }),
+          Object.freeze({ order: 3, label: "Observe the raw fine-clock hardware input", detail: "CO85_LB1_Labeler_1online.L5K maps E1701_ENC101_FineClockPulse to Local:7:I.Data.0 and identifies it as the fine clock (10 per pitch). The same input increments ElectrBrake.Counter." }),
+          Object.freeze({ order: 4, label: "Verify the derived speed state", detail: "After ElectrBrake.Timer.ACC reaches at least 1000 ms, the PLC calculates SpeedActVal = Counter.ACC * 360 * 1000 / Timer.ACC, clears the sample, and sets ElectrBrake.ZeroSpeed when SpeedActVal <= 0." }),
+          Object.freeze({ order: 5, label: "Follow the 3000 ms supervision predicate", detail: "ElectrBrake.I_DriveEnable + ElectrBrake.ZeroSpeed + monitoring enabled starts FinePulseCon. Its preset is 3000 ms; done state produces ElectrBrake.O_FinePulseFault." }),
+          Object.freeze({ order: 6, label: "Confirm the memorized 670 latch", detail: "ElectrBrake.O_FinePulseFault latches E2001_M_ElectrBrakeFaultEncoder. With the Labeler modulation gating satisfied, that bit drives Faults_LB1[41].14 (Fault 670). The safety-circuit reset push-button unlatches the memorized encoder fault." }),
+          Object.freeze({ order: 7, label: "Open the physical encoder route only when supported", detail: "If verified machine motion exists but E1701_ENC101_FineClockPulse and ElectrBrake.Counter.ACC are frozen, use the K407039 Fault 670 circuit trace. Do not borrow the K605163 1756-M02AE/CN131 Station path." })
         ]),
+        sourceEvidence: MAIN_670_SOURCE,
+        liveChecks: MAIN_670_LIVE_CHECKS,
         circuitTrace: entry?.circuitTrace || base.getTopModulCircuitTrace?.(670) || null,
         safety: Object.freeze([OBSERVE, LOTO, ELECTRICAL]),
         evaluate: evaluateMainFineClock
@@ -227,31 +268,36 @@
       const current = base.validate();
       const errors = [...(current.errors || [])];
       const field = getTopModulEncoderIsolationPlan("00067");
-      if (field?.producer !== "BaseMachineEncoderAxis.FeedbackFault") errors.push("v348 lost source-proven 00067 FeedbackFault producer.");
-      if (field?.scope !== "Station / Cart encoder") errors.push("v348 lost 00067 Station/Cart scope.");
+      if (field?.producer !== "BaseMachineEncoderAxis.FeedbackFault") errors.push("encoder isolation lost source-proven 00067 FeedbackFault producer.");
+      if (field?.scope !== "Station / Cart encoder") errors.push("encoder isolation lost 00067 Station/Cart scope.");
       const station1 = getTopModulEncoderIsolationPlan(1091);
-      if (station1?.station !== 1 || station1?.localOffset !== 67) errors.push("v348 lost Station 1 global 1091 -> local 067 mapping.");
-      if (!station1?.siblings?.some((row) => row.number === 1088) || !station1?.siblings?.some((row) => row.number === 1093)) errors.push("v348 lost Station 1 encoder sibling family.");
+      if (station1?.station !== 1 || station1?.localOffset !== 67) errors.push("encoder isolation lost Station 1 global 1091 -> local 067 mapping.");
+      if (!station1?.siblings?.some((row) => row.number === 1088) || !station1?.siblings?.some((row) => row.number === 1093)) errors.push("encoder isolation lost Station 1 encoder sibling family.");
       const frozen = evaluateTopModulEncoderIsolation(1091, { motion: "yes", feedback: "frozen" });
-      if (frozen?.code !== "direct-aqb-feedback-path") errors.push("v348 must route motion-present/frozen-feedback to AQB feedback path.");
+      if (frozen?.code !== "direct-aqb-feedback-path") errors.push("encoder isolation must route motion-present/frozen-feedback to AQB feedback path.");
       const noMotion = evaluateTopModulEncoderIsolation("00067", { motion: "no" });
-      if (noMotion?.code !== "resolve-no-motion-first") errors.push("v348 must hold encoder replacement when actual motion is absent.");
+      if (noMotion?.code !== "resolve-no-motion-first") errors.push("encoder isolation must hold encoder replacement when actual motion is absent.");
       const noise = evaluateTopModulEncoderIsolation(1091, { motion: "yes", feedback: "intermittent" });
-      if (noise?.code !== "feedback-signal-integrity") errors.push("v348 must route intermittent feedback toward signal integrity/noise evidence.");
+      if (noise?.code !== "feedback-signal-integrity") errors.push("encoder isolation must route intermittent feedback toward signal integrity/noise evidence.");
       const f670 = getTopModulEncoderIsolationPlan(670);
-      if (f670?.scope !== "Main Labeler encoder / fine clock") errors.push("v348 lost main Labeler Fault 670 scope.");
+      if (f670?.scope !== "Main Labeler encoder / fine clock") errors.push("encoder isolation lost main Labeler Fault 670 scope.");
       const f670CircuitText = JSON.stringify({ source: f670?.circuitTrace?.source?.id || f670?.circuitTrace?.sourceId || "", devices: f670?.circuitTrace?.deviceRows || [] });
-      if (/1756-M02AE|CN131/i.test(f670CircuitText)) errors.push("v348 must not attach Station encoder hardware evidence to Fault 670.");
+      if (/1756-M02AE|CN131/i.test(f670CircuitText)) errors.push("encoder isolation must not attach Station encoder hardware evidence to Fault 670.");
+      if (f670?.sourceEvidence?.sourceId !== "CO85_LB1_Labeler_1online.L5K") errors.push("Fault 670 lost the supplied Labeler PLC source authority.");
+      if (f670?.sourceEvidence?.faultAddress !== "Faults_LB1[41].14") errors.push("Fault 670 lost its exact PLC fault bit.");
+      if (!f670?.liveChecks?.some((row) => /E1701_ENC101_FineClockPulse/.test(row.signal))) errors.push("Fault 670 lost raw fine-clock live observation checkpoint.");
+      if (!f670?.liveChecks?.some((row) => /SpeedActVal.*ZeroSpeed/.test(row.signal))) errors.push("Fault 670 lost derived speed/zero-speed checkpoint.");
       if (getTopModulEncoderIsolationPlan(67)) errors.push("Base Labeler PLC Fault 067 Change Mode must not receive the Station encoder isolation workflow.");
       return { ok: errors.length === 0, errors };
     }
 
     return Object.freeze({
       ...base,
-      version: `${base.version}+encoder-isolation-v1`,
+      version: `${base.version}+encoder-isolation-v2`,
       getTopModulEncoderIsolationPlan,
       evaluateTopModulEncoderIsolation,
       topModulEncoderIsolationOffsets: ENCODER_OFFSETS,
+      topModulMain670Source: MAIN_670_SOURCE,
       validate
     });
   };
