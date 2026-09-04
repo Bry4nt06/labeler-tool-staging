@@ -105,11 +105,12 @@ test("existing disabled Heuft low-air path remains unpromoted", () => {
   assert.ok(entry.sourceGap || entry.labelerRungEvidence?.rootLikelihood === "disabled");
 });
 
-test("browser loads v343 after lubrication and before the controller", () => {
+test("browser keeps v343 loaded after lubrication and before later troubleshooting phases", () => {
   const html = fs.readFileSync(path.join(__dirname, "../app/troubleshooting/index.html"), "utf8");
   const lubePos = html.indexOf("topmodul-labeler-lubrication-trace.js");
   const inspectionPos = html.indexOf("topmodul-labeler-inspection-coder-trace.js");
   const appPos = html.indexOf("troubleshooting-app.js");
   assert.ok(lubePos >= 0 && inspectionPos > lubePos && appPos > inspectionPos);
-  assert.match(html, /data-troubleshooting-version="v343"/);
+  const version = Number(html.match(/data-troubleshooting-version="v(\d+)"/)?.[1] || 0);
+  assert.ok(version >= 343, `Expected troubleshooting version >=343, found v${version}.`);
 });
