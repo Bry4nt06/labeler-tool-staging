@@ -16,28 +16,30 @@ function manifestEntries() {
   return JSON.parse(match[1]);
 }
 
-test("v361 troubleshooting content keeps the v358 responsive bootstrap shell", () => {
-  assert.match(html, /data-troubleshooting-version="v361"/);
-  assert.match(html, /TROUBLESHOOTING v361/);
+test("v362 troubleshooting content keeps the v358 responsive bootstrap shell", () => {
+  assert.match(html, /data-troubleshooting-version="v362"/);
+  assert.match(html, /TROUBLESHOOTING v362/);
   assert.match(html, /Preparing diagnostic bootstrap/);
   const executableScripts = [...html.matchAll(/<script(?![^>]*type="application\/json")[^>]*src="([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(executableScripts, ["./troubleshooting-bootstrap.js?v=0.9.10&amp;build=troubleshooting-bootstrap-v358-20260904"]);
 });
 
-test("bootstrap preserves the complete v361 troubleshooting module order declaratively", () => {
+test("bootstrap preserves the complete v362 troubleshooting module order declaratively", () => {
   const entries = manifestEntries();
   assert.ok(entries.length >= 40, `expected full troubleshooting startup manifest, found ${entries.length}`);
   entries.forEach((src) => assert.match(src, /shell=v358/, `missing v358 shell key: ${src}`));
   const foundation = "./apl-cart-foundation.js?v=0.9.10&build=troubleshooting-apl-cart-foundation-v355-20260904&shell=v358";
   const web = "./apl-cart-web-handling.js?v=0.9.10&build=troubleshooting-apl-cart-web-handling-v361-20260904&shell=v358";
+  const servo = "./apl-cart-servo-status.js?v=0.9.10&build=troubleshooting-apl-cart-servo-status-v362-20260904&shell=v358";
   const exactSearch = "./troubleshooting-search-precedence.js?v=0.9.10&build=troubleshooting-search-precedence-v360-20260904&shell=v358";
   const guard = "./troubleshooting-startup-guard.js?v=0.9.10&build=troubleshooting-startup-v356-20260904&shell=v358";
   const controller = "./troubleshooting-app.js?v=0.9.10&build=troubleshooting-exact-circuit-v329-20260903-1920&shell=v358";
   assert.ok(entries.indexOf(foundation) < entries.indexOf(web));
-  assert.ok(entries.indexOf(web) < entries.indexOf(exactSearch));
+  assert.ok(entries.indexOf(web) < entries.indexOf(servo));
+  assert.ok(entries.indexOf(servo) < entries.indexOf(exactSearch));
   assert.ok(entries.indexOf(exactSearch) < entries.indexOf(guard));
   assert.ok(entries.indexOf(guard) < entries.indexOf(controller));
-  assert.equal(entries.at(-1).startsWith("./apl-cart-web-handling-ui.js"), true);
+  assert.equal(entries.at(-1).startsWith("./apl-cart-servo-status-ui.js"), true);
 });
 
 test("bootstrap yields a paint before each module executes and exposes the active filename", () => {
