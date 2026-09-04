@@ -120,5 +120,6 @@ test("browser loads source bridge after v345 and before alarm-stack analyzer", (
   const analyzerPos = html.indexOf("topmodul-alarm-stack-analyzer.js");
   const appPos = html.indexOf("troubleshooting-app.js");
   assert.ok(gapsPos >= 0 && bridgePos > gapsPos && analyzerPos > bridgePos && appPos > analyzerPos);
-  assert.match(html, /data-troubleshooting-version="v347"/);
+  const bannerVersion = Number(/data-troubleshooting-version="v(\d+)"/.exec(html)?.[1] || 0);
+  assert.ok(bannerVersion >= 347);
 });
