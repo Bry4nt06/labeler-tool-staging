@@ -13,12 +13,12 @@
     <link rel="stylesheet" href="./plc-analyzer-compare.css?v=2" />
   </head>
   <body>
-    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER COMPARE v7.1 — TASK SCHEDULE DIFF — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER COMPARE v8.1 — COMMUNICATION DIFF — NOT PRODUCTION</div>
     <main class="app plc-analyzer-app">
       <section class="topbar plc-analyzer-topbar">
         <div>
           <h1>ServoForge <span class="product-module">PLC Compare</span></h1>
-          <p>Known-good vs current/problem L5K source, dependency, and task-schedule comparison.</p>
+          <p>Known-good vs current/problem L5K source, dependency, task-schedule, and communication-topology comparison.</p>
         </div>
         <nav class="module-navigation" aria-label="ServoForge modules">
           <a class="module-navigation-link" href="../../index.html">Labeler Tool</a>
@@ -33,7 +33,7 @@
         <div>
           <span class="sf-eyebrow">SOURCE COMPARISON</span>
           <h2>What changed between two PLC exports?</h2>
-          <p>Compare a known-good/baseline export against a current or problem export. ServoForge reports exact rung/configuration differences, source-visible MAIN/JSR/UDT/AOI dependencies, and TASK/program scheduling changes without assuming that a change is defective.</p>
+          <p>Compare a known-good/baseline export against a current or problem export. ServoForge reports exact rung/configuration differences, source-visible MAIN/JSR/UDT/AOI dependencies, TASK/program scheduling, and produced/consumed communication-tag changes without assuming that a change is defective.</p>
         </div>
         <div class="plc-local-badge" aria-label="Local-only file handling">
           <strong>Local only</strong>
@@ -69,7 +69,7 @@
           <button id="plcCompareButton" type="button" disabled>Compare PLC Projects</button>
           <button id="plcCompareClear" type="button" class="secondary-button" disabled>Clear</button>
         </div>
-        <p class="plc-source-boundary"><strong>Boundary:</strong> A difference is source/configuration evidence only. This comparison does not prove live state, runtime execution, wiring condition, device health, scan time, current task inhibit state, controller mode, or that a change is defective. TASK attributes, program assignment, and declared order are compared only as source-visible configuration.</p>
+        <p class="plc-source-boundary"><strong>Boundary:</strong> A difference is source/configuration evidence only. This comparison does not prove live state, runtime execution, wiring condition, device health, scan time, current task inhibit state, controller mode, peer availability, packet delivery, connection health, current connection status, actual consumer count, or that a change is defective. TASK attributes and produced/consumed communication attributes are compared only as source-visible configuration.</p>
       </section>
 
       <section id="plcCompareResults" hidden>
@@ -82,9 +82,10 @@
         <section class="panel plc-search-panel">
           <div class="sf-section-heading"><div><span class="sf-eyebrow">FILTER DIFFERENCES</span><h2>Review changed source</h2></div><span id="plcCompareCount" class="plc-status"></span></div>
           <div class="plc-compare-filters">
-            <input id="plcCompareSearch" type="search" spellcheck="false" placeholder="Faults[0].9, timer, task, program order, JSR, UDT, AOI..." />
+            <input id="plcCompareSearch" type="search" spellcheck="false" placeholder="Producer, RemoteTag, RPI, ProduceCount, task, JSR, fault..." />
             <select id="plcCompareCategory" aria-label="Difference category">
               <option value="all">All categories</option>
+              <option value="communications">Produced / consumed communication</option>
               <option value="tasks">Tasks / scheduling</option>
               <option value="dependencies">Dependencies — MAIN / JSR / UDT / AOI</option>
               <option value="project">Project</option>
@@ -117,7 +118,7 @@
       </section>
 
       <footer class="sf-troubleshooting-footer plc-footer">
-        <p><strong>Read-only comparison:</strong> ServoForge does not connect to, write to, force, reset, or modify either PLC project. Timer presets, thresholds, addresses, module settings, dependency changes, task attributes, program assignment, and task order are displayed as source evidence only.</p>
+        <p><strong>Read-only comparison:</strong> ServoForge does not connect to, write to, force, reset, or modify either PLC project. Timer presets, thresholds, addresses, module settings, dependency changes, task attributes, program assignment, task order, Producer/RemoteTag/RPI, ProduceCount, and RPI bounds are displayed as source evidence only.</p>
       </footer>
     </main>
 
@@ -126,9 +127,11 @@
     <script src="./l5k-analyzer-dependencies-v5.js?v=5"></script>
     <script src="./l5k-analyzer-discrepancies-v6.js?v=6"></script>
     <script src="./l5k-analyzer-task-schedule-v7.js?v=7"></script>
+    <script src="./l5k-analyzer-communication-v8.js?v=8"></script>
     <script src="./l5k-analyzer-compare.js?v=2"></script>
     <script src="./l5k-analyzer-compare-dependencies-v5-2.js?v=5.2"></script>
     <script src="./l5k-analyzer-compare-task-schedule-v7-1.js?v=7.1"></script>
-    <script src="./plc-analyzer-compare-v5-2.js?v=7.1"></script>
+    <script src="./l5k-analyzer-compare-communication-v8-1.js?v=8.1"></script>
+    <script src="./plc-analyzer-compare-v5-2.js?v=8.1"></script>
   </body>
 </html>
