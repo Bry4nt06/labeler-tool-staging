@@ -230,7 +230,7 @@
         if (controllerMatch) project.controller = unquote(controllerMatch[1]);
       }
       if (!project.exportVersion) {
-        const versionMatch = /(?:RSLogix|Studio\s*5000|L5K)\D{0,30}(\d+(?:\.\d+){1,3})/i.exec(line) || /\b(?:Major|Revision)\s*:=\s*(\d+)\s*,\s*(?:Minor\s*:=\s*)?(\d+)/i.exec(line);
+        const versionMatch = /(?:RSLogix(?:\s+5000)?|Studio\s*5000|L5K).*?Export\s+Version\s+(\d+(?:\.\d+){1,3})/i.exec(line) || /\b(?:Major|Revision)\s*:=\s*(\d+)\s*,\s*(?:Minor\s*:=\s*)?(\d+)/i.exec(line);
         if (versionMatch) project.exportVersion = versionMatch[2] ? `${versionMatch[1]}.${versionMatch[2]}` : versionMatch[1];
       }
 
@@ -302,7 +302,6 @@
     finishRung(lines.length);
     finishModule(lines.length);
 
-    // Some exports place rung bodies on N: lines without explicit RUNG wrappers. Retain them as source-search rungs.
     if (!project.rungs.length) {
       lines.forEach((line, index) => {
         if (/^\s*N\s*:/i.test(line) && /\b(?:XIC|XIO|OTE|OTL|TON|CTU|GSV)\s*\(/i.test(line)) {
