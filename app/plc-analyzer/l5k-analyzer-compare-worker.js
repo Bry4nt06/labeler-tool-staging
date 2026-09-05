@@ -4,8 +4,11 @@ importScripts(
   "./l5k-analyzer-core.js?v=1",
   "./l5k-analyzer-legacy-v4.js?v=4.1",
   "./l5k-analyzer-dependencies-v5.js?v=5",
+  "./l5k-analyzer-discrepancies-v6.js?v=6",
+  "./l5k-analyzer-task-schedule-v7.js?v=7",
   "./l5k-analyzer-compare.js?v=2",
-  "./l5k-analyzer-compare-dependencies-v5-2.js?v=5.2"
+  "./l5k-analyzer-compare-dependencies-v5-2.js?v=5.2",
+  "./l5k-analyzer-compare-task-schedule-v7-1.js?v=7.1"
 );
 
 self.onmessage = (event) => {
