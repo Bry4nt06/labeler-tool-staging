@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="./plc-analyzer.css?v=1" />
   </head>
   <body>
-    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER v9 — MSG MESSAGE TOPOLOGY • v10 INTRA-PROJECT CONSISTENCY REVIEW — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER v9 MSG TOPOLOGY • v10 CONSISTENCY REVIEW • v11 SEQUENCE TOPOLOGY — NOT PRODUCTION</div>
     <main class="app plc-analyzer-app">
       <section class="topbar plc-analyzer-topbar">
         <div>
@@ -32,7 +32,7 @@
         <div>
           <span class="sf-eyebrow">SOURCE ANALYSIS</span>
           <h2>What does the PLC export actually say?</h2>
-          <p>Drop an L5K export to inventory logic, fault writers, timers, counters, I/O, module status reads, motion references, dependency paths, task/program scheduling, produced/consumed communication tags, explicit MSG/MESSAGE paths, and source-review discrepancies. v10 also reviews source-proven same-name program-scoped peers for timer, counter, and numeric decision-threshold differences inside one project.</p>
+          <p>Drop an L5K export to inventory logic, fault writers, timers, counters, I/O, module status reads, motion references, dependency paths, task/program scheduling, produced/consumed communication tags, explicit MSG/MESSAGE paths, and source-review discrepancies. v10 reviews source-proven same-name program-scoped peers for timer/counter/threshold differences. v11 adds a static sequence graph for source-visible state/step logic by pairing exact numeric EQU state gates with numeric MOV/CLR/CPT assignments to the same scoped symbol.</p>
         </div>
         <div class="plc-local-badge" aria-label="Local-only file handling">
           <strong>Local only</strong>
@@ -55,7 +55,7 @@
           <button id="plcAnalyzeButton" type="button" disabled>Analyze PLC Project</button>
           <button id="plcClearButton" type="button" class="secondary-button" disabled>Clear</button>
         </div>
-        <p class="plc-source-boundary"><strong>Boundary:</strong> This is static source analysis, not PLC simulation. Task-aware reachability follows source-visible TASK → PROGRAM MAIN → JSR relationships. Produced/consumed mappings and MSG/MESSAGE configuration follow source-visible export attributes only. Same-name program-scoped peers are an inferred comparison family, not proof that the tags serve the same machine function. Numeric PRE/threshold differences are source evidence only and are not adjustment recommendations. They do not prove live execution, current task inhibit state, peer availability, route health, packet delivery, message completion, current EN/DN/ER state, payload freshness, scan time, wiring condition, device health, or that a source-review item is defective.</p>
+        <p class="plc-source-boundary"><strong>Boundary:</strong> This is static source analysis, not PLC simulation. Task-aware reachability follows source-visible TASK → PROGRAM MAIN → JSR relationships. Produced/consumed mappings and MSG/MESSAGE configuration follow source-visible export attributes only. The v11 static sequence graph infers an edge only when an exact numeric EQU state gate and a numeric MOV/CLR/CPT assignment to the same scoped symbol occur on the same ladder rung. Same-name program-scoped peers are inferred comparison families, not proof of identical machine function. Numeric PRE/threshold/state values are source evidence only and are not adjustment recommendations. The analyzer does not prove live execution, current state, transition order, branch selection, timer completion, task inhibit state, peer availability, route health, packet delivery, message completion, current EN/DN/ER state, payload freshness, scan time, wiring condition, device health, or that a source-review item is defective.</p>
       </section>
 
       <section id="plcResults" hidden>
@@ -73,7 +73,7 @@
             <span id="plcSearchCount" class="plc-status"></span>
           </div>
           <div class="plc-search-row">
-            <input id="plcSearchInput" type="search" spellcheck="false" placeholder="MSG tag, ConnectionPath, RemoteElement, Faults[1].13, Producer, DelayTimer, CycleCount..." />
+            <input id="plcSearchInput" type="search" spellcheck="false" placeholder="Step, State, MSG tag, ConnectionPath, Faults[1].13, DelayTimer, CycleCount..." />
             <button id="plcSearchButton" type="button">Search</button>
           </div>
           <div id="plcSearchResults" class="plc-search-results"></div>
@@ -103,7 +103,7 @@
 
           <section id="plcTabTimers" class="panel plc-tab-panel" data-plc-panel="timers" hidden>
             <h2>Timers &amp; counters</h2>
-            <p class="panel-help">Native timer/counter instructions are separated from scan-counter candidates. v10 can also flag source-visible program-scoped peer PRE differences for SME review without recommending a value.</p>
+            <p class="panel-help">Native timer/counter instructions are separated from scan-counter candidates. v10 can flag source-visible program-scoped peer PRE differences for SME review without recommending a value. v11 also attaches source-visible timer .DN guards to exact state transitions when they occur on the same transition rung.</p>
             <div id="plcTimerList"></div>
           </section>
 
@@ -120,7 +120,7 @@
 
           <section id="plcTabFindings" class="panel plc-tab-panel" data-plc-panel="findings" hidden>
             <h2>Discrepancies &amp; review items</h2>
-            <p class="panel-help">A finding is not automatically a machine defect. v10 adds same-name program-scoped peer consistency review for native timer/counter PRE evidence and numeric comparison thresholds. Peer grouping is static inference; values are not adjustment recommendations, and PLC-cycle counters are not converted to time without runtime scan evidence.</p>
+            <p class="panel-help">A finding is not automatically a machine defect. v10 adds same-name program-scoped peer consistency review. v11 adds reviewable sequence topology summaries, branch targets, source-visible state gaps, and unanchored numeric state assignments. Sequence gaps can be explained by initialization, external/HMI writes, other languages, protected logic, or export scope; the analyzer does not label them dead logic.</p>
             <div id="plcFindingList"></div>
           </section>
 
@@ -144,7 +144,7 @@
       </section>
 
       <footer class="sf-troubleshooting-footer plc-footer">
-        <p><strong>Read-only analyzer:</strong> ServoForge does not connect to, write to, force, reset, or modify a PLC. Timer values, addresses, thresholds, peer-consistency differences, dependency paths, task attributes, produced/consumed attributes, MESSAGE configuration, MSG call sites, and module settings shown here are evidence from the supplied export and require machine-specific/runtime verification before field changes.</p>
+        <p><strong>Read-only analyzer:</strong> ServoForge does not connect to, write to, force, reset, or modify a PLC. Timer values, addresses, thresholds, state values, sequence edges, peer-consistency differences, dependency paths, task attributes, produced/consumed attributes, MESSAGE configuration, MSG call sites, and module settings shown here are evidence from the supplied export and require machine-specific/runtime verification before field changes.</p>
       </footer>
     </main>
 
@@ -156,7 +156,8 @@
     <script src="./l5k-analyzer-communication-v8.js?v=8"></script>
     <script src="./l5k-analyzer-message-v9.js?v=9"></script>
     <script src="./l5k-analyzer-consistency-v10.js?v=10"></script>
-    <script src="./plc-analyzer.js?v=9"></script>
-    <script src="./plc-analyzer-dependencies-v5.js?v=9"></script>
+    <script src="./l5k-analyzer-sequence-v11.js?v=11"></script>
+    <script src="./plc-analyzer.js?v=11"></script>
+    <script src="./plc-analyzer-dependencies-v5.js?v=11"></script>
   </body>
 </html>
