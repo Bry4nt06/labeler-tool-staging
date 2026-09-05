@@ -1,6 +1,6 @@
 "use strict";
 
-importScripts("./l5k-analyzer-core.js");
+importScripts("./l5k-analyzer-core.js?v=1", "./l5k-analyzer-legacy-v4.js?v=4");
 
 self.addEventListener("message", (event) => {
   const payload = event.data || {};

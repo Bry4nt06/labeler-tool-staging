@@ -41,6 +41,7 @@ jobs:
           node --check app.js
           node --check app/troubleshooting/troubleshooting-bootstrap.js
           node --check app/plc-analyzer/l5k-analyzer-core.js
+          node --check app/plc-analyzer/l5k-analyzer-legacy-v4.js
           node --check app/plc-analyzer/l5k-analyzer-worker.js
           node --check app/plc-analyzer/plc-analyzer.js
           node --check app/plc-analyzer/l5k-analyzer-compare.js
@@ -49,7 +50,7 @@ jobs:
           node --check app/plc-analyzer/l5k-analyzer-import.js
           node --check app/plc-analyzer/plc-analyzer-import.js
       - name: Run analyzer regressions
-        run: node --test tests/plc-l5k-analyzer.test.js tests/plc-l5k-analyzer-compare.test.js tests/plc-l5k-analyzer-import.test.js
+        run: node --test tests/plc-l5k-analyzer.test.js tests/plc-l5k-analyzer-compare.test.js tests/plc-l5k-analyzer-import.test.js tests/plc-l5k-analyzer-legacy-v4.test.js
       - name: Check patch whitespace
         run: |
           set -euo pipefail
