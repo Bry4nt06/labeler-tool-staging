@@ -14,10 +14,8 @@
 
   const baseParseL5K = base.parseL5K;
   const baseSearchAnalysis = base.searchAnalysis;
-  const EXACT_GATE = "EQU";
   const COMPARISON_INSTRUCTIONS = new Set(["EQU", "NEQ", "LES", "LEQ", "GRT", "GEQ", "LIM"]);
   const CONTACT_INSTRUCTIONS = new Set(["XIC", "XIO"]);
-  const ASSIGNMENT_INSTRUCTIONS = new Set(["MOV", "CLR", "CPT"]);
 
   function rootSymbol(value) {
     return String(value || "").trim().split(".")[0].replace(/\[[^\]]*\].*$/, "");
@@ -33,8 +31,7 @@
     const compact = raw.replace(/_/g, "");
     const radix = /^([+-]?)(2|8|10|16)#([0-9A-F]+)$/i.exec(compact);
     if (radix) {
-      const baseValue = Number(radix[2]);
-      const parsed = Number.parseInt(radix[3], baseValue);
+      const parsed = Number.parseInt(radix[3], Number(radix[2]));
       if (!Number.isFinite(parsed)) return null;
       const valueNumber = radix[1] === "-" ? -parsed : parsed;
       return { raw, value: valueNumber, canonical: String(valueNumber) };
@@ -79,6 +76,25 @@
     };
   }
 
+  // CLR is valid Logix ladder syntax but is not part of the older core KNOWN_INSTRUCTIONS set.
+  // Keep this compatibility extraction local to v11 so earlier parser behavior remains stable.
+  function sequenceInstructionCalls(source) {
+    const text = String(source || "");
+    const calls = [...base.parseInstructionCalls(text)];
+    const seen = new Set(calls.map((call) => `${call.name}|${call.index}|${call.raw}`));
+    const clr = /\bCLR\s*\(\s*([^()]+?)\s*\)/gi;
+    let match;
+    while ((match = clr.exec(text))) {
+      const call = { name: "CLR", args: [match[1].trim()], raw: match[0], index: match.index };
+      const key = `${call.name}|${call.index}|${call.raw}`;
+      if (!seen.has(key)) {
+        calls.push(call);
+        seen.add(key);
+      }
+    }
+    return calls.sort((a, b) => (a.index || 0) - (b.index || 0));
+  }
+
   function stateGateFromCall(call) {
     const args = call.args || [];
     if (!COMPARISON_INSTRUCTIONS.has(call.name)) return null;
@@ -106,7 +122,7 @@
       return {
         instruction: call.name,
         symbol: normalizeSymbol(args[0]),
-        exact: call.name === EXACT_GATE,
+        exact: call.name === "EQU",
         state: rightNumeric.canonical,
         rawState: rightNumeric.raw,
         numericSide: "right",
@@ -117,7 +133,7 @@
       return {
         instruction: call.name,
         symbol: normalizeSymbol(args[1]),
-        exact: call.name === EXACT_GATE,
+        exact: call.name === "EQU",
         state: leftNumeric.canonical,
         rawState: leftNumeric.raw,
         numericSide: "left",
@@ -129,7 +145,6 @@
 
   function assignmentFromCall(call) {
     const args = call.args || [];
-    if (!ASSIGNMENT_INSTRUCTIONS.has(call.name)) return null;
     if (call.name === "CLR" && args[0]) {
       const destination = normalizeSymbol(args[0]);
       return destination ? { instruction: "CLR", symbol: destination, state: "0", rawState: "0", source: call.raw } : null;
@@ -140,7 +155,6 @@
       if (value && destination && !numericLiteral(destination)) {
         return { instruction: "MOV", symbol: destination, state: value.canonical, rawState: value.raw, source: call.raw };
       }
-      return null;
     }
     if (call.name === "CPT" && args.length >= 2) {
       const destination = normalizeSymbol(args[0]);
@@ -175,9 +189,8 @@
     const scheduling = project?.dependencies?.taskScheduling;
     const program = rung.program || null;
     const routine = rung.routine || null;
-    const schedules = (scheduling?.scheduledPrograms || []).filter((item) => item.program === program);
     return {
-      schedules,
+      schedules: (scheduling?.scheduledPrograms || []).filter((item) => item.program === program),
       taskRootReachable: Boolean(scheduling?.taskRootReachableRoutines?.includes(`${program || ""}/${routine || ""}`)),
       runtimeExecutionProven: false
     };
@@ -205,7 +218,7 @@
     }
 
     for (const rung of project.rungs || []) {
-      const calls = base.parseInstructionCalls(rung.source || "");
+      const calls = sequenceInstructionCalls(rung.source || "");
       const gates = [];
       const assignments = [];
       const timerDoneGates = [];
@@ -361,8 +374,7 @@
         if (!byFrom.has(transition.from)) byFrom.set(transition.from, new Set());
         byFrom.get(transition.from).add(transition.to);
       }
-      const branched = [...byFrom.entries()].filter(([, targets]) => targets.size > 1);
-      for (const [from, targets] of branched) {
+      for (const [from, targets] of [...byFrom.entries()].filter(([, values]) => values.size > 1)) {
         add(
           `v11:multiple-targets:${safeId(variable.key)}:${safeId(from)}`,
           "static-inference",
@@ -445,7 +457,15 @@
     const extra = [];
     for (const variable of project?.dependencies?.sequenceTopology?.variables || []) {
       for (const transition of variable.transitions || []) {
-        const haystack = JSON.stringify({ symbol: variable.symbol, scope: variable.scope, from: transition.from, to: transition.to, guards: transition.guards, timers: transition.timerDoneGates, source: transition.source }).toLowerCase();
+        const haystack = JSON.stringify({
+          symbol: variable.symbol,
+          scope: variable.scope,
+          from: transition.from,
+          to: transition.to,
+          guards: transition.guards,
+          timers: transition.timerDoneGates,
+          source: transition.source
+        }).toLowerCase();
         if (!haystack.includes(needle)) continue;
         extra.push({
           type: "rung",
@@ -457,10 +477,10 @@
         });
       }
     }
-    const combined = [...extra, ...baseResults]
+    return [...extra, ...baseResults]
       .filter((item, index, all) => all.findIndex((candidate) => `${candidate.type}|${candidate.key}|${candidate.title}` === `${item.type}|${item.key}|${item.title}`) === index)
-      .sort((a, b) => (b.score || 0) - (a.score || 0));
-    return combined.slice(0, limit);
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
+      .slice(0, limit);
   }
 
   return Object.freeze({
