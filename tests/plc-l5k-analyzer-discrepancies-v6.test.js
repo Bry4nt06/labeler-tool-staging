@@ -154,14 +154,14 @@ END_CONTROLLER`;
   assert.equal(v6Findings(project).some((finding) => finding.id === "v6:fault-writers-not-main-reachable"), false);
 });
 
-test("v6 page and worker preserve local/read-only source-review boundaries", () => {
+test("v6 layer remains local/read-only under the current analyzer release", () => {
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/index.html"), "utf8");
   const worker = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-worker.js"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-discrepancies-v6.js"), "utf8");
-  assert.match(page, /PLC ANALYZER v6 — CALL-GRAPH REVIEW/);
+  assert.match(page, /PLC ANALYZER v7 — TASK SCHEDULE TOPOLOGY/);
   assert.match(page, /l5k-analyzer-discrepancies-v6\.js\?v=6/);
   assert.match(worker, /l5k-analyzer-discrepancies-v6\.js\?v=6/);
-  assert.match(page, /Call-graph reachability uses source-visible PROGRAM MAIN and JSR relationships only/i);
+  assert.match(page, /Task-aware reachability follows source-visible TASK → PROGRAM MAIN → JSR relationships only/i);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(page, /connect to PLC|write to PLC|force PLC/i);
 });
