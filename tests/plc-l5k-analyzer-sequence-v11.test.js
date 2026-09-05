@@ -107,7 +107,7 @@ test("v11 preserves unanchored numeric state assignments without inventing a sou
 
 test("v11 reports multiple source-visible targets from one state only as a review cue", () => {
   const project = analyzer.parseL5K(fixture({ branches: true, unanchored: false }));
-  const finding = sequenceFindings(project).find((item) => item.id.includes("multiple-targets") && /:30$/.test(item.id));
+  const finding = sequenceFindings(project).find((item) => item.id.includes("multiple-targets") && item.evidence?.from === "30");
   assert.ok(finding);
   assert.equal(finding.classification, "static-inference");
   assert.equal(finding.severity, "review");
