@@ -74,7 +74,7 @@
   }
 
   function createWorker() {
-    try { return new Worker("./l5k-analyzer-compare-worker.js?v=9.1"); }
+    try { return new Worker("./l5k-analyzer-compare-worker.js?v=10.1"); }
     catch { return null; }
   }
 
@@ -85,7 +85,7 @@
     setStatus("Reading both L5K files locally…", "loading");
     try {
       const [baselineText, currentText] = await Promise.all([readFile(state.baselineFile), readFile(state.currentFile)]);
-      setStatus("Parsing source, dependency graphs, task schedules, communication/message topology, and comparison…", "loading");
+      setStatus("Parsing source, dependency graphs, task schedules, communication/message topology, peer consistency, and comparison…", "loading");
       const result = await new Promise((resolve, reject) => {
         const worker = createWorker();
         if (!worker) {
@@ -129,7 +129,8 @@
       const tasks = state.comparison.statistics?.taskScheduleDifferences || 0;
       const communications = state.comparison.statistics?.communicationDifferences || 0;
       const messages = state.comparison.statistics?.messageDifferences || 0;
-      setStatus(`Comparison complete • ${total} source differences • ${dependencies} dependency differences • ${tasks} task-schedule differences • ${communications} produced/consumed differences • ${messages} MSG/MESSAGE differences.`, "pass");
+      const consistency = state.comparison.statistics?.consistencyDifferences || 0;
+      setStatus(`Comparison complete • ${total} source differences • ${dependencies} dependency differences • ${tasks} task-schedule differences • ${communications} produced/consumed differences • ${messages} MSG/MESSAGE differences • ${consistency} peer-consistency differences.`, "pass");
     } catch (error) {
       console.error(error);
       state.baselineProject = null;
@@ -170,6 +171,7 @@
         <dt>Consumed tags</dt><dd>${esc(communicationStats.consumedTags || 0)}</dd>
         <dt>MESSAGE tags</dt><dd>${esc(messageStats.messageTags || 0)}</dd>
         <dt>MSG calls</dt><dd>${esc(messageStats.msgCalls || 0)}</dd>
+        <dt>Peer consistency findings</dt><dd>${esc(stats.consistencyFindings || 0)}</dd>
       </dl>
     </div>`;
   }
@@ -192,7 +194,8 @@
       summaryCard("Dependency differences", stats.dependencyDifferences || 0),
       summaryCard("Task schedule differences", stats.taskScheduleDifferences || 0),
       summaryCard("Communication differences", stats.communicationDifferences || 0),
-      summaryCard("MSG / MESSAGE differences", stats.messageDifferences || 0)
+      summaryCard("MSG / MESSAGE differences", stats.messageDifferences || 0),
+      summaryCard("Peer consistency differences", stats.consistencyDifferences || 0)
     ].join("");
     els.projectCards.innerHTML = projectCard("BASELINE", state.baselineProject) + projectCard("CURRENT / PROBLEM", state.currentProject);
     resetFilters(false);
@@ -204,7 +207,7 @@
   }
 
   function differenceRow(item) {
-    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || "";
+    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || item.consistencyKind || "";
     const kindBadge = detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : "";
     return `<div class="plc-row plc-compare-diff" data-difference-id="${esc(item.id)}">
       <div class="plc-compare-diff-head"><div><strong>${esc(item.title)}</strong><small>${esc(item.summary)}</small></div>
@@ -253,8 +256,11 @@
     const messageBoundary = item.category === "messages"
       ? `<div class="plc-warning"><strong>MSG/MESSAGE comparison boundary:</strong> MESSAGE configuration and MSG call sites are offline source evidence only. They do not prove rung execution, route health, message completion, current EN/DN/ER state, payload freshness, or that a path/length/service value should be changed.</div>`
       : "";
-    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || "";
-    els.detailBody.innerHTML = `${dependencyBoundary}${taskBoundary}${communicationBoundary}${messageBoundary}<div class="plc-section-box"><div class="plc-compare-badges"><span class="plc-compare-badge" data-kind="${esc(item.changeType)}">${esc(item.changeType)}</span><span class="plc-compare-badge">${esc(item.category)}</span>${detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : ""}<span class="plc-compare-badge" data-kind="${esc(item.reviewLevel)}">${esc(item.reviewLevel)}</span></div><p>${esc(item.summary)}</p></div>
+    const consistencyBoundary = item.category === "consistency"
+      ? `<div class="plc-warning"><strong>Peer consistency boundary:</strong> Same-name program-scoped tags are inferred peers only. Uniform/divergent state and majority/outlier evidence do not prove identical machine function, identify a correct value, or recommend a timer/counter/threshold adjustment. PLC-cycle counts are not converted to time without runtime scan evidence.</div>`
+      : "";
+    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || item.consistencyKind || "";
+    els.detailBody.innerHTML = `${dependencyBoundary}${taskBoundary}${communicationBoundary}${messageBoundary}${consistencyBoundary}<div class="plc-section-box"><div class="plc-compare-badges"><span class="plc-compare-badge" data-kind="${esc(item.changeType)}">${esc(item.changeType)}</span><span class="plc-compare-badge">${esc(item.category)}</span>${detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : ""}<span class="plc-compare-badge" data-kind="${esc(item.reviewLevel)}">${esc(item.reviewLevel)}</span></div><p>${esc(item.summary)}</p></div>
       <div class="plc-compare-detail-grid"><div class="plc-compare-side"><h4>Baseline</h4><pre>${esc(formatValue(item.baseline))}</pre></div><div class="plc-compare-side"><h4>Current / problem</h4><pre>${esc(formatValue(item.current))}</pre></div></div>
       ${item.evidence ? `<div class="plc-section-box plc-compare-evidence"><h3>Source evidence</h3><pre>${esc(formatValue(item.evidence))}</pre></div>` : ""}`;
     els.detail.hidden = false;
