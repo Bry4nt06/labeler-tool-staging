@@ -27,7 +27,8 @@
   }
 
   function hasLegacyNeutralRungs(text) {
-    return /^\s*N\s*:/im.test(String(text || ""));
+    const source = String(text || "");
+    return /^\s*N\s*:/im.test(source) && !/^\s*RUNG\s+-?\d+/im.test(source);
   }
 
   function transformLegacyNeutralRungs(input) {
@@ -35,8 +36,6 @@
     const lines = original.split("\n");
     const transformed = [];
     const lineMap = [null];
-    let currentProgram = null;
-    let currentRoutine = null;
     let routineRungOrdinal = 0;
     let legacyRungs = 0;
 
@@ -48,16 +47,9 @@
     lines.forEach((line, index) => {
       const originalLine = index + 1;
       const trimmed = line.trim();
-      const programMatch = /^PROGRAM\s+("[^"]+"|[^\s(]+)/i.exec(trimmed);
       const routineMatch = /^ROUTINE\s+("[^"]+"|[^\s(]+)/i.exec(trimmed);
-
-      if (programMatch) currentProgram = unquote(programMatch[1]);
-      if (/^END_PROGRAM\b/i.test(trimmed)) {
-        currentProgram = null;
-        currentRoutine = null;
-      }
       if (routineMatch) {
-        currentRoutine = unquote(routineMatch[1]);
+        unquote(routineMatch[1]);
         routineRungOrdinal = 0;
       }
 
@@ -70,8 +62,6 @@
       } else {
         push(line, originalLine);
       }
-
-      if (/^END_ROUTINE\b/i.test(trimmed)) currentRoutine = null;
     });
 
     return {
