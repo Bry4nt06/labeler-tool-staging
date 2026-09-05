@@ -202,7 +202,7 @@ test("v8 layer remains browser-local/read-only under the current v9 analyzer rel
   assert.match(page, /l5k-analyzer-message-v9\.js\?v=9/);
   assert.match(worker, /l5k-analyzer-communication-v8\.js\?v=8/);
   assert.match(worker, /l5k-analyzer-message-v9\.js\?v=9/);
-  assert.match(page, /do not prove live execution/i);
+  assert.match(page, /(?:do|does) not prove live execution/i);
   assert.match(page, /peer availability, route health, packet delivery/i);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(page, /connect to PLC|write to PLC|force PLC/i);
