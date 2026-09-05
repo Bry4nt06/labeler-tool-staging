@@ -13,12 +13,12 @@
     <link rel="stylesheet" href="./plc-analyzer-import.css?v=3" />
   </head>
   <body>
-    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC IMPORT ASSISTANT v4.1 — LEGACY L5K SUPPORT — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC IMPORT ASSISTANT v5.1 — DEPENDENCY EVIDENCE — NOT PRODUCTION</div>
     <main class="app plc-analyzer-app">
       <section class="topbar plc-analyzer-topbar">
         <div>
           <h1>ServoForge <span class="product-module">PLC Import Assistant</span></h1>
-          <p>Turn source-proven L5K fault logic into reviewable Troubleshooting Library draft records.</p>
+          <p>Turn source-proven L5K fault logic and dependency paths into reviewable Troubleshooting Library draft records.</p>
         </div>
         <nav class="module-navigation" aria-label="ServoForge modules">
           <a class="module-navigation-link" href="../../index.html">Labeler Tool</a>
@@ -33,7 +33,7 @@
         <div>
           <span class="sf-eyebrow">REVIEW-ONLY IMPORT PIPELINE</span>
           <h2>Find source-backed troubleshooting candidates without publishing guesses</h2>
-          <p>The assistant parses one L5K locally, checks exact PLC target references against the currently loaded Troubleshooting Library, and generates draft records for SME review.</p>
+          <p>The assistant parses one L5K locally, checks exact PLC target references against the currently loaded Troubleshooting Library, and attaches bounded upstream dependency evidence for SME review.</p>
         </div>
         <div class="plc-local-badge" aria-label="Local-only file handling">
           <strong>Local L5K parsing</strong>
@@ -56,7 +56,7 @@
           <button id="plcImportAnalyzeButton" type="button" disabled>Analyze &amp; Build Review Queue</button>
           <button id="plcImportClearButton" type="button" class="secondary-button" disabled>Clear</button>
         </div>
-        <p class="plc-source-boundary"><strong>Boundary:</strong> An unmatched PLC target is a review candidate, not proof that ServoForge is missing a diagnostic. Alarm number/text and machine namespace are never inferred from the bit address alone.</p>
+        <p class="plc-source-boundary"><strong>Boundary:</strong> An unmatched PLC target is a review candidate, not proof that ServoForge is missing a diagnostic. Dependency traces are static source inference; alarm number/text, machine namespace, live state and physical device condition are never inferred from the bit address or trace alone.</p>
       </section>
 
       <section class="panel plc-import-library-panel" aria-labelledby="plcLibraryBridgeHeading">
@@ -64,7 +64,7 @@
           <div><span class="sf-eyebrow">2. CURRENT LIBRARY</span><h2 id="plcLibraryBridgeHeading">Troubleshooting coverage bridge</h2></div>
           <span id="plcImportLibraryStatus" class="plc-status" aria-live="polite">Waiting for analysis.</span>
         </div>
-        <p>The assistant reads the currently deployed Troubleshooting Library from a hidden same-origin page. It compares exact PLC target strings only; it does not treat fuzzy text similarity as verified coverage.</p>
+        <p>The assistant reads the currently deployed Troubleshooting Library from a hidden same-origin page. It compares exact PLC target strings only; it does not treat fuzzy text similarity or dependency similarity as verified coverage.</p>
       </section>
 
       <section id="plcImportResults" hidden>
@@ -115,7 +115,9 @@
 
     <script src="./l5k-analyzer-core.js?v=1"></script>
     <script src="./l5k-analyzer-legacy-v4.js?v=4.1"></script>
+    <script src="./l5k-analyzer-dependencies-v5.js?v=5"></script>
     <script src="./l5k-analyzer-import.js?v=3"></script>
-    <script src="./plc-analyzer-import.js?v=4.1"></script>
+    <script src="./l5k-analyzer-import-dependencies-v5-1.js?v=5.1"></script>
+    <script src="./plc-analyzer-import-v5-1.js?v=5.1"></script>
   </body>
 </html>
