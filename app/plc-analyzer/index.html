@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="./plc-analyzer.css?v=1" />
   </head>
   <body>
-    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER v6 — CALL-GRAPH REVIEW — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER v7 — TASK SCHEDULE TOPOLOGY — NOT PRODUCTION</div>
     <main class="app plc-analyzer-app">
       <section class="topbar plc-analyzer-topbar">
         <div>
@@ -32,7 +32,7 @@
         <div>
           <span class="sf-eyebrow">SOURCE ANALYSIS</span>
           <h2>What does the PLC export actually say?</h2>
-          <p>Drop an L5K export to inventory logic, fault writers, timers, counters, I/O, module status reads, motion references, dependency paths, and source-review discrepancies.</p>
+          <p>Drop an L5K export to inventory logic, fault writers, timers, counters, I/O, module status reads, motion references, dependency paths, task/program scheduling, and source-review discrepancies.</p>
         </div>
         <div class="plc-local-badge" aria-label="Local-only file handling">
           <strong>Local only</strong>
@@ -55,7 +55,7 @@
           <button id="plcAnalyzeButton" type="button" disabled>Analyze PLC Project</button>
           <button id="plcClearButton" type="button" class="secondary-button" disabled>Clear</button>
         </div>
-        <p class="plc-source-boundary"><strong>Boundary:</strong> This is static source analysis, not PLC simulation. Call-graph reachability uses source-visible PROGRAM MAIN and JSR relationships only. Findings do not prove live machine state, actual scan time, wiring condition, device health, or that a source-review item is defective.</p>
+        <p class="plc-source-boundary"><strong>Boundary:</strong> This is static source analysis, not PLC simulation. Task-aware reachability follows source-visible TASK → PROGRAM MAIN → JSR relationships only. TASK attributes and schedule order are export evidence; they do not prove live execution, current inhibit state, actual scan time, event occurrence, wiring condition, device health, or that a source-review item is defective.</p>
       </section>
 
       <section id="plcResults" hidden>
@@ -119,7 +119,7 @@
 
           <section id="plcTabFindings" class="panel plc-tab-panel" data-plc-panel="findings" hidden>
             <h2>Discrepancies &amp; review items</h2>
-            <p class="panel-help">A finding is not automatically a machine defect. v6 call-graph findings are source-review cues and explicitly account for unsupported invocation mechanisms and export/revision gaps.</p>
+            <p class="panel-help">A finding is not automatically a machine defect. v7 adds source-visible TASK scheduling to the v6 MAIN/JSR review so scheduled, unscheduled, and unresolved entry paths are distinguished without claiming runtime execution.</p>
             <div id="plcFindingList"></div>
           </section>
 
@@ -143,7 +143,7 @@
       </section>
 
       <footer class="sf-troubleshooting-footer plc-footer">
-        <p><strong>Read-only analyzer:</strong> ServoForge does not connect to, write to, force, reset, or modify a PLC. Timer values, addresses, thresholds, dependency paths and module settings shown here are evidence from the supplied export and require machine-specific/runtime verification before field changes.</p>
+        <p><strong>Read-only analyzer:</strong> ServoForge does not connect to, write to, force, reset, or modify a PLC. Timer values, addresses, thresholds, dependency paths, task attributes, schedule order and module settings shown here are evidence from the supplied export and require machine-specific/runtime verification before field changes.</p>
       </footer>
     </main>
 
@@ -151,7 +151,8 @@
     <script src="./l5k-analyzer-legacy-v4.js?v=4.1"></script>
     <script src="./l5k-analyzer-dependencies-v5.js?v=5"></script>
     <script src="./l5k-analyzer-discrepancies-v6.js?v=6"></script>
-    <script src="./plc-analyzer.js?v=6"></script>
-    <script src="./plc-analyzer-dependencies-v5.js?v=6"></script>
+    <script src="./l5k-analyzer-task-schedule-v7.js?v=7"></script>
+    <script src="./plc-analyzer.js?v=7"></script>
+    <script src="./plc-analyzer-dependencies-v5.js?v=7"></script>
   </body>
 </html>
