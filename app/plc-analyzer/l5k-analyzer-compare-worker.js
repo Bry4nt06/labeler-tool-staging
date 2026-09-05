@@ -8,11 +8,13 @@ importScripts(
   "./l5k-analyzer-task-schedule-v7.js?v=7",
   "./l5k-analyzer-communication-v8.js?v=8",
   "./l5k-analyzer-message-v9.js?v=9",
+  "./l5k-analyzer-consistency-v10.js?v=10",
   "./l5k-analyzer-compare.js?v=2",
   "./l5k-analyzer-compare-dependencies-v5-2.js?v=5.2",
   "./l5k-analyzer-compare-task-schedule-v7-1.js?v=7.1",
   "./l5k-analyzer-compare-communication-v8-1.js?v=8.1",
-  "./l5k-analyzer-compare-message-v9-1.js?v=9.1"
+  "./l5k-analyzer-compare-message-v9-1.js?v=9.1",
+  "./l5k-analyzer-compare-consistency-v10-1.js?v=10.1"
 );
 
 self.onmessage = (event) => {
