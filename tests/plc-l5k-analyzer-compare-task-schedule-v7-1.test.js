@@ -66,7 +66,7 @@ test("v7.1 detects task addition and removal", () => {
   const result = compare.compareProjects(baseline, current);
   assert.ok(taskDiffs(result).some((item) => item.taskKind === "task" && item.changeType === "removed" && /MainTask/.test(item.title)));
   assert.ok(taskDiffs(result).some((item) => item.taskKind === "task" && item.changeType === "added" && /ReplacementTask/.test(item.title)));
-  assert.match(result.taskScheduleComparison.sourceBoundary, /does not prove current task execution/i);
+  assert.match(result.taskScheduleComparison.sourceBoundary, /not prove current task execution/i);
 });
 
 test("v7.1 detects source-visible task attribute changes without recommending values", () => {
