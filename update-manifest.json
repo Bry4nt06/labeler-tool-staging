@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-apl-cart-servo-status-v362-20260904",
+  "buildId": "troubleshooting-apl-cart-tail-v363-20260904",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Troubleshooting v362 adds exact Cart-local HMI Faults 00032-00054 for the readable LB1 APL Cart 1 source. Twenty-one active positions bridge directly to the existing shared Station MainDriveAxis producer and K605163 servo-circuit authority rather than duplicating servo logic; Faults 00040 and 00049 remain inactive Logic_0 source positions in this Cart revision. Five-digit Cart-local codes remain explicitly separate from same-number three-digit base-Labeler faults. v361 label-web/encoder handling, v360 exact-search precedence, and the v358 responsive bootstrap/startup safeguards remain intact."
+  "notes": "Troubleshooting v363 imports the remaining high-number LB1 APL Cart 1 tail: Fault 00060 Rewind Full, Cart-local base-machine encoder Faults 00064-00069, and catalog-only Fault 00074 Height Adjustment / Circuit Breaker Tripped. Rewind Full preserves the PE603 / DiameterSensorTimer source chain and K605163 hardware route. Encoder faults reuse the existing BaseMachineEncoderAxis Slot 11 1756-M02AE / CN131 / W131 authority. Existing field/source-backed 00067 remains the sole exact 00067 entry; v363 adds context without duplication. Fault 00074 remains searchable but producer-unresolved. v362 servo-status coverage, v361 label-web coverage, v360 exact-search precedence, and v358 responsive startup safeguards remain intact."
 }

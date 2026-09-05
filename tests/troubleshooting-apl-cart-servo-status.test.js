@@ -115,19 +115,23 @@ test("v362 UI remains idempotent/debounced and exposes local/global/circuit evid
   assert.match(uiSource, /Shared Station servo circuit authority/);
 });
 
-test("v362 loader order preserves v361 web handling, v360 exact search, and v358 bootstrap", () => {
-  assert.match(page, /data-troubleshooting-version="v362"/);
-  assert.match(page, /TROUBLESHOOTING v362/);
+test("v362 servo-status coverage remains loaded under v363 with v360 exact search and the v358 bootstrap", () => {
+  assert.match(page, /data-troubleshooting-version="v363"/);
+  assert.match(page, /TROUBLESHOOTING v363/);
   assert.match(page, /troubleshooting-bootstrap-v358-20260904/);
   const foundationIndex = page.indexOf("apl-cart-foundation.js");
   const webIndex = page.indexOf("apl-cart-web-handling.js");
   const servoIndex = page.indexOf("apl-cart-servo-status.js");
+  const tailIndex = page.indexOf("apl-cart-tail-status.js");
+  const sourceBridgeIndex = page.indexOf("topmodul-live-00067-source-bridge.js");
   const searchIndex = page.indexOf("troubleshooting-search-precedence.js");
   const appIndex = page.indexOf("troubleshooting-app.js");
   const webUiIndex = page.indexOf("apl-cart-web-handling-ui.js");
   const servoUiIndex = page.indexOf("apl-cart-servo-status-ui.js");
-  assert.ok(foundationIndex >= 0 && webIndex > foundationIndex && servoIndex > webIndex);
-  assert.ok(searchIndex > servoIndex && appIndex > searchIndex);
-  assert.ok(servoUiIndex > webUiIndex);
+  const tailUiIndex = page.indexOf("apl-cart-tail-status-ui.js");
+  assert.ok(foundationIndex >= 0 && webIndex > foundationIndex && servoIndex > webIndex && tailIndex > servoIndex);
+  assert.ok(sourceBridgeIndex > tailIndex && searchIndex > sourceBridgeIndex && appIndex > searchIndex);
+  assert.ok(servoUiIndex > webUiIndex && tailUiIndex > servoUiIndex);
   assert.match(page, /troubleshooting-apl-cart-servo-status-v362-20260904&shell=v358/);
+  assert.match(page, /troubleshooting-apl-cart-tail-v363-20260904&shell=v358/);
 });
