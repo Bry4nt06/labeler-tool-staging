@@ -74,7 +74,7 @@
   }
 
   function createWorker() {
-    try { return new Worker("./l5k-analyzer-compare-worker.js?v=5.2"); }
+    try { return new Worker("./l5k-analyzer-compare-worker.js?v=7.1"); }
     catch { return null; }
   }
 
@@ -85,7 +85,7 @@
     setStatus("Reading both L5K files locally…", "loading");
     try {
       const [baselineText, currentText] = await Promise.all([readFile(state.baselineFile), readFile(state.currentFile)]);
-      setStatus("Parsing source, dependency graphs, and comparison…", "loading");
+      setStatus("Parsing source, dependency graphs, task schedules, and comparison…", "loading");
       const result = await new Promise((resolve, reject) => {
         const worker = createWorker();
         if (!worker) {
@@ -126,7 +126,8 @@
       renderComparison();
       const total = state.comparison.statistics?.totalDifferences || 0;
       const dependencies = state.comparison.statistics?.dependencyDifferences || 0;
-      setStatus(`Comparison complete • ${total} source differences • ${dependencies} dependency-level differences.`, "pass");
+      const tasks = state.comparison.statistics?.taskScheduleDifferences || 0;
+      setStatus(`Comparison complete • ${total} source differences • ${dependencies} dependency differences • ${tasks} task-schedule differences.`, "pass");
     } catch (error) {
       console.error(error);
       state.baselineProject = null;
@@ -147,6 +148,7 @@
   function projectCard(label, project) {
     const stats = project?.statistics || {};
     const dependencyStats = project?.dependencies?.statistics || {};
+    const taskStats = project?.dependencies?.taskScheduling?.statistics || {};
     return `<div class="plc-compare-project-card">
       <span class="sf-eyebrow">${esc(label)}</span>
       <h3>${esc(project?.controller || project?.source?.fileName || "PLC project")}</h3>
@@ -158,6 +160,8 @@
         <dt>UDTs</dt><dd>${esc(dependencyStats.dataTypes || 0)}</dd>
         <dt>JSR calls</dt><dd>${esc(dependencyStats.routineCalls || 0)}</dd>
         <dt>AOI definitions</dt><dd>${esc(dependencyStats.aoiDefinitions || 0)}</dd>
+        <dt>Tasks</dt><dd>${esc(taskStats.tasks || 0)}</dd>
+        <dt>Scheduled programs</dt><dd>${esc(taskStats.scheduledPrograms || 0)}</dd>
       </dl>
     </div>`;
   }
@@ -177,7 +181,8 @@
       summaryCard("Changed", stats.changeCounts?.changed || 0),
       summaryCard("Rung differences", stats.categoryCounts?.rungs || 0),
       summaryCard("Fault differences", stats.categoryCounts?.faults || 0),
-      summaryCard("Dependency differences", stats.dependencyDifferences || 0)
+      summaryCard("Dependency differences", stats.dependencyDifferences || 0),
+      summaryCard("Task schedule differences", stats.taskScheduleDifferences || 0)
     ].join("");
     els.projectCards.innerHTML = projectCard("BASELINE", state.baselineProject) + projectCard("CURRENT / PROBLEM", state.currentProject);
     resetFilters(false);
@@ -189,10 +194,11 @@
   }
 
   function differenceRow(item) {
-    const dependencyBadge = item.category === "dependencies" && item.dependencyKind ? `<span class="plc-compare-badge">${esc(item.dependencyKind)}</span>` : "";
+    const detailKind = item.dependencyKind || item.taskKind || "";
+    const kindBadge = detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : "";
     return `<div class="plc-row plc-compare-diff" data-difference-id="${esc(item.id)}">
       <div class="plc-compare-diff-head"><div><strong>${esc(item.title)}</strong><small>${esc(item.summary)}</small></div>
-      <div class="plc-compare-badges"><span class="plc-compare-badge" data-kind="${esc(item.changeType)}">${esc(item.changeType)}</span><span class="plc-compare-badge">${esc(item.category)}</span>${dependencyBadge}<span class="plc-compare-badge" data-kind="${esc(item.reviewLevel)}">${esc(item.reviewLevel)}</span><span class="plc-compare-badge">${esc(item.classification)}</span></div></div>
+      <div class="plc-compare-badges"><span class="plc-compare-badge" data-kind="${esc(item.changeType)}">${esc(item.changeType)}</span><span class="plc-compare-badge">${esc(item.category)}</span>${kindBadge}<span class="plc-compare-badge" data-kind="${esc(item.reviewLevel)}">${esc(item.reviewLevel)}</span><span class="plc-compare-badge">${esc(item.classification)}</span></div></div>
       <button type="button" class="secondary-button" data-open-difference="${esc(item.id)}">Review source difference</button>
     </div>`;
   }
@@ -228,7 +234,11 @@
     const dependencyBoundary = item.category === "dependencies"
       ? `<div class="plc-warning"><strong>Dependency comparison boundary:</strong> Source-visible call/type differences do not prove runtime execution, live state, physical device condition, or that a change is defective.</div>`
       : "";
-    els.detailBody.innerHTML = `${dependencyBoundary}<div class="plc-section-box"><div class="plc-compare-badges"><span class="plc-compare-badge" data-kind="${esc(item.changeType)}">${esc(item.changeType)}</span><span class="plc-compare-badge">${esc(item.category)}</span>${item.dependencyKind ? `<span class="plc-compare-badge">${esc(item.dependencyKind)}</span>` : ""}<span class="plc-compare-badge" data-kind="${esc(item.reviewLevel)}">${esc(item.reviewLevel)}</span></div><p>${esc(item.summary)}</p></div>
+    const taskBoundary = item.category === "tasks"
+      ? `<div class="plc-warning"><strong>Task schedule comparison boundary:</strong> TASK attributes, program assignment, and declared order are source/configuration evidence only. They do not prove current task execution, inhibit state, scan timing, controller mode, or that a change is defective.</div>`
+      : "";
+    const detailKind = item.dependencyKind || item.taskKind || "";
+    els.detailBody.innerHTML = `${dependencyBoundary}${taskBoundary}<div class="plc-section-box"><div class="plc-compare-badges"><span class="plc-compare-badge" data-kind="${esc(item.changeType)}">${esc(item.changeType)}</span><span class="plc-compare-badge">${esc(item.category)}</span>${detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : ""}<span class="plc-compare-badge" data-kind="${esc(item.reviewLevel)}">${esc(item.reviewLevel)}</span></div><p>${esc(item.summary)}</p></div>
       <div class="plc-compare-detail-grid"><div class="plc-compare-side"><h4>Baseline</h4><pre>${esc(formatValue(item.baseline))}</pre></div><div class="plc-compare-side"><h4>Current / problem</h4><pre>${esc(formatValue(item.current))}</pre></div></div>
       ${item.evidence ? `<div class="plc-section-box plc-compare-evidence"><h3>Source evidence</h3><pre>${esc(formatValue(item.evidence))}</pre></div>` : ""}`;
     els.detail.hidden = false;
