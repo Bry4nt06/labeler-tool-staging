@@ -149,7 +149,7 @@ test("v1 parser is local/read-only and UI states that files are not uploaded", (
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/index.html"), "utf8");
   assert.doesNotMatch(coreSource, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(uiSource, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
-  assert.match(uiSource, /new Worker\("\.\/l5k-analyzer-worker\.js\?v=1"\)/);
+  assert.match(uiSource, /new Worker\("\.\/l5k-analyzer-worker\.js\?v=11"\)/);
   assert.match(page, /parsed in your browser and is not uploaded/i);
   assert.match(page, /static source analysis, not PLC simulation/i);
 });
