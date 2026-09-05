@@ -150,7 +150,8 @@ test("v5 dependency UI remains local/read-only under the current analyzer releas
   assert.match(ui, /Static source trace/);
   assert.match(page, /PLC ANALYZER v9 — MSG MESSAGE TOPOLOGY/);
   assert.match(page, /l5k-analyzer-dependencies-v5\.js\?v=5/);
-  assert.match(page, /plc-analyzer-dependencies-v5\.js\?v=9/);
+  assert.match(page, /l5k-analyzer-sequence-v11\.js\?v=11/);
+  assert.match(page, /plc-analyzer-dependencies-v5\.js\?v=11/);
   assert.doesNotMatch(ui, /fetch\s*\(/);
   assert.doesNotMatch(ui, /XMLHttpRequest/);
   assert.doesNotMatch(ui, /localStorage/);
