@@ -142,14 +142,15 @@ test("v5 enriches the legacy v4 parser path without losing routine context", () 
   assert.equal(project.faultWriters[0].writers[0].routine, "FaultsRoutine");
 });
 
-test("v5 UI remains local/read-only and exposes dependency tracing as static analysis", () => {
+test("v5 dependency UI remains local/read-only under the current analyzer release", () => {
   const fs = require("node:fs");
   const ui = fs.readFileSync(path.join(root, "app/plc-analyzer/plc-analyzer-dependencies-v5.js"), "utf8");
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/index.html"), "utf8");
   assert.match(ui, /new Worker\("\.\/l5k-analyzer-worker\.js\?v=5"\)/);
   assert.match(ui, /Static source trace/);
-  assert.match(page, /PLC ANALYZER v5 — DEPENDENCY TRACE/);
+  assert.match(page, /PLC ANALYZER v6 — CALL-GRAPH REVIEW/);
   assert.match(page, /l5k-analyzer-dependencies-v5\.js\?v=5/);
+  assert.match(page, /plc-analyzer-dependencies-v5\.js\?v=6/);
   assert.doesNotMatch(ui, /fetch\s*\(/);
   assert.doesNotMatch(ui, /XMLHttpRequest/);
   assert.doesNotMatch(ui, /localStorage/);
