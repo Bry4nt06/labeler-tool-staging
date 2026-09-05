@@ -1,8 +1,8 @@
 # ServoForge PLC / L5K Analyzer — Build Plan
 
-Status: **active feature branch build**  
-Branch: `feature/plc-l5k-analyzer-v1`  
-Baseline: staging `main` at Troubleshooting v363 (`5ba786444d85c0d36f7f4f1dce8f15d222526353`)  
+Status: **active feature branch build**
+Branch: `feature/plc-l5k-analyzer-v1`
+Baseline: staging `main` at Troubleshooting v363 (`5ba786444d85c0d36f7f4f1dce8f15d222526353`)
 Production: **out of scope**
 
 ## Goal
