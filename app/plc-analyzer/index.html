@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="./plc-analyzer.css?v=1" />
   </head>
   <body>
-    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER v4 — LEGACY L5K SUPPORT — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER v5 — DEPENDENCY TRACE — NOT PRODUCTION</div>
     <main class="app plc-analyzer-app">
       <section class="topbar plc-analyzer-topbar">
         <div>
@@ -32,7 +32,7 @@
         <div>
           <span class="sf-eyebrow">SOURCE ANALYSIS</span>
           <h2>What does the PLC export actually say?</h2>
-          <p>Drop an L5K export to inventory logic, fault writers, timers, counters, I/O, module status reads, motion references, and review-worthy discrepancies.</p>
+          <p>Drop an L5K export to inventory logic, fault writers, timers, counters, I/O, module status reads, motion references, routine calls, UDT relationships, and review-worthy discrepancies.</p>
         </div>
         <div class="plc-local-badge" aria-label="Local-only file handling">
           <strong>Local only</strong>
@@ -149,6 +149,8 @@
 
     <script src="./l5k-analyzer-core.js?v=1"></script>
     <script src="./l5k-analyzer-legacy-v4.js?v=4"></script>
-    <script src="./plc-analyzer.js?v=4"></script>
+    <script src="./l5k-analyzer-dependencies-v5.js?v=5"></script>
+    <script src="./plc-analyzer.js?v=5"></script>
+    <script src="./plc-analyzer-dependencies-v5.js?v=5"></script>
   </body>
 </html>
