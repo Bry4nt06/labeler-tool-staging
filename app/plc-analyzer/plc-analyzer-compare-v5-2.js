@@ -74,7 +74,7 @@
   }
 
   function createWorker() {
-    try { return new Worker("./l5k-analyzer-compare-worker.js?v=7.1"); }
+    try { return new Worker("./l5k-analyzer-compare-worker.js?v=8.1"); }
     catch { return null; }
   }
 
@@ -85,7 +85,7 @@
     setStatus("Reading both L5K files locally…", "loading");
     try {
       const [baselineText, currentText] = await Promise.all([readFile(state.baselineFile), readFile(state.currentFile)]);
-      setStatus("Parsing source, dependency graphs, task schedules, and comparison…", "loading");
+      setStatus("Parsing source, dependency graphs, task schedules, communication topology, and comparison…", "loading");
       const result = await new Promise((resolve, reject) => {
         const worker = createWorker();
         if (!worker) {
@@ -127,7 +127,8 @@
       const total = state.comparison.statistics?.totalDifferences || 0;
       const dependencies = state.comparison.statistics?.dependencyDifferences || 0;
       const tasks = state.comparison.statistics?.taskScheduleDifferences || 0;
-      setStatus(`Comparison complete • ${total} source differences • ${dependencies} dependency differences • ${tasks} task-schedule differences.`, "pass");
+      const communications = state.comparison.statistics?.communicationDifferences || 0;
+      setStatus(`Comparison complete • ${total} source differences • ${dependencies} dependency differences • ${tasks} task-schedule differences • ${communications} communication differences.`, "pass");
     } catch (error) {
       console.error(error);
       state.baselineProject = null;
@@ -149,6 +150,7 @@
     const stats = project?.statistics || {};
     const dependencyStats = project?.dependencies?.statistics || {};
     const taskStats = project?.dependencies?.taskScheduling?.statistics || {};
+    const communicationStats = project?.dependencies?.communicationTopology?.statistics || {};
     return `<div class="plc-compare-project-card">
       <span class="sf-eyebrow">${esc(label)}</span>
       <h3>${esc(project?.controller || project?.source?.fileName || "PLC project")}</h3>
@@ -162,6 +164,8 @@
         <dt>AOI definitions</dt><dd>${esc(dependencyStats.aoiDefinitions || 0)}</dd>
         <dt>Tasks</dt><dd>${esc(taskStats.tasks || 0)}</dd>
         <dt>Scheduled programs</dt><dd>${esc(taskStats.scheduledPrograms || 0)}</dd>
+        <dt>Produced tags</dt><dd>${esc(communicationStats.producedTags || 0)}</dd>
+        <dt>Consumed tags</dt><dd>${esc(communicationStats.consumedTags || 0)}</dd>
       </dl>
     </div>`;
   }
@@ -182,7 +186,8 @@
       summaryCard("Rung differences", stats.categoryCounts?.rungs || 0),
       summaryCard("Fault differences", stats.categoryCounts?.faults || 0),
       summaryCard("Dependency differences", stats.dependencyDifferences || 0),
-      summaryCard("Task schedule differences", stats.taskScheduleDifferences || 0)
+      summaryCard("Task schedule differences", stats.taskScheduleDifferences || 0),
+      summaryCard("Communication differences", stats.communicationDifferences || 0)
     ].join("");
     els.projectCards.innerHTML = projectCard("BASELINE", state.baselineProject) + projectCard("CURRENT / PROBLEM", state.currentProject);
     resetFilters(false);
@@ -194,7 +199,7 @@
   }
 
   function differenceRow(item) {
-    const detailKind = item.dependencyKind || item.taskKind || "";
+    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || "";
     const kindBadge = detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : "";
     return `<div class="plc-row plc-compare-diff" data-difference-id="${esc(item.id)}">
       <div class="plc-compare-diff-head"><div><strong>${esc(item.title)}</strong><small>${esc(item.summary)}</small></div>
@@ -237,8 +242,11 @@
     const taskBoundary = item.category === "tasks"
       ? `<div class="plc-warning"><strong>Task schedule comparison boundary:</strong> TASK attributes, program assignment, and declared order are source/configuration evidence only. They do not prove current task execution, inhibit state, scan timing, controller mode, or that a change is defective.</div>`
       : "";
-    const detailKind = item.dependencyKind || item.taskKind || "";
-    els.detailBody.innerHTML = `${dependencyBoundary}${taskBoundary}<div class="plc-section-box"><div class="plc-compare-badges"><span class="plc-compare-badge" data-kind="${esc(item.changeType)}">${esc(item.changeType)}</span><span class="plc-compare-badge">${esc(item.category)}</span>${detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : ""}<span class="plc-compare-badge" data-kind="${esc(item.reviewLevel)}">${esc(item.reviewLevel)}</span></div><p>${esc(item.summary)}</p></div>
+    const communicationBoundary = item.category === "communications"
+      ? `<div class="plc-warning"><strong>Communication comparison boundary:</strong> Produced/consumed tag attributes are source/configuration evidence only. They do not prove peer availability, packet delivery, connection health, current connection status, actual consumer count, or that an RPI/timeout value should be changed.</div>`
+      : "";
+    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || "";
+    els.detailBody.innerHTML = `${dependencyBoundary}${taskBoundary}${communicationBoundary}<div class="plc-section-box"><div class="plc-compare-badges"><span class="plc-compare-badge" data-kind="${esc(item.changeType)}">${esc(item.changeType)}</span><span class="plc-compare-badge">${esc(item.category)}</span>${detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : ""}<span class="plc-compare-badge" data-kind="${esc(item.reviewLevel)}">${esc(item.reviewLevel)}</span></div><p>${esc(item.summary)}</p></div>
       <div class="plc-compare-detail-grid"><div class="plc-compare-side"><h4>Baseline</h4><pre>${esc(formatValue(item.baseline))}</pre></div><div class="plc-compare-side"><h4>Current / problem</h4><pre>${esc(formatValue(item.current))}</pre></div></div>
       ${item.evidence ? `<div class="plc-section-box plc-compare-evidence"><h3>Source evidence</h3><pre>${esc(formatValue(item.evidence))}</pre></div>` : ""}`;
     els.detail.hidden = false;
