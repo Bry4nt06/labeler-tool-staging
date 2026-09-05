@@ -163,8 +163,11 @@
         writerCount: item.writerCount || 0,
         writerTypes: sortedUnique((item.writers || []).map((writer) => writer.instruction)),
         writerLocations: sortedUnique((item.writers || []).map((writer) => `${writer.program || "?"}/${writer.routine || "?"}/${writer.rung}`)),
+        writerSymbols: sortedUnique((item.writers || []).flatMap((writer) => (writer.symbols || []).filter((symbol) => symbol !== item.target))),
+        writerSources: sortedUnique((item.writers || []).map((writer) => normalizedSource(writer.source))),
         resetCount: (item.resets || []).length,
-        resetLocations: sortedUnique((item.resets || []).map((reset) => `${reset.program || "?"}/${reset.routine || "?"}/${reset.rung}`))
+        resetLocations: sortedUnique((item.resets || []).map((reset) => `${reset.program || "?"}/${reset.routine || "?"}/${reset.rung}`)),
+        resetSources: sortedUnique((item.resets || []).map((reset) => normalizedSource(reset.source)))
       }),
       (_item, key) => `Fault/output ${key}`,
       {
