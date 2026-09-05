@@ -66,7 +66,7 @@
 
   function createWorker() {
     try {
-      return new Worker("./l5k-analyzer-worker.js?v=1");
+      return new Worker("./l5k-analyzer-worker.js?v=11");
     } catch (_error) {
       return null;
     }
