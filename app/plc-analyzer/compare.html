@@ -13,12 +13,12 @@
     <link rel="stylesheet" href="./plc-analyzer-compare.css?v=2" />
   </head>
   <body>
-    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER COMPARE v9.1 — MSG / MESSAGE DIFF — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER COMPARE v9.1 — MSG / MESSAGE DIFF • v10.1 CONSISTENCY STATE DIFF — NOT PRODUCTION</div>
     <main class="app plc-analyzer-app">
       <section class="topbar plc-analyzer-topbar">
         <div>
           <h1>ServoForge <span class="product-module">PLC Compare</span></h1>
-          <p>Known-good vs current/problem L5K source, dependency, task-schedule, produced/consumed, and MSG/MESSAGE comparison.</p>
+          <p>Known-good vs current/problem L5K source, dependency, task-schedule, communications, MSG/MESSAGE, and peer-consistency comparison.</p>
         </div>
         <nav class="module-navigation" aria-label="ServoForge modules">
           <a class="module-navigation-link" href="../../index.html">Labeler Tool</a>
@@ -33,7 +33,7 @@
         <div>
           <span class="sf-eyebrow">SOURCE COMPARISON</span>
           <h2>What changed between two PLC exports?</h2>
-          <p>Compare a known-good/baseline export against a current or problem export. ServoForge reports exact rung/configuration differences, source-visible MAIN/JSR/UDT/AOI dependencies, TASK/program scheduling, produced/consumed communication tags, and explicit MSG/MESSAGE configuration/call-site changes without assuming that a change is defective.</p>
+          <p>Compare a known-good/baseline export against a current or problem export. ServoForge reports exact rung/configuration differences, source-visible MAIN/JSR/UDT/AOI dependencies, TASK/program scheduling, produced/consumed communication tags, explicit MSG/MESSAGE changes, and v10.1 changes in source-visible program-scoped peer consistency without assuming that a change is defective.</p>
         </div>
         <div class="plc-local-badge" aria-label="Local-only file handling">
           <strong>Local only</strong>
@@ -69,7 +69,7 @@
           <button id="plcCompareButton" type="button" disabled>Compare PLC Projects</button>
           <button id="plcCompareClear" type="button" class="secondary-button" disabled>Clear</button>
         </div>
-        <p class="plc-source-boundary"><strong>Boundary:</strong> A difference is source/configuration evidence only. This comparison does not prove live state, runtime execution, wiring condition, device health, scan time, current task inhibit state, controller mode, peer availability, route health, packet delivery, connection health, message completion, current EN/DN/ER state, payload freshness, actual consumer count, or that a change is defective. TASK attributes, produced/consumed attributes, MESSAGE configuration, and MSG call sites are compared only as source-visible offline evidence.</p>
+        <p class="plc-source-boundary"><strong>Boundary:</strong> A difference is source/configuration evidence only. Same-name program-scoped tags are inferred peers, not proof of identical machine function. Uniform/divergent state, majority/outlier patterns, timer/counter PRE values, and numeric thresholds do not establish a correct field setting and are not adjustment recommendations. This comparison does not prove live state, runtime execution, wiring condition, device health, scan time, current task inhibit state, controller mode, peer availability, route health, packet delivery, connection health, message completion, current EN/DN/ER state, payload freshness, actual consumer count, or that a change is defective.</p>
       </section>
 
       <section id="plcCompareResults" hidden>
@@ -82,9 +82,10 @@
         <section class="panel plc-search-panel">
           <div class="sf-section-heading"><div><span class="sf-eyebrow">FILTER DIFFERENCES</span><h2>Review changed source</h2></div><span id="plcCompareCount" class="plc-status"></span></div>
           <div class="plc-compare-filters">
-            <input id="plcCompareSearch" type="search" spellcheck="false" placeholder="MSG, MESSAGE, ConnectionPath, RemoteElement, Producer, RPI, task, JSR, fault..." />
+            <input id="plcCompareSearch" type="search" spellcheck="false" placeholder="DelayTimer, CycleCount, MSG, ConnectionPath, Producer, RPI, task, JSR, fault..." />
             <select id="plcCompareCategory" aria-label="Difference category">
               <option value="all">All categories</option>
+              <option value="consistency">Peer consistency — timers / counters / thresholds</option>
               <option value="messages">MSG / MESSAGE paths</option>
               <option value="communications">Produced / consumed communication</option>
               <option value="tasks">Tasks / scheduling</option>
@@ -119,7 +120,7 @@
       </section>
 
       <footer class="sf-troubleshooting-footer plc-footer">
-        <p><strong>Read-only comparison:</strong> ServoForge does not connect to, write to, force, reset, or modify either PLC project. Timer presets, thresholds, addresses, module settings, dependency changes, task attributes, program assignment, task order, produced/consumed attributes, MESSAGE configuration, MSG call sites, connection paths, source/destination elements, requested lengths, and CIP service/object fields are displayed as source evidence only.</p>
+        <p><strong>Read-only comparison:</strong> ServoForge does not connect to, write to, force, reset, or modify either PLC project. Timer presets, thresholds, peer-consistency states, addresses, module settings, dependency changes, task attributes, program assignment, task order, produced/consumed attributes, MESSAGE configuration, MSG call sites, connection paths, source/destination elements, requested lengths, and CIP service/object fields are displayed as source evidence only.</p>
       </footer>
     </main>
 
@@ -130,11 +131,13 @@
     <script src="./l5k-analyzer-task-schedule-v7.js?v=7"></script>
     <script src="./l5k-analyzer-communication-v8.js?v=8"></script>
     <script src="./l5k-analyzer-message-v9.js?v=9"></script>
+    <script src="./l5k-analyzer-consistency-v10.js?v=10"></script>
     <script src="./l5k-analyzer-compare.js?v=2"></script>
     <script src="./l5k-analyzer-compare-dependencies-v5-2.js?v=5.2"></script>
     <script src="./l5k-analyzer-compare-task-schedule-v7-1.js?v=7.1"></script>
     <script src="./l5k-analyzer-compare-communication-v8-1.js?v=8.1"></script>
     <script src="./l5k-analyzer-compare-message-v9-1.js?v=9.1"></script>
-    <script src="./plc-analyzer-compare-v5-2.js?v=9.1"></script>
+    <script src="./l5k-analyzer-compare-consistency-v10-1.js?v=10.1"></script>
+    <script src="./plc-analyzer-compare-v5-2.js?v=10.1"></script>
   </body>
 </html>
