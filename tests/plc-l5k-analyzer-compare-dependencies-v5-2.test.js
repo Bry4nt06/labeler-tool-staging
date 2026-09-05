@@ -117,18 +117,19 @@ test("v5.2 dependency category can be filtered with the existing comparison filt
   assert.ok(filtered.every((item) => item.category === "dependencies"));
 });
 
-test("v5.2 Compare UI loads dependency parser/wrapper locally and exposes dependency filter", () => {
+test("v5.2 Compare layer remains local/read-only under the current task-aware release", () => {
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/compare.html"), "utf8");
   const ui = fs.readFileSync(path.join(root, "app/plc-analyzer/plc-analyzer-compare-v5-2.js"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-compare-dependencies-v5-2.js"), "utf8");
   const dependencies = page.indexOf("l5k-analyzer-dependencies-v5.js?v=5");
   const baseCompare = page.indexOf("l5k-analyzer-compare.js?v=2");
   const wrapper = page.indexOf("l5k-analyzer-compare-dependencies-v5-2.js?v=5.2");
-  const uiScript = page.indexOf("plc-analyzer-compare-v5-2.js?v=5.2");
-  assert.ok(dependencies >= 0 && dependencies < baseCompare && baseCompare < wrapper && wrapper < uiScript);
+  const taskWrapper = page.indexOf("l5k-analyzer-compare-task-schedule-v7-1.js?v=7.1");
+  const uiScript = page.indexOf("plc-analyzer-compare-v5-2.js?v=7.1");
+  assert.ok(dependencies >= 0 && dependencies < baseCompare && baseCompare < wrapper && wrapper < taskWrapper && taskWrapper < uiScript);
   assert.match(page, /value="dependencies"/);
-  assert.match(page, /PLC ANALYZER COMPARE v5\.2 — DEPENDENCY DIFF/);
-  assert.match(ui, /new Worker\("\.\/l5k-analyzer-compare-worker\.js\?v=5\.2"\)/);
+  assert.match(page, /PLC ANALYZER COMPARE v7\.1 — TASK SCHEDULE DIFF/);
+  assert.match(ui, /new Worker\("\.\/l5k-analyzer-compare-worker\.js\?v=7\.1"\)/);
   assert.doesNotMatch(ui, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
 });
