@@ -148,9 +148,9 @@ test("v5 dependency UI remains local/read-only under the current analyzer releas
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/index.html"), "utf8");
   assert.match(ui, /new Worker\("\.\/l5k-analyzer-worker\.js\?v=5"\)/);
   assert.match(ui, /Static source trace/);
-  assert.match(page, /PLC ANALYZER v8 — PRODUCED \/ CONSUMED TOPOLOGY/);
+  assert.match(page, /PLC ANALYZER v9 — MSG MESSAGE TOPOLOGY/);
   assert.match(page, /l5k-analyzer-dependencies-v5\.js\?v=5/);
-  assert.match(page, /plc-analyzer-dependencies-v5\.js\?v=8/);
+  assert.match(page, /plc-analyzer-dependencies-v5\.js\?v=9/);
   assert.doesNotMatch(ui, /fetch\s*\(/);
   assert.doesNotMatch(ui, /XMLHttpRequest/);
   assert.doesNotMatch(ui, /localStorage/);
