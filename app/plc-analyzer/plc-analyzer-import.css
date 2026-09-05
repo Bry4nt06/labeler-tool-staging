@@ -1,0 +1,74 @@
+.plc-import-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.plc-import-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.plc-import-candidate {
+  gap: 0.6rem;
+}
+
+.plc-import-candidate[data-coverage="review-candidate"] {
+  border-left: 3px solid currentColor;
+}
+
+.plc-import-candidate[data-coverage="covered-exact-source-reference"] {
+  opacity: 0.88;
+}
+
+.plc-import-status-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.plc-import-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.plc-import-evidence-box {
+  border: 1px solid rgba(150, 190, 180, 0.22);
+  border-radius: 0.65rem;
+  padding: 0.85rem;
+  background: rgba(4, 17, 21, 0.38);
+  min-width: 0;
+}
+
+.plc-import-evidence-box pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0.5rem 0 0;
+  max-height: 22rem;
+  overflow: auto;
+}
+
+.plc-import-unresolved-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.plc-import-library-bridge {
+  width: 0;
+  height: 0;
+  border: 0;
+  position: absolute;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .plc-import-filter-grid,
+  .plc-import-evidence-grid {
+    grid-template-columns: 1fr;
+  }
+}

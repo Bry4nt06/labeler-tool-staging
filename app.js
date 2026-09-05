@@ -22,18 +22,30 @@
   }
 })();
 
-(function installTroubleshootingNavigation() {
+(function installToolNavigation() {
   const install = () => {
-    if (document.getElementById("troubleshootingLibraryButton")) return;
     const settings = document.querySelector(".top-settings-menu");
     if (!settings?.parentElement) return;
-    const button = document.createElement("button");
-    button.id = "troubleshootingLibraryButton";
-    button.type = "button";
-    button.textContent = "Troubleshooting";
-    button.title = "Open the ServoForge Troubleshooting Library";
-    button.addEventListener("click", () => { window.location.href = "./app/troubleshooting/index.html"; });
-    settings.parentElement.insertBefore(button, settings);
+
+    if (!document.getElementById("troubleshootingLibraryButton")) {
+      const troubleshootingButton = document.createElement("button");
+      troubleshootingButton.id = "troubleshootingLibraryButton";
+      troubleshootingButton.type = "button";
+      troubleshootingButton.textContent = "Troubleshooting";
+      troubleshootingButton.title = "Open the ServoForge Troubleshooting Library";
+      troubleshootingButton.addEventListener("click", () => { window.location.href = "./app/troubleshooting/index.html"; });
+      settings.parentElement.insertBefore(troubleshootingButton, settings);
+    }
+
+    if (!document.getElementById("plcAnalyzerButton")) {
+      const analyzerButton = document.createElement("button");
+      analyzerButton.id = "plcAnalyzerButton";
+      analyzerButton.type = "button";
+      analyzerButton.textContent = "PLC Analyzer";
+      analyzerButton.title = "Open the ServoForge PLC / L5K Analyzer";
+      analyzerButton.addEventListener("click", () => { window.location.href = "./app/plc-analyzer/index.html"; });
+      settings.parentElement.insertBefore(analyzerButton, settings);
+    }
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
   else install();

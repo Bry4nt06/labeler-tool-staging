@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="application-version" content="0.9.10" />
+    <meta name="theme-color" content="#173f35" />
+    <title>ServoForge PLC Import Assistant — STAGING</title>
+    <link rel="manifest" href="../../manifest.webmanifest" />
+    <link rel="icon" href="../../assets/labeler-tool-icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../../styles.css?v=0.9.10" />
+    <link rel="stylesheet" href="./plc-analyzer.css?v=1" />
+    <link rel="stylesheet" href="./plc-analyzer-import.css?v=3" />
+  </head>
+  <body>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC IMPORT ASSISTANT v3 — NOT PRODUCTION</div>
+    <main class="app plc-analyzer-app">
+      <section class="topbar plc-analyzer-topbar">
+        <div>
+          <h1>ServoForge <span class="product-module">PLC Import Assistant</span></h1>
+          <p>Turn source-proven L5K fault logic into reviewable Troubleshooting Library draft records.</p>
+        </div>
+        <nav class="module-navigation" aria-label="ServoForge modules">
+          <a class="module-navigation-link" href="../../index.html">Labeler Tool</a>
+          <a class="module-navigation-link" href="../troubleshooting/index.html">Troubleshooting</a>
+          <a class="module-navigation-link" href="./index.html">PLC Analyzer</a>
+          <a class="module-navigation-link" href="./compare.html">Compare</a>
+          <a class="module-navigation-link active" href="./import.html" aria-current="page">Import Assistant</a>
+        </nav>
+      </section>
+
+      <section class="panel plc-analyzer-intro">
+        <div>
+          <span class="sf-eyebrow">REVIEW-ONLY IMPORT PIPELINE</span>
+          <h2>Find source-backed troubleshooting candidates without publishing guesses</h2>
+          <p>The assistant parses one L5K locally, checks exact PLC target references against the currently loaded Troubleshooting Library, and generates draft records for SME review.</p>
+        </div>
+        <div class="plc-local-badge" aria-label="Local-only file handling">
+          <strong>Local L5K parsing</strong>
+          <span>The selected PLC export is not uploaded.</span>
+        </div>
+      </section>
+
+      <section class="panel plc-file-panel" aria-labelledby="plcImportFileHeading">
+        <div class="sf-section-heading">
+          <div><span class="sf-eyebrow">1. SOURCE FILE</span><h2 id="plcImportFileHeading">Load an L5K export</h2></div>
+          <span id="plcImportFileStatus" class="plc-status" aria-live="polite">No file selected.</span>
+        </div>
+        <div id="plcImportDropZone" class="plc-drop-zone" tabindex="0" role="button" aria-label="Drop L5K file or choose a file">
+          <input id="plcImportFileInput" type="file" accept=".l5k,.L5K,text/plain" hidden />
+          <strong>Drop .L5K here</strong>
+          <span>or click to browse</span>
+          <small id="plcImportSelectedFile">No file selected</small>
+        </div>
+        <div class="plc-file-actions">
+          <button id="plcImportAnalyzeButton" type="button" disabled>Analyze &amp; Build Review Queue</button>
+          <button id="plcImportClearButton" type="button" class="secondary-button" disabled>Clear</button>
+        </div>
+        <p class="plc-source-boundary"><strong>Boundary:</strong> An unmatched PLC target is a review candidate, not proof that ServoForge is missing a diagnostic. Alarm number/text and machine namespace are never inferred from the bit address alone.</p>
+      </section>
+
+      <section class="panel plc-import-library-panel" aria-labelledby="plcLibraryBridgeHeading">
+        <div class="sf-section-heading">
+          <div><span class="sf-eyebrow">2. CURRENT LIBRARY</span><h2 id="plcLibraryBridgeHeading">Troubleshooting coverage bridge</h2></div>
+          <span id="plcImportLibraryStatus" class="plc-status" aria-live="polite">Waiting for analysis.</span>
+        </div>
+        <p>The assistant reads the currently deployed Troubleshooting Library from a hidden same-origin page. It compares exact PLC target strings only; it does not treat fuzzy text similarity as verified coverage.</p>
+      </section>
+
+      <section id="plcImportResults" hidden>
+        <section class="panel plc-overview-panel">
+          <div class="sf-section-heading">
+            <div><span class="sf-eyebrow">3. REVIEW QUEUE</span><h2 id="plcImportControllerName">PLC project</h2></div>
+            <span id="plcImportAnalysisStatus" class="plc-status"></span>
+          </div>
+          <div id="plcImportSummaryCards" class="plc-summary-grid"></div>
+          <div class="plc-import-actions">
+            <button id="plcImportDownloadButton" type="button">Download Review JSON</button>
+            <button id="plcImportCopyButton" type="button" class="secondary-button">Copy Review JSON</button>
+          </div>
+        </section>
+
+        <section class="panel plc-search-panel">
+          <div class="sf-section-heading">
+            <div><span class="sf-eyebrow">FILTER</span><h2>Candidate records</h2></div>
+            <span id="plcImportResultCount" class="plc-status"></span>
+          </div>
+          <div class="plc-import-filter-grid">
+            <input id="plcImportSearch" type="search" spellcheck="false" placeholder="Faults[1].13, encoder, WebBreakTime..." />
+            <select id="plcImportCoverageFilter" aria-label="Filter coverage status">
+              <option value="all">All coverage states</option>
+              <option value="review-candidate">Review candidates</option>
+              <option value="covered-exact-source-reference">Exact source reference already found</option>
+              <option value="coverage-unverified">Coverage unavailable</option>
+            </select>
+          </div>
+          <div id="plcImportCandidateList" class="plc-list"></div>
+        </section>
+
+        <section id="plcImportDetailPanel" class="panel plc-detail-panel" hidden>
+          <div class="sf-section-heading">
+            <div><span class="sf-eyebrow">DRAFT EVIDENCE</span><h2 id="plcImportDetailTitle">Candidate</h2></div>
+            <button id="plcImportDetailClose" type="button" class="secondary-button">Close</button>
+          </div>
+          <div id="plcImportDetailBody"></div>
+        </section>
+      </section>
+
+      <iframe id="plcTroubleshootingLibraryBridge" class="plc-import-library-bridge" title="Troubleshooting library coverage bridge" src="../troubleshooting/index.html?embeddedCoverageBridge=v3" hidden></iframe>
+
+      <footer class="sf-troubleshooting-footer plc-footer">
+        <p><strong>Review-only:</strong> Generated JSON is a draft evidence package. It does not publish to the Troubleshooting Library, edit a PLC, infer live machine state, or authorize field parameter changes.</p>
+      </footer>
+    </main>
+
+    <script src="./l5k-analyzer-core.js?v=1"></script>
+    <script src="./l5k-analyzer-import.js?v=3"></script>
+    <script src="./plc-analyzer-import.js?v=3"></script>
+  </body>
+</html>

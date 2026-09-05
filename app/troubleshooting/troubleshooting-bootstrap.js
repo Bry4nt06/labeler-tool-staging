@@ -22,6 +22,23 @@
   };
   global.ServoForgeTroubleshootingBootstrap = state;
 
+  function installAnalyzerNavigation() {
+    const install = () => {
+      const nav = document.querySelector(".module-navigation");
+      if (!nav || document.getElementById("troubleshootingPlcAnalyzerLink")) return;
+      const link = document.createElement("a");
+      link.id = "troubleshootingPlcAnalyzerLink";
+      link.className = "module-navigation-link";
+      link.href = "../plc-analyzer/index.html";
+      link.textContent = "PLC Analyzer";
+      link.title = "Open the ServoForge PLC / L5K Analyzer";
+      nav.appendChild(link);
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
+    else install();
+  }
+  installAnalyzerNavigation();
+
   function statusElement() { return document.getElementById(STATUS_ID); }
   function repairElement() { return document.getElementById(REPAIR_ID); }
   function filename(value) {
