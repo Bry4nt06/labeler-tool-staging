@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="application-version" content="0.9.10" />
+    <meta name="theme-color" content="#173f35" />
+    <title>ServoForge PLC Analyzer — STAGING</title>
+    <link rel="manifest" href="../../manifest.webmanifest" />
+    <link rel="icon" href="../../assets/labeler-tool-icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../../styles.css?v=0.9.10" />
+    <link rel="stylesheet" href="./plc-analyzer.css?v=1" />
+  </head>
+  <body>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER v1 — NOT PRODUCTION</div>
+    <main class="app plc-analyzer-app">
+      <section class="topbar plc-analyzer-topbar">
+        <div>
+          <h1>ServoForge <span class="product-module">PLC Analyzer</span></h1>
+          <p>Read-only static analysis of Allen-Bradley / Rockwell L5K exports.</p>
+        </div>
+        <nav class="module-navigation" aria-label="ServoForge modules">
+          <a class="module-navigation-link" href="../../index.html">Labeler Tool</a>
+          <a class="module-navigation-link" href="../troubleshooting/index.html">Troubleshooting</a>
+          <a class="module-navigation-link active" href="./index.html" aria-current="page">PLC Analyzer</a>
+        </nav>
+      </section>
+
+      <section class="panel plc-analyzer-intro">
+        <div>
+          <span class="sf-eyebrow">SOURCE ANALYSIS</span>
+          <h2>What does the PLC export actually say?</h2>
+          <p>Drop an L5K export to inventory logic, fault writers, timers, counters, I/O, module status reads, motion references, and review-worthy discrepancies.</p>
+        </div>
+        <div class="plc-local-badge" aria-label="Local-only file handling">
+          <strong>Local only</strong>
+          <span>This file is parsed in your browser and is not uploaded.</span>
+        </div>
+      </section>
+
+      <section class="panel plc-file-panel" aria-labelledby="plcFileHeading">
+        <div class="sf-section-heading">
+          <div><span class="sf-eyebrow">1. SOURCE FILE</span><h2 id="plcFileHeading">Load an L5K export</h2></div>
+          <span id="plcFileStatus" class="plc-status" aria-live="polite">No file selected.</span>
+        </div>
+        <div id="plcDropZone" class="plc-drop-zone" tabindex="0" role="button" aria-label="Drop L5K file or choose a file">
+          <input id="plcFileInput" type="file" accept=".l5k,.L5K,text/plain" hidden />
+          <strong>Drop .L5K here</strong>
+          <span>or click to browse</span>
+          <small id="plcSelectedFile">No file selected</small>
+        </div>
+        <div class="plc-file-actions">
+          <button id="plcAnalyzeButton" type="button" disabled>Analyze PLC Project</button>
+          <button id="plcClearButton" type="button" class="secondary-button" disabled>Clear</button>
+        </div>
+        <p class="plc-source-boundary"><strong>Boundary:</strong> This is static source analysis, not PLC simulation. Findings do not prove the live machine state, actual scan time, wiring condition, or device health.</p>
+      </section>
+
+      <section id="plcResults" hidden>
+        <section class="panel plc-overview-panel">
+          <div class="sf-section-heading">
+            <div><span class="sf-eyebrow">2. PROJECT OVERVIEW</span><h2 id="plcControllerName">PLC project</h2></div>
+            <span id="plcAnalysisStatus" class="plc-status"></span>
+          </div>
+          <div id="plcSummaryCards" class="plc-summary-grid"></div>
+        </section>
+
+        <section class="panel plc-search-panel">
+          <div class="sf-section-heading">
+            <div><span class="sf-eyebrow">FASTEST PATH</span><h2>Search the analyzed source</h2></div>
+            <span id="plcSearchCount" class="plc-status"></span>
+          </div>
+          <div class="plc-search-row">
+            <input id="plcSearchInput" type="search" spellcheck="false" placeholder="Faults[1].13, WebBreakTime, Local:5:I.Data.9, FeedbackFault..." />
+            <button id="plcSearchButton" type="button">Search</button>
+          </div>
+          <div id="plcSearchResults" class="plc-search-results"></div>
+        </section>
+
+        <section class="plc-workspace">
+          <div class="plc-tab-list" role="tablist" aria-label="PLC analyzer views">
+            <button type="button" class="plc-tab active" data-plc-tab="overview" role="tab" aria-selected="true">Overview</button>
+            <button type="button" class="plc-tab" data-plc-tab="faults" role="tab" aria-selected="false">Faults / Outputs</button>
+            <button type="button" class="plc-tab" data-plc-tab="timers" role="tab" aria-selected="false">Timers &amp; Counters</button>
+            <button type="button" class="plc-tab" data-plc-tab="io" role="tab" aria-selected="false">I/O &amp; Modules</button>
+            <button type="button" class="plc-tab" data-plc-tab="motion" role="tab" aria-selected="false">Motion</button>
+            <button type="button" class="plc-tab" data-plc-tab="findings" role="tab" aria-selected="false">Discrepancies</button>
+            <button type="button" class="plc-tab" data-plc-tab="raw" role="tab" aria-selected="false">Raw Search</button>
+          </div>
+
+          <section id="plcTabOverview" class="panel plc-tab-panel" data-plc-panel="overview">
+            <h2>Project structure</h2>
+            <div id="plcProjectStructure"></div>
+          </section>
+
+          <section id="plcTabFaults" class="panel plc-tab-panel" data-plc-panel="faults" hidden>
+            <h2>Fault / output writers</h2>
+            <p class="panel-help">OTE and OTL writers for fault-like targets, with located OTU/reset evidence.</p>
+            <div id="plcFaultList"></div>
+          </section>
+
+          <section id="plcTabTimers" class="panel plc-tab-panel" data-plc-panel="timers" hidden>
+            <h2>Timers &amp; counters</h2>
+            <p class="panel-help">Native timer/counter instructions are separated from scan-counter candidates.</p>
+            <div id="plcTimerList"></div>
+          </section>
+
+          <section id="plcTabIo" class="panel plc-tab-panel" data-plc-panel="io" hidden>
+            <h2>I/O &amp; module evidence</h2>
+            <div id="plcIoList"></div>
+          </section>
+
+          <section id="plcTabMotion" class="panel plc-tab-panel" data-plc-panel="motion" hidden>
+            <h2>Motion / axis references</h2>
+            <div id="plcMotionList"></div>
+          </section>
+
+          <section id="plcTabFindings" class="panel plc-tab-panel" data-plc-panel="findings" hidden>
+            <h2>Discrepancies &amp; review items</h2>
+            <p class="panel-help">A finding is not automatically a machine defect. Each item is labeled by evidence class.</p>
+            <div id="plcFindingList"></div>
+          </section>
+
+          <section id="plcTabRaw" class="panel plc-tab-panel" data-plc-panel="raw" hidden>
+            <h2>Raw source search</h2>
+            <div class="plc-search-row">
+              <input id="plcRawSearchInput" type="search" spellcheck="false" placeholder="Search exact rung text or source symbol" />
+              <button id="plcRawSearchButton" type="button">Search source</button>
+            </div>
+            <div id="plcRawSearchResults"></div>
+          </section>
+        </section>
+
+        <section id="plcDetailPanel" class="panel plc-detail-panel" hidden>
+          <div class="sf-section-heading">
+            <div><span class="sf-eyebrow">SOURCE DETAIL</span><h2 id="plcDetailTitle">Selected evidence</h2></div>
+            <button id="plcDetailClose" type="button" class="secondary-button">Close</button>
+          </div>
+          <div id="plcDetailBody"></div>
+        </section>
+      </section>
+
+      <footer class="sf-troubleshooting-footer plc-footer">
+        <p><strong>Read-only analyzer:</strong> ServoForge does not connect to, write to, force, reset, or modify a PLC. Timer values, addresses, thresholds and module settings shown here are evidence from the supplied export and require machine-specific/runtime verification before field changes.</p>
+      </footer>
+    </main>
+
+    <script src="./l5k-analyzer-core.js?v=1"></script>
+    <script src="./plc-analyzer.js?v=1"></script>
+  </body>
+</html>
