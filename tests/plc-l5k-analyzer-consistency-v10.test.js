@@ -170,7 +170,8 @@ test("v10 page and worker remain browser-local/read-only and load after v9", () 
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/index.html"), "utf8");
   const worker = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-worker.js"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-consistency-v10.js"), "utf8");
-  assert.match(page, /PLC ANALYZER v10 — INTRA-PROJECT CONSISTENCY REVIEW/);
+  assert.match(page, /PLC ANALYZER v9 — MSG MESSAGE TOPOLOGY/);
+  assert.match(page, /v10 INTRA-PROJECT CONSISTENCY REVIEW/);
   assert.match(page, /l5k-analyzer-message-v9\.js\?v=9/);
   assert.match(page, /l5k-analyzer-consistency-v10\.js\?v=10/);
   assert.match(worker, /l5k-analyzer-message-v9\.js\?v=9/);
