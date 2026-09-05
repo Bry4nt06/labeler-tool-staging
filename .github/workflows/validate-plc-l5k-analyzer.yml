@@ -40,8 +40,10 @@ jobs:
           node --check app/plc-analyzer/l5k-analyzer-compare.js
           node --check app/plc-analyzer/l5k-analyzer-compare-worker.js
           node --check app/plc-analyzer/plc-analyzer-compare.js
+          node --check app/plc-analyzer/l5k-analyzer-import.js
+          node --check app/plc-analyzer/plc-analyzer-import.js
       - name: Run analyzer regressions
-        run: node --test tests/plc-l5k-analyzer.test.js tests/plc-l5k-analyzer-compare.test.js
+        run: node --test tests/plc-l5k-analyzer.test.js tests/plc-l5k-analyzer-compare.test.js tests/plc-l5k-analyzer-import.test.js
       - name: Check patch whitespace
         run: |
           set -euo pipefail
