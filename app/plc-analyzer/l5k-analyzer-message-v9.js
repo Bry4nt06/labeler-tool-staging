@@ -45,6 +45,42 @@
     return false;
   }
 
+  function buildMessageRecord(raw, scope, program, startLine, endLine) {
+    const header = /^\s*([A-Za-z_][A-Za-z0-9_:$]*)\s*(?:OF\s+[^:]+)?\s*:\s*MESSAGE\b/i.exec(raw);
+    if (!header) return null;
+    const attributes = {};
+    for (const name of MESSAGE_ATTRIBUTES) {
+      const value = attributeValue(raw, name);
+      if (value !== null) attributes[name] = value;
+    }
+    return {
+      name: header[1], dataType: "MESSAGE", scope, program, line: startLine, endLine, raw: raw.trim(), attributes,
+      messageType: attributes.MessageType ?? null,
+      remoteElement: attributes.RemoteElement ?? null,
+      requestedLength: attributes.RequestedLength ?? null,
+      connectedFlag: attributes.ConnectedFlag ?? null,
+      connectionPath: attributes.ConnectionPath ?? null,
+      commTypeCode: attributes.CommTypeCode ?? null,
+      serviceCode: attributes.ServiceCode ?? null,
+      objectType: attributes.ObjectType ?? null,
+      targetObject: attributes.TargetObject ?? null,
+      attributeNumber: attributes.AttributeNumber ?? null,
+      channel: attributes.Channel ?? null,
+      sourceLink: attributes.SourceLink ?? null,
+      destinationLink: attributes.DestinationLink ?? null,
+      destinationNode: attributes.DestinationNode ?? null,
+      rack: attributes.Rack ?? null,
+      group: attributes.Group ?? null,
+      slot: attributes.Slot ?? null,
+      localIndex: attributes.LocalIndex ?? null,
+      remoteIndex: attributes.RemoteIndex ?? null,
+      localElement: attributes.LocalElement ?? null,
+      destinationTag: attributes.DestinationTag ?? null,
+      cacheConnections: attributes.CacheConnections ?? null,
+      largePacketUsage: attributes.LargePacketUsage ?? null
+    };
+  }
+
   function parseMessageTags(input) {
     const lines = normalize(input).split("\n");
     const records = [];
@@ -52,69 +88,41 @@
     let inTags = false;
     let inDataType = false;
     let inAOI = false;
-    let buffer = null;
-    function finish(endLine) {
-      if (!buffer) return;
-      const raw = buffer.lines.join("\n").trim();
-      const header = /^\s*([A-Za-z_][A-Za-z0-9_:$]*)\s*(?:OF\s+[^:]+)?\s*:\s*MESSAGE\b/i.exec(raw);
-      if (header) {
-        const attributes = {};
-        for (const name of MESSAGE_ATTRIBUTES) {
-          const value = attributeValue(raw, name);
-          if (value !== null) attributes[name] = value;
-        }
-        records.push({
-          name: header[1], dataType: "MESSAGE", scope: buffer.program || "controller", program: buffer.program,
-          line: buffer.startLine, endLine, raw, attributes,
-          messageType: attributes.MessageType ?? null,
-          remoteElement: attributes.RemoteElement ?? null,
-          requestedLength: attributes.RequestedLength ?? null,
-          connectedFlag: attributes.ConnectedFlag ?? null,
-          connectionPath: attributes.ConnectionPath ?? null,
-          commTypeCode: attributes.CommTypeCode ?? null,
-          serviceCode: attributes.ServiceCode ?? null,
-          objectType: attributes.ObjectType ?? null,
-          targetObject: attributes.TargetObject ?? null,
-          attributeNumber: attributes.AttributeNumber ?? null,
-          channel: attributes.Channel ?? null,
-          sourceLink: attributes.SourceLink ?? null,
-          destinationLink: attributes.DestinationLink ?? null,
-          destinationNode: attributes.DestinationNode ?? null,
-          rack: attributes.Rack ?? null,
-          group: attributes.Group ?? null,
-          slot: attributes.Slot ?? null,
-          localIndex: attributes.LocalIndex ?? null,
-          remoteIndex: attributes.RemoteIndex ?? null,
-          localElement: attributes.LocalElement ?? null,
-          destinationTag: attributes.DestinationTag ?? null,
-          cacheConnections: attributes.CacheConnections ?? null,
-          largePacketUsage: attributes.LargePacketUsage ?? null
-        });
-      }
-      buffer = null;
-    }
+
     for (let index = 0; index < lines.length; index += 1) {
       const line = lines[index];
       const lineNumber = index + 1;
       const trimmed = line.trim();
+
       if (/^DATATYPE\b/i.test(trimmed)) { inDataType = true; continue; }
       if (/^END_DATATYPE\b/i.test(trimmed)) { inDataType = false; continue; }
       if (/^ADD_ON_INSTRUCTION_DEFINITION\b/i.test(trimmed)) { inAOI = true; continue; }
       if (/^END_ADD_ON_INSTRUCTION_DEFINITION\b/i.test(trimmed)) { inAOI = false; continue; }
       if (inDataType || inAOI) continue;
+
       const program = /^PROGRAM\s+("[^"]+"|[^\s(]+)/i.exec(trimmed);
       if (program) currentProgram = unquote(program[1]);
       if (/^END_PROGRAM\b/i.test(trimmed)) currentProgram = null;
-      if (/^TAG\b/i.test(trimmed) && !/^TAG\s*:/i.test(trimmed)) { finish(lineNumber - 1); inTags = true; continue; }
-      if (/^END_TAG\b/i.test(trimmed)) { finish(lineNumber - 1); inTags = false; continue; }
+
+      if (/^TAG\b/i.test(trimmed) && !/^TAG\s*:/i.test(trimmed)) { inTags = true; continue; }
+      if (/^END_TAG\b/i.test(trimmed)) { inTags = false; continue; }
       if (!inTags) continue;
-      if (!buffer) {
-        if (!/^\s*[A-Za-z_][A-Za-z0-9_:$]*\s*(?:OF\s+[^:]+)?\s*:\s*MESSAGE\b/i.test(line)) continue;
-        buffer = { program: currentProgram, startLine: lineNumber, lines: [line] };
-      } else buffer.lines.push(line);
-      if (statementHasTerminator(buffer.lines.join("\n"))) finish(lineNumber);
+
+      if (!/^\s*[A-Za-z_][A-Za-z0-9_:$]*\s*(?:OF\s+[^:]+)?\s*:\s*MESSAGE\b/i.test(line)) continue;
+
+      const startLine = lineNumber;
+      const statementLines = [line];
+      let cursor = index;
+      while (!statementHasTerminator(statementLines.join("\n")) && cursor + 1 < lines.length) {
+        cursor += 1;
+        if (/^\s*END_TAG\b/i.test(lines[cursor])) break;
+        statementLines.push(lines[cursor]);
+      }
+      const raw = statementLines.join("\n");
+      const record = buildMessageRecord(raw, currentProgram || "controller", currentProgram, startLine, cursor + 1);
+      if (record) records.push(record);
+      index = cursor;
     }
-    finish(lines.length);
     return records;
   }
 
@@ -309,19 +317,11 @@
     const topology = project?.dependencies?.messageTopology;
     for (const tag of topology?.messageTags || []) {
       if (!JSON.stringify(tag).toLowerCase().includes(needle)) continue;
-      extra.push({
-        type: "finding", key: tagFindingId(tag), title: `${tag.name} • ${tag.messageType || "MESSAGE"}`,
-        detail: `${tag.connectionPath || "path not present"} • ${tag.remoteElement || "remote element not present"}`,
-        score: tag.name.toLowerCase() === needle ? 120 : 78, source: tag.raw
-      });
+      extra.push({ type: "finding", key: tagFindingId(tag), title: `${tag.name} • ${tag.messageType || "MESSAGE"}`, detail: `${tag.connectionPath || "path not present"} • ${tag.remoteElement || "remote element not present"}`, score: tag.name.toLowerCase() === needle ? 120 : 78, source: tag.raw });
     }
     for (const call of topology?.calls || []) {
       if (!JSON.stringify(call).toLowerCase().includes(needle)) continue;
-      extra.push({
-        type: "finding", key: callFindingId(call), title: `MSG ${call.controlTag || "control unresolved"}`,
-        detail: `${call.program || "?"}/${call.routine || "?"} rung ${call.rung} • ${call.messageType || "configuration unresolved"}`,
-        score: String(call.controlTag || "").toLowerCase() === needle ? 115 : 76, source: call.source
-      });
+      extra.push({ type: "finding", key: callFindingId(call), title: `MSG ${call.controlTag || "control unresolved"}`, detail: `${call.program || "?"}/${call.routine || "?"} rung ${call.rung} • ${call.messageType || "configuration unresolved"}`, score: String(call.controlTag || "").toLowerCase() === needle ? 115 : 76, source: call.source });
     }
     return [...baseResults, ...extra].sort((a, b) => Number(b.score || 0) - Number(a.score || 0)).slice(0, limit);
   }
