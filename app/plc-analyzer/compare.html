@@ -13,12 +13,12 @@
     <link rel="stylesheet" href="./plc-analyzer-compare.css?v=2" />
   </head>
   <body>
-    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER COMPARE v4.1 — LEGACY L5K SUPPORT — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER COMPARE v5.2 — DEPENDENCY DIFF — NOT PRODUCTION</div>
     <main class="app plc-analyzer-app">
       <section class="topbar plc-analyzer-topbar">
         <div>
           <h1>ServoForge <span class="product-module">PLC Compare</span></h1>
-          <p>Known-good vs current/problem L5K source comparison.</p>
+          <p>Known-good vs current/problem L5K source and dependency comparison.</p>
         </div>
         <nav class="module-navigation" aria-label="ServoForge modules">
           <a class="module-navigation-link" href="../../index.html">Labeler Tool</a>
@@ -33,7 +33,7 @@
         <div>
           <span class="sf-eyebrow">SOURCE COMPARISON</span>
           <h2>What changed between two PLC exports?</h2>
-          <p>Compare a known-good/baseline export against a current or problem export. ServoForge reports exact source differences without assuming that a configuration change is a machine defect.</p>
+          <p>Compare a known-good/baseline export against a current or problem export. ServoForge reports exact rung/configuration differences plus source-visible MAIN, JSR, UDT and AOI dependency changes without assuming that a change is defective.</p>
         </div>
         <div class="plc-local-badge" aria-label="Local-only file handling">
           <strong>Local only</strong>
@@ -49,28 +49,18 @@
 
         <div class="plc-compare-files">
           <div class="plc-compare-file-card" data-role="baseline">
-            <div class="plc-compare-file-heading">
-              <span class="sf-eyebrow">BASELINE</span>
-              <h3>Known-good / reference</h3>
-            </div>
+            <div class="plc-compare-file-heading"><span class="sf-eyebrow">BASELINE</span><h3>Known-good / reference</h3></div>
             <div id="plcBaselineDropZone" class="plc-drop-zone" tabindex="0" role="button" aria-label="Choose baseline L5K file">
               <input id="plcBaselineInput" type="file" accept=".l5k,.L5K,text/plain" hidden />
-              <strong>Drop baseline .L5K</strong>
-              <span>or click to browse</span>
-              <small id="plcBaselineFile">No file selected</small>
+              <strong>Drop baseline .L5K</strong><span>or click to browse</span><small id="plcBaselineFile">No file selected</small>
             </div>
           </div>
 
           <div class="plc-compare-file-card" data-role="current">
-            <div class="plc-compare-file-heading">
-              <span class="sf-eyebrow">CURRENT / PROBLEM</span>
-              <h3>Revision to review</h3>
-            </div>
+            <div class="plc-compare-file-heading"><span class="sf-eyebrow">CURRENT / PROBLEM</span><h3>Revision to review</h3></div>
             <div id="plcCurrentDropZone" class="plc-drop-zone" tabindex="0" role="button" aria-label="Choose current L5K file">
               <input id="plcCurrentInput" type="file" accept=".l5k,.L5K,text/plain" hidden />
-              <strong>Drop current .L5K</strong>
-              <span>or click to browse</span>
-              <small id="plcCurrentFile">No file selected</small>
+              <strong>Drop current .L5K</strong><span>or click to browse</span><small id="plcCurrentFile">No file selected</small>
             </div>
           </div>
         </div>
@@ -79,28 +69,23 @@
           <button id="plcCompareButton" type="button" disabled>Compare PLC Projects</button>
           <button id="plcCompareClear" type="button" class="secondary-button" disabled>Clear</button>
         </div>
-        <p class="plc-source-boundary"><strong>Boundary:</strong> A difference is source/configuration evidence only. It does not prove live state, wiring condition, device health, scan time, or that a change is defective.</p>
+        <p class="plc-source-boundary"><strong>Boundary:</strong> A difference is source/configuration evidence only. This comparison does not prove live state, runtime execution, wiring condition, device health, scan time, or that a change is defective. Dependency differences report only source-visible call/type relationships.</p>
       </section>
 
       <section id="plcCompareResults" hidden>
         <section class="panel plc-overview-panel">
-          <div class="sf-section-heading">
-            <div><span class="sf-eyebrow">2. COMPARISON OVERVIEW</span><h2 id="plcCompareTitle">PLC project comparison</h2></div>
-            <span id="plcCompareSummaryStatus" class="plc-status"></span>
-          </div>
+          <div class="sf-section-heading"><div><span class="sf-eyebrow">2. COMPARISON OVERVIEW</span><h2 id="plcCompareTitle">PLC project comparison</h2></div><span id="plcCompareSummaryStatus" class="plc-status"></span></div>
           <div id="plcCompareSummaryCards" class="plc-summary-grid"></div>
           <div id="plcCompareProjectCards" class="plc-compare-projects"></div>
         </section>
 
         <section class="panel plc-search-panel">
-          <div class="sf-section-heading">
-            <div><span class="sf-eyebrow">FILTER DIFFERENCES</span><h2>Review changed source</h2></div>
-            <span id="plcCompareCount" class="plc-status"></span>
-          </div>
+          <div class="sf-section-heading"><div><span class="sf-eyebrow">FILTER DIFFERENCES</span><h2>Review changed source</h2></div><span id="plcCompareCount" class="plc-status"></span></div>
           <div class="plc-compare-filters">
-            <input id="plcCompareSearch" type="search" spellcheck="false" placeholder="Faults[0].9, timer, module, axis, routine..." />
+            <input id="plcCompareSearch" type="search" spellcheck="false" placeholder="Faults[0].9, timer, JSR, UDT, AOI, routine..." />
             <select id="plcCompareCategory" aria-label="Difference category">
               <option value="all">All categories</option>
+              <option value="dependencies">Dependencies — MAIN / JSR / UDT / AOI</option>
               <option value="project">Project</option>
               <option value="programs">Programs</option>
               <option value="routines">Routines</option>
@@ -114,46 +99,32 @@
               <option value="motion">Motion</option>
               <option value="rungs">Rungs</option>
             </select>
-            <select id="plcCompareChangeType" aria-label="Change type">
-              <option value="all">Added / removed / changed</option>
-              <option value="added">Added</option>
-              <option value="removed">Removed</option>
-              <option value="changed">Changed</option>
-            </select>
-            <select id="plcCompareReviewLevel" aria-label="Review level">
-              <option value="all">All review levels</option>
-              <option value="review">Review</option>
-              <option value="info">Info</option>
-              <option value="caution">Caution</option>
-            </select>
+            <select id="plcCompareChangeType" aria-label="Change type"><option value="all">Added / removed / changed</option><option value="added">Added</option><option value="removed">Removed</option><option value="changed">Changed</option></select>
+            <select id="plcCompareReviewLevel" aria-label="Review level"><option value="all">All review levels</option><option value="review">Review</option><option value="info">Info</option><option value="caution">Caution</option></select>
           </div>
         </section>
 
         <section class="panel">
-          <div class="sf-section-heading">
-            <div><span class="sf-eyebrow">SOURCE DIFFERENCES</span><h2>Comparison results</h2></div>
-            <button id="plcCompareResetFilters" type="button" class="secondary-button">Reset filters</button>
-          </div>
+          <div class="sf-section-heading"><div><span class="sf-eyebrow">SOURCE DIFFERENCES</span><h2>Comparison results</h2></div><button id="plcCompareResetFilters" type="button" class="secondary-button">Reset filters</button></div>
           <div id="plcCompareList" class="plc-list"></div>
         </section>
 
         <section id="plcCompareDetail" class="panel plc-detail-panel" hidden>
-          <div class="sf-section-heading">
-            <div><span class="sf-eyebrow">DIFFERENCE DETAIL</span><h2 id="plcCompareDetailTitle">Selected difference</h2></div>
-            <button id="plcCompareDetailClose" type="button" class="secondary-button">Close</button>
-          </div>
+          <div class="sf-section-heading"><div><span class="sf-eyebrow">DIFFERENCE DETAIL</span><h2 id="plcCompareDetailTitle">Selected difference</h2></div><button id="plcCompareDetailClose" type="button" class="secondary-button">Close</button></div>
           <div id="plcCompareDetailBody"></div>
         </section>
       </section>
 
       <footer class="sf-troubleshooting-footer plc-footer">
-        <p><strong>Read-only comparison:</strong> ServoForge does not connect to, write to, force, reset, or modify either PLC project. Timer presets, thresholds, addresses and module settings are displayed as source evidence only.</p>
+        <p><strong>Read-only comparison:</strong> ServoForge does not connect to, write to, force, reset, or modify either PLC project. Timer presets, thresholds, addresses, module settings and dependency changes are displayed as source evidence only.</p>
       </footer>
     </main>
 
     <script src="./l5k-analyzer-core.js?v=1"></script>
     <script src="./l5k-analyzer-legacy-v4.js?v=4.1"></script>
+    <script src="./l5k-analyzer-dependencies-v5.js?v=5"></script>
     <script src="./l5k-analyzer-compare.js?v=2"></script>
-    <script src="./plc-analyzer-compare.js?v=4.1"></script>
+    <script src="./l5k-analyzer-compare-dependencies-v5-2.js?v=5.2"></script>
+    <script src="./plc-analyzer-compare-v5-2.js?v=5.2"></script>
   </body>
 </html>
