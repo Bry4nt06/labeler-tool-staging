@@ -1,6 +1,6 @@
 "use strict";
 
-importScripts("./l5k-analyzer-core.js?v=1", "./l5k-analyzer-compare.js?v=2");
+importScripts("./l5k-analyzer-core.js?v=1", "./l5k-analyzer-legacy-v4.js?v=4", "./l5k-analyzer-compare.js?v=2");
 
 self.onmessage = (event) => {
   const payload = event.data || {};
