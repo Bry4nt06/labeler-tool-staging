@@ -192,16 +192,18 @@ test("v8 preserves v7 task topology and legacy neutral-N source support", () => 
   assert.equal(project.dependencies.communicationTopology.consumed[0].consumed.includeConnectionStatus, "Yes");
 });
 
-test("v8 page and worker remain browser-local/read-only", () => {
+test("v8 layer remains browser-local/read-only under the current v9 analyzer release", () => {
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/index.html"), "utf8");
   const worker = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-worker.js"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-communication-v8.js"), "utf8");
-  assert.match(page, /PLC ANALYZER v8 — PRODUCED \/ CONSUMED TOPOLOGY/);
+  assert.match(page, /PLC ANALYZER v9 — MSG MESSAGE TOPOLOGY/);
   assert.match(page, /l5k-analyzer-task-schedule-v7\.js\?v=7/);
   assert.match(page, /l5k-analyzer-communication-v8\.js\?v=8/);
+  assert.match(page, /l5k-analyzer-message-v9\.js\?v=9/);
   assert.match(worker, /l5k-analyzer-communication-v8\.js\?v=8/);
+  assert.match(worker, /l5k-analyzer-message-v9\.js\?v=9/);
   assert.match(page, /do not prove live execution/i);
-  assert.match(page, /peer availability, packet delivery, current connection status/i);
+  assert.match(page, /peer availability, route health, packet delivery/i);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(page, /connect to PLC|write to PLC|force PLC/i);
 });

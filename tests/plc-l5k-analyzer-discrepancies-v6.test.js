@@ -158,7 +158,7 @@ test("v6 layer remains local/read-only under the current analyzer release", () =
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/index.html"), "utf8");
   const worker = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-worker.js"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-discrepancies-v6.js"), "utf8");
-  assert.match(page, /PLC ANALYZER v8 — PRODUCED \/ CONSUMED TOPOLOGY/);
+  assert.match(page, /PLC ANALYZER v9 — MSG MESSAGE TOPOLOGY/);
   assert.match(page, /l5k-analyzer-discrepancies-v6\.js\?v=6/);
   assert.match(worker, /l5k-analyzer-discrepancies-v6\.js\?v=6/);
   assert.match(page, /Task-aware reachability follows source-visible TASK → PROGRAM MAIN → JSR relationships/i);

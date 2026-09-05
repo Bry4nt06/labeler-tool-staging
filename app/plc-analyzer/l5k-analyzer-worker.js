@@ -6,7 +6,8 @@ importScripts(
   "./l5k-analyzer-dependencies-v5.js?v=5",
   "./l5k-analyzer-discrepancies-v6.js?v=6",
   "./l5k-analyzer-task-schedule-v7.js?v=7",
-  "./l5k-analyzer-communication-v8.js?v=8"
+  "./l5k-analyzer-communication-v8.js?v=8",
+  "./l5k-analyzer-message-v9.js?v=9"
 );
 
 self.addEventListener("message", (event) => {
