@@ -62,11 +62,62 @@
 
   function relatedMotion(project, fault) {
     const sources = writerSources(fault);
-    const symbols = new Set(writerSymbols(fault));
-    return (project?.motionReferences || []).filter((reference) => {
-      const values = [reference?.axis, reference?.source, reference?.member].filter(Boolean).map(String);
-      return values.some((value) => symbols.has(value) || sources.some((source) => sourceMentions(source, value)));
-    });
+    const symbols = writerSymbols(fault);
+    const symbolSet = new Set(symbols);
+    const related = [];
+    const seen = new Set();
+
+    function add(reference) {
+      const key = JSON.stringify([
+        reference?.instruction ?? null,
+        reference?.axis ?? null,
+        reference?.member ?? null,
+        reference?.source ?? null,
+        reference?.routine ?? null,
+        reference?.rung ?? null
+      ]);
+      if (seen.has(key)) return;
+      seen.add(key);
+      related.push(reference);
+    }
+
+    for (const reference of project?.motionReferences || []) {
+      const axis = String(reference?.axis || "");
+      const member = String(reference?.member || "");
+      const source = String(reference?.source || "");
+      const fullStatus = axis && member ? `${axis}.${member}` : "";
+      const exactCandidates = unique([source, fullStatus, axis]);
+      const matches = exactCandidates.some((value) => symbolSet.has(value) || sources.some((writerSource) => sourceMentions(writerSource, value)))
+        || (axis && symbols.some((symbol) => symbol === axis || symbol.startsWith(`${axis}.`)));
+      if (matches) add(reference);
+    }
+
+    // Some Rockwell projects use axis tag names such as AxisOne or Servo1 that
+    // do not end in the word "Axis". Use the parsed AXIS_* declarations as the
+    // authority instead of inferring motion status from the tag name alone.
+    for (const axisRecord of project?.axes || []) {
+      const axis = String(axisRecord?.name || "");
+      if (!axis) continue;
+      for (const symbol of symbols) {
+        if (!symbol.startsWith(`${axis}.`)) continue;
+        const member = symbol.slice(axis.length + 1);
+        if (!member) continue;
+        const writer = (fault?.writers || []).find((item) => (item?.symbols || []).includes(symbol) || sourceMentions(item?.source, symbol));
+        add({
+          instruction: "STATUS",
+          axis,
+          member,
+          source: symbol,
+          program: writer?.program ?? null,
+          routine: writer?.routine ?? null,
+          rung: writer?.rung ?? null,
+          line: writer?.line ?? null,
+          evidenceClass: "declared-axis-status"
+        });
+      }
+    }
+
+    return related;
   }
 
   function collectIoReferences(fault) {
@@ -140,7 +191,8 @@
         source: reference?.source ?? null,
         member: reference?.member ?? null,
         routine: reference?.routine ?? null,
-        rung: reference?.rung ?? null
+        rung: reference?.rung ?? null,
+        evidenceClass: reference?.evidenceClass ?? null
       })),
       draft: {
         status: "draft-sme-review-required",
