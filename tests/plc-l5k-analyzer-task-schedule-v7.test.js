@@ -144,15 +144,17 @@ test("v7 preserves legacy neutral-N ladder parsing while adding TASK topology", 
   assert.ok(project.dependencies.taskScheduling.taskRootReachableRoutines.includes("P/FaultsRoutine"));
 });
 
-test("v7 page and worker remain local/read-only and load task scheduling after v6", () => {
+test("v7 layer remains local/read-only under the current v8 analyzer release", () => {
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/index.html"), "utf8");
   const worker = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-worker.js"), "utf8");
   const source = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-task-schedule-v7.js"), "utf8");
-  assert.match(page, /PLC ANALYZER v7 — TASK SCHEDULE TOPOLOGY/);
+  assert.match(page, /PLC ANALYZER v8 — PRODUCED \/ CONSUMED TOPOLOGY/);
   assert.match(page, /TASK → PROGRAM MAIN → JSR/);
   assert.match(page, /l5k-analyzer-task-schedule-v7\.js\?v=7/);
+  assert.match(page, /l5k-analyzer-communication-v8\.js\?v=8/);
   assert.match(worker, /l5k-analyzer-discrepancies-v6\.js\?v=6/);
   assert.match(worker, /l5k-analyzer-task-schedule-v7\.js\?v=7/);
+  assert.match(worker, /l5k-analyzer-communication-v8\.js\?v=8/);
   assert.match(source, /do not prove live execution/i);
   assert.doesNotMatch(source, /fetch\s*\(/);
   assert.doesNotMatch(source, /XMLHttpRequest/);
