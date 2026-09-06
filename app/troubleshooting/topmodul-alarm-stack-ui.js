@@ -5,6 +5,7 @@
 
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
   const codeFor = (entry) => entry?.code || (Number.isFinite(Number(entry?.number)) ? String(entry.number).padStart(3, "0") : "—");
+  const relationCode = (row) => row?.code || (Number.isFinite(Number(row?.number)) ? String(row.number).padStart(3, "0") : "—");
 
   function ensurePanel() {
     if (document.getElementById("faultStackInput")) return;
@@ -15,9 +16,9 @@
     panel.setAttribute("aria-labelledby", "faultStackHeading");
     panel.innerHTML = `<div class="sf-section-heading">
       <div><span class="sf-eyebrow">Multiple alarms?</span><h2 id="faultStackHeading">Alarm stack / first-fault analyzer</h2></div>
-      <p>Paste alarms in the order they appeared. ServoForge preserves that chronology and separately ranks the strongest verified PLC evidence.</p>
+      <p>Paste alarms and Cart warnings in the order they appeared. ServoForge preserves chronology and separately ranks the strongest verified source evidence.</p>
     </div>
-    <textarea id="faultStackInput" class="sf-stack-input" spellcheck="false" placeholder="Example: 673, 674, 695\nOr: 663, 1091\nField HMI code 00067 stays separate from PLC Fault 067."></textarea>
+    <textarea id="faultStackInput" class="sf-stack-input" spellcheck="false" placeholder="Example: W 0005 → 00025 → 655\nOr: W 0012 → 00022\nField HMI code 00067 stays separate from PLC Fault 067."></textarea>
     <div class="sf-stack-actions"><button id="faultStackAnalyze" type="button">Analyze alarm stack</button><span class="sf-stack-help">Ctrl/⌘ + Enter also analyzes.</span></div>
     <div id="faultStackResults" class="sf-stack-results" aria-live="polite"></div>`;
     searchPanel.insertAdjacentElement("afterend", panel);
@@ -35,10 +36,10 @@
   function renderItem(item, index, mode) {
     const entry = item.entry;
     const upstream = item.upstreamCandidatesInStack?.length
-      ? `<p class="sf-stack-note"><strong>Earlier/stronger candidates in this stack:</strong> ${item.upstreamCandidatesInStack.map((row) => `${escapeHtml(String(row.number).padStart(3, "0"))} ${escapeHtml(row.title)}${row.appearedEarlier ? " (appeared earlier)" : ""}`).join("; ")}</p>`
+      ? `<p class="sf-stack-note"><strong>Earlier/stronger candidates in this stack:</strong> ${item.upstreamCandidatesInStack.map((row) => `${escapeHtml(relationCode(row))} ${escapeHtml(row.title)}${row.appearedEarlier ? " (appeared earlier)" : ""}`).join("; ")}</p>`
       : "";
     const supports = item.downstreamItemsSupported?.length
-      ? `<p class="sf-stack-note"><strong>May explain downstream entries in this stack:</strong> ${item.downstreamItemsSupported.map((row) => `${escapeHtml(String(row.number).padStart(3, "0"))} ${escapeHtml(row.title)}`).join("; ")}</p>`
+      ? `<p class="sf-stack-note"><strong>May explain downstream entries in this stack:</strong> ${item.downstreamItemsSupported.map((row) => `${escapeHtml(relationCode(row))} ${escapeHtml(row.title)}`).join("; ")}</p>`
       : "";
     return `<button type="button" class="sf-stack-card" data-stack-entry-id="${escapeHtml(entry.id)}">
       <span class="sf-stack-rank">${mode === "observed" ? `Observed ${index + 1}` : `Priority ${index + 1}`}</span>
@@ -52,7 +53,7 @@
     const target = document.getElementById("faultStackResults");
     if (!target) return;
     if (!analysis.observed.length) {
-      target.innerHTML = `<p class="sf-stack-empty">No recognized TopModul faults were found. Enter exact fault numbers such as <strong>1091</strong>, <strong>673</strong>, or field HMI code <strong>00067</strong>.</p>`;
+      target.innerHTML = `<p class="sf-stack-empty">No recognized TopModul/APL alarms or warnings were found. Enter an exact warning such as <strong>W 0005</strong>, Cart fault such as <strong>00025</strong>, base-Labeler fault such as <strong>1091</strong>, or field HMI code <strong>00067</strong>.</p>`;
       return;
     }
 
@@ -63,12 +64,14 @@
     const unresolved = analysis.unresolved.length
       ? `<p class="sf-stack-unresolved"><strong>Not resolved:</strong> ${analysis.unresolved.map((row) => escapeHtml(row.token)).join(", ")}</p>`
       : "";
+    const warningCount = Number(analysis.counts?.warnings || 0);
+    const warningSummary = warningCount ? ` · warnings ${warningCount}` : "";
 
     target.innerHTML = `${disagreement}
-      <div class="sf-stack-summary">Resolved ${analysis.counts.resolved} · direct/verified ${analysis.counts.direct} · summaries/escalations ${analysis.counts.summaries} · gaps/inactive ${analysis.counts.gaps}</div>
+      <div class="sf-stack-summary">Resolved ${analysis.counts.resolved} · direct/verified ${analysis.counts.direct} · summaries/escalations ${analysis.counts.summaries}${warningSummary} · gaps/inactive ${analysis.counts.gaps}</div>
       <div class="sf-stack-columns">
-        <section><h3>Observed order</h3><p>Exactly as entered from alarm history.</p><div class="sf-stack-list">${analysis.observed.map((item, index) => renderItem(item, index, "observed")).join("")}</div></section>
-        <section><h3>Investigation order</h3><p>PLC evidence priority; not a claim of causality.</p><div class="sf-stack-list">${analysis.recommended.map((item, index) => renderItem(item, index, "recommended")).join("")}</div></section>
+        <section><h3>Observed order</h3><p>Exactly as entered from alarm/warning history.</p><div class="sf-stack-list">${analysis.observed.map((item, index) => renderItem(item, index, "observed")).join("")}</div></section>
+        <section><h3>Investigation order</h3><p>Verified source-evidence priority; not a claim of causality.</p><div class="sf-stack-list">${analysis.recommended.map((item, index) => renderItem(item, index, "recommended")).join("")}</div></section>
       </div>
       ${unresolved}<p class="sf-stack-guidance">${escapeHtml(analysis.guidance)}</p>`;
 
@@ -88,7 +91,7 @@
     const button = document.getElementById("faultStackAnalyze");
     if (!library?.analyzeTopModulFaultStack || !input || !button) return;
 
-    button.addEventListener("click", () => renderAnalysis(library.analyzeTopModulFaultStack(input.value, { machineType: "TopModul" })));
+    button.addEventListener("click", () => renderAnalysis(library.analyzeTopModulFaultStack(input.value, { machineType: "TopModul", applicationMode: "apl" })));
     input.addEventListener("keydown", (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key === "Enter") button.click();
     });
