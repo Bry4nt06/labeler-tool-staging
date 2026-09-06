@@ -1,0 +1,53 @@
+name: Validate PLC L5K analyzer v14
+
+on:
+  pull_request:
+    paths:
+      - "app/plc-analyzer/l5k-analyzer-afi-v14.js"
+      - "app/plc-analyzer/plc-analyzer-afi-ui-v14.js"
+      - "app/plc-analyzer/plc-analyzer-v14.css"
+      - "app/plc-analyzer/l5k-analyzer-worker.js"
+      - "app/plc-analyzer/index.html"
+      - "tests/plc-l5k-analyzer-afi-v14.test.js"
+      - ".github/workflows/validate-plc-l5k-analyzer-v14.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "app/plc-analyzer/l5k-analyzer-afi-v14.js"
+      - "app/plc-analyzer/plc-analyzer-afi-ui-v14.js"
+      - "app/plc-analyzer/plc-analyzer-v14.css"
+      - "app/plc-analyzer/l5k-analyzer-worker.js"
+      - "app/plc-analyzer/index.html"
+      - "tests/plc-l5k-analyzer-afi-v14.test.js"
+      - ".github/workflows/validate-plc-l5k-analyzer-v14.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-v14:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out change
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check v14 syntax
+        run: |
+          set -euo pipefail
+          node --check app/plc-analyzer/l5k-analyzer-afi-v14.js
+          node --check app/plc-analyzer/plc-analyzer-afi-ui-v14.js
+          node --check app/plc-analyzer/l5k-analyzer-worker.js
+      - name: Run v14 regressions
+        run: node --test tests/plc-l5k-analyzer-afi-v14.test.js
+      - name: Check patch whitespace
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ github.base_ref }}" ]]; then
+            git diff --check "origin/${{ github.base_ref }}...HEAD"
+          else
+            git diff --check HEAD^...HEAD
+          fi
