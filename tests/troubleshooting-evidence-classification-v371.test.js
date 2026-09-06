@@ -94,7 +94,8 @@ test("Analyzer carryover is temporary Site PLC Evidence and does not mutate the 
   assert.equal(classification.activeOverlay, true);
   assert.equal(library.uploadedPlcOverlay.universalLibraryModified, false);
   assert.equal(base.entries.some((entry) => entry.id === local.id), false);
-  assert.equal(base.searchEntries("LocalFaults[12].3", {}, 5).length, 0);
+  assert.equal(base.entries.some((entry) => String(entry.code || "") === "LocalFaults[12].3"), false);
+  assert.equal(base.getEntry(local.id), null);
 });
 
 test("v371 validation enforces evidence classification for all entries, flows, sources, and overlays", () => {
