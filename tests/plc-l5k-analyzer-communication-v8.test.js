@@ -192,17 +192,23 @@ test("v8 preserves v7 task topology and legacy neutral-N source support", () => 
   assert.equal(project.dependencies.communicationTopology.consumed[0].consumed.includeConnectionStatus, "Yes");
 });
 
-test("v8 layer remains browser-local/read-only under the current v9 analyzer release", () => {
+test("v8 layer remains browser-local/read-only under the current v13 analyzer release", () => {
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/index.html"), "utf8");
   const worker = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-worker.js"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-communication-v8.js"), "utf8");
-  assert.match(page, /PLC ANALYZER v9 — MSG MESSAGE TOPOLOGY/);
+  const v8 = page.indexOf("l5k-analyzer-communication-v8.js?v=8");
+  const v9 = page.indexOf("l5k-analyzer-message-v9.js?v=9");
+  const v10 = page.indexOf("l5k-analyzer-consistency-v10.js?v=10");
+  const v11 = page.indexOf("l5k-analyzer-sequence-v11.js?v=11");
+  const v12 = page.indexOf("l5k-analyzer-interlocks-v12.js?v=12");
+  const v13 = page.indexOf("l5k-analyzer-recovery-v13.js?v=13");
+  assert.ok(v8 >= 0 && v8 < v9 && v9 < v10 && v10 < v11 && v11 < v12 && v12 < v13);
+  assert.match(page, /v13 RESET \/ RECOVERY TOPOLOGY/);
   assert.match(page, /l5k-analyzer-task-schedule-v7\.js\?v=7/);
-  assert.match(page, /l5k-analyzer-communication-v8\.js\?v=8/);
-  assert.match(page, /l5k-analyzer-message-v9\.js\?v=9/);
   assert.match(worker, /l5k-analyzer-communication-v8\.js\?v=8/);
   assert.match(worker, /l5k-analyzer-message-v9\.js\?v=9/);
-  assert.match(page, /(?:do|does) not prove live execution/i);
+  assert.match(worker, /l5k-analyzer-recovery-v13\.js\?v=13/);
+  assert.match(page, /does not prove live execution/i);
   assert.match(page, /peer availability, route health, packet delivery/i);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(page, /connect to PLC|write to PLC|force PLC/i);
