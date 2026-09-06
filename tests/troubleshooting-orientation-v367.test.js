@@ -31,7 +31,7 @@ test("v367 adds exactly the four prepared orientation records and preserves the 
   assert.equal(library.entries.length, base.entries.length + 4);
   assert.equal(library.getEntry("orientation-inaccurate").code, "ORIENTATION INACCURATE");
   assert.equal(library.getEntry("orientation-image-sequence").code, "FAULTY IMAGE SEQUENCE");
-  assert.equal(library.getEntry("orientation-trigger-can").code, "TRIGGER DEVICE / CAN");
+  assert.equal(library.getEntry("orientation-trigger-can").code, "TRIGGER/CAN");
   assert.equal(library.validate().ok, true, library.validate().errors.join(" | "));
 });
 
@@ -103,6 +103,14 @@ test("v367 extends both orientation guided paths without removing their existing
   assert.ok(bottleResults.includes("orientation-trigger-can"));
   assert.ok(autocolResults.includes("orientation-sync-after-encoder"));
   assert.ok(autocolResults.includes("orientation-inaccurate"));
+});
+
+test("v367 preserves machine-context guide ranking metadata", () => {
+  const ranked = library.recommendFlows({ machineType: "Autocol", applicationMode: "orientation" });
+  const bottle = ranked.find((flow) => flow.id === "bottle-orientation-flow");
+  const autocol = ranked.find((flow) => flow.id === "autocol-orientation-flow");
+  assert.ok(Number(bottle?.contextScore || 0) > 0);
+  assert.ok(Number(autocol?.contextScore || 0) > 0);
 });
 
 test("staging page loads v367 before exact-search precedence and application startup", () => {
