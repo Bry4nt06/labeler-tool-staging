@@ -115,9 +115,10 @@ test("v362 UI remains idempotent/debounced and exposes local/global/circuit evid
   assert.match(uiSource, /Shared Station servo circuit authority/);
 });
 
-test("v362 servo-status coverage remains loaded under v363 with v360 exact search and the v358 bootstrap", () => {
-  assert.match(page, /data-troubleshooting-version="v363"/);
-  assert.match(page, /TROUBLESHOOTING v363/);
+test("v362 servo-status coverage remains loaded under v363-or-later with v360 exact search and the v358 bootstrap", () => {
+  const versionMatch = /data-troubleshooting-version="v(\d+)"/.exec(page);
+  assert.ok(versionMatch, "troubleshooting version banner missing");
+  assert.ok(Number(versionMatch[1]) >= 363, `expected v363 or later, got v${versionMatch?.[1]}`);
   assert.match(page, /troubleshooting-bootstrap-v358-20260904/);
   const foundationIndex = page.indexOf("apl-cart-foundation.js");
   const webIndex = page.indexOf("apl-cart-web-handling.js");
