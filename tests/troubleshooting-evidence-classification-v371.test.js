@@ -116,15 +116,19 @@ test("v371 UI surfaces classification legend and decorates results without a mic
   assert.doesNotMatch(uiSource, /queueMicrotask/);
 });
 
-test("v371 manifest loads classification after v370 search overlay and UI after the main controller", () => {
+test("v371 manifest remains loaded after v370 search and before application startup on later releases", () => {
   const search = page.indexOf("troubleshooting-search-precedence.js");
   const classification = page.indexOf("evidence-classification-v371.js");
   const startup = page.indexOf("troubleshooting-startup-guard.js");
   const app = page.indexOf("troubleshooting-app.js");
   const ui = page.indexOf("evidence-classification-ui-v371.js");
   assert.ok(search >= 0 && classification > search && startup > classification && app > startup && ui > app);
-  assert.match(page, /data-troubleshooting-version="v371"/);
-  assert.match(page, /TROUBLESHOOTING v371/);
+  const versionMatch = /data-troubleshooting-version="v(\d+)"/.exec(page);
+  assert.ok(versionMatch, "troubleshooting version banner missing");
+  assert.ok(Number(versionMatch[1]) >= 371, `expected Troubleshooting v371 or later, got v${versionMatch?.[1]}`);
+  const bannerMatch = /STAGING \/ TEST BUILD — TROUBLESHOOTING v(\d+) — ServoForge 0\.9\.10 — NOT PRODUCTION/.exec(page);
+  assert.ok(bannerMatch, "troubleshooting staging banner missing");
+  assert.ok(Number(bannerMatch[1]) >= 371, `expected staging banner v371 or later, got v${bannerMatch?.[1]}`);
   assert.match(page, /troubleshooting-evidence-classification-v371-20260906&shell=v358/);
   assert.match(page, /troubleshooting-evidence-classification-ui-v371-20260906&shell=v358/);
 });

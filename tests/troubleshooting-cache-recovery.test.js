@@ -42,23 +42,27 @@ test("bootstrap preserves the complete current troubleshooting module order decl
   const coreIndex = manifestIndex(entries, "apl-cart-core-status.js");
   const sourceBridgeIndex = manifestIndex(entries, "topmodul-live-00067-source-bridge.js");
   const exactSearchIndex = manifestIndex(entries, "troubleshooting-search-precedence.js");
+  const handoffIndex = manifestIndex(entries, "universal-handoff-v372.js");
   const classificationIndex = manifestIndex(entries, "evidence-classification-v371.js");
   const guardIndex = manifestIndex(entries, "troubleshooting-startup-guard.js");
   const controllerIndex = manifestIndex(entries, "troubleshooting-app.js");
   const tailUiIndex = manifestIndex(entries, "apl-cart-tail-status-ui.js");
   const classificationUiIndex = manifestIndex(entries, "evidence-classification-ui-v371.js");
+  const handoffUiIndex = manifestIndex(entries, "universal-handoff-ui-v372.js");
   assert.ok(foundationIndex < webIndex);
   assert.ok(webIndex < servoIndex);
   assert.ok(servoIndex < tailIndex);
   assert.ok(tailIndex < coreIndex);
   assert.ok(coreIndex < sourceBridgeIndex);
   assert.ok(sourceBridgeIndex < exactSearchIndex);
-  assert.ok(exactSearchIndex < classificationIndex);
+  assert.ok(exactSearchIndex < handoffIndex);
+  assert.ok(handoffIndex < classificationIndex);
   assert.ok(classificationIndex < guardIndex);
   assert.ok(guardIndex < controllerIndex);
   assert.ok(controllerIndex < tailUiIndex);
   assert.ok(tailUiIndex < classificationUiIndex);
-  assert.equal(entries.at(-1).startsWith("./evidence-classification-ui-v371.js"), true);
+  assert.ok(classificationUiIndex < handoffUiIndex);
+  assert.equal(entries.at(-1).startsWith("./universal-handoff-ui-v372.js"), true);
 });
 
 test("bootstrap yields a paint before each module executes and exposes the active filename", () => {
