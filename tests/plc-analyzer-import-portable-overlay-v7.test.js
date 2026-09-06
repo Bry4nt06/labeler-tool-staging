@@ -87,7 +87,8 @@ test("v370 manifests visibly identify the portable architecture and cache-bust b
   assert.match(importHtml, /plc-analyzer-import-controller-v6\.js\?v=7-portable-20260906/);
   assert.doesNotMatch(importHtml, /plc-analyzer-import-controller-v6\.js\?v=6[\"']/);
   assert.match(troubleshootingHtml, /data-troubleshooting-version="v370"/);
-  assert.match(troubleshootingHtml, /UNIVERSAL CORE \+ SITE PLC OVERLAY/);
+  assert.match(troubleshootingHtml, /STAGING \/ TEST BUILD — TROUBLESHOOTING v370 — ServoForge 0\.9\.10 — NOT PRODUCTION/);
+  assert.match(troubleshootingHtml, /Universal guided fault isolation/);
   assert.match(troubleshootingHtml, /troubleshooting-search-precedence-v370-20260906/);
   assert.doesNotMatch(troubleshootingHtml, /troubleshooting-search-precedence-v360\.1-20260906/);
 });
