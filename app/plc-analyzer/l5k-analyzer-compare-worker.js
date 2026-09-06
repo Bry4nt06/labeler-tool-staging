@@ -18,7 +18,8 @@ importScripts(
   "./l5k-analyzer-compare-message-v9-1.js?v=9.1",
   "./l5k-analyzer-compare-consistency-v10-1.js?v=10.1",
   "./l5k-analyzer-compare-sequence-v11-1.js?v=11.1",
-  "./l5k-analyzer-compare-interlocks-v12-1.js?v=12.1"
+  "./l5k-analyzer-compare-interlocks-v12-1.js?v=12.1",
+  "./l5k-analyzer-compare-snapshot-v13-1.js?v=13.1"
 );
 
 self.onmessage = (event) => {
