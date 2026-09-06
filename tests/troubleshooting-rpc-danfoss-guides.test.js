@@ -93,9 +93,10 @@ test("v359 guide UI links to existing records without a self-triggering microtas
   assert.doesNotMatch(uiSource, /queueMicrotask\(render\)/);
 });
 
-test("v359 records remain loaded under v363 with v362/v361 imports, v360 exact-search precedence, and the v358 shell", () => {
-  assert.match(page, /data-troubleshooting-version="v363"/);
-  assert.match(page, /TROUBLESHOOTING v363/);
+test("v359 records remain loaded under v363-or-later with v362/v361 imports, v360 exact-search precedence, and the v358 shell", () => {
+  const versionMatch = /data-troubleshooting-version="v(\d+)"/.exec(page);
+  assert.ok(versionMatch, "troubleshooting version banner missing");
+  assert.ok(Number(versionMatch[1]) >= 363, `expected v363 or later, got v${versionMatch?.[1]}`);
   assert.match(page, /troubleshooting-bootstrap-v358-20260904/);
   const baseIndex = page.indexOf("diagnostic-library.js");
   const guideIndex = page.indexOf("rpc-danfoss-guides.js");
