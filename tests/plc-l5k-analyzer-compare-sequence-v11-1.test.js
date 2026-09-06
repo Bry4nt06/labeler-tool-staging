@@ -115,22 +115,26 @@ test("v11.1 sequence category works with the existing filter API", () => {
   assert.ok(filtered.every((item) => item.category === "sequences"));
 });
 
-test("v11.1 Compare loads v11 analyzer and sequence comparison locally/read-only", () => {
+test("v11.1 Compare loads v11 analyzer and sequence comparison locally/read-only under v12.1", () => {
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/compare.html"), "utf8");
   const ui = fs.readFileSync(path.join(root, "app/plc-analyzer/plc-analyzer-compare-v5-2.js"), "utf8");
   const worker = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-compare-worker.js"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-compare-sequence-v11-1.js"), "utf8");
   const analyzerV11 = page.indexOf("l5k-analyzer-sequence-v11.js?v=11");
+  const analyzerV12 = page.indexOf("l5k-analyzer-interlocks-v12.js?v=12");
   const consistencyCompare = page.indexOf("l5k-analyzer-compare-consistency-v10-1.js?v=10.1");
   const sequenceCompare = page.indexOf("l5k-analyzer-compare-sequence-v11-1.js?v=11.1");
-  const uiScript = page.indexOf("plc-analyzer-compare-v5-2.js?v=11.1");
-  assert.ok(analyzerV11 >= 0 && analyzerV11 < consistencyCompare && consistencyCompare < sequenceCompare && sequenceCompare < uiScript);
-  assert.match(page, /v11\.1 SEQUENCE DIFF/);
+  const interlockCompare = page.indexOf("l5k-analyzer-compare-interlocks-v12-1.js?v=12.1");
+  const uiScript = page.indexOf("plc-analyzer-compare-v5-2.js?v=12.1");
+  assert.ok(analyzerV11 >= 0 && analyzerV11 < analyzerV12 && analyzerV12 < consistencyCompare && consistencyCompare < sequenceCompare && sequenceCompare < interlockCompare && interlockCompare < uiScript);
+  assert.match(page, /v11\.1 SEQUENCE/);
+  assert.match(page, /v12\.1 INTERLOCK \/ PERMISSIVE DIFF/);
   assert.match(page, /value="sequences"/);
-  assert.match(ui, /new Worker\("\.\/l5k-analyzer-compare-worker\.js\?v=11\.1"\)/);
+  assert.match(ui, /new Worker\("\.\/l5k-analyzer-compare-worker\.js\?v=12\.1"\)/);
   assert.match(ui, /item\.sequenceKind/);
   assert.match(worker, /l5k-analyzer-sequence-v11\.js\?v=11/);
   assert.match(worker, /l5k-analyzer-compare-sequence-v11-1\.js\?v=11\.1/);
+  assert.match(worker, /l5k-analyzer-compare-interlocks-v12-1\.js\?v=12\.1/);
   assert.match(page, /does not prove live state, current sequence state, transition order/i);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(ui, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);

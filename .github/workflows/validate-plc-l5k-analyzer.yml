@@ -20,6 +20,7 @@ on:
       - "docs/PLC_L5K_ANALYZER_PHASE11_SEQUENCE_TOPOLOGY.md"
       - "docs/PLC_L5K_ANALYZER_COMPARE_V11_1_SEQUENCE.md"
       - "docs/PLC_L5K_ANALYZER_PHASE12_INTERLOCK_PERMISSIVE.md"
+      - "docs/PLC_L5K_ANALYZER_COMPARE_V12_1_INTERLOCKS.md"
       - "tests/plc-l5k-analyzer*.test.js"
       - ".github/workflows/validate-plc-l5k-analyzer.yml"
   push:
@@ -43,6 +44,7 @@ on:
       - "docs/PLC_L5K_ANALYZER_PHASE11_SEQUENCE_TOPOLOGY.md"
       - "docs/PLC_L5K_ANALYZER_COMPARE_V11_1_SEQUENCE.md"
       - "docs/PLC_L5K_ANALYZER_PHASE12_INTERLOCK_PERMISSIVE.md"
+      - "docs/PLC_L5K_ANALYZER_COMPARE_V12_1_INTERLOCKS.md"
       - "tests/plc-l5k-analyzer*.test.js"
       - ".github/workflows/validate-plc-l5k-analyzer.yml"
 
@@ -86,6 +88,7 @@ jobs:
           node --check app/plc-analyzer/l5k-analyzer-compare-message-v9-1.js
           node --check app/plc-analyzer/l5k-analyzer-compare-consistency-v10-1.js
           node --check app/plc-analyzer/l5k-analyzer-compare-sequence-v11-1.js
+          node --check app/plc-analyzer/l5k-analyzer-compare-interlocks-v12-1.js
           node --check app/plc-analyzer/l5k-analyzer-compare-worker.js
           node --check app/plc-analyzer/plc-analyzer-compare.js
           node --check app/plc-analyzer/plc-analyzer-compare-v5-2.js
@@ -94,7 +97,7 @@ jobs:
           node --check app/plc-analyzer/plc-analyzer-import.js
           node --check app/plc-analyzer/plc-analyzer-import-v5-1.js
       - name: Run analyzer regressions
-        run: node --test tests/plc-l5k-analyzer.test.js tests/plc-l5k-analyzer-compare.test.js tests/plc-l5k-analyzer-import.test.js tests/plc-l5k-analyzer-legacy-v4.test.js tests/plc-l5k-analyzer-dependencies-v5.test.js tests/plc-l5k-analyzer-import-dependencies-v5-1.test.js tests/plc-l5k-analyzer-compare-dependencies-v5-2.test.js tests/plc-l5k-analyzer-compare-task-schedule-v7-1.test.js tests/plc-l5k-analyzer-compare-communication-v8-1.test.js tests/plc-l5k-analyzer-compare-message-v9-1.test.js tests/plc-l5k-analyzer-compare-consistency-v10-1.test.js tests/plc-l5k-analyzer-compare-sequence-v11-1.test.js tests/plc-l5k-analyzer-discrepancies-v6.test.js tests/plc-l5k-analyzer-task-schedule-v7.test.js tests/plc-l5k-analyzer-communication-v8.test.js tests/plc-l5k-analyzer-message-v9.test.js tests/plc-l5k-analyzer-consistency-v10.test.js tests/plc-l5k-analyzer-sequence-v11.test.js tests/plc-l5k-analyzer-interlocks-v12.test.js
+        run: node --test tests/plc-l5k-analyzer.test.js tests/plc-l5k-analyzer-compare.test.js tests/plc-l5k-analyzer-import.test.js tests/plc-l5k-analyzer-legacy-v4.test.js tests/plc-l5k-analyzer-dependencies-v5.test.js tests/plc-l5k-analyzer-import-dependencies-v5-1.test.js tests/plc-l5k-analyzer-compare-dependencies-v5-2.test.js tests/plc-l5k-analyzer-compare-task-schedule-v7-1.test.js tests/plc-l5k-analyzer-compare-communication-v8-1.test.js tests/plc-l5k-analyzer-compare-message-v9-1.test.js tests/plc-l5k-analyzer-compare-consistency-v10-1.test.js tests/plc-l5k-analyzer-compare-sequence-v11-1.test.js tests/plc-l5k-analyzer-compare-interlocks-v12-1.test.js tests/plc-l5k-analyzer-discrepancies-v6.test.js tests/plc-l5k-analyzer-task-schedule-v7.test.js tests/plc-l5k-analyzer-communication-v8.test.js tests/plc-l5k-analyzer-message-v9.test.js tests/plc-l5k-analyzer-consistency-v10.test.js tests/plc-l5k-analyzer-sequence-v11.test.js tests/plc-l5k-analyzer-interlocks-v12.test.js
       - name: Check patch whitespace
         run: |
           set -euo pipefail

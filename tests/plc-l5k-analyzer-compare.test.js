@@ -169,5 +169,5 @@ test("v2 comparison remains browser-local, read-only, and worker-based", () => {
   assert.match(uiSource, /new Worker\("\.\/l5k-analyzer-compare-worker\.js\?v=2"\)/);
   assert.match(page, /Both files are parsed in your browser and are not uploaded/i);
   assert.match(page, /does not prove live state/i);
-  assert.match(page, /does not connect to, write to, force, reset, or modify either PLC project/i);
+  assert.match(page, /does not connect to, write to, force, reset, bypass, or modify either PLC project/i);
 });

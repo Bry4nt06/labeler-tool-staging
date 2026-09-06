@@ -74,7 +74,7 @@
   }
 
   function createWorker() {
-    try { return new Worker("./l5k-analyzer-compare-worker.js?v=11.1"); }
+    try { return new Worker("./l5k-analyzer-compare-worker.js?v=12.1"); }
     catch { return null; }
   }
 
@@ -85,7 +85,7 @@
     setStatus("Reading both L5K files locally…", "loading");
     try {
       const [baselineText, currentText] = await Promise.all([readFile(state.baselineFile), readFile(state.currentFile)]);
-      setStatus("Parsing source, dependency graphs, task schedules, communication/message topology, peer consistency, sequence topology, and comparison…", "loading");
+      setStatus("Parsing source, dependency graphs, task schedules, communication/message topology, peer consistency, sequence topology, interlock/permissive paths, and comparison…", "loading");
       const result = await new Promise((resolve, reject) => {
         const worker = createWorker();
         if (!worker) {
@@ -131,7 +131,8 @@
       const messages = state.comparison.statistics?.messageDifferences || 0;
       const consistency = state.comparison.statistics?.consistencyDifferences || 0;
       const sequences = state.comparison.statistics?.sequenceDifferences || 0;
-      setStatus(`Comparison complete • ${total} source differences • ${dependencies} dependency differences • ${tasks} task-schedule differences • ${communications} produced/consumed differences • ${messages} MSG/MESSAGE differences • ${consistency} peer-consistency differences • ${sequences} sequence differences.`, "pass");
+      const interlocks = state.comparison.statistics?.interlockDifferences || 0;
+      setStatus(`Comparison complete • ${total} source differences • ${dependencies} dependency differences • ${tasks} task-schedule differences • ${communications} produced/consumed differences • ${messages} MSG/MESSAGE differences • ${consistency} peer-consistency differences • ${sequences} sequence differences • ${interlocks} interlock/permissive differences.`, "pass");
     } catch (error) {
       console.error(error);
       state.baselineProject = null;
@@ -176,6 +177,9 @@
         <dt>Peer consistency findings</dt><dd>${esc(stats.consistencyFindings || 0)}</dd>
         <dt>Sequence variables</dt><dd>${esc(sequenceTopology.variables?.length || 0)}</dd>
         <dt>Sequence transitions</dt><dd>${esc(stats.sequenceTransitions || 0)}</dd>
+        <dt>Interlock/action paths</dt><dd>${esc(stats.interlockActionPaths || 0)}</dd>
+        <dt>Gated action paths</dt><dd>${esc(stats.gatedActionPaths || 0)}</dd>
+        <dt>Self-hold candidates</dt><dd>${esc(stats.selfHoldCandidates || 0)}</dd>
       </dl>
     </div>`;
   }
@@ -200,7 +204,8 @@
       summaryCard("Communication differences", stats.communicationDifferences || 0),
       summaryCard("MSG / MESSAGE differences", stats.messageDifferences || 0),
       summaryCard("Peer consistency differences", stats.consistencyDifferences || 0),
-      summaryCard("Sequence differences", stats.sequenceDifferences || 0)
+      summaryCard("Sequence differences", stats.sequenceDifferences || 0),
+      summaryCard("Interlock / permissive differences", stats.interlockDifferences || 0)
     ].join("");
     els.projectCards.innerHTML = projectCard("BASELINE", state.baselineProject) + projectCard("CURRENT / PROBLEM", state.currentProject);
     resetFilters(false);
@@ -212,7 +217,7 @@
   }
 
   function differenceRow(item) {
-    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || item.consistencyKind || item.sequenceKind || "";
+    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || item.consistencyKind || item.sequenceKind || item.interlockKind || "";
     const kindBadge = detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : "";
     return `<div class="plc-row plc-compare-diff" data-difference-id="${esc(item.id)}">
       <div class="plc-compare-diff-head"><div><strong>${esc(item.title)}</strong><small>${esc(item.summary)}</small></div>
@@ -267,8 +272,11 @@
     const sequenceBoundary = item.category === "sequences"
       ? `<div class="plc-warning"><strong>Sequence comparison boundary:</strong> State values and transition edges are static source inference from exact numeric EQU gates plus same-rung numeric assignments. They do not prove current sequence state, transition order, branch selection, timer completion, task execution, physical I/O state, or that either export is correct. Timer PRE values are not adjustment recommendations.</div>`
       : "";
-    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || item.consistencyKind || item.sequenceKind || "";
-    els.detailBody.innerHTML = `${dependencyBoundary}${taskBoundary}${communicationBoundary}${messageBoundary}${consistencyBoundary}${sequenceBoundary}<div class="plc-section-box"><div class="plc-compare-badges"><span class="plc-compare-badge" data-kind="${esc(item.changeType)}">${esc(item.changeType)}</span><span class="plc-compare-badge">${esc(item.category)}</span>${detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : ""}<span class="plc-compare-badge" data-kind="${esc(item.reviewLevel)}">${esc(item.reviewLevel)}</span></div><p>${esc(item.summary)}</p></div>
+    const interlockBoundary = item.category === "interlocks"
+      ? `<div class="plc-warning"><strong>Interlock/permissive comparison boundary:</strong> v12.1 compares same-rung XIC/XIO/comparison evidence preceding supported output/motion actions. It is not a Boolean branch solver and does not prove live contact values, that every displayed gate is series-required, current permissive/interlock state, physical interlock condition, action execution, or which export is correct. Do not use this evidence to justify forcing or bypassing machine or safety interlocks.</div>`
+      : "";
+    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || item.consistencyKind || item.sequenceKind || item.interlockKind || "";
+    els.detailBody.innerHTML = `${dependencyBoundary}${taskBoundary}${communicationBoundary}${messageBoundary}${consistencyBoundary}${sequenceBoundary}${interlockBoundary}<div class="plc-section-box"><div class="plc-compare-badges"><span class="plc-compare-badge" data-kind="${esc(item.changeType)}">${esc(item.changeType)}</span><span class="plc-compare-badge">${esc(item.category)}</span>${detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : ""}<span class="plc-compare-badge" data-kind="${esc(item.reviewLevel)}">${esc(item.reviewLevel)}</span></div><p>${esc(item.summary)}</p></div>
       <div class="plc-compare-detail-grid"><div class="plc-compare-side"><h4>Baseline</h4><pre>${esc(formatValue(item.baseline))}</pre></div><div class="plc-compare-side"><h4>Current / problem</h4><pre>${esc(formatValue(item.current))}</pre></div></div>
       ${item.evidence ? `<div class="plc-section-box plc-compare-evidence"><h3>Source evidence</h3><pre>${esc(formatValue(item.evidence))}</pre></div>` : ""}`;
     els.detail.hidden = false;
