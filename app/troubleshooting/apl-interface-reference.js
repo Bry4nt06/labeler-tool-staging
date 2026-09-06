@@ -40,7 +40,7 @@
 
   const SOURCE_PATCHES = Object.freeze({
     "apl-contactor-figure-2": Object.freeze({
-      title: "APL Servo Drive Guard Safety Switch Reference",
+      title: "APL Servo-Drive Guard Safety Switch Reference",
       topics: Object.freeze(["APL", "main contactor", "servo drive guard", "safety switch", "PLC monitoring"]),
       notes: "Archived field figure showing the APL servo-drive guard safety switch: one contact participates in the main-power contactor path and a second contact is used for PLC monitoring. Verify the active machine circuit before tracing."
     }),
