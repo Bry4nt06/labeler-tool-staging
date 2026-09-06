@@ -241,6 +241,16 @@
       </article>`;
   }
 
+  function resetActiveGuidedSessionForSearch() {
+    state.flowId = "";
+    state.nodeId = "";
+    state.history = [];
+    state.trail = [];
+    state.resultId = "";
+    if (els.workspace) els.workspace.hidden = true;
+    clearResult();
+  }
+
   function performSearch() {
     const query = String(els.search?.value || "").trim();
     state.query = query;
@@ -249,6 +259,7 @@
       saveSession();
       return;
     }
+    resetActiveGuidedSessionForSearch();
     const matches = library.searchEntries(query, state.context, 8);
     if (!matches.length) {
       els.results.innerHTML = `<div class="sf-empty-state">No direct match for <strong>${esc(query)}</strong>. Use a guided path below, or search the reference library.</div>`;
