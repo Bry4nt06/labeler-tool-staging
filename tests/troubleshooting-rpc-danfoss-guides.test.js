@@ -93,7 +93,7 @@ test("v359 guide UI links to existing records without a self-triggering microtas
   assert.doesNotMatch(uiSource, /queueMicrotask\(render\)/);
 });
 
-test("v359 records remain loaded under v363-or-later with v362/v361 imports, v360 exact-search precedence, and the v358 shell", () => {
+test("v359 records remain loaded under v363-or-later with v362/v361 imports, v360-or-later exact-search precedence, and the v358 shell", () => {
   const versionMatch = /data-troubleshooting-version="v(\d+)"/.exec(page);
   assert.ok(versionMatch, "troubleshooting version banner missing");
   assert.ok(Number(versionMatch[1]) >= 363, `expected v363 or later, got v${versionMatch?.[1]}`);
@@ -111,6 +111,8 @@ test("v359 records remain loaded under v363-or-later with v362/v361 imports, v36
   assert.ok(webIndex > bridgeIndex && servoIndex > webIndex && tailIndex > servoIndex && searchPrecedenceIndex > tailIndex && appIndex > searchPrecedenceIndex);
   assert.ok(uiIndex > appIndex);
   assert.match(page, /rpc-danfoss-guides-v359-20260904&shell=v358/);
-  assert.match(page, /troubleshooting-search-precedence-v360(?:\.\d+)?-\d{8}&shell=v358/);
+  const searchBuild = /troubleshooting-search-precedence-v(\d+)(?:\.\d+)?-\d{8}&shell=v358/.exec(page);
+  assert.ok(searchBuild, "search precedence build marker missing");
+  assert.ok(Number(searchBuild[1]) >= 360, `expected search precedence v360 or later, got v${searchBuild?.[1]}`);
   assert.match(page, /troubleshooting-apl-cart-tail-v363-20260904&shell=v358/);
 });
