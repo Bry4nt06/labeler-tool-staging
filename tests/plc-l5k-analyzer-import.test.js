@@ -111,5 +111,6 @@ test("v3 UI keeps L5K parsing local and uses the same-origin Troubleshooting bri
   assert.match(ui, /new Worker\("\.\/l5k-analyzer-worker\.js\?v=1"\)/);
   assert.doesNotMatch(ui, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
-  assert.match(page, /unmatched PLC target is a review candidate, not proof/i);
+  assert.match(page, /Exact target matches are reference evidence only/i);
+  assert.match(page, /different site's tag naming does not mean its troubleshooting method is different/i);
 });
