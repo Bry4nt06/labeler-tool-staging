@@ -296,7 +296,7 @@
     Object.freeze({ id: "motion-drive", label: "Motion / drive", entryId: "universal-motion-drive-isolation", pattern: /\b(?:axis|servo|drive|motor|velocity|speed|position|torque|jog|kinetix|motion|vfd|frequency drive)\b/i }),
     Object.freeze({ id: "mechanical-condition", label: "Mechanical condition", entryId: "universal-mechanical-condition-isolation", pattern: /\b(?:jam|bind|binding|slip|bearing|mechanical|clutch|brake|gear|belt|chain|roller|gripper|coupling|shaft|wear|alignment)\b/i }),
     Object.freeze({ id: "process-condition", label: "Process / material condition", entryId: "universal-process-condition-isolation", pattern: /\b(?:label|bottle|container|glue|vacuum|air|pressure|level|conveyor|reject|inspection|coder|rewind|feed|transfer|product|material|flow)\b/i }),
-    Object.freeze({ id: "control-sequence", label: "Control sequence / state", entryId: "universal-control-sequence-isolation", pattern: /\b(?:sequence|state|step|mode|latch|latched|warning|alarm|reset|startstop|routine|program|logic|faults?)\b/i })
+    Object.freeze({ id: "control-sequence", label: "Control sequence / state", entryId: "universal-control-sequence-isolation", pattern: /\b(?:sequence|state|step|mode|latch|latched|reset|startstop)\b/i })
   ]);
 
   function normalize(base, value) {
@@ -309,12 +309,21 @@
     return [...new Set((values || []).filter(Boolean))];
   }
 
+  function searchableEvidenceText(value) {
+    return String(value || "")
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+      .replace(/[_./:\[\]()\-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   function genericEvidence(entry) {
     const overlay = entry?.uploadedPlcOverlay;
     if (!overlay) return null;
     const writers = Array.isArray(overlay.writers) ? overlay.writers : [];
     const resets = Array.isArray(overlay.resets) ? overlay.resets : [];
-    const text = [
+    const rawText = [
       overlay.target,
       ...writers.flatMap((writer) => [writer?.instruction, writer?.program, writer?.routine, ...(writer?.symbols || [])]),
       ...resets.flatMap((writer) => [writer?.instruction, writer?.program, writer?.routine, ...(writer?.symbols || [])]),
@@ -326,7 +335,7 @@
     ].filter(Boolean).join(" ");
     return {
       overlay,
-      text,
+      text: searchableEvidenceText(rawText),
       writers,
       resets,
       timerCount: (overlay.relatedTimers || []).length,
