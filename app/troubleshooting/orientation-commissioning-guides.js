@@ -292,7 +292,7 @@
 
     function recommendFlows(context = {}) {
       const ranked = base.recommendFlows(context);
-      return ranked.map((flow) => getFlow(flow.id) || flow);
+      return ranked.map((flow) => Object.freeze({ ...(getFlow(flow.id) || flow), contextScore: flow.contextScore }));
     }
 
     function validate() {
