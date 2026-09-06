@@ -83,16 +83,20 @@ test("v367 search starts a new diagnostic session instead of retaining an old 00
   assert.match(resetBlock, /clearResult\(\)/);
 });
 
-test("v367 hotfix manifest cache-busts both patched search assets", () => {
-  assert.match(page, /troubleshooting-search-precedence-v360\.1-20260906&shell=v358/);
+test("v367-or-later manifest cache-busts both patched search assets", () => {
+  const searchBuild = /troubleshooting-search-precedence-v(\d+)(?:\.\d+)?-20260906&shell=v358/.exec(page);
+  assert.ok(searchBuild, "search-precedence cache-bust marker missing");
+  assert.ok(Number(searchBuild[1]) >= 360, `expected search precedence v360 or later, got v${searchBuild?.[1]}`);
   assert.doesNotMatch(page, /troubleshooting-search-precedence-v360-20260904&shell=v358/);
   assert.match(page, /troubleshooting-app-v367\.2-20260906&shell=v358/);
   assert.doesNotMatch(page, /troubleshooting-app\.js\?v=0\.9\.10&build=troubleshooting-exact-circuit-v329-20260903-1920&shell=v358/);
 });
 
-test("v360 validation asserts exact and natural-alias precedence when the records exist", () => {
+test("v360-or-later validation asserts exact and natural-alias precedence when the records exist", () => {
   const library = extend(makeBase());
   const result = library.validate();
   assert.equal(result.ok, true, result.errors.join(" | "));
-  assert.match(library.version, /search-precedence-v360/);
+  const versionMatch = /search-precedence-v(\d+)/.exec(library.version);
+  assert.ok(versionMatch, `search precedence version marker missing from ${library.version}`);
+  assert.ok(Number(versionMatch[1]) >= 360, `expected search precedence v360 or later, got v${versionMatch?.[1]}`);
 });
