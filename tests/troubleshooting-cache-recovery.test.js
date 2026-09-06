@@ -42,17 +42,23 @@ test("bootstrap preserves the complete current troubleshooting module order decl
   const coreIndex = manifestIndex(entries, "apl-cart-core-status.js");
   const sourceBridgeIndex = manifestIndex(entries, "topmodul-live-00067-source-bridge.js");
   const exactSearchIndex = manifestIndex(entries, "troubleshooting-search-precedence.js");
+  const classificationIndex = manifestIndex(entries, "evidence-classification-v371.js");
   const guardIndex = manifestIndex(entries, "troubleshooting-startup-guard.js");
   const controllerIndex = manifestIndex(entries, "troubleshooting-app.js");
+  const tailUiIndex = manifestIndex(entries, "apl-cart-tail-status-ui.js");
+  const classificationUiIndex = manifestIndex(entries, "evidence-classification-ui-v371.js");
   assert.ok(foundationIndex < webIndex);
   assert.ok(webIndex < servoIndex);
   assert.ok(servoIndex < tailIndex);
   assert.ok(tailIndex < coreIndex);
   assert.ok(coreIndex < sourceBridgeIndex);
   assert.ok(sourceBridgeIndex < exactSearchIndex);
-  assert.ok(exactSearchIndex < guardIndex);
+  assert.ok(exactSearchIndex < classificationIndex);
+  assert.ok(classificationIndex < guardIndex);
   assert.ok(guardIndex < controllerIndex);
-  assert.equal(entries.at(-1).startsWith("./apl-cart-tail-status-ui.js"), true);
+  assert.ok(controllerIndex < tailUiIndex);
+  assert.ok(tailUiIndex < classificationUiIndex);
+  assert.equal(entries.at(-1).startsWith("./evidence-classification-ui-v371.js"), true);
 });
 
 test("bootstrap yields a paint before each module executes and exposes the active filename", () => {
@@ -88,4 +94,5 @@ test("cache repair remains scoped to service workers and ServoForge caches", () 
 test("offline shell carries the v358 bootstrap instead of the stale v329 cache generation", () => {
   assert.match(serviceWorker, /CACHE_NAME = "servoforge-labeler-staging-v0\.9\.10-troubleshooting-bootstrap-v358-20260904"/);
   assert.match(serviceWorker, /\.\/app\/troubleshooting\/troubleshooting-bootstrap\.js/);
+  assert.doesNotMatch(serviceWorker, /servoforge-labeler-staging-v0\.9\.10-exact-circuit-v329-20260903-1920/);
 });
