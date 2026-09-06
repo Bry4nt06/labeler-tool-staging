@@ -178,9 +178,10 @@ test("warning exact search stays separate from five-digit Cart faults and uses t
   assert.equal(evaluation.severity, "direct");
 });
 
-test("v365 warning layer loads after v364 Cart core and before alarm-stack/search/controller startup", () => {
-  assert.match(page, /data-troubleshooting-version="v365"/);
-  assert.match(page, /TROUBLESHOOTING v365/);
+test("v365 warning layer remains loaded after v364 Cart core as later troubleshooting phases advance", () => {
+  const phase = Number(/data-troubleshooting-version="v(\d+)"/.exec(page)?.[1] || 0);
+  assert.ok(phase >= 365, `expected troubleshooting phase >= v365, found v${phase}`);
+  assert.match(page, /TROUBLESHOOTING v\d+/);
   const tailIndex = page.indexOf("apl-cart-tail-status.js");
   const coreIndex = page.indexOf("apl-cart-core-status.js");
   const warningIndex = page.indexOf("apl-cart-warning-status.js");
