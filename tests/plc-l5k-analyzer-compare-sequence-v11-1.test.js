@@ -103,7 +103,7 @@ test("v11.1 carries task-root reachability changes as transition context only", 
   const after = changed.current.find((item) => item.from === "10" && item.to === "20") || changed.current[0];
   assert.equal(before.taskRootReachable, true);
   assert.equal(after.taskRootReachable, false);
-  assert.match(result.sequenceComparison.sourceBoundary, /does not prove current state, runtime execution/i);
+  assert.match(result.sequenceComparison.sourceBoundary, /not prove current state, runtime execution/i);
 });
 
 test("v11.1 sequence category works with the existing filter API", () => {
@@ -131,7 +131,7 @@ test("v11.1 Compare loads v11 analyzer and sequence comparison locally/read-only
   assert.match(ui, /item\.sequenceKind/);
   assert.match(worker, /l5k-analyzer-sequence-v11\.js\?v=11/);
   assert.match(worker, /l5k-analyzer-compare-sequence-v11-1\.js\?v=11\.1/);
-  assert.match(page, /does not prove live sequence state|does not prove current sequence state/i);
+  assert.match(page, /does not prove live state, current sequence state, transition order/i);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(ui, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
 });
