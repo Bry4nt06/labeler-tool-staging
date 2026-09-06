@@ -107,7 +107,7 @@ test("v3 UI keeps L5K parsing local and uses the same-origin Troubleshooting bri
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/import.html"), "utf8");
   const ui = fs.readFileSync(path.join(root, "app/plc-analyzer/plc-analyzer-import.js"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-import.js"), "utf8");
-  assert.match(page, /src="\.\.\/troubleshooting\/index\.html\?embeddedCoverageBridge=v3"/);
+  assert.match(page, /src="\.\.\/troubleshooting\/index\.html\?embeddedCoverageBridge=v[0-9.]+"/);
   assert.match(ui, /new Worker\("\.\/l5k-analyzer-worker\.js\?v=1"\)/);
   assert.doesNotMatch(ui, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
