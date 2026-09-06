@@ -86,6 +86,7 @@ jobs:
           node --check app/troubleshooting/topmodul-main-drive-isolation.js
           node --check app/troubleshooting/troubleshooting-search-precedence.js
           node --check app/troubleshooting/universal-handoff-v372.js
+          node --check app/troubleshooting/site-plc-structural-routing-v373.js
           node --check app/troubleshooting/evidence-classification-v371.js
           node --check app/troubleshooting/troubleshooting-startup-guard.js
           node --check app/troubleshooting/troubleshooting-bootstrap.js
@@ -126,6 +127,7 @@ jobs:
           node --test tests/troubleshooting-search-precedence.test.js
           node --test tests/troubleshooting-evidence-classification-v371.test.js
           node --test tests/troubleshooting-universal-handoff-v372.test.js
+          node --test tests/troubleshooting-site-plc-structural-routing-v373.test.js
           node --test tests/troubleshooting-startup-responsiveness.test.js
           node --test tests/troubleshooting-cache-recovery.test.js
       - name: Run startup regressions

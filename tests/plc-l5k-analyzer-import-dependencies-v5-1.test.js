@@ -122,11 +122,22 @@ test("v5.1 dependency import remains loaded as later Import Assistant phases adv
   const dependencies = page.indexOf("l5k-analyzer-dependencies-v5.js?v=5");
   const baseImport = page.indexOf("l5k-analyzer-import.js?v=3");
   const wrapper = page.indexOf("l5k-analyzer-import-dependencies-v5-1.js?v=5.1");
-  const uiScript = page.indexOf("plc-analyzer-import-v5-1.js?v=5.1");
+  const controllerIntake = page.indexOf("l5k-analyzer-import-controller-v6.js?v=6");
+  const structuralEngine = page.indexOf("l5k-analyzer-import-structural-evidence-v8.js?v=");
+  const controllerUi = page.indexOf("plc-analyzer-import-controller-v6.js?v=");
+  const structuralOverlay = page.indexOf("plc-analyzer-import-structural-overlay-v8.js?v=");
+  const uiScript = page.indexOf("plc-analyzer-import-v5-1.js?v=");
   assert.ok(dependencies >= 0 && dependencies < baseImport && baseImport < wrapper && wrapper < uiScript);
-  assert.match(page, /PLC IMPORT ASSISTANT v(?:5\.1|6|7).*DEPENDENCY EVIDENCE/);
+  if (controllerIntake >= 0) assert.ok(wrapper < controllerIntake && controllerIntake < uiScript);
+  if (structuralEngine >= 0 || structuralOverlay >= 0) {
+    assert.ok(structuralEngine > controllerIntake && structuralEngine < controllerUi);
+    assert.ok(structuralOverlay > controllerUi && structuralOverlay < uiScript);
+  }
+  const versionMatch = /PLC IMPORT ASSISTANT v(\d+(?:\.\d+)?)/.exec(page);
+  assert.ok(versionMatch, "Import Assistant version banner missing");
+  assert.ok(Number(versionMatch[1]) >= 5.1, `expected Import Assistant v5.1 or later, got v${versionMatch?.[1]}`);
   assert.match(ui, /new Worker\("\.\/l5k-analyzer-worker\.js\?v=5"\)/);
   assert.doesNotMatch(ui, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
-  assert.match(page, /Dependency traces are static source inference/i);
+  assert.match(page, /Dependency traces[\s\S]*static source/i);
 });

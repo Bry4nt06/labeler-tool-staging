@@ -1,0 +1,57 @@
+name: Validate site PLC structural routing v373
+
+on:
+  pull_request:
+    paths:
+      - "app/plc-analyzer/**"
+      - "app/troubleshooting/**"
+      - "tests/plc-analyzer-import-structural-evidence-v8.test.js"
+      - "tests/troubleshooting-site-plc-structural-routing-v373.test.js"
+      - "tests/troubleshooting-universal-handoff-v372.test.js"
+      - ".github/workflows/validate-site-plc-structural-routing-v373.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "app/plc-analyzer/**"
+      - "app/troubleshooting/**"
+      - "tests/plc-analyzer-import-structural-evidence-v8.test.js"
+      - "tests/troubleshooting-site-plc-structural-routing-v373.test.js"
+      - "tests/troubleshooting-universal-handoff-v372.test.js"
+      - ".github/workflows/validate-site-plc-structural-routing-v373.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-v373:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out change
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check v373 syntax
+        run: |
+          set -euo pipefail
+          node --check app/plc-analyzer/l5k-analyzer-import-structural-evidence-v8.js
+          node --check app/plc-analyzer/plc-analyzer-import-structural-overlay-v8.js
+          node --check app/troubleshooting/site-plc-structural-routing-v373.js
+      - name: Run v373 regressions
+        run: |
+          set -euo pipefail
+          node --test tests/plc-analyzer-import-structural-evidence-v8.test.js
+          node --test tests/troubleshooting-site-plc-structural-routing-v373.test.js
+          node --test tests/troubleshooting-universal-handoff-v372.test.js
+      - name: Check patch whitespace
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ github.base_ref }}" ]]; then
+            git diff --check "origin/${{ github.base_ref }}...HEAD"
+          else
+            git diff --check HEAD^...HEAD
+          fi

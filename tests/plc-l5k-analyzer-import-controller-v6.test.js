@@ -124,7 +124,9 @@ test("v6 intake remains present as later portable Import Assistant phases advanc
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/import.html"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-import-controller-v6.js"), "utf8");
   const ui = fs.readFileSync(path.join(root, "app/plc-analyzer/plc-analyzer-import-controller-v6.js"), "utf8");
-  assert.match(page, /PLC IMPORT ASSISTANT v(?:6|7)/);
+  const versionMatch = /PLC IMPORT ASSISTANT v(\d+)/.exec(page);
+  assert.ok(versionMatch, "Import Assistant version banner missing");
+  assert.ok(Number(versionMatch[1]) >= 6, `expected Import Assistant v6 or later, got v${versionMatch?.[1]}`);
   assert.match(page, /id="plcImportControllerSlot"/);
   assert.match(page, /id="plcImportSourceStatus"/);
   assert.match(page, /id="plcImportControllerRevision"/);
@@ -138,13 +140,19 @@ test("v6 intake remains present as later portable Import Assistant phases advanc
   const baseImport = page.indexOf("l5k-analyzer-import.js?v=3");
   const dependencyImport = page.indexOf("l5k-analyzer-import-dependencies-v5-1.js?v=5.1");
   const intakeEngine = page.indexOf("l5k-analyzer-import-controller-v6.js?v=6");
+  const structuralEngine = page.indexOf("l5k-analyzer-import-structural-evidence-v8.js?v=");
   const intakeUi = page.indexOf("plc-analyzer-import-controller-v6.js?v=");
-  const existingUi = page.indexOf("plc-analyzer-import-v5-1.js?v=5.1");
+  const structuralOverlay = page.indexOf("plc-analyzer-import-structural-overlay-v8.js?v=");
+  const existingUi = page.indexOf("plc-analyzer-import-v5-1.js?v=");
   assert.ok(baseImport >= 0 && baseImport < dependencyImport && dependencyImport < intakeEngine && intakeEngine < intakeUi && intakeUi < existingUi);
+  if (structuralEngine >= 0 || structuralOverlay >= 0) {
+    assert.ok(structuralEngine > intakeEngine && structuralEngine < intakeUi);
+    assert.ok(structuralOverlay > intakeUi && structuralOverlay < existingUi);
+  }
   assert.match(ui, /analyzeButton\.disabled = !ready/);
   assert.match(ui, /resetIdentity\(\)/);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(ui, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.match(page, /review candidate, not proof/i);
-  assert.match(page, /Dependency traces are static source inference/i);
+  assert.match(page, /Dependency traces[\s\S]*static source/i);
 });
