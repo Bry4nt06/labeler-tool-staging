@@ -1,0 +1,48 @@
+name: Validate troubleshooting v372
+
+on:
+  push:
+    paths:
+      - "app/troubleshooting/universal-handoff-v372.js"
+      - "app/troubleshooting/universal-handoff-ui-v372.js"
+      - "app/troubleshooting/index.html"
+      - "tests/troubleshooting-universal-handoff-v372.test.js"
+      - "tests/troubleshooting-evidence-classification-v371.test.js"
+      - "tests/troubleshooting-cache-recovery.test.js"
+      - ".github/workflows/validate-troubleshooting-v372.yml"
+  pull_request:
+    paths:
+      - "app/troubleshooting/universal-handoff-v372.js"
+      - "app/troubleshooting/universal-handoff-ui-v372.js"
+      - "app/troubleshooting/index.html"
+      - "tests/troubleshooting-universal-handoff-v372.test.js"
+      - "tests/troubleshooting-evidence-classification-v371.test.js"
+      - "tests/troubleshooting-cache-recovery.test.js"
+      - ".github/workflows/validate-troubleshooting-v372.yml"
+
+jobs:
+  validate-v372:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out change
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check v372 syntax
+        run: |
+          node --check app/troubleshooting/universal-handoff-v372.js
+          node --check app/troubleshooting/universal-handoff-ui-v372.js
+      - name: Run v372 regressions
+        run: node --test tests/troubleshooting-universal-handoff-v372.test.js
+      - name: Check patch whitespace
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ github.base_ref }}" ]]; then
+            git diff --check "origin/${{ github.base_ref }}...HEAD"
+          else
+            git diff --check HEAD^...HEAD
+          fi
