@@ -82,12 +82,16 @@ test("Import Assistant exposes explicit carryover and boundary", () => {
   assert.match(uiSource, /\.\.\/troubleshooting\/index\.html\?plcOverlay=1/);
 });
 
-test("v370 manifests visibly identify the portable architecture and cache-bust both runtime scripts", () => {
+test("v370 portable architecture remains present in v370-or-later Troubleshooting builds", () => {
   assert.match(importHtml, /PLC IMPORT ASSISTANT v7 — PORTABLE SITE OVERLAY/);
   assert.match(importHtml, /plc-analyzer-import-controller-v6\.js\?v=7-portable-20260906/);
   assert.doesNotMatch(importHtml, /plc-analyzer-import-controller-v6\.js\?v=6[\"']/);
-  assert.match(troubleshootingHtml, /data-troubleshooting-version="v370"/);
-  assert.match(troubleshootingHtml, /STAGING \/ TEST BUILD — TROUBLESHOOTING v370 — ServoForge 0\.9\.10 — NOT PRODUCTION/);
+  const versionMatch = /data-troubleshooting-version="v(\d+)"/.exec(troubleshootingHtml);
+  assert.ok(versionMatch, "troubleshooting version banner missing");
+  assert.ok(Number(versionMatch[1]) >= 370, `expected Troubleshooting v370 or later, got v${versionMatch?.[1]}`);
+  const bannerMatch = /STAGING \/ TEST BUILD — TROUBLESHOOTING v(\d+) — ServoForge 0\.9\.10 — NOT PRODUCTION/.exec(troubleshootingHtml);
+  assert.ok(bannerMatch, "troubleshooting staging banner missing");
+  assert.ok(Number(bannerMatch[1]) >= 370, `expected staging banner v370 or later, got v${bannerMatch?.[1]}`);
   assert.match(troubleshootingHtml, /Universal guided fault isolation/);
   assert.match(troubleshootingHtml, /troubleshooting-search-precedence-v370-20260906/);
   assert.doesNotMatch(troubleshootingHtml, /troubleshooting-search-precedence-v360\.1-20260906/);
