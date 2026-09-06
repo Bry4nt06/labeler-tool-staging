@@ -12,8 +12,23 @@
       throw new Error("ServoForge troubleshooting search library is required before exact-match precedence.");
     }
 
+    const SEARCH_STOP_WORDS = new Set(["a", "an", "and", "between", "for", "of", "the", "to"]);
+
     function compact(value) {
       return base.normalize(value).replaceAll(" ", "");
+    }
+
+    function normalizeToken(token) {
+      if (token.endsWith("ies") && token.length > 4) return `${token.slice(0, -3)}y`;
+      if (token.endsWith("s") && token.length > 3) return token.slice(0, -1);
+      return token;
+    }
+
+    function searchTokens(value) {
+      return base.normalize(value)
+        .split(/[^a-z0-9]+/)
+        .map(normalizeToken)
+        .filter((token) => token.length > 1 && !SEARCH_STOP_WORDS.has(token));
     }
 
     function exactMatches(query) {
@@ -28,13 +43,25 @@
       });
     }
 
+    function aliasMatches(query) {
+      const normalized = base.normalize(query);
+      const queryTokens = searchTokens(query);
+      if (!normalized || queryTokens.length < 2) return [];
+      return base.entries.filter((entry) => (entry?.aliases || []).some((alias) => {
+        if (base.normalize(alias) === normalized) return true;
+        const aliasTokens = new Set(searchTokens(alias));
+        return queryTokens.every((token) => aliasTokens.has(token));
+      }));
+    }
+
     const baseSearchEntries = base.searchEntries.bind(base);
     function searchEntries(query, context = {}, limit = 8) {
       const count = Math.max(1, Number(limit) || 8);
       const exact = exactMatches(query);
+      const aliases = aliasMatches(query);
       const ranked = baseSearchEntries(query, context, Math.max(count, 8));
       const seen = new Set();
-      return [...exact, ...ranked]
+      return [...exact, ...aliases, ...ranked]
         .filter((entry) => {
           if (!entry?.id || seen.has(entry.id)) return false;
           seen.add(entry.id);
@@ -47,6 +74,10 @@
       return Object.freeze([...exactMatches(query)]);
     }
 
+    function getAliasSearchMatches(query) {
+      return Object.freeze([...aliasMatches(query)]);
+    }
+
     function validate() {
       const current = typeof base.validate === "function" ? base.validate() : { ok: true, errors: [] };
       let errors = [...(current.errors || [])];
@@ -55,6 +86,14 @@
         const first = searchEntries("600", { machineType: "TopModul", applicationMode: "apl" }, 8)[0];
         if (first?.id !== "servo-terminal-code-600") {
           errors.push("Exact Code 600 must outrank machine-context recommendations.");
+        }
+      }
+
+      const orientationGeometry = base.entries.find((entry) => entry?.id === "orientation-trigger-geometry-baseline");
+      if (orientationGeometry) {
+        const first = searchEntries("rotary plate distance", { machineType: "TopModul", applicationMode: "apl" }, 8)[0];
+        if (first?.id !== "orientation-trigger-geometry-baseline") {
+          errors.push("Natural rotary-plate geometry wording must outrank unrelated machine-context faults.");
         }
       }
 
@@ -72,9 +111,10 @@
 
     return Object.freeze({
       ...base,
-      version: `${base.version}+search-precedence-v360`,
+      version: `${base.version}+search-precedence-v360.1`,
       searchEntries,
       getExactSearchMatches,
+      getAliasSearchMatches,
       validate
     });
   };
