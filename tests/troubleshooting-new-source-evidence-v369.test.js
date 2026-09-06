@@ -77,12 +77,17 @@ test("v369 library validates cleanly", () => {
   assert.deepEqual(result.errors, []);
 });
 
-test("v369 staging manifest loads source evidence after orientation authority and identifies v369", () => {
+test("v369 staging manifest remains loaded after orientation authority in v369-or-later builds", () => {
   const page = fs.readFileSync(path.join(root, "app/troubleshooting/index.html"), "utf8");
   const orientation = page.indexOf("orientation-commissioning-guides.js");
   const v369 = page.indexOf("new-source-evidence-v369.js");
   const topmodul = page.indexOf("topmodul-live-diagnostics.js");
   assert.ok(orientation >= 0 && v369 > orientation && topmodul > v369);
-  assert.match(page, /data-troubleshooting-version="v369"/);
-  assert.match(page, /TROUBLESHOOTING v369/);
+  assert.match(page, /new-source-evidence-v369\.js\?v=0\.9\.10&build=troubleshooting-new-source-evidence-v369-20260906&shell=v358/);
+  const versionMatch = /data-troubleshooting-version="v(\d+)"/.exec(page);
+  assert.ok(versionMatch, "troubleshooting version banner missing");
+  assert.ok(Number(versionMatch[1]) >= 369, `expected troubleshooting v369 or later, got v${versionMatch?.[1]}`);
+  const bannerMatch = /TROUBLESHOOTING v(\d+)/.exec(page);
+  assert.ok(bannerMatch, "troubleshooting banner text missing");
+  assert.ok(Number(bannerMatch[1]) >= 369, `expected troubleshooting banner v369 or later, got v${bannerMatch?.[1]}`);
 });
