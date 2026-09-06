@@ -16,6 +16,12 @@ function manifestEntries() {
   return JSON.parse(match[1]);
 }
 
+function manifestIndex(entries, filename) {
+  const index = entries.findIndex((src) => src.startsWith(`./${filename}?`) || src.startsWith(`../${filename}?`));
+  assert.ok(index >= 0, `manifest entry missing: ${filename}`);
+  return index;
+}
+
 test("v363-or-later troubleshooting content keeps the v358 responsive bootstrap shell", () => {
   const versionMatch = /data-troubleshooting-version="v(\d+)"/.exec(html);
   assert.ok(versionMatch, "troubleshooting version banner missing");
@@ -29,23 +35,23 @@ test("bootstrap preserves the complete current troubleshooting module order decl
   const entries = manifestEntries();
   assert.ok(entries.length >= 40, `expected full troubleshooting startup manifest, found ${entries.length}`);
   entries.forEach((src) => assert.match(src, /shell=v358/, `missing v358 shell key: ${src}`));
-  const foundation = "./apl-cart-foundation.js?v=0.9.10&build=troubleshooting-apl-cart-foundation-v355-20260904&shell=v358";
-  const web = "./apl-cart-web-handling.js?v=0.9.10&build=troubleshooting-apl-cart-web-handling-v361-20260904&shell=v358";
-  const servo = "./apl-cart-servo-status.js?v=0.9.10&build=troubleshooting-apl-cart-servo-status-v362-20260904&shell=v358";
-  const tail = "./apl-cart-tail-status.js?v=0.9.10&build=troubleshooting-apl-cart-tail-v363-20260904&shell=v358";
-  const core = "./apl-cart-core-status.js?v=0.9.10&build=troubleshooting-apl-cart-core-v364-20260905&shell=v358";
-  const sourceBridge = "./topmodul-live-00067-source-bridge.js?v=0.9.10&build=troubleshooting-live-00067-v347-20260904-0645&shell=v358";
-  const exactSearch = "./troubleshooting-search-precedence.js?v=0.9.10&build=troubleshooting-search-precedence-v360-20260904&shell=v358";
-  const guard = "./troubleshooting-startup-guard.js?v=0.9.10&build=troubleshooting-startup-v356-20260904&shell=v358";
-  const controller = "./troubleshooting-app.js?v=0.9.10&build=troubleshooting-exact-circuit-v329-20260903-1920&shell=v358";
-  assert.ok(entries.indexOf(foundation) < entries.indexOf(web));
-  assert.ok(entries.indexOf(web) < entries.indexOf(servo));
-  assert.ok(entries.indexOf(servo) < entries.indexOf(tail));
-  assert.ok(entries.indexOf(tail) < entries.indexOf(core));
-  assert.ok(entries.indexOf(core) < entries.indexOf(sourceBridge));
-  assert.ok(entries.indexOf(sourceBridge) < entries.indexOf(exactSearch));
-  assert.ok(entries.indexOf(exactSearch) < entries.indexOf(guard));
-  assert.ok(entries.indexOf(guard) < entries.indexOf(controller));
+  const foundationIndex = manifestIndex(entries, "apl-cart-foundation.js");
+  const webIndex = manifestIndex(entries, "apl-cart-web-handling.js");
+  const servoIndex = manifestIndex(entries, "apl-cart-servo-status.js");
+  const tailIndex = manifestIndex(entries, "apl-cart-tail-status.js");
+  const coreIndex = manifestIndex(entries, "apl-cart-core-status.js");
+  const sourceBridgeIndex = manifestIndex(entries, "topmodul-live-00067-source-bridge.js");
+  const exactSearchIndex = manifestIndex(entries, "troubleshooting-search-precedence.js");
+  const guardIndex = manifestIndex(entries, "troubleshooting-startup-guard.js");
+  const controllerIndex = manifestIndex(entries, "troubleshooting-app.js");
+  assert.ok(foundationIndex < webIndex);
+  assert.ok(webIndex < servoIndex);
+  assert.ok(servoIndex < tailIndex);
+  assert.ok(tailIndex < coreIndex);
+  assert.ok(coreIndex < sourceBridgeIndex);
+  assert.ok(sourceBridgeIndex < exactSearchIndex);
+  assert.ok(exactSearchIndex < guardIndex);
+  assert.ok(guardIndex < controllerIndex);
   assert.equal(entries.at(-1).startsWith("./apl-cart-tail-status-ui.js"), true);
 });
 
