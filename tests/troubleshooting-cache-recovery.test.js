@@ -34,7 +34,13 @@ test("v363-or-later troubleshooting content keeps the v358 responsive bootstrap 
 test("bootstrap preserves the complete current troubleshooting module order declaratively", () => {
   const entries = manifestEntries();
   assert.ok(entries.length >= 40, `expected full troubleshooting startup manifest, found ${entries.length}`);
-  entries.forEach((src) => assert.match(src, /shell=v358/, `missing v358 shell key: ${src}`));
+  entries.forEach((src) => {
+    if (src.startsWith("../shared/universal-troubleshooting-core.js?")) {
+      assert.match(src, /build=universal-troubleshooting-v370-20260906/, `missing shared universal-core build key: ${src}`);
+      return;
+    }
+    assert.match(src, /shell=v358/, `missing v358 shell key: ${src}`);
+  });
   const foundationIndex = manifestIndex(entries, "apl-cart-foundation.js");
   const webIndex = manifestIndex(entries, "apl-cart-web-handling.js");
   const servoIndex = manifestIndex(entries, "apl-cart-servo-status.js");
