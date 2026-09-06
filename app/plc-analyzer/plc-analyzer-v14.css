@@ -1,0 +1,12 @@
+.plc-detail-panel[hidden]{display:none!important}
+
+.plc-structure-table td:nth-child(3){white-space:normal;min-width:260px}
+.plc-structure-table td:nth-child(3) .plc-chip{display:inline-block;line-height:1.25;margin:2px 4px 2px 0;max-width:100%;vertical-align:top}
+
+.plc-afi-audit-section{margin-top:10px}
+.plc-afi-list{margin-top:4px}
+.plc-afi-row code{justify-self:start}
+
+@media(max-width:800px){
+  .plc-structure-table td:nth-child(3){min-width:220px}
+}
