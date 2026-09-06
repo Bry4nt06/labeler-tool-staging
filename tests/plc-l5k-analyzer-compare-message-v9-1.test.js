@@ -131,27 +131,31 @@ test("v9.1 message category works with the existing comparison filter API", () =
   assert.ok(filtered.every((item) => item.category === "messages"));
 });
 
-test("v9.1 Compare layer remains local/read-only under the current v10.1 consistency-aware release", () => {
+test("v9.1 Compare layer remains local/read-only under the current v11.1 sequence-aware release", () => {
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/compare.html"), "utf8");
   const ui = fs.readFileSync(path.join(root, "app/plc-analyzer/plc-analyzer-compare-v5-2.js"), "utf8");
   const worker = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-compare-worker.js"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-compare-message-v9-1.js"), "utf8");
   const analyzerV9 = page.indexOf("l5k-analyzer-message-v9.js?v=9");
   const analyzerV10 = page.indexOf("l5k-analyzer-consistency-v10.js?v=10");
+  const analyzerV11 = page.indexOf("l5k-analyzer-sequence-v11.js?v=11");
   const communicationCompare = page.indexOf("l5k-analyzer-compare-communication-v8-1.js?v=8.1");
   const messageCompare = page.indexOf("l5k-analyzer-compare-message-v9-1.js?v=9.1");
   const consistencyCompare = page.indexOf("l5k-analyzer-compare-consistency-v10-1.js?v=10.1");
-  const uiScript = page.indexOf("plc-analyzer-compare-v5-2.js?v=10.1");
-  assert.ok(analyzerV9 >= 0 && analyzerV9 < analyzerV10 && analyzerV10 < communicationCompare && communicationCompare < messageCompare && messageCompare < consistencyCompare && consistencyCompare < uiScript);
-  assert.match(page, /PLC ANALYZER COMPARE v9\.1 — MSG \/ MESSAGE DIFF .* v10\.1 CONSISTENCY STATE DIFF/);
+  const sequenceCompare = page.indexOf("l5k-analyzer-compare-sequence-v11-1.js?v=11.1");
+  const uiScript = page.indexOf("plc-analyzer-compare-v5-2.js?v=11.1");
+  assert.ok(analyzerV9 >= 0 && analyzerV9 < analyzerV10 && analyzerV10 < analyzerV11 && analyzerV11 < communicationCompare && communicationCompare < messageCompare && messageCompare < consistencyCompare && consistencyCompare < sequenceCompare && sequenceCompare < uiScript);
+  assert.match(page, /PLC ANALYZER COMPARE v9\.1 — MSG \/ MESSAGE DIFF .* v10\.1 CONSISTENCY STATE DIFF .* v11\.1 SEQUENCE DIFF/);
   assert.match(page, /value="messages"/);
   assert.match(page, /message completion, current EN\/DN\/ER state/i);
-  assert.match(ui, /new Worker\("\.\/l5k-analyzer-compare-worker\.js\?v=10\.1"\)/);
+  assert.match(ui, /new Worker\("\.\/l5k-analyzer-compare-worker\.js\?v=11\.1"\)/);
   assert.match(ui, /item\.messageKind/);
   assert.match(worker, /l5k-analyzer-message-v9\.js\?v=9/);
   assert.match(worker, /l5k-analyzer-consistency-v10\.js\?v=10/);
+  assert.match(worker, /l5k-analyzer-sequence-v11\.js\?v=11/);
   assert.match(worker, /l5k-analyzer-compare-message-v9-1\.js\?v=9\.1/);
   assert.match(worker, /l5k-analyzer-compare-consistency-v10-1\.js\?v=10\.1/);
+  assert.match(worker, /l5k-analyzer-compare-sequence-v11-1\.js\?v=11\.1/);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(ui, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
 });

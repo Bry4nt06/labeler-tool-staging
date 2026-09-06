@@ -117,24 +117,27 @@ test("v5.2 dependency category can be filtered with the existing comparison filt
   assert.ok(filtered.every((item) => item.category === "dependencies"));
 });
 
-test("v5.2 Compare layer remains local/read-only under the current v10.1 consistency-aware release", () => {
+test("v5.2 Compare layer remains local/read-only under the current v11.1 sequence-aware release", () => {
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/compare.html"), "utf8");
   const ui = fs.readFileSync(path.join(root, "app/plc-analyzer/plc-analyzer-compare-v5-2.js"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-compare-dependencies-v5-2.js"), "utf8");
   const dependencies = page.indexOf("l5k-analyzer-dependencies-v5.js?v=5");
   const messageParser = page.indexOf("l5k-analyzer-message-v9.js?v=9");
   const consistencyParser = page.indexOf("l5k-analyzer-consistency-v10.js?v=10");
+  const sequenceParser = page.indexOf("l5k-analyzer-sequence-v11.js?v=11");
   const baseCompare = page.indexOf("l5k-analyzer-compare.js?v=2");
   const wrapper = page.indexOf("l5k-analyzer-compare-dependencies-v5-2.js?v=5.2");
   const taskWrapper = page.indexOf("l5k-analyzer-compare-task-schedule-v7-1.js?v=7.1");
   const communicationWrapper = page.indexOf("l5k-analyzer-compare-communication-v8-1.js?v=8.1");
   const messageWrapper = page.indexOf("l5k-analyzer-compare-message-v9-1.js?v=9.1");
   const consistencyWrapper = page.indexOf("l5k-analyzer-compare-consistency-v10-1.js?v=10.1");
-  const uiScript = page.indexOf("plc-analyzer-compare-v5-2.js?v=10.1");
-  assert.ok(dependencies >= 0 && dependencies < messageParser && messageParser < consistencyParser && consistencyParser < baseCompare && baseCompare < wrapper && wrapper < taskWrapper && taskWrapper < communicationWrapper && communicationWrapper < messageWrapper && messageWrapper < consistencyWrapper && consistencyWrapper < uiScript);
+  const sequenceWrapper = page.indexOf("l5k-analyzer-compare-sequence-v11-1.js?v=11.1");
+  const uiScript = page.indexOf("plc-analyzer-compare-v5-2.js?v=11.1");
+  assert.ok(dependencies >= 0 && dependencies < messageParser && messageParser < consistencyParser && consistencyParser < sequenceParser && sequenceParser < baseCompare && baseCompare < wrapper && wrapper < taskWrapper && taskWrapper < communicationWrapper && communicationWrapper < messageWrapper && messageWrapper < consistencyWrapper && consistencyWrapper < sequenceWrapper && sequenceWrapper < uiScript);
   assert.match(page, /value="dependencies"/);
   assert.match(page, /PLC ANALYZER COMPARE v9\.1 — MSG \/ MESSAGE DIFF/);
-  assert.match(ui, /new Worker\("\.\/l5k-analyzer-compare-worker\.js\?v=10\.1"\)/);
+  assert.match(page, /v11\.1 SEQUENCE DIFF/);
+  assert.match(ui, /new Worker\("\.\/l5k-analyzer-compare-worker\.js\?v=11\.1"\)/);
   assert.doesNotMatch(ui, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
 });

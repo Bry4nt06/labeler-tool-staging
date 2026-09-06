@@ -74,7 +74,7 @@
   }
 
   function createWorker() {
-    try { return new Worker("./l5k-analyzer-compare-worker.js?v=10.1"); }
+    try { return new Worker("./l5k-analyzer-compare-worker.js?v=11.1"); }
     catch { return null; }
   }
 
@@ -85,7 +85,7 @@
     setStatus("Reading both L5K files locally…", "loading");
     try {
       const [baselineText, currentText] = await Promise.all([readFile(state.baselineFile), readFile(state.currentFile)]);
-      setStatus("Parsing source, dependency graphs, task schedules, communication/message topology, peer consistency, and comparison…", "loading");
+      setStatus("Parsing source, dependency graphs, task schedules, communication/message topology, peer consistency, sequence topology, and comparison…", "loading");
       const result = await new Promise((resolve, reject) => {
         const worker = createWorker();
         if (!worker) {
@@ -130,7 +130,8 @@
       const communications = state.comparison.statistics?.communicationDifferences || 0;
       const messages = state.comparison.statistics?.messageDifferences || 0;
       const consistency = state.comparison.statistics?.consistencyDifferences || 0;
-      setStatus(`Comparison complete • ${total} source differences • ${dependencies} dependency differences • ${tasks} task-schedule differences • ${communications} produced/consumed differences • ${messages} MSG/MESSAGE differences • ${consistency} peer-consistency differences.`, "pass");
+      const sequences = state.comparison.statistics?.sequenceDifferences || 0;
+      setStatus(`Comparison complete • ${total} source differences • ${dependencies} dependency differences • ${tasks} task-schedule differences • ${communications} produced/consumed differences • ${messages} MSG/MESSAGE differences • ${consistency} peer-consistency differences • ${sequences} sequence differences.`, "pass");
     } catch (error) {
       console.error(error);
       state.baselineProject = null;
@@ -154,6 +155,7 @@
     const taskStats = project?.dependencies?.taskScheduling?.statistics || {};
     const communicationStats = project?.dependencies?.communicationTopology?.statistics || {};
     const messageStats = project?.dependencies?.messageTopology?.statistics || {};
+    const sequenceTopology = project?.dependencies?.sequenceTopology || {};
     return `<div class="plc-compare-project-card">
       <span class="sf-eyebrow">${esc(label)}</span>
       <h3>${esc(project?.controller || project?.source?.fileName || "PLC project")}</h3>
@@ -172,6 +174,8 @@
         <dt>MESSAGE tags</dt><dd>${esc(messageStats.messageTags || 0)}</dd>
         <dt>MSG calls</dt><dd>${esc(messageStats.msgCalls || 0)}</dd>
         <dt>Peer consistency findings</dt><dd>${esc(stats.consistencyFindings || 0)}</dd>
+        <dt>Sequence variables</dt><dd>${esc(sequenceTopology.variables?.length || 0)}</dd>
+        <dt>Sequence transitions</dt><dd>${esc(stats.sequenceTransitions || 0)}</dd>
       </dl>
     </div>`;
   }
@@ -195,7 +199,8 @@
       summaryCard("Task schedule differences", stats.taskScheduleDifferences || 0),
       summaryCard("Communication differences", stats.communicationDifferences || 0),
       summaryCard("MSG / MESSAGE differences", stats.messageDifferences || 0),
-      summaryCard("Peer consistency differences", stats.consistencyDifferences || 0)
+      summaryCard("Peer consistency differences", stats.consistencyDifferences || 0),
+      summaryCard("Sequence differences", stats.sequenceDifferences || 0)
     ].join("");
     els.projectCards.innerHTML = projectCard("BASELINE", state.baselineProject) + projectCard("CURRENT / PROBLEM", state.currentProject);
     resetFilters(false);
@@ -207,7 +212,7 @@
   }
 
   function differenceRow(item) {
-    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || item.consistencyKind || "";
+    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || item.consistencyKind || item.sequenceKind || "";
     const kindBadge = detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : "";
     return `<div class="plc-row plc-compare-diff" data-difference-id="${esc(item.id)}">
       <div class="plc-compare-diff-head"><div><strong>${esc(item.title)}</strong><small>${esc(item.summary)}</small></div>
@@ -259,8 +264,11 @@
     const consistencyBoundary = item.category === "consistency"
       ? `<div class="plc-warning"><strong>Peer consistency boundary:</strong> Same-name program-scoped tags are inferred peers only. Uniform/divergent state and majority/outlier evidence do not prove identical machine function, identify a correct value, or recommend a timer/counter/threshold adjustment. PLC-cycle counts are not converted to time without runtime scan evidence.</div>`
       : "";
-    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || item.consistencyKind || "";
-    els.detailBody.innerHTML = `${dependencyBoundary}${taskBoundary}${communicationBoundary}${messageBoundary}${consistencyBoundary}<div class="plc-section-box"><div class="plc-compare-badges"><span class="plc-compare-badge" data-kind="${esc(item.changeType)}">${esc(item.changeType)}</span><span class="plc-compare-badge">${esc(item.category)}</span>${detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : ""}<span class="plc-compare-badge" data-kind="${esc(item.reviewLevel)}">${esc(item.reviewLevel)}</span></div><p>${esc(item.summary)}</p></div>
+    const sequenceBoundary = item.category === "sequences"
+      ? `<div class="plc-warning"><strong>Sequence comparison boundary:</strong> State values and transition edges are static source inference from exact numeric EQU gates plus same-rung numeric assignments. They do not prove current sequence state, transition order, branch selection, timer completion, task execution, physical I/O state, or that either export is correct. Timer PRE values are not adjustment recommendations.</div>`
+      : "";
+    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || item.consistencyKind || item.sequenceKind || "";
+    els.detailBody.innerHTML = `${dependencyBoundary}${taskBoundary}${communicationBoundary}${messageBoundary}${consistencyBoundary}${sequenceBoundary}<div class="plc-section-box"><div class="plc-compare-badges"><span class="plc-compare-badge" data-kind="${esc(item.changeType)}">${esc(item.changeType)}</span><span class="plc-compare-badge">${esc(item.category)}</span>${detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : ""}<span class="plc-compare-badge" data-kind="${esc(item.reviewLevel)}">${esc(item.reviewLevel)}</span></div><p>${esc(item.summary)}</p></div>
       <div class="plc-compare-detail-grid"><div class="plc-compare-side"><h4>Baseline</h4><pre>${esc(formatValue(item.baseline))}</pre></div><div class="plc-compare-side"><h4>Current / problem</h4><pre>${esc(formatValue(item.current))}</pre></div></div>
       ${item.evidence ? `<div class="plc-section-box plc-compare-evidence"><h3>Source evidence</h3><pre>${esc(formatValue(item.evidence))}</pre></div>` : ""}`;
     els.detail.hidden = false;
