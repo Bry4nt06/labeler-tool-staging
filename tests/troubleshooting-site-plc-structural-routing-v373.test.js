@@ -125,7 +125,7 @@ test("AFI on the same source writer rung strengthens control-sequence routing wi
   assert.equal(entry.uploadedPlcOverlay.structuralEvidence.afi.wholeRoutineDisabledProven, false);
 });
 
-test("recovery gate structure can refine a route while reset safety and cause-clear remain unproven", () => {
+test("recovery structure stays control-sequence-first while physical gate terminology can remain an alternative", () => {
   const target = "LocalLatchedState";
   const library = libraryFor({
     target,
@@ -146,8 +146,11 @@ test("recovery gate structure can refine a route while reset safety and cause-cl
   });
   const entry = siteEntry(library, target);
   const handoff = library.getUniversalHandoff(entry);
-  assert.equal(handoff.primary.domainId, "power-supply");
-  assert.match(handoff.primary.signals.join(" "), /recovery-path gate symbols/i);
+  assert.equal(handoff.primary.domainId, "control-sequence");
+  assert.match(handoff.primary.signals.join(" "), /latch\/unlatch relationship is paired/i);
+  const powerAlternative = handoff.alternatives.find((item) => item.domainId === "power-supply");
+  assert.ok(powerAlternative, "expected power/supply to remain a structural alternative");
+  assert.match(powerAlternative.signals.join(" "), /recovery-path gate symbols/i);
   assert.equal(entry.uploadedPlcOverlay.structuralEvidence.recovery.causeClearedProven, false);
   assert.equal(entry.uploadedPlcOverlay.structuralEvidence.recovery.safeToResetProven, false);
   assert.doesNotMatch(JSON.stringify(handoff), /reset now|perform reset|safe to reset/i);
