@@ -74,6 +74,7 @@ jobs:
           node --check app/troubleshooting/apl-cart-servo-status.js
           node --check app/troubleshooting/apl-cart-tail-status.js
           node --check app/troubleshooting/apl-cart-core-status.js
+          node --check app/troubleshooting/apl-cart-warning-status.js
           node --check app/troubleshooting/topmodul-live-00067-source-bridge.js
           node --check app/troubleshooting/topmodul-alarm-stack-analyzer.js
           node --check app/troubleshooting/topmodul-encoder-isolation.js

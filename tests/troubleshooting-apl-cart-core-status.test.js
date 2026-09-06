@@ -23,7 +23,8 @@ const communication = require(path.join(root, "app/troubleshooting/topmodul-stat
 const processTrace = require(path.join(root, "app/troubleshooting/topmodul-station-process-trace.js"))(communication);
 const stationFoundation = require(path.join(root, "app/troubleshooting/topmodul-station-foundation-circuit.js"))(processTrace);
 const aplFoundation = require(path.join(root, "app/troubleshooting/apl-cart-foundation.js"))(stationFoundation);
-const library = require(path.join(root, "app/troubleshooting/apl-cart-core-status.js"))(aplFoundation);
+const core = require(path.join(root, "app/troubleshooting/apl-cart-core-status.js"))(aplFoundation);
+const library = require(path.join(root, "app/troubleshooting/apl-cart-warning-status.js"))(core);
 const page = fs.readFileSync(path.join(root, "app/troubleshooting/index.html"), "utf8");
 
 const supported = [1, 2, 3, 4, 20, 31];
@@ -117,15 +118,76 @@ test("five-digit Cart-local codes stay distinct from same-number base Labeler fa
   assert.equal(exact31[0].id, "apl-cart-00031");
 });
 
-test("v364 loader is after the v363 Cart tail and before exact-search/controller startup", () => {
-  assert.match(page, /data-troubleshooting-version="v364"/);
-  assert.match(page, /TROUBLESHOOTING v364/);
+test("v365 indexes 15 named Cart warnings without converting them into numbered faults", () => {
+  assert.deepEqual([...library.aplCartNamedWarnings], [1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 13, 14, 15, 16, 17]);
+  assert.deepEqual([...library.aplCartActiveWarnings], [1, 3, 4, 5, 6, 8, 10, 12, 13, 15]);
+  assert.deepEqual([...library.aplCartWarningSourceGaps], [2, 11, 14, 16, 17]);
+  const warning = library.getEntry("apl-cart-warning-0005");
+  assert.equal(warning.code, "W 0005");
+  assert.equal(warning.number, undefined);
+  assert.equal(warning.warningNumber, 5);
+  assert.equal(warning.aplCartWarning.address, "Warnings[0].5");
+});
+
+test("W 0005 is pre-fault Low Labels evidence and keeps the selected end-of-reel handoff distinct", () => {
+  const plan = library.getAplCartWarningPlan("W 0005");
+  assert.match(plan.producer, /InputDetectEndOfReel1/);
+  assert.match(plan.producer, /InputDetectEndOfReel2/);
+  assert.match(plan.producer, /SS631/);
+  assert.match(plan.producer, /Faults\[1\]\.9/);
+  assert.match(JSON.stringify(plan.watchPoints), /DataFromLS\.Par1\[0\]\.1/);
+  const result = library.evaluateAplCartWarning("W 0005", { producerState: "true" });
+  assert.equal(result.severity, "direct");
+  assert.match(result.next, /00025/);
+});
+
+test("W 0012 preserves label-length warning recovery and Fault 00022 escalation without recommending threshold changes", () => {
+  const plan = library.getAplCartWarningPlan("W 0012");
+  assert.match(plan.producer, /CountLabelLengthBad/);
+  assert.match(plan.producer, /ParLS_Actual\.Par1\[22\]/);
+  assert.match(plan.producer, /Faults\[1\]\.6/);
+  assert.match(plan.producer, /10 good measurements/i);
+  assert.match(JSON.stringify(plan.watchPoints), /not a recommended adjustment/i);
+  const result = library.evaluateAplCartWarning("W 0012", { producerState: "true" });
+  assert.match(result.next, /00022/);
+});
+
+test("W 0015 is the current Level-3 communication warning while Cart 00014 remains the separate latched fault", () => {
+  const plan = library.getAplCartWarningPlan("W 0015");
+  assert.match(plan.producer, /ReadyForETHConnect_L3/);
+  assert.match(JSON.stringify(plan.watchPoints), /Faults\[0\]\.14/);
+  assert.match(JSON.stringify(plan.watchPoints), /current-state communication evidence/i);
+});
+
+test("disabled or unimplemented warning names remain searchable source gaps", () => {
+  for (const number of [2, 11, 14, 16, 17]) {
+    const plan = library.getAplCartWarningPlan(`W ${String(number).padStart(4, "0")}`);
+    assert.ok(plan.sourceGap, `warning ${number} must retain source gap`);
+  }
+  assert.match(library.getAplCartWarningPlan("W 0002").producer, /Logic_0/);
+  assert.match(library.getAplCartWarningPlan("W 0014").producer, /AFI/);
+  assert.match(library.getAplCartWarningPlan("W 0017").sourceGap.reason, /does not invent/i);
+});
+
+test("warning exact search stays separate from five-digit Cart faults and uses the existing APL source-isolation UI", () => {
+  assert.equal(library.searchEntries("W 0005", { machineType: "TopModul", applicationMode: "apl" }, 8)[0].id, "apl-cart-warning-0005");
+  assert.equal(library.searchEntries("W0005", { machineType: "TopModul", applicationMode: "apl" }, 8)[0].id, "apl-cart-warning-0005");
+  assert.equal(library.searchEntries("00005", { machineType: "TopModul", applicationMode: "apl" }, 8)[0].id, "apl-cart-00005");
+  assert.equal(library.getAplCartFoundationPlan("W 0012").id, "apl-cart-warning-0012");
+  const evaluation = library.evaluateAplCartFoundation("W 0015", { producerState: "true" });
+  assert.equal(evaluation.severity, "direct");
+});
+
+test("v365 warning layer loads after v364 Cart core and before alarm-stack/search/controller startup", () => {
+  assert.match(page, /data-troubleshooting-version="v365"/);
+  assert.match(page, /TROUBLESHOOTING v365/);
   const tailIndex = page.indexOf("apl-cart-tail-status.js");
   const coreIndex = page.indexOf("apl-cart-core-status.js");
+  const warningIndex = page.indexOf("apl-cart-warning-status.js");
   const bridgeIndex = page.indexOf("topmodul-live-00067-source-bridge.js");
   const exactIndex = page.indexOf("troubleshooting-search-precedence.js");
   const appIndex = page.indexOf("troubleshooting-app.js");
-  assert.ok(tailIndex >= 0 && coreIndex > tailIndex && bridgeIndex > coreIndex);
+  assert.ok(tailIndex >= 0 && coreIndex > tailIndex && warningIndex > coreIndex && bridgeIndex > warningIndex);
   assert.ok(exactIndex > bridgeIndex && appIndex > exactIndex);
   assert.match(page, /troubleshooting-bootstrap-v358-20260904/);
 });
