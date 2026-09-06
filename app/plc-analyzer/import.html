@@ -95,7 +95,7 @@
             <textarea id="plcImportIdentityNotes" rows="2" maxlength="500" placeholder="Optional: locked routines, known backup status, machine-specific notes"></textarea>
           </label>
         </div>
-        <p class="plc-source-boundary"><strong>Boundary:</strong> Controller intake metadata is operator-supplied context. It is carried into every review candidate and exported review package, but it does not prove that the source is the current running program unless that status has been independently confirmed.</p>
+        <p class="plc-source-boundary"><strong>Boundary:</strong> Controller intake metadata is operator-supplied context. It is carried into every review candidate and exported review package, but it does not prove that the source is the current running program unless that status has been independently confirmed. An unmatched PLC target is a review candidate, not proof that ServoForge is missing a diagnostic. Dependency traces are static source inference; alarm identity, machine namespace, live state, and physical device condition still require separate verification.</p>
       </section>
 
       <section class="panel plc-import-library-panel" aria-labelledby="plcLibraryBridgeHeading">
