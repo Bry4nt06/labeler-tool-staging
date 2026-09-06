@@ -114,18 +114,21 @@ test("v12 preserves legacy neutral-N source and routine context", () => {
   assert.deepEqual(pathItem.gates.map((item) => item.symbol), ["Permit", "Trip"]);
 });
 
-test("v12 page and worker load after v11 and remain local/read-only", () => {
+test("v12 layer remains local/read-only under the current v13 analyzer release", () => {
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/index.html"), "utf8");
   const worker = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-worker.js"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-interlocks-v12.js"), "utf8");
   const v11 = page.indexOf("l5k-analyzer-sequence-v11.js?v=11");
   const v12 = page.indexOf("l5k-analyzer-interlocks-v12.js?v=12");
-  const ui = page.indexOf("plc-analyzer.js?v=12");
-  assert.ok(v11 >= 0 && v11 < v12 && v12 < ui);
-  assert.match(page, /PLC ANALYZER .* v12 INTERLOCK \/ PERMISSIVE PATHS/i);
+  const v13 = page.indexOf("l5k-analyzer-recovery-v13.js?v=13");
+  const ui = page.indexOf("plc-analyzer.js?v=13");
+  assert.ok(v11 >= 0 && v11 < v12 && v12 < v13 && v13 < ui);
+  assert.match(page, /v12 INTERLOCK \/ PERMISSIVE/);
+  assert.match(page, /v13 RESET \/ RECOVERY TOPOLOGY/);
   assert.match(page, /does not prove.*current permissive|does not prove live.*permissive/i);
   assert.match(worker, /l5k-analyzer-sequence-v11\.js\?v=11/);
   assert.match(worker, /l5k-analyzer-interlocks-v12\.js\?v=12/);
+  assert.match(worker, /l5k-analyzer-recovery-v13\.js\?v=13/);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(page, /force interlock|bypass interlock/i);
 });
