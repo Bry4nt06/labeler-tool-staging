@@ -3,8 +3,10 @@ name: Validate universal troubleshooting overlay v370
 on:
   pull_request:
     paths:
+      - "app/plc-analyzer/import.html"
       - "app/plc-analyzer/l5k-analyzer-troubleshooting-overlay-v7.js"
       - "app/plc-analyzer/plc-analyzer-import-controller-v6.js"
+      - "app/troubleshooting/index.html"
       - "app/troubleshooting/troubleshooting-search-precedence.js"
       - "tests/plc-analyzer-import-portable-overlay-v7.test.js"
       - "tests/troubleshooting-universal-overlay-v370.test.js"
@@ -13,8 +15,10 @@ on:
     branches:
       - main
     paths:
+      - "app/plc-analyzer/import.html"
       - "app/plc-analyzer/l5k-analyzer-troubleshooting-overlay-v7.js"
       - "app/plc-analyzer/plc-analyzer-import-controller-v6.js"
+      - "app/troubleshooting/index.html"
       - "app/troubleshooting/troubleshooting-search-precedence.js"
       - "tests/plc-analyzer-import-portable-overlay-v7.test.js"
       - "tests/troubleshooting-universal-overlay-v370.test.js"
