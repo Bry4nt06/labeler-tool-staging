@@ -42,6 +42,7 @@ jobs:
           set -euo pipefail
           node --check app/troubleshooting/diagnostic-library.js
           node --check app/troubleshooting/rpc-danfoss-guides.js
+          node --check app/troubleshooting/orientation-commissioning-guides.js
           node --check app/troubleshooting/topmodul-live-diagnostics.js
           node --check app/troubleshooting/topmodul-plc-fault-data.js
           node --check app/troubleshooting/topmodul-plc-fault-catalog.js
@@ -115,6 +116,7 @@ jobs:
           node --test tests/troubleshooting-apl-cart-core-status.test.js
           node --test tests/troubleshooting-apl-cart-label-supply.test.js
           node --test tests/troubleshooting-rpc-danfoss-guides.test.js
+          node --test tests/troubleshooting-orientation-v367.test.js
           node --test tests/troubleshooting-search-precedence.test.js
           node --test tests/troubleshooting-startup-responsiveness.test.js
           node --test tests/troubleshooting-cache-recovery.test.js
