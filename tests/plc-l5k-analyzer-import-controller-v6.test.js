@@ -120,11 +120,14 @@ test("v6 sanitizes optional intake metadata and does not accept arbitrary source
   assert.equal(identity.notes, "note with spacing");
 });
 
-test("v6 page requires explicit controller/source-status intake and remains L5K-only/review-only", () => {
+test("v6 controller intake remains explicit and L5K-only as later Import Assistant phases advance", () => {
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/import.html"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-import-controller-v6.js"), "utf8");
   const ui = fs.readFileSync(path.join(root, "app/plc-analyzer/plc-analyzer-import-controller-v6.js"), "utf8");
-  assert.match(page, /PLC IMPORT ASSISTANT v6 — CONTROLLER INTAKE/);
+  const versionMatch = page.match(/PLC IMPORT ASSISTANT v(\d+(?:\.\d+)?)/);
+  assert.ok(versionMatch, "Import Assistant must expose its active version.");
+  assert.ok(Number(versionMatch[1]) >= 6, `Expected Import Assistant v6 or later, found v${versionMatch[1]}.`);
+  assert.match(page, /CONTROLLER INTAKE/);
   assert.match(page, /id="plcImportControllerSlot"/);
   assert.match(page, /id="plcImportSourceStatus"/);
   assert.match(page, /id="plcImportControllerRevision"/);
@@ -145,6 +148,6 @@ test("v6 page requires explicit controller/source-status intake and remains L5K-
   assert.match(ui, /resetIdentity\(\)/);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(ui, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
-  assert.match(page, /review candidate, not proof/i);
-  assert.match(page, /Dependency traces are static source inference/i);
+  assert.match(page, /reference evidence only/i);
+  assert.match(page, /Controller tags, addresses, fault numbers, rung numbers and parameter values remain site\/revision-specific evidence/i);
 });
