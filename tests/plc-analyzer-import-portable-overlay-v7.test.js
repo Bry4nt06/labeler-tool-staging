@@ -8,6 +8,8 @@ const overlayApi = require("../app/plc-analyzer/l5k-analyzer-troubleshooting-ove
 
 const uiPath = path.join(__dirname, "..", "app", "plc-analyzer", "plc-analyzer-import-controller-v6.js");
 const uiSource = fs.readFileSync(uiPath, "utf8");
+const importHtml = fs.readFileSync(path.join(__dirname, "..", "app", "plc-analyzer", "import.html"), "utf8");
+const troubleshootingHtml = fs.readFileSync(path.join(__dirname, "..", "app", "troubleshooting", "index.html"), "utf8");
 
 function makeStorage() {
   const values = new Map();
@@ -78,4 +80,14 @@ test("Import Assistant exposes explicit carryover and boundary", () => {
   assert.match(uiSource, /universalLibraryModified: false/);
   assert.match(uiSource, /Local tag names, addresses, rung locations, AFIs, timing values, I\/O references, and dependencies do not become permanent ServoForge troubleshooting rules/);
   assert.match(uiSource, /\.\.\/troubleshooting\/index\.html\?plcOverlay=1/);
+});
+
+test("v370 manifests visibly identify the portable architecture and cache-bust both runtime scripts", () => {
+  assert.match(importHtml, /PLC IMPORT ASSISTANT v7 — PORTABLE SITE OVERLAY/);
+  assert.match(importHtml, /plc-analyzer-import-controller-v6\.js\?v=7-portable-20260906/);
+  assert.doesNotMatch(importHtml, /plc-analyzer-import-controller-v6\.js\?v=6[\"']/);
+  assert.match(troubleshootingHtml, /data-troubleshooting-version="v370"/);
+  assert.match(troubleshootingHtml, /UNIVERSAL CORE \+ SITE PLC OVERLAY/);
+  assert.match(troubleshootingHtml, /troubleshooting-search-precedence-v370-20260906/);
+  assert.doesNotMatch(troubleshootingHtml, /troubleshooting-search-precedence-v360\.1-20260906/);
 });
