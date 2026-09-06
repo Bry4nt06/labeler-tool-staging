@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="./plc-analyzer.css?v=1" />
   </head>
   <body>
-    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER v9 — MSG MESSAGE TOPOLOGY • v10 INTRA-PROJECT CONSISTENCY REVIEW • v11 SEQUENCE TOPOLOGY — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER v9 — MSG MESSAGE TOPOLOGY • v10 INTRA-PROJECT CONSISTENCY REVIEW • v11 SEQUENCE TOPOLOGY • v12 INTERLOCK / PERMISSIVE PATHS — NOT PRODUCTION</div>
     <main class="app plc-analyzer-app">
       <section class="topbar plc-analyzer-topbar">
         <div>
@@ -32,7 +32,7 @@
         <div>
           <span class="sf-eyebrow">SOURCE ANALYSIS</span>
           <h2>What does the PLC export actually say?</h2>
-          <p>Drop an L5K export to inventory logic, fault writers, timers, counters, I/O, module status reads, motion references, dependency paths, task/program scheduling, produced/consumed communication tags, explicit MSG/MESSAGE paths, and source-review discrepancies. v10 reviews source-proven same-name program-scoped peers for timer/counter/threshold differences. v11 adds a static sequence graph for source-visible state/step logic by pairing exact numeric EQU state gates with numeric MOV/CLR/CPT assignments to the same scoped symbol.</p>
+          <p>Drop an L5K export to inventory logic, fault writers, timers, counters, I/O, module status reads, motion references, dependency paths, task/program scheduling, produced/consumed communication tags, explicit MSG/MESSAGE paths, and source-review discrepancies. v10 reviews source-proven same-name program-scoped peers for timer/counter/threshold differences. v11 adds a static sequence graph for source-visible state/step logic. v12 adds source-visible interlock/permissive paths for OTE/OTL and supported motion actions by preserving preceding XIC/XIO/comparison evidence and intermediate producer relationships.</p>
         </div>
         <div class="plc-local-badge" aria-label="Local-only file handling">
           <strong>Local only</strong>
@@ -55,7 +55,7 @@
           <button id="plcAnalyzeButton" type="button" disabled>Analyze PLC Project</button>
           <button id="plcClearButton" type="button" class="secondary-button" disabled>Clear</button>
         </div>
-        <p class="plc-source-boundary"><strong>Boundary:</strong> This is static source analysis, not PLC simulation. Task-aware reachability follows source-visible TASK → PROGRAM MAIN → JSR relationships. Produced/consumed mappings and MSG/MESSAGE configuration follow source-visible export attributes only. The v11 static sequence graph infers an edge only when an exact numeric EQU state gate and a numeric MOV/CLR/CPT assignment to the same scoped symbol occur on the same ladder rung. Same-name program-scoped peers are inferred comparison families, not proof of identical machine function. Numeric PRE/threshold/state values are source evidence only and are not adjustment recommendations. The analyzer does not prove live execution, current state, transition order, branch selection, timer completion, task inhibit state, peer availability, route health, packet delivery, message completion, current EN/DN/ER state, payload freshness, scan time, wiring condition, device health, or that a source-review item is defective.</p>
+        <p class="plc-source-boundary"><strong>Boundary:</strong> This is static source analysis, not PLC simulation. Task-aware reachability follows source-visible TASK → PROGRAM MAIN → JSR relationships. Produced/consumed mappings and MSG/MESSAGE configuration follow source-visible export attributes only. The v11 static sequence graph infers an edge only when an exact numeric EQU state gate and a numeric MOV/CLR/CPT assignment to the same scoped symbol occur on the same ladder rung. v12 preserves same-rung XIC/XIO/comparison evidence that appears before supported output/motion actions, but it is not a complete Boolean branch solver and does not prove the current permissive/interlock state or that every displayed condition is series-required. Same-name program-scoped peers are inferred comparison families, not proof of identical machine function. Numeric PRE/threshold/state values are source evidence only and are not adjustment recommendations. The analyzer does not prove live execution, current state, transition order, branch selection, timer completion, task inhibit state, current permissive state, physical interlock state, peer availability, route health, packet delivery, message completion, current EN/DN/ER state, payload freshness, scan time, wiring condition, device health, or that a source-review item is defective.</p>
       </section>
 
       <section id="plcResults" hidden>
@@ -73,7 +73,7 @@
             <span id="plcSearchCount" class="plc-status"></span>
           </div>
           <div class="plc-search-row">
-            <input id="plcSearchInput" type="search" spellcheck="false" placeholder="Step, State, MSG tag, ConnectionPath, Faults[1].13, DelayTimer, CycleCount..." />
+            <input id="plcSearchInput" type="search" spellcheck="false" placeholder="MotorRun, Ready, Faulted, Step, MSG tag, Faults[1].13, DelayTimer..." />
             <button id="plcSearchButton" type="button">Search</button>
           </div>
           <div id="plcSearchResults" class="plc-search-results"></div>
@@ -97,7 +97,7 @@
 
           <section id="plcTabFaults" class="panel plc-tab-panel" data-plc-panel="faults" hidden>
             <h2>Fault / output writers</h2>
-            <p class="panel-help">OTE and OTL writers for fault-like targets, with located OTU/reset evidence.</p>
+            <p class="panel-help">OTE and OTL writers for fault-like targets, with located OTU/reset evidence. v12 also makes source-visible same-rung XIC/XIO/comparison paths searchable for supported outputs/actions.</p>
             <div id="plcFaultList"></div>
           </section>
 
@@ -115,12 +115,13 @@
 
           <section id="plcTabMotion" class="panel plc-tab-panel" data-plc-panel="motion" hidden>
             <h2>Motion / axis references</h2>
+            <p class="panel-help">v12 can attach same-rung contact/comparison evidence to supported motion actions, but it does not prove the axis command is executing or that a displayed contact is a live blocker.</p>
             <div id="plcMotionList"></div>
           </section>
 
           <section id="plcTabFindings" class="panel plc-tab-panel" data-plc-panel="findings" hidden>
             <h2>Discrepancies &amp; review items</h2>
-            <p class="panel-help">A finding is not automatically a machine defect. v10 adds same-name program-scoped peer consistency review. v11 adds reviewable sequence topology summaries, branch targets, source-visible state gaps, and unanchored numeric state assignments. Sequence gaps can be explained by initialization, external/HMI writes, other languages, protected logic, or export scope; the analyzer does not label them dead logic.</p>
+            <p class="panel-help">A finding is not automatically a machine defect. v10 adds same-name program-scoped peer consistency review. v11 adds reviewable sequence topology summaries and state/branch cues. v12 adds self-hold candidates and multiple source-visible permissive-path review where one action target has differing writer/gate signatures. These are static review cues only; do not use them to justify forcing or bypassing machine or safety interlocks.</p>
             <div id="plcFindingList"></div>
           </section>
 
@@ -144,7 +145,7 @@
       </section>
 
       <footer class="sf-troubleshooting-footer plc-footer">
-        <p><strong>Read-only analyzer:</strong> ServoForge does not connect to, write to, force, reset, or modify a PLC. Timer values, addresses, thresholds, state values, sequence edges, peer-consistency differences, dependency paths, task attributes, produced/consumed attributes, MESSAGE configuration, MSG call sites, and module settings shown here are evidence from the supplied export and require machine-specific/runtime verification before field changes.</p>
+        <p><strong>Read-only analyzer:</strong> ServoForge does not connect to, write to, force, reset, bypass, or modify a PLC. Timer values, addresses, thresholds, state values, sequence edges, interlock/permissive paths, peer-consistency differences, dependency paths, task attributes, produced/consumed attributes, MESSAGE configuration, MSG call sites, and module settings shown here are evidence from the supplied export and require machine-specific/runtime verification before field changes.</p>
       </footer>
     </main>
 
@@ -157,7 +158,8 @@
     <script src="./l5k-analyzer-message-v9.js?v=9"></script>
     <script src="./l5k-analyzer-consistency-v10.js?v=10"></script>
     <script src="./l5k-analyzer-sequence-v11.js?v=11"></script>
-    <script src="./plc-analyzer.js?v=11"></script>
+    <script src="./l5k-analyzer-interlocks-v12.js?v=12"></script>
+    <script src="./plc-analyzer.js?v=12"></script>
     <script src="./plc-analyzer-dependencies-v5.js?v=11"></script>
   </body>
 </html>
