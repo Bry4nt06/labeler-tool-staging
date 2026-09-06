@@ -13,12 +13,12 @@
     <link rel="stylesheet" href="./plc-analyzer-compare.css?v=2" />
   </head>
   <body>
-    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER COMPARE v9.1 MSG / MESSAGE • v10.1 CONSISTENCY • v11.1 SEQUENCE • v12.1 INTERLOCK / PERMISSIVE DIFF — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER COMPARE v9.1 MSG / MESSAGE • v10.1 CONSISTENCY • v11.1 SEQUENCE • v12.1 INTERLOCK / PERMISSIVE DIFF • v13.1 SAME-CONTROLLER SNAPSHOT ALIGNMENT — NOT PRODUCTION</div>
     <main class="app plc-analyzer-app">
       <section class="topbar plc-analyzer-topbar">
         <div>
           <h1>ServoForge <span class="product-module">PLC Compare</span></h1>
-          <p>Known-good vs current/problem L5K source, dependency, task-schedule, communications, MSG/MESSAGE, peer-consistency, sequence-topology, and interlock/permissive-path comparison.</p>
+          <p>Reference vs current/later L5K source, dependency, task-schedule, communications, MSG/MESSAGE, peer-consistency, sequence-topology, interlock/permissive-path, and same-controller snapshot comparison.</p>
         </div>
         <nav class="module-navigation" aria-label="ServoForge modules">
           <a class="module-navigation-link" href="../../index.html">Labeler Tool</a>
@@ -33,7 +33,7 @@
         <div>
           <span class="sf-eyebrow">SOURCE COMPARISON</span>
           <h2>What changed between two PLC exports?</h2>
-          <p>Compare a known-good/baseline export against a current or problem export. ServoForge reports exact rung/configuration differences, source-visible MAIN/JSR/UDT/AOI dependencies, TASK/program scheduling, produced/consumed communication tags, explicit MSG/MESSAGE changes, program-scoped peer consistency, static sequence-state/transition changes, and v12.1 source-visible interlock/permissive-path differences without assuming that a change is defective.</p>
+          <p>Compare a known-good/reference or earlier snapshot against a current/later export. ServoForge reports exact source/configuration differences, source-visible dependencies and communications, and v13.1 aligns exact unchanged rung source within each same-controller routine so a single inserted or removed rung does not create a cascade of false positional changes.</p>
         </div>
         <div class="plc-local-badge" aria-label="Local-only file handling">
           <strong>Local only</strong>
@@ -43,24 +43,24 @@
 
       <section class="panel" aria-labelledby="plcCompareFilesHeading">
         <div class="sf-section-heading">
-          <div><span class="sf-eyebrow">1. SOURCE FILES</span><h2 id="plcCompareFilesHeading">Choose baseline and current exports</h2></div>
+          <div><span class="sf-eyebrow">1. SOURCE FILES</span><h2 id="plcCompareFilesHeading">Choose reference and current/later exports</h2></div>
           <span id="plcCompareStatus" class="plc-status" aria-live="polite">Choose two L5K files.</span>
         </div>
 
         <div class="plc-compare-files">
           <div class="plc-compare-file-card" data-role="baseline">
-            <div class="plc-compare-file-heading"><span class="sf-eyebrow">BASELINE</span><h3>Known-good / reference</h3></div>
-            <div id="plcBaselineDropZone" class="plc-drop-zone" tabindex="0" role="button" aria-label="Choose baseline L5K file">
+            <div class="plc-compare-file-heading"><span class="sf-eyebrow">REFERENCE / EARLIER</span><h3>Known-good or earlier snapshot</h3></div>
+            <div id="plcBaselineDropZone" class="plc-drop-zone" tabindex="0" role="button" aria-label="Choose reference or earlier L5K file">
               <input id="plcBaselineInput" type="file" accept=".l5k,.L5K,text/plain" hidden />
-              <strong>Drop baseline .L5K</strong><span>or click to browse</span><small id="plcBaselineFile">No file selected</small>
+              <strong>Drop reference .L5K</strong><span>or click to browse</span><small id="plcBaselineFile">No file selected</small>
             </div>
           </div>
 
           <div class="plc-compare-file-card" data-role="current">
-            <div class="plc-compare-file-heading"><span class="sf-eyebrow">CURRENT / PROBLEM</span><h3>Revision to review</h3></div>
-            <div id="plcCurrentDropZone" class="plc-drop-zone" tabindex="0" role="button" aria-label="Choose current L5K file">
+            <div class="plc-compare-file-heading"><span class="sf-eyebrow">CURRENT / LATER</span><h3>Current, problem, or later snapshot</h3></div>
+            <div id="plcCurrentDropZone" class="plc-drop-zone" tabindex="0" role="button" aria-label="Choose current or later L5K file">
               <input id="plcCurrentInput" type="file" accept=".l5k,.L5K,text/plain" hidden />
-              <strong>Drop current .L5K</strong><span>or click to browse</span><small id="plcCurrentFile">No file selected</small>
+              <strong>Drop current/later .L5K</strong><span>or click to browse</span><small id="plcCurrentFile">No file selected</small>
             </div>
           </div>
         </div>
@@ -69,7 +69,7 @@
           <button id="plcCompareButton" type="button" disabled>Compare PLC Projects</button>
           <button id="plcCompareClear" type="button" class="secondary-button" disabled>Clear</button>
         </div>
-        <p class="plc-source-boundary"><strong>Boundary:</strong> A difference is source/configuration evidence only. Same-name program-scoped tags are inferred peers, not proof of identical machine function. Uniform/divergent state, majority/outlier patterns, timer/counter PRE values, numeric thresholds, sequence state values, inferred transition edges, and interlock/permissive gate paths do not establish a correct field setting or live behavior and are not adjustment recommendations. v12.1 compares same-rung XIC/XIO/comparison evidence preceding supported output/motion actions, but it is not a Boolean branch solver and does not prove that every displayed condition is series-required. This comparison does not prove live state, current sequence state, transition order, branch selection, timer completion, runtime execution, current permissive/interlock state, physical interlock condition, wiring condition, device health, scan time, current task inhibit state, controller mode, peer availability, route health, packet delivery, connection health, message completion, current EN/DN/ER state, payload freshness, actual consumer count, or that a change is defective. Never use an offline comparison as justification to force or bypass machine or safety interlocks.</p>
+        <p class="plc-source-boundary"><strong>Boundary:</strong> A difference is source/configuration evidence only. Same-name program-scoped tags are inferred peers, not proof of identical machine function. Uniform/divergent state, majority/outlier patterns, timer/counter PRE values, numeric thresholds, sequence state values, inferred transition edges, and interlock/permissive gate paths do not establish a correct field setting or live behavior and are not adjustment recommendations. v12.1 compares same-rung XIC/XIO/comparison evidence preceding supported output/motion actions, but it is not a Boolean branch solver and does not prove that every displayed condition is series-required. v13.1 same-controller alignment uses exact unchanged rung source as anchors and pairs only bounded unmatched source for review; the later/online export is not assumed correct, approved, live, or safe. This comparison does not prove live state, current sequence state, transition order, branch selection, timer completion, runtime execution, current permissive/interlock state, physical interlock condition, wiring condition, device health, scan time, current task inhibit state, controller mode, peer availability, route health, packet delivery, connection health, message completion, current EN/DN/ER state, payload freshness, actual consumer count, or that a change is defective. Never use an offline comparison as justification to force or bypass machine or safety interlocks.</p>
       </section>
 
       <section id="plcCompareResults" hidden>
@@ -85,6 +85,7 @@
             <input id="plcCompareSearch" type="search" spellcheck="false" placeholder="MotorRun, Ready, Faulted, Step, MSG, DelayTimer, ConnectionPath, task, JSR, fault..." />
             <select id="plcCompareCategory" aria-label="Difference category">
               <option value="all">All categories</option>
+              <option value="snapshots">Same-controller aligned rung changes</option>
               <option value="interlocks">Interlock / permissive paths</option>
               <option value="sequences">Sequence states / transitions</option>
               <option value="consistency">Peer consistency — timers / counters / thresholds</option>
@@ -103,7 +104,7 @@
               <option value="io">I/O</option>
               <option value="axes">Axes</option>
               <option value="motion">Motion</option>
-              <option value="rungs">Rungs</option>
+              <option value="rungs">Raw positional rungs (different-controller comparisons)</option>
             </select>
             <select id="plcCompareChangeType" aria-label="Change type"><option value="all">Added / removed / changed</option><option value="added">Added</option><option value="removed">Removed</option><option value="changed">Changed</option></select>
             <select id="plcCompareReviewLevel" aria-label="Review level"><option value="all">All review levels</option><option value="review">Review</option><option value="info">Info</option><option value="caution">Caution</option></select>
@@ -122,7 +123,7 @@
       </section>
 
       <footer class="sf-troubleshooting-footer plc-footer">
-        <p><strong>Read-only comparison:</strong> ServoForge does not connect to, write to, force, reset, bypass, or modify either PLC project. Timer presets, thresholds, peer-consistency states, sequence state values/edges, interlock/permissive gate paths, addresses, module settings, dependency changes, task attributes, program assignment, task order, produced/consumed attributes, MESSAGE configuration, MSG call sites, connection paths, source/destination elements, requested lengths, and CIP service/object fields are displayed as source evidence only.</p>
+        <p><strong>Read-only comparison:</strong> ServoForge does not connect to, write to, force, reset, bypass, or modify either PLC project. Timer presets, thresholds, peer-consistency states, sequence state values/edges, interlock/permissive gate paths, aligned snapshot differences, addresses, module settings, dependency changes, task attributes, program assignment, task order, produced/consumed attributes, MESSAGE configuration, MSG call sites, connection paths, source/destination elements, requested lengths, and CIP service/object fields are displayed as source evidence only.</p>
       </footer>
     </main>
 
@@ -144,6 +145,7 @@
     <script src="./l5k-analyzer-compare-consistency-v10-1.js?v=10.1"></script>
     <script src="./l5k-analyzer-compare-sequence-v11-1.js?v=11.1"></script>
     <script src="./l5k-analyzer-compare-interlocks-v12-1.js?v=12.1"></script>
-    <script src="./plc-analyzer-compare-v5-2.js?v=12.1"></script>
+    <script src="./l5k-analyzer-compare-snapshot-v13-1.js?v=13.1"></script>
+    <script src="./plc-analyzer-compare-v5-2.js?v=13.1"></script>
   </body>
 </html>
