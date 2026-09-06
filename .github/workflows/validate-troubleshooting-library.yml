@@ -85,6 +85,8 @@ jobs:
           node --check app/troubleshooting/topmodul-encoder-verification.js
           node --check app/troubleshooting/topmodul-main-drive-isolation.js
           node --check app/troubleshooting/troubleshooting-search-precedence.js
+          node --check app/troubleshooting/universal-handoff-v372.js
+          node --check app/troubleshooting/evidence-classification-v371.js
           node --check app/troubleshooting/troubleshooting-startup-guard.js
           node --check app/troubleshooting/troubleshooting-bootstrap.js
           node --check app/troubleshooting/rpc-danfoss-guides-ui.js
@@ -101,6 +103,8 @@ jobs:
           node --check app/troubleshooting/apl-cart-web-handling-ui.js
           node --check app/troubleshooting/apl-cart-servo-status-ui.js
           node --check app/troubleshooting/apl-cart-tail-status-ui.js
+          node --check app/troubleshooting/evidence-classification-ui-v371.js
+          node --check app/troubleshooting/universal-handoff-ui-v372.js
           node --check app/troubleshooting/troubleshooting-app.js
           node --check app.js
           node --check service-worker.js
@@ -120,6 +124,8 @@ jobs:
           node --test tests/troubleshooting-rpc-danfoss-guides.test.js
           node --test tests/troubleshooting-orientation-v367.test.js
           node --test tests/troubleshooting-search-precedence.test.js
+          node --test tests/troubleshooting-evidence-classification-v371.test.js
+          node --test tests/troubleshooting-universal-handoff-v372.test.js
           node --test tests/troubleshooting-startup-responsiveness.test.js
           node --test tests/troubleshooting-cache-recovery.test.js
       - name: Run startup regressions
