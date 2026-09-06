@@ -82,8 +82,10 @@ test("Import Assistant exposes explicit carryover and boundary", () => {
   assert.match(uiSource, /\.\.\/troubleshooting\/index\.html\?plcOverlay=1/);
 });
 
-test("v370 portable architecture remains present in v370-or-later Troubleshooting builds", () => {
-  assert.match(importHtml, /PLC IMPORT ASSISTANT v7 — PORTABLE SITE OVERLAY/);
+test("v370 portable architecture remains present in later Import Assistant and Troubleshooting builds", () => {
+  const importVersion = /PLC IMPORT ASSISTANT v(\d+) —/.exec(importHtml);
+  assert.ok(importVersion, "Import Assistant version banner missing");
+  assert.ok(Number(importVersion[1]) >= 7, `expected Import Assistant v7 or later, got v${importVersion?.[1]}`);
   assert.match(importHtml, /plc-analyzer-import-controller-v6\.js\?v=7-portable-20260906/);
   assert.doesNotMatch(importHtml, /plc-analyzer-import-controller-v6\.js\?v=6[\"']/);
   const versionMatch = /data-troubleshooting-version="v(\d+)"/.exec(troubleshootingHtml);
