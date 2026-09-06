@@ -1,0 +1,36 @@
+name: Validate troubleshooting v371
+
+on:
+  push:
+    paths:
+      - "app/troubleshooting/evidence-classification-v371.js"
+      - "app/troubleshooting/evidence-classification-ui-v371.js"
+      - "app/troubleshooting/index.html"
+      - "tests/troubleshooting-evidence-classification-v371.test.js"
+      - ".github/workflows/validate-troubleshooting-v371.yml"
+  pull_request:
+    paths:
+      - "app/troubleshooting/evidence-classification-v371.js"
+      - "app/troubleshooting/evidence-classification-ui-v371.js"
+      - "app/troubleshooting/index.html"
+      - "tests/troubleshooting-evidence-classification-v371.test.js"
+      - ".github/workflows/validate-troubleshooting-v371.yml"
+
+jobs:
+  validate-v371:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out change
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check v371 syntax
+        run: |
+          node --check app/troubleshooting/evidence-classification-v371.js
+          node --check app/troubleshooting/evidence-classification-ui-v371.js
+      - name: Run v371 regressions
+        run: node --test tests/troubleshooting-evidence-classification-v371.test.js
+      - name: Check patch whitespace
+        run: git diff --check ${{ github.event.pull_request.base.sha || github.event.before }}..${{ github.sha }}
