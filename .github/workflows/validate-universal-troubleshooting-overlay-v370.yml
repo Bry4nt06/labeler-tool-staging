@@ -53,4 +53,8 @@ jobs:
       - name: Check patch whitespace
         run: |
           set -euo pipefail
-          git diff --check "origin/${{ github.base_ref }}...HEAD"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff --check "origin/${{ github.base_ref }}...HEAD"
+          else
+            git diff --check HEAD^...HEAD
+          fi
