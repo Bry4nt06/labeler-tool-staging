@@ -154,13 +154,17 @@ END_CONTROLLER`;
   assert.equal(v6Findings(project).some((finding) => finding.id === "v6:fault-writers-not-main-reachable"), false);
 });
 
-test("v6 layer remains local/read-only under the current analyzer release", () => {
+test("v6 layer remains local/read-only under the current v13 analyzer release", () => {
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/index.html"), "utf8");
   const worker = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-worker.js"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-discrepancies-v6.js"), "utf8");
-  assert.match(page, /PLC ANALYZER v9 — MSG MESSAGE TOPOLOGY/);
-  assert.match(page, /l5k-analyzer-discrepancies-v6\.js\?v=6/);
+  const v6 = page.indexOf("l5k-analyzer-discrepancies-v6.js?v=6");
+  const v12 = page.indexOf("l5k-analyzer-interlocks-v12.js?v=12");
+  const v13 = page.indexOf("l5k-analyzer-recovery-v13.js?v=13");
+  assert.ok(v6 >= 0 && v6 < v12 && v12 < v13);
+  assert.match(page, /v13 RESET \/ RECOVERY TOPOLOGY/);
   assert.match(worker, /l5k-analyzer-discrepancies-v6\.js\?v=6/);
+  assert.match(worker, /l5k-analyzer-recovery-v13\.js\?v=13/);
   assert.match(page, /Task-aware reachability follows source-visible TASK → PROGRAM MAIN → JSR relationships/i);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(page, /connect to PLC|write to PLC|force PLC/i);

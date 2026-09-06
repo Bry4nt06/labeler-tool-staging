@@ -142,15 +142,17 @@ test("v5 enriches the legacy v4 parser path without losing routine context", () 
   assert.equal(project.faultWriters[0].writers[0].routine, "FaultsRoutine");
 });
 
-test("v5 dependency UI remains local/read-only under the current analyzer release", () => {
+test("v5 dependency UI remains local/read-only under the current v13 analyzer release", () => {
   const fs = require("node:fs");
   const ui = fs.readFileSync(path.join(root, "app/plc-analyzer/plc-analyzer-dependencies-v5.js"), "utf8");
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/index.html"), "utf8");
+  const v5 = page.indexOf("l5k-analyzer-dependencies-v5.js?v=5");
+  const v12 = page.indexOf("l5k-analyzer-interlocks-v12.js?v=12");
+  const v13 = page.indexOf("l5k-analyzer-recovery-v13.js?v=13");
   assert.match(ui, /new Worker\("\.\/l5k-analyzer-worker\.js\?v=5"\)/);
   assert.match(ui, /Static source trace/);
-  assert.match(page, /PLC ANALYZER v9 — MSG MESSAGE TOPOLOGY/);
-  assert.match(page, /l5k-analyzer-dependencies-v5\.js\?v=5/);
-  assert.match(page, /l5k-analyzer-sequence-v11\.js\?v=11/);
+  assert.ok(v5 >= 0 && v5 < v12 && v12 < v13);
+  assert.match(page, /v13 RESET \/ RECOVERY TOPOLOGY/);
   assert.match(page, /plc-analyzer-dependencies-v5\.js\?v=11/);
   assert.doesNotMatch(ui, /fetch\s*\(/);
   assert.doesNotMatch(ui, /XMLHttpRequest/);

@@ -10,7 +10,8 @@ importScripts(
   "./l5k-analyzer-message-v9.js?v=9",
   "./l5k-analyzer-consistency-v10.js?v=10",
   "./l5k-analyzer-sequence-v11.js?v=11",
-  "./l5k-analyzer-interlocks-v12.js?v=12"
+  "./l5k-analyzer-interlocks-v12.js?v=12",
+  "./l5k-analyzer-recovery-v13.js?v=13"
 );
 
 self.addEventListener("message", (event) => {
