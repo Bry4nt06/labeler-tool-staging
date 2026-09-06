@@ -8,6 +8,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const extend = require(path.join(root, "app/troubleshooting/troubleshooting-search-precedence.js"));
 const page = fs.readFileSync(path.join(root, "app/troubleshooting/index.html"), "utf8");
+const app = fs.readFileSync(path.join(root, "app/troubleshooting/troubleshooting-app.js"), "utf8");
 
 function makeBase() {
   const code600 = Object.freeze({ id: "servo-terminal-code-600", code: "600", title: "RPC terminal communication absent" });
@@ -62,9 +63,31 @@ test("v367 hotfix treats natural rotary-plate wording as a strong alias match", 
   assert.deepEqual(library.getAliasSearchMatches("rotary plate distance").map((entry) => entry.id), ["orientation-trigger-geometry-baseline"]);
 });
 
-test("v367 hotfix manifest cache-busts the patched search-precedence asset", () => {
+test("v367 search starts a new diagnostic session instead of retaining an old 00067 guided workspace", () => {
+  const resetStart = app.indexOf("function resetActiveGuidedSessionForSearch()");
+  const searchStart = app.indexOf("function performSearch()");
+  const resetCall = app.indexOf("resetActiveGuidedSessionForSearch();", searchStart);
+  const librarySearch = app.indexOf("library.searchEntries(query, state.context, 8)", searchStart);
+
+  assert.ok(resetStart >= 0, "search-state reset helper missing");
+  assert.ok(searchStart > resetStart, "search handler should follow reset helper");
+  assert.ok(resetCall > searchStart && resetCall < librarySearch, "guided state must clear before evaluating a new search");
+
+  const resetBlock = app.slice(resetStart, searchStart);
+  assert.match(resetBlock, /state\.flowId = ""/);
+  assert.match(resetBlock, /state\.nodeId = ""/);
+  assert.match(resetBlock, /state\.history = \[\]/);
+  assert.match(resetBlock, /state\.trail = \[\]/);
+  assert.match(resetBlock, /state\.resultId = ""/);
+  assert.match(resetBlock, /els\.workspace\) els\.workspace\.hidden = true/);
+  assert.match(resetBlock, /clearResult\(\)/);
+});
+
+test("v367 hotfix manifest cache-busts both patched search assets", () => {
   assert.match(page, /troubleshooting-search-precedence-v360\.1-20260906&shell=v358/);
   assert.doesNotMatch(page, /troubleshooting-search-precedence-v360-20260904&shell=v358/);
+  assert.match(page, /troubleshooting-app-v367\.2-20260906&shell=v358/);
+  assert.doesNotMatch(page, /troubleshooting-app\.js\?v=0\.9\.10&build=troubleshooting-exact-circuit-v329-20260903-1920&shell=v358/);
 });
 
 test("v360 validation asserts exact and natural-alias precedence when the records exist", () => {
