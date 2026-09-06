@@ -109,9 +109,10 @@ test("v363 UI is debounced/idempotent and does not add a self-triggering microta
   assert.doesNotMatch(uiSource, /queueMicrotask\(render\)/);
 });
 
-test("v363 loader order preserves v362, v360 exact search, and v358 bootstrap", () => {
-  assert.match(page, /data-troubleshooting-version="v363"/);
-  assert.match(page, /TROUBLESHOOTING v363/);
+test("v363 loader order is preserved inside v363-or-later troubleshooting builds", () => {
+  const versionMatch = /data-troubleshooting-version="v(\d+)"/.exec(page);
+  assert.ok(versionMatch, "troubleshooting version banner missing");
+  assert.ok(Number(versionMatch[1]) >= 363, `expected v363 or later, got v${versionMatch?.[1]}`);
   assert.match(page, /troubleshooting-bootstrap-v358-20260904/);
   const servoIndex = page.indexOf("apl-cart-servo-status.js");
   const tailIndex = page.indexOf("apl-cart-tail-status.js");

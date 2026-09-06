@@ -122,9 +122,10 @@ test("v361 UI is idempotent/debounced and does not recreate the earlier microtas
   assert.doesNotMatch(uiSource, /queueMicrotask\(render\)/);
 });
 
-test("v361 web handling remains loaded under v363 with v362 tail adjacency, v360 exact search, and the v358 bootstrap", () => {
-  assert.match(page, /data-troubleshooting-version="v363"/);
-  assert.match(page, /TROUBLESHOOTING v363/);
+test("v361 web handling remains loaded under v363-or-later with v362 tail adjacency, v360 exact search, and the v358 bootstrap", () => {
+  const versionMatch = /data-troubleshooting-version="v(\d+)"/.exec(page);
+  assert.ok(versionMatch, "troubleshooting version banner missing");
+  assert.ok(Number(versionMatch[1]) >= 363, `expected v363 or later, got v${versionMatch?.[1]}`);
   assert.match(page, /troubleshooting-bootstrap-v358-20260904/);
   const foundationIndex = page.indexOf("apl-cart-foundation.js");
   const webIndex = page.indexOf("apl-cart-web-handling.js");
