@@ -120,11 +120,11 @@ test("v6 sanitizes optional intake metadata and does not accept arbitrary source
   assert.equal(identity.notes, "note with spacing");
 });
 
-test("v6 page requires explicit controller/source-status intake and remains L5K-only/review-only", () => {
+test("v6 intake remains present as later portable Import Assistant phases advance", () => {
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/import.html"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-import-controller-v6.js"), "utf8");
   const ui = fs.readFileSync(path.join(root, "app/plc-analyzer/plc-analyzer-import-controller-v6.js"), "utf8");
-  assert.match(page, /PLC IMPORT ASSISTANT v6 — CONTROLLER INTAKE/);
+  assert.match(page, /PLC IMPORT ASSISTANT v(?:6|7)/);
   assert.match(page, /id="plcImportControllerSlot"/);
   assert.match(page, /id="plcImportSourceStatus"/);
   assert.match(page, /id="plcImportControllerRevision"/);
@@ -138,7 +138,7 @@ test("v6 page requires explicit controller/source-status intake and remains L5K-
   const baseImport = page.indexOf("l5k-analyzer-import.js?v=3");
   const dependencyImport = page.indexOf("l5k-analyzer-import-dependencies-v5-1.js?v=5.1");
   const intakeEngine = page.indexOf("l5k-analyzer-import-controller-v6.js?v=6");
-  const intakeUi = page.indexOf("plc-analyzer-import-controller-v6.js?v=6");
+  const intakeUi = page.indexOf("plc-analyzer-import-controller-v6.js?v=");
   const existingUi = page.indexOf("plc-analyzer-import-v5-1.js?v=5.1");
   assert.ok(baseImport >= 0 && baseImport < dependencyImport && dependencyImport < intakeEngine && intakeEngine < intakeUi && intakeUi < existingUi);
   assert.match(ui, /analyzeButton\.disabled = !ready/);

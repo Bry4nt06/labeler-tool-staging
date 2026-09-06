@@ -13,12 +13,12 @@
     <link rel="stylesheet" href="./troubleshooting.css?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v358" />
   </head>
   <body>
-    <div class="staging-environment-banner" role="status" data-troubleshooting-version="v369">STAGING / TEST BUILD — TROUBLESHOOTING v369 — ServoForge 0.9.10 — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status" data-troubleshooting-version="v370">STAGING / TEST BUILD — TROUBLESHOOTING v370 — ServoForge 0.9.10 — NOT PRODUCTION</div>
     <main class="app troubleshooting-app">
       <section class="topbar troubleshooting-topbar">
         <div>
           <h1>ServoForge <span class="product-module">Troubleshooting Library</span></h1>
-          <p>Guided fault isolation backed by ServoForge machine context and the archived service references.</p>
+          <p>Universal guided fault isolation, with machine-family evidence and optional session-only PLC evidence from the Analyzer.</p>
         </div>
         <nav class="module-navigation" aria-label="ServoForge modules">
           <a class="module-navigation-link" href="../../index.html">Labeler Tool</a>
@@ -30,7 +30,7 @@
         <div class="sf-hero-copy">
           <span class="sf-eyebrow">Start with evidence</span>
           <h2>What is the machine telling you?</h2>
-          <p>Search an exact alarm or describe the symptom. If there is no useful code, use a guided path to narrow the fault by system, scope, power, communication, timing, and machine condition.</p>
+          <p>Search an exact alarm or describe the symptom. The core diagnostic method follows failure mechanisms—system, scope, power, safety/permissives, communication, sensing, timing, motion, mechanical condition, and process condition—without assuming every site uses the same PLC tags or alarm numbering.</p>
         </div>
         <div class="sf-library-status">
           <span>Library status</span>
@@ -82,7 +82,7 @@
           <div><span class="sf-eyebrow">Evidence layer</span><h2 id="referenceHeading">Reference library</h2></div>
           <span id="sourceCount" class="sf-reference-count"></span>
         </div>
-        <p class="sf-reference-intro">The supplied troubleshooting archive, TopModul electrical drawings, readable PLC exports, and field-observed validation cases remain separate evidence types. PLC fault-number binding does not imply a rung or schematic page is fully traced until that mapping is verified.</p>
+        <p class="sf-reference-intro">OEM manuals, machine-family references, schematics, readable PLC exports, and field observations remain evidence—not universal tag standards. Site-specific PLC names and addresses may assist a carried Analyzer session, but they do not redefine the permanent troubleshooting method.</p>
         <div class="sf-reference-toolbar">
           <input id="sourceSearch" type="search" placeholder="Search manuals, schematics, PLC projects, RPC, APL, TopModul…" aria-label="Search reference library" />
           <select id="sourceKindFilter" aria-label="Filter reference type"></select>
@@ -91,7 +91,7 @@
       </section>
 
       <footer class="sf-troubleshooting-footer">
-        <p><strong>Source discipline:</strong> archived OEM/procedure content, PLC exports, schematics, and field observations are kept separate from diagnostic interpretation. Recommendations involving energized electrical work, stored energy, servo motion, guards, or safety circuits retain an explicit safety boundary.</p>
+        <p><strong>Source discipline:</strong> universal diagnostic methods, machine-family evidence, archived OEM/procedure content, PLC exports, schematics, and field observations are kept distinct. Uploaded PLC evidence is session/site-specific. Recommendations involving energized electrical work, stored energy, servo motion, guards, or safety circuits retain an explicit safety boundary.</p>
       </footer>
     </main>
 
@@ -143,7 +143,7 @@
         "./topmodul-encoder-stack-bridge.js?v=0.9.10&build=troubleshooting-encoder-stack-v349-20260904-0830&shell=v358",
         "./topmodul-encoder-verification.js?v=0.9.10&build=troubleshooting-encoder-verification-v350-20260904-0845&shell=v358",
         "./topmodul-main-drive-isolation.js?v=0.9.10&build=troubleshooting-main-drive-isolation-v352-20260904&shell=v358",
-        "./troubleshooting-search-precedence.js?v=0.9.10&build=troubleshooting-search-precedence-v360.1-20260906&shell=v358",
+        "./troubleshooting-search-precedence.js?v=0.9.10&build=troubleshooting-search-precedence-v370-20260906&shell=v358",
         "./troubleshooting-startup-guard.js?v=0.9.10&build=troubleshooting-startup-v356-20260904&shell=v358",
         "./troubleshooting-app.js?v=0.9.10&build=troubleshooting-app-v367.2-20260906&shell=v358",
         "./rpc-danfoss-guides-ui.js?v=0.9.10&build=rpc-danfoss-guides-v359-20260904&shell=v358",
