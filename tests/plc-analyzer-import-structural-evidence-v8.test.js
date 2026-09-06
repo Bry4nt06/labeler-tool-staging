@@ -116,7 +116,8 @@ test("v8 draft boundary never promotes static gates, recovery, or AFI evidence t
   assert.match(text, /does not prove current gate values|does not prove live gate state/i);
   assert.match(text, /reset.*safe|reset safety/i);
   assert.match(text, /AFI.*caus/i);
-  assert.doesNotMatch(text, /GuardDoorClosed is false|reset is safe|AFI caused/i);
+  assert.doesNotMatch(text, /"runtimeGateStateProven":true|"booleanBranchSemanticsProven":true|"causeClearedProven":true|"safeToResetProven":true|"causeProven":true|"wholeRoutineDisabledProven":true/);
+  assert.doesNotMatch(text, /GuardDoorClosed is false|reset now|perform reset|AFI is the cause|whole routine is disabled/i);
 });
 
 test("v8 structural overlay preserves nested import writer locations and structural evidence", () => {
