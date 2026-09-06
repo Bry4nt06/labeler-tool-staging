@@ -34,12 +34,12 @@
   function structuralEvidenceIsBounded(value) {
     if (!value) return true;
     if (value.authority !== "static-site-structure-only") return false;
-    if (value.interlock?.runtimeGateStateProven !== false) return false;
-    if (value.interlock?.booleanBranchSemanticsProven !== false) return false;
-    if (value.recovery?.causeClearedProven !== false) return false;
-    if (value.recovery?.safeToResetProven !== false) return false;
-    if (value.afi?.causeProven !== false) return false;
-    if (value.afi?.wholeRoutineDisabledProven !== false) return false;
+    if (value.interlock && value.interlock.runtimeGateStateProven !== false) return false;
+    if (value.interlock && value.interlock.booleanBranchSemanticsProven !== false) return false;
+    if (value.recovery && value.recovery.causeClearedProven !== false) return false;
+    if (value.recovery && value.recovery.safeToResetProven !== false) return false;
+    if (value.afi && value.afi.causeProven !== false) return false;
+    if (value.afi && value.afi.wholeRoutineDisabledProven !== false) return false;
     return true;
   }
 
