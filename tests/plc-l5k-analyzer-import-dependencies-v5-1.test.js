@@ -124,7 +124,7 @@ test("v5.1 dependency import remains loaded as later Import Assistant phases adv
   const wrapper = page.indexOf("l5k-analyzer-import-dependencies-v5-1.js?v=5.1");
   const uiScript = page.indexOf("plc-analyzer-import-v5-1.js?v=5.1");
   assert.ok(dependencies >= 0 && dependencies < baseImport && baseImport < wrapper && wrapper < uiScript);
-  assert.match(page, /PLC IMPORT ASSISTANT v(?:5\.1|6).*DEPENDENCY EVIDENCE/);
+  assert.match(page, /PLC IMPORT ASSISTANT v(?:5\.1|6|7).*DEPENDENCY EVIDENCE/);
   assert.match(ui, /new Worker\("\.\/l5k-analyzer-worker\.js\?v=5"\)/);
   assert.doesNotMatch(ui, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
