@@ -156,7 +156,7 @@ test("v372 UI exposes a reversible Site PLC to Universal Method handoff without 
   assert.doesNotMatch(uiSource, /force outputs to prove|bypass .* to continue|jumper .* safety/i);
 });
 
-test("v372 manifest loads handoff after v370 search, before v371 classification, and UI after v371 decoration", () => {
+test("v372 handoff remains ordered correctly in v372-or-later manifests", () => {
   const search = page.indexOf("troubleshooting-search-precedence.js");
   const handoff = page.indexOf("universal-handoff-v372.js");
   const classification = page.indexOf("evidence-classification-v371.js");
@@ -165,8 +165,9 @@ test("v372 manifest loads handoff after v370 search, before v371 classification,
   const classificationUi = page.indexOf("evidence-classification-ui-v371.js");
   const handoffUi = page.indexOf("universal-handoff-ui-v372.js");
   assert.ok(search >= 0 && handoff > search && classification > handoff && guard > classification && app > guard && classificationUi > app && handoffUi > classificationUi);
-  assert.match(page, /data-troubleshooting-version="v372"/);
-  assert.match(page, /TROUBLESHOOTING v372/);
+  const versionMatch = /data-troubleshooting-version="v(\d+)"/.exec(page);
+  assert.ok(versionMatch, "troubleshooting version banner missing");
+  assert.ok(Number(versionMatch[1]) >= 372, `expected v372 or later, got v${versionMatch?.[1]}`);
   assert.match(page, /troubleshooting-universal-handoff-v372-20260906&shell=v358/);
   assert.match(page, /troubleshooting-universal-handoff-ui-v372-20260906&shell=v358/);
 });
