@@ -10,15 +10,15 @@
     <link rel="icon" href="../../assets/labeler-tool-icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="../../styles.css?v=0.9.10" />
     <link rel="stylesheet" href="./plc-analyzer.css?v=1" />
-    <link rel="stylesheet" href="./plc-analyzer-import.css?v=6" />
+    <link rel="stylesheet" href="./plc-analyzer-import.css?v=7" />
   </head>
   <body>
-    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC IMPORT ASSISTANT v6 — CONTROLLER INTAKE • DEPENDENCY EVIDENCE — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC IMPORT ASSISTANT v7 — UNIVERSAL HANDOFF • CONTROLLER INTAKE • DEPENDENCY EVIDENCE — NOT PRODUCTION</div>
     <main class="app plc-analyzer-app">
       <section class="topbar plc-analyzer-topbar">
         <div>
           <h1>ServoForge <span class="product-module">PLC Import Assistant</span></h1>
-          <p>Turn source-proven L5K fault logic and dependency paths into reviewable Troubleshooting Library draft records.</p>
+          <p>Analyze source-proven L5K logic as controller-specific evidence that can temporarily enrich the universal Troubleshooter.</p>
         </div>
         <nav class="module-navigation" aria-label="ServoForge modules">
           <a class="module-navigation-link" href="../../index.html">Labeler Tool</a>
@@ -31,9 +31,9 @@
 
       <section class="panel plc-analyzer-intro">
         <div>
-          <span class="sf-eyebrow">REVIEW-ONLY IMPORT PIPELINE</span>
-          <h2>Find source-backed troubleshooting candidates without publishing guesses</h2>
-          <p>The assistant parses one L5K locally, records the physical controller identity you explicitly select, checks exact PLC target references against the currently loaded Troubleshooting Library, and attaches bounded upstream dependency evidence for SME review.</p>
+          <span class="sf-eyebrow">UNIVERSAL TROUBLESHOOTING HANDOFF</span>
+          <h2>Use PLC source as context, not as the troubleshooting bible</h2>
+          <p>The Troubleshooter keeps generic diagnostic methods such as encoder feedback, safety/interlock, communication, servo/motion, label supply, container flow, orientation and utilities. This page can attach the uploaded controller's actual tags, fault targets and source locations to those methods for the current browser session without making site-specific names universal.</p>
         </div>
         <div class="plc-local-badge" aria-label="Local-only file handling">
           <strong>Local L5K parsing</strong>
@@ -64,7 +64,7 @@
           <div><span class="sf-eyebrow">2. CONTROLLER IDENTITY</span><h2 id="plcControllerIntakeHeading">Map this export to the physical controller</h2></div>
           <span id="plcImportIdentityStatus" class="plc-status" aria-live="polite">Select an L5K export, then map it to the physical controller.</span>
         </div>
-        <p>Choose the machine location explicitly. ServoForge does not infer LB1/LB2, Labeler, or Cart identity from the file name or the controller name embedded in the export.</p>
+        <p>Choose the machine location explicitly. ServoForge does not infer LB1/LB2, Labeler, Cart, site, or machine authority from the file name or embedded controller name.</p>
         <div class="plc-import-controller-grid">
           <label class="plc-import-field plc-import-field-wide">
             <span>Controller mapping</span>
@@ -95,33 +95,36 @@
             <textarea id="plcImportIdentityNotes" rows="2" maxlength="500" placeholder="Optional: locked routines, known backup status, machine-specific notes"></textarea>
           </label>
         </div>
-        <p class="plc-source-boundary"><strong>Boundary:</strong> Controller intake metadata is operator-supplied context. It is carried into every review candidate and exported review package, but it does not prove that the source is the current running program unless that status has been independently confirmed. An unmatched PLC target is a review candidate, not proof that ServoForge is missing a diagnostic. Dependency traces are static source inference; alarm identity, machine namespace, live state, and physical device condition still require separate verification.</p>
+        <p class="plc-source-boundary"><strong>Boundary:</strong> Controller intake metadata is operator-supplied context. It does not prove that the source is the current running program unless independently confirmed. Controller tags, addresses, fault numbers, rung numbers and parameter values remain site/revision-specific evidence; they are never promoted into the universal troubleshooting method merely because they appear in an uploaded export.</p>
       </section>
 
       <section class="panel plc-import-library-panel" aria-labelledby="plcLibraryBridgeHeading">
         <div class="sf-section-heading">
-          <div><span class="sf-eyebrow">3. CURRENT LIBRARY</span><h2 id="plcLibraryBridgeHeading">Troubleshooting coverage bridge</h2></div>
+          <div><span class="sf-eyebrow">3. CURRENT LIBRARY</span><h2 id="plcLibraryBridgeHeading">Reference coverage bridge</h2></div>
           <span id="plcImportLibraryStatus" class="plc-status" aria-live="polite">Waiting for analysis.</span>
         </div>
-        <p>The assistant reads the currently deployed Troubleshooting Library from a hidden same-origin page. It compares exact PLC target strings only; it does not treat fuzzy text similarity or dependency similarity as verified coverage.</p>
+        <p>The assistant can still compare exact PLC target strings with the deployed reference library for SME review. Exact target matches are reference evidence only; a different site's tag naming does not mean its troubleshooting method is different.</p>
       </section>
 
       <section id="plcImportResults" hidden>
         <section class="panel plc-overview-panel">
           <div class="sf-section-heading">
-            <div><span class="sf-eyebrow">4. REVIEW QUEUE</span><h2 id="plcImportControllerName">PLC project</h2></div>
+            <div><span class="sf-eyebrow">4. CONTROLLER EVIDENCE</span><h2 id="plcImportControllerName">PLC project</h2></div>
             <span id="plcImportAnalysisStatus" class="plc-status"></span>
           </div>
           <div id="plcImportSummaryCards" class="plc-summary-grid"></div>
           <div class="plc-import-actions">
-            <button id="plcImportDownloadButton" type="button">Download Review JSON</button>
+            <button id="plcImportUseTroubleshooterButton" type="button" disabled>Use Analyzer Context in Troubleshooter</button>
+            <button id="plcImportDownloadButton" type="button" class="secondary-button">Download Review JSON</button>
             <button id="plcImportCopyButton" type="button" class="secondary-button">Copy Review JSON</button>
           </div>
+          <p id="plcImportHandoffStatus" class="plc-status" aria-live="polite">Analyze an L5K first. No controller-specific evidence has been attached to Troubleshooting.</p>
+          <p class="plc-source-boundary"><strong>Handoff behavior:</strong> The handoff is stored only in this browser as a temporary controller evidence overlay. The Troubleshooter keeps its universal diagnostic method and may show the uploaded controller's matching tags/rung locations alongside it. Clearing/replacing the Analyzer context does not edit the permanent Troubleshooting Library.</p>
         </section>
 
         <section class="panel plc-search-panel">
           <div class="sf-section-heading">
-            <div><span class="sf-eyebrow">FILTER</span><h2>Candidate records</h2></div>
+            <div><span class="sf-eyebrow">FILTER</span><h2>Controller source candidates</h2></div>
             <span id="plcImportResultCount" class="plc-status"></span>
           </div>
           <div class="plc-import-filter-grid">
@@ -138,7 +141,7 @@
 
         <section id="plcImportDetailPanel" class="panel plc-detail-panel" hidden>
           <div class="sf-section-heading">
-            <div><span class="sf-eyebrow">DRAFT EVIDENCE</span><h2 id="plcImportDetailTitle">Candidate</h2></div>
+            <div><span class="sf-eyebrow">SOURCE EVIDENCE</span><h2 id="plcImportDetailTitle">Candidate</h2></div>
             <button id="plcImportDetailClose" type="button" class="secondary-button">Close</button>
           </div>
           <div id="plcImportDetailBody"></div>
@@ -148,7 +151,7 @@
       <iframe id="plcTroubleshootingLibraryBridge" class="plc-import-library-bridge" title="Troubleshooting library coverage bridge" src="../troubleshooting/index.html?embeddedCoverageBridge=v3" hidden></iframe>
 
       <footer class="sf-troubleshooting-footer plc-footer">
-        <p><strong>Review-only:</strong> Generated JSON is a draft evidence package. It does not publish to the Troubleshooting Library, edit a PLC, infer live machine state, or authorize field parameter changes.</p>
+        <p><strong>Read-only / local-only:</strong> Generated review JSON and temporary Troubleshooter context do not publish PLC tags into the universal library, edit a PLC, infer live machine state, or authorize field parameter changes, forcing, jumpers, bypasses, or safety defeat.</p>
       </footer>
     </main>
 
@@ -159,6 +162,8 @@
     <script src="./l5k-analyzer-import-dependencies-v5-1.js?v=5.1"></script>
     <script src="./l5k-analyzer-import-controller-v6.js?v=6"></script>
     <script src="./plc-analyzer-import-controller-v6.js?v=6"></script>
+    <script src="../shared/universal-troubleshooting-core.js?v=1"></script>
+    <script src="./plc-analyzer-import-handoff-v7.js?v=7"></script>
     <script src="./plc-analyzer-import-v5-1.js?v=5.1"></script>
   </body>
 </html>

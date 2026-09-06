@@ -1,0 +1,61 @@
+name: Validate universal troubleshooting v370
+
+on:
+  pull_request:
+    paths:
+      - "app/shared/universal-troubleshooting-core.js"
+      - "app/troubleshooting/universal-methods-v370.js"
+      - "app/troubleshooting/analyzer-context-overlay-v370.js"
+      - "app/troubleshooting/analyzer-context-ui-v370.js"
+      - "app/troubleshooting/index.html"
+      - "app/plc-analyzer/import.html"
+      - "app/plc-analyzer/plc-analyzer-import-handoff-v7.js"
+      - "tests/troubleshooting-universal-v370.test.js"
+      - ".github/workflows/validate-universal-troubleshooting-v370.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "app/shared/universal-troubleshooting-core.js"
+      - "app/troubleshooting/universal-methods-v370.js"
+      - "app/troubleshooting/analyzer-context-overlay-v370.js"
+      - "app/troubleshooting/analyzer-context-ui-v370.js"
+      - "app/troubleshooting/index.html"
+      - "app/plc-analyzer/import.html"
+      - "app/plc-analyzer/plc-analyzer-import-handoff-v7.js"
+      - "tests/troubleshooting-universal-v370.test.js"
+      - ".github/workflows/validate-universal-troubleshooting-v370.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-v370:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out change
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check universal and handoff syntax
+        run: |
+          set -euo pipefail
+          node --check app/shared/universal-troubleshooting-core.js
+          node --check app/troubleshooting/universal-methods-v370.js
+          node --check app/troubleshooting/analyzer-context-overlay-v370.js
+          node --check app/troubleshooting/analyzer-context-ui-v370.js
+          node --check app/plc-analyzer/plc-analyzer-import-handoff-v7.js
+      - name: Run v370 regressions
+        run: node --test tests/troubleshooting-universal-v370.test.js
+      - name: Check patch whitespace
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ github.base_ref }}" ]]; then
+            git diff --check "origin/${{ github.base_ref }}...HEAD"
+          else
+            git diff --check HEAD^...HEAD
+          fi

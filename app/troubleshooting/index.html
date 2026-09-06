@@ -13,12 +13,12 @@
     <link rel="stylesheet" href="./troubleshooting.css?v=0.9.10&amp;build=troubleshooting-exact-circuit-v329-20260903-1920&amp;shell=v358" />
   </head>
   <body>
-    <div class="staging-environment-banner" role="status" data-troubleshooting-version="v369">STAGING / TEST BUILD — TROUBLESHOOTING v369 — ServoForge 0.9.10 — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status" data-troubleshooting-version="v370">STAGING / TEST BUILD — TROUBLESHOOTING v370 — UNIVERSAL METHODS + ANALYZER CONTEXT — ServoForge 0.9.10 — NOT PRODUCTION</div>
     <main class="app troubleshooting-app">
       <section class="topbar troubleshooting-topbar">
         <div>
           <h1>ServoForge <span class="product-module">Troubleshooting Library</span></h1>
-          <p>Guided fault isolation backed by ServoForge machine context and the archived service references.</p>
+          <p>Universal fault-isolation methods with machine context and optional controller-specific Analyzer evidence kept as separate layers.</p>
         </div>
         <nav class="module-navigation" aria-label="ServoForge modules">
           <a class="module-navigation-link" href="../../index.html">Labeler Tool</a>
@@ -30,7 +30,7 @@
         <div class="sf-hero-copy">
           <span class="sf-eyebrow">Start with evidence</span>
           <h2>What is the machine telling you?</h2>
-          <p>Search an exact alarm or describe the symptom. If there is no useful code, use a guided path to narrow the fault by system, scope, power, communication, timing, and machine condition.</p>
+          <p>Search an exact alarm or describe the symptom. If there is no useful code, start from a universal failure family and narrow by scope, power, communication, timing, feedback, material flow and machine condition. Site-specific PLC tags can be attached from Analyzer without becoming universal rules.</p>
         </div>
         <div class="sf-library-status">
           <span>Library status</span>
@@ -47,13 +47,22 @@
         <div id="troubleshootingContext" class="sf-context-chips"></div>
       </section>
 
+      <section id="analyzerContextPanel" class="sf-analyzer-context-panel panel" aria-label="Temporary Analyzer controller context" hidden>
+        <div class="sf-section-heading">
+          <div><span class="sf-eyebrow">Analyzer evidence overlay</span><h2>Uploaded controller context</h2></div>
+          <div class="sf-analyzer-context-actions"><span id="analyzerContextStatus" class="sf-recent-status"></span><button id="clearAnalyzerContext" type="button" class="secondary-button">Clear Analyzer context</button></div>
+        </div>
+        <p>Controller tags, fault targets, rung locations and project naming shown here belong only to the uploaded source. They can help locate this machine's implementation while the diagnostic method remains site- and tag-independent.</p>
+        <div id="analyzerContextChips" class="sf-analyzer-context-chips"></div>
+      </section>
+
       <section class="sf-search-panel panel" aria-labelledby="faultSearchHeading">
         <div class="sf-section-heading">
           <div><span class="sf-eyebrow">Fastest path</span><h2 id="faultSearchHeading">Fault / symptom search</h2></div>
           <span id="recentDiagnosis" class="sf-recent-status"></span>
         </div>
         <div class="sf-fault-search-row">
-          <input id="faultSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Example: 1091, 670, 00067, SERVOCOUNT, main contactor…" aria-label="Search fault code, alarm text, or symptom" />
+          <input id="faultSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Example: encoder feedback missing, 670, 00067, SERVOCOUNT, main contactor…" aria-label="Search fault code, alarm text, symptom, or attached Analyzer tag" />
           <button id="faultSearchButton" type="button">Find fault</button>
         </div>
         <div id="searchResults" class="sf-search-results" aria-live="polite"></div>
@@ -62,7 +71,7 @@
       <section class="sf-guide-panel" aria-labelledby="guidedHeading">
         <div class="sf-section-heading sf-section-heading-outside">
           <div><span class="sf-eyebrow">No exact alarm?</span><h2 id="guidedHeading">Guided troubleshooting</h2></div>
-          <p>Choose the system that best matches what you see.</p>
+          <p>Start with the universal failure family that best matches what you see; machine-specific paths remain available as evidence-backed references.</p>
         </div>
         <div id="guideCards" class="sf-guide-grid"></div>
       </section>
@@ -82,7 +91,7 @@
           <div><span class="sf-eyebrow">Evidence layer</span><h2 id="referenceHeading">Reference library</h2></div>
           <span id="sourceCount" class="sf-reference-count"></span>
         </div>
-        <p class="sf-reference-intro">The supplied troubleshooting archive, TopModul electrical drawings, readable PLC exports, and field-observed validation cases remain separate evidence types. PLC fault-number binding does not imply a rung or schematic page is fully traced until that mapping is verified.</p>
+        <p class="sf-reference-intro">OEM manuals, schematics, readable PLC exports, site-specific fault mappings and field observations remain evidence—not universal naming authority. PLC fault-number or tag binding does not imply the same address/name exists on another machine or site.</p>
         <div class="sf-reference-toolbar">
           <input id="sourceSearch" type="search" placeholder="Search manuals, schematics, PLC projects, RPC, APL, TopModul…" aria-label="Search reference library" />
           <select id="sourceKindFilter" aria-label="Filter reference type"></select>
@@ -91,7 +100,7 @@
       </section>
 
       <footer class="sf-troubleshooting-footer">
-        <p><strong>Source discipline:</strong> archived OEM/procedure content, PLC exports, schematics, and field observations are kept separate from diagnostic interpretation. Recommendations involving energized electrical work, stored energy, servo motion, guards, or safety circuits retain an explicit safety boundary.</p>
+        <p><strong>Source discipline:</strong> universal troubleshooting method, machine context, OEM/procedure content, PLC exports, schematics and field observations are kept as distinct layers. Site-specific tags, values and addresses are evidence for that source only. Recommendations involving energized electrical work, stored energy, servo motion, guards, or safety circuits retain an explicit safety boundary.</p>
       </footer>
     </main>
 
@@ -143,9 +152,13 @@
         "./topmodul-encoder-stack-bridge.js?v=0.9.10&build=troubleshooting-encoder-stack-v349-20260904-0830&shell=v358",
         "./topmodul-encoder-verification.js?v=0.9.10&build=troubleshooting-encoder-verification-v350-20260904-0845&shell=v358",
         "./topmodul-main-drive-isolation.js?v=0.9.10&build=troubleshooting-main-drive-isolation-v352-20260904&shell=v358",
+        "../shared/universal-troubleshooting-core.js?v=1&build=universal-troubleshooting-v370-20260906",
+        "./universal-methods-v370.js?v=0.9.10&build=universal-troubleshooting-v370-20260906&shell=v358",
         "./troubleshooting-search-precedence.js?v=0.9.10&build=troubleshooting-search-precedence-v360.1-20260906&shell=v358",
+        "./analyzer-context-overlay-v370.js?v=0.9.10&build=analyzer-context-overlay-v370-20260906&shell=v358",
         "./troubleshooting-startup-guard.js?v=0.9.10&build=troubleshooting-startup-v356-20260904&shell=v358",
         "./troubleshooting-app.js?v=0.9.10&build=troubleshooting-app-v367.2-20260906&shell=v358",
+        "./analyzer-context-ui-v370.js?v=0.9.10&build=analyzer-context-ui-v370-20260906&shell=v358",
         "./rpc-danfoss-guides-ui.js?v=0.9.10&build=rpc-danfoss-guides-v359-20260904&shell=v358",
         "./topmodul-fault-drilldown-ui.js?v=0.9.10&build=troubleshooting-exact-circuit-v329-20260903-1920&shell=v358",
         "./topmodul-process-trace-ui.js?v=0.9.10&build=troubleshooting-station-process-v334-20260903-2045&shell=v358",
