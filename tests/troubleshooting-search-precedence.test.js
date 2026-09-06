@@ -11,13 +11,22 @@ function makeBase() {
   const code600 = Object.freeze({ id: "servo-terminal-code-600", code: "600", title: "RPC terminal communication absent" });
   const unrelated = Object.freeze({ id: "topmodul-00067-secondary-no-motion", code: "00067 — CHECK MOTION", title: "Determine whether 00067 is secondary to a no-motion condition" });
   const apl = Object.freeze({ id: "apl-aggregate-connection", code: "APL AGGREGATE CONNECTION", title: "APL aggregate connection / docking path" });
+  const orientation = Object.freeze({
+    id: "orientation-trigger-geometry-baseline",
+    code: "ORIENTATION TRIGGER GEOMETRY",
+    title: "Verify orientation trigger geometry against the machine baseline",
+    aliases: Object.freeze(["distance between rotary plates", "table diameter", "orientation geometry baseline"])
+  });
   return Object.freeze({
     version: "test-search-stack",
-    entries: Object.freeze([unrelated, apl, code600]),
+    entries: Object.freeze([unrelated, apl, orientation, code600]),
     normalize(value) { return String(value || "").trim().toLowerCase(); },
     searchEntries(query, context, limit = 8) {
       if (String(query).trim() === "600" && String(context.applicationMode).toLowerCase() === "apl") {
         return [unrelated, apl, code600].slice(0, limit);
+      }
+      if (String(query).trim().toLowerCase() === "rotary plate distance") {
+        return [unrelated, apl, orientation].slice(0, limit);
       }
       return [unrelated, apl].slice(0, limit);
     },
@@ -44,7 +53,14 @@ test("v360 preserves existing ranking when there is no exact code or id", () => 
   assert.deepEqual(matches.map((entry) => entry.id), ["topmodul-00067-secondary-no-motion", "apl-aggregate-connection"]);
 });
 
-test("v360 validation asserts Code 600 exact precedence when the record exists", () => {
+test("v367 hotfix treats natural rotary-plate wording as a strong alias match", () => {
+  const library = extend(makeBase());
+  const matches = library.searchEntries("rotary plate distance", { machineType: "TopModul", applicationMode: "apl" }, 8);
+  assert.equal(matches[0].id, "orientation-trigger-geometry-baseline");
+  assert.deepEqual(library.getAliasSearchMatches("rotary plate distance").map((entry) => entry.id), ["orientation-trigger-geometry-baseline"]);
+});
+
+test("v360 validation asserts exact and natural-alias precedence when the records exist", () => {
   const library = extend(makeBase());
   const result = library.validate();
   assert.equal(result.ok, true, result.errors.join(" | "));
