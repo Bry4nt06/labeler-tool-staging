@@ -113,8 +113,10 @@ test("v367 preserves machine-context guide ranking metadata", () => {
   assert.ok(Number(autocol?.contextScore || 0) > 0);
 });
 
-test("staging page loads v367 before exact-search precedence and application startup", () => {
-  assert.match(page, /data-troubleshooting-version="v367"/);
+test("staging page keeps v367 loaded before exact-search precedence and application startup on later troubleshooting releases", () => {
+  const versionMatch = /data-troubleshooting-version="v(\d+)"/.exec(page);
+  assert.ok(versionMatch, "troubleshooting version banner missing");
+  assert.ok(Number(versionMatch[1]) >= 367, `expected v367 or later, got v${versionMatch?.[1]}`);
   const baseIndex = page.indexOf("diagnostic-library.js");
   const orientationIndex = page.indexOf("orientation-commissioning-guides.js");
   const precedenceIndex = page.indexOf("troubleshooting-search-precedence.js");

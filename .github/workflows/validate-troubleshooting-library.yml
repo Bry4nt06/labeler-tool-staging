@@ -77,6 +77,7 @@ jobs:
           node --check app/troubleshooting/apl-cart-core-status.js
           node --check app/troubleshooting/apl-cart-warning-status.js
           node --check app/troubleshooting/apl-cart-label-supply-chronology.js
+          node --check app/troubleshooting/apl-interface-reference.js
           node --check app/troubleshooting/topmodul-live-00067-source-bridge.js
           node --check app/troubleshooting/topmodul-alarm-stack-analyzer.js
           node --check app/troubleshooting/topmodul-encoder-isolation.js
@@ -115,6 +116,7 @@ jobs:
           node --test tests/troubleshooting-apl-cart-tail-status.test.js
           node --test tests/troubleshooting-apl-cart-core-status.test.js
           node --test tests/troubleshooting-apl-cart-label-supply.test.js
+          node --test tests/troubleshooting-apl-interface-v368.test.js
           node --test tests/troubleshooting-rpc-danfoss-guides.test.js
           node --test tests/troubleshooting-orientation-v367.test.js
           node --test tests/troubleshooting-search-precedence.test.js
