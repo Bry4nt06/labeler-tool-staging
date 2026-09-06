@@ -48,8 +48,8 @@
     els.compareButton.disabled = !(state.baselineFile && state.currentFile && !state.comparing);
     els.clearButton.disabled = !(state.baselineFile || state.currentFile || state.comparison || state.comparing);
     if (!state.baselineFile && !state.currentFile) setStatus("Choose two L5K files.");
-    else if (!state.baselineFile) setStatus("Choose the known-good / baseline L5K.", "caution");
-    else if (!state.currentFile) setStatus("Choose the current / problem L5K.", "caution");
+    else if (!state.baselineFile) setStatus("Choose the reference / earlier L5K.", "caution");
+    else if (!state.currentFile) setStatus("Choose the current / later L5K.", "caution");
     else if (!state.comparing) setStatus("Ready to compare locally.", "ready");
   }
 
@@ -74,7 +74,7 @@
   }
 
   function createWorker() {
-    try { return new Worker("./l5k-analyzer-compare-worker.js?v=12.1"); }
+    try { return new Worker("./l5k-analyzer-compare-worker.js?v=13.1"); }
     catch { return null; }
   }
 
@@ -85,7 +85,7 @@
     setStatus("Reading both L5K files locally…", "loading");
     try {
       const [baselineText, currentText] = await Promise.all([readFile(state.baselineFile), readFile(state.currentFile)]);
-      setStatus("Parsing source, dependency graphs, task schedules, communication/message topology, peer consistency, sequence topology, interlock/permissive paths, and comparison…", "loading");
+      setStatus("Parsing source, dependency graphs, task schedules, communication/message topology, peer consistency, sequence topology, interlock/permissive paths, same-controller rung alignment, and comparison…", "loading");
       const result = await new Promise((resolve, reject) => {
         const worker = createWorker();
         if (!worker) {
@@ -132,7 +132,9 @@
       const consistency = state.comparison.statistics?.consistencyDifferences || 0;
       const sequences = state.comparison.statistics?.sequenceDifferences || 0;
       const interlocks = state.comparison.statistics?.interlockDifferences || 0;
-      setStatus(`Comparison complete • ${total} source differences • ${dependencies} dependency differences • ${tasks} task-schedule differences • ${communications} produced/consumed differences • ${messages} MSG/MESSAGE differences • ${consistency} peer-consistency differences • ${sequences} sequence differences • ${interlocks} interlock/permissive differences.`, "pass");
+      const snapshots = state.comparison.statistics?.snapshotAlignedDifferences || 0;
+      const snapshotText = state.comparison.snapshotComparison?.sameController ? ` • ${snapshots} aligned snapshot differences` : "";
+      setStatus(`Comparison complete • ${total} source differences${snapshotText} • ${dependencies} dependency differences • ${tasks} task-schedule differences • ${communications} produced/consumed differences • ${messages} MSG/MESSAGE differences • ${consistency} peer-consistency differences • ${sequences} sequence differences • ${interlocks} interlock/permissive differences.`, "pass");
     } catch (error) {
       console.error(error);
       state.baselineProject = null;
@@ -190,13 +192,17 @@
     els.results.hidden = false;
     els.title.textContent = `${comparison.options?.baselineLabel || "Baseline"} vs ${comparison.options?.currentLabel || "Current"}`;
     const stats = comparison.statistics || {};
-    els.summaryStatus.textContent = `${comparison.baseline?.source?.lineCount || 0} baseline lines • ${comparison.current?.source?.lineCount || 0} current lines`;
+    const snapshot = comparison.snapshotComparison || {};
+    els.summaryStatus.textContent = `${comparison.baseline?.source?.lineCount || 0} baseline lines • ${comparison.current?.source?.lineCount || 0} current lines${snapshot.sameController ? ` • same controller: ${snapshot.controller}` : ""}`;
     els.summaryCards.innerHTML = [
       summaryCard("Total differences", stats.totalDifferences || 0),
       summaryCard("Review items", stats.reviewCounts?.review || 0),
       summaryCard("Added", stats.changeCounts?.added || 0),
       summaryCard("Removed", stats.changeCounts?.removed || 0),
       summaryCard("Changed", stats.changeCounts?.changed || 0),
+      summaryCard("Aligned snapshot differences", stats.snapshotAlignedDifferences || 0),
+      summaryCard("Snapshot routines changed", stats.snapshotRoutinesChanged || 0),
+      summaryCard("Same controller", snapshot.sameController ? "Yes" : "No"),
       summaryCard("Rung differences", stats.categoryCounts?.rungs || 0),
       summaryCard("Fault differences", stats.categoryCounts?.faults || 0),
       summaryCard("Dependency differences", stats.dependencyDifferences || 0),
@@ -207,7 +213,7 @@
       summaryCard("Sequence differences", stats.sequenceDifferences || 0),
       summaryCard("Interlock / permissive differences", stats.interlockDifferences || 0)
     ].join("");
-    els.projectCards.innerHTML = projectCard("BASELINE", state.baselineProject) + projectCard("CURRENT / PROBLEM", state.currentProject);
+    els.projectCards.innerHTML = projectCard("REFERENCE / EARLIER", state.baselineProject) + projectCard("CURRENT / LATER", state.currentProject);
     resetFilters(false);
     els.detail.hidden = true;
   }
@@ -217,7 +223,7 @@
   }
 
   function differenceRow(item) {
-    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || item.consistencyKind || item.sequenceKind || item.interlockKind || "";
+    const detailKind = item.snapshotKind || item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || item.consistencyKind || item.sequenceKind || item.interlockKind || "";
     const kindBadge = detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : "";
     return `<div class="plc-row plc-compare-diff" data-difference-id="${esc(item.id)}">
       <div class="plc-compare-diff-head"><div><strong>${esc(item.title)}</strong><small>${esc(item.summary)}</small></div>
@@ -254,6 +260,9 @@
     const item = (state.comparison?.differences || []).find((entry) => entry.id === value);
     if (!item) return;
     els.detailTitle.textContent = item.title;
+    const snapshotBoundary = item.category === "snapshots"
+      ? `<div class="plc-warning"><strong>Same-controller snapshot boundary:</strong> v13.1 aligns exact unchanged rung source within each program/routine so inserted or removed rungs do not create a cascade of positional changes. Unmatched nearby rungs are review pairings only. The later/online export is not assumed correct, approved, live, or safe, and displayed numeric values are not adjustment recommendations.</div>`
+      : "";
     const dependencyBoundary = item.category === "dependencies"
       ? `<div class="plc-warning"><strong>Dependency comparison boundary:</strong> Source-visible call/type differences do not prove runtime execution, live state, physical device condition, or that a change is defective.</div>`
       : "";
@@ -275,8 +284,8 @@
     const interlockBoundary = item.category === "interlocks"
       ? `<div class="plc-warning"><strong>Interlock/permissive comparison boundary:</strong> v12.1 compares same-rung XIC/XIO/comparison evidence preceding supported output/motion actions. It is not a Boolean branch solver and does not prove live contact values, that every displayed gate is series-required, current permissive/interlock state, physical interlock condition, action execution, or which export is correct. Do not use this evidence to justify forcing or bypassing machine or safety interlocks.</div>`
       : "";
-    const detailKind = item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || item.consistencyKind || item.sequenceKind || item.interlockKind || "";
-    els.detailBody.innerHTML = `${dependencyBoundary}${taskBoundary}${communicationBoundary}${messageBoundary}${consistencyBoundary}${sequenceBoundary}${interlockBoundary}<div class="plc-section-box"><div class="plc-compare-badges"><span class="plc-compare-badge" data-kind="${esc(item.changeType)}">${esc(item.changeType)}</span><span class="plc-compare-badge">${esc(item.category)}</span>${detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : ""}<span class="plc-compare-badge" data-kind="${esc(item.reviewLevel)}">${esc(item.reviewLevel)}</span></div><p>${esc(item.summary)}</p></div>
+    const detailKind = item.snapshotKind || item.dependencyKind || item.taskKind || item.communicationKind || item.messageKind || item.consistencyKind || item.sequenceKind || item.interlockKind || "";
+    els.detailBody.innerHTML = `${snapshotBoundary}${dependencyBoundary}${taskBoundary}${communicationBoundary}${messageBoundary}${consistencyBoundary}${sequenceBoundary}${interlockBoundary}<div class="plc-section-box"><div class="plc-compare-badges"><span class="plc-compare-badge" data-kind="${esc(item.changeType)}">${esc(item.changeType)}</span><span class="plc-compare-badge">${esc(item.category)}</span>${detailKind ? `<span class="plc-compare-badge">${esc(detailKind)}</span>` : ""}<span class="plc-compare-badge" data-kind="${esc(item.reviewLevel)}">${esc(item.reviewLevel)}</span></div><p>${esc(item.summary)}</p></div>
       <div class="plc-compare-detail-grid"><div class="plc-compare-side"><h4>Baseline</h4><pre>${esc(formatValue(item.baseline))}</pre></div><div class="plc-compare-side"><h4>Current / problem</h4><pre>${esc(formatValue(item.current))}</pre></div></div>
       ${item.evidence ? `<div class="plc-section-box plc-compare-evidence"><h3>Source evidence</h3><pre>${esc(formatValue(item.evidence))}</pre></div>` : ""}`;
     els.detail.hidden = false;
