@@ -44,6 +44,6 @@ test("the staging banner visibly identifies the active troubleshooting phase", (
   const version = versionMatch[1];
   assert.match(
     troubleshootingPage,
-    new RegExp(`STAGING / TEST BUILD — TROUBLESHOOTING ${version} — ServoForge 0\\.9\\.10 — NOT PRODUCTION`)
+    new RegExp(`STAGING / TEST BUILD — TROUBLESHOOTING ${version}\\b[^\\n<]*— ServoForge 0\\.9\\.10 — NOT PRODUCTION`)
   );
 });
