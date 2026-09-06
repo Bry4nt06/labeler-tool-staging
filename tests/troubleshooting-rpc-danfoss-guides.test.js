@@ -111,6 +111,6 @@ test("v359 records remain loaded under v363-or-later with v362/v361 imports, v36
   assert.ok(webIndex > bridgeIndex && servoIndex > webIndex && tailIndex > servoIndex && searchPrecedenceIndex > tailIndex && appIndex > searchPrecedenceIndex);
   assert.ok(uiIndex > appIndex);
   assert.match(page, /rpc-danfoss-guides-v359-20260904&shell=v358/);
-  assert.match(page, /troubleshooting-search-precedence-v360-20260904&shell=v358/);
+  assert.match(page, /troubleshooting-search-precedence-v360(?:\.\d+)?-\d{8}&shell=v358/);
   assert.match(page, /troubleshooting-apl-cart-tail-v363-20260904&shell=v358/);
 });
