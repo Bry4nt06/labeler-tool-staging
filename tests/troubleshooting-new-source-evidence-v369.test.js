@@ -77,12 +77,14 @@ test("v369 library validates cleanly", () => {
   assert.deepEqual(result.errors, []);
 });
 
-test("v369 staging manifest loads source evidence after orientation authority and identifies v369", () => {
+test("v369 staging manifest remains loaded after orientation authority as later troubleshooting phases advance", () => {
   const page = fs.readFileSync(path.join(root, "app/troubleshooting/index.html"), "utf8");
   const orientation = page.indexOf("orientation-commissioning-guides.js");
   const v369 = page.indexOf("new-source-evidence-v369.js");
   const topmodul = page.indexOf("topmodul-live-diagnostics.js");
   assert.ok(orientation >= 0 && v369 > orientation && topmodul > v369);
-  assert.match(page, /data-troubleshooting-version="v369"/);
-  assert.match(page, /TROUBLESHOOTING v369/);
+  const versionMatch = page.match(/data-troubleshooting-version="v(\d+)"/);
+  assert.ok(versionMatch, "Troubleshooting staging banner must expose a numeric phase version.");
+  assert.ok(Number(versionMatch[1]) >= 369, `Expected troubleshooting phase >=369, found v${versionMatch[1]}.`);
+  assert.match(page, new RegExp(`TROUBLESHOOTING v${versionMatch[1]}\\b`));
 });
