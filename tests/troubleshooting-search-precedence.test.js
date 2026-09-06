@@ -2,10 +2,12 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const extend = require(path.join(root, "app/troubleshooting/troubleshooting-search-precedence.js"));
+const page = fs.readFileSync(path.join(root, "app/troubleshooting/index.html"), "utf8");
 
 function makeBase() {
   const code600 = Object.freeze({ id: "servo-terminal-code-600", code: "600", title: "RPC terminal communication absent" });
@@ -58,6 +60,11 @@ test("v367 hotfix treats natural rotary-plate wording as a strong alias match", 
   const matches = library.searchEntries("rotary plate distance", { machineType: "TopModul", applicationMode: "apl" }, 8);
   assert.equal(matches[0].id, "orientation-trigger-geometry-baseline");
   assert.deepEqual(library.getAliasSearchMatches("rotary plate distance").map((entry) => entry.id), ["orientation-trigger-geometry-baseline"]);
+});
+
+test("v367 hotfix manifest cache-busts the patched search-precedence asset", () => {
+  assert.match(page, /troubleshooting-search-precedence-v360\.1-20260906&shell=v358/);
+  assert.doesNotMatch(page, /troubleshooting-search-precedence-v360-20260904&shell=v358/);
 });
 
 test("v360 validation asserts exact and natural-alias precedence when the records exist", () => {
