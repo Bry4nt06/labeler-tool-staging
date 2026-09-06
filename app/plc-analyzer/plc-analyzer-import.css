@@ -5,6 +5,43 @@
   margin-bottom: 1rem;
 }
 
+.plc-import-controller-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.plc-import-field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.plc-import-field > span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+
+.plc-import-field input,
+.plc-import-field select,
+.plc-import-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.plc-import-field textarea {
+  resize: vertical;
+  min-height: 4.2rem;
+}
+
+.plc-import-field-notes {
+  grid-column: 1 / -1;
+}
+
 .plc-import-actions {
   display: flex;
   gap: 0.75rem;
@@ -68,7 +105,12 @@
 
 @media (max-width: 900px) {
   .plc-import-filter-grid,
+  .plc-import-controller-grid,
   .plc-import-evidence-grid {
     grid-template-columns: 1fr;
+  }
+
+  .plc-import-field-notes {
+    grid-column: auto;
   }
 }

@@ -114,7 +114,7 @@ test("v5.1 remains compatible with a project parsed before dependency enrichment
   assert.ok(queue.candidates.every((candidate) => candidate.coverageStatus === "review-candidate"));
 });
 
-test("v5.1 Import Assistant loads dependency parser before wrapper and keeps analysis local", () => {
+test("v5.1 dependency import remains loaded as later Import Assistant phases advance", () => {
   const page = fs.readFileSync(path.join(root, "app/plc-analyzer/import.html"), "utf8");
   const ui = fs.readFileSync(path.join(root, "app/plc-analyzer/plc-analyzer-import-v5-1.js"), "utf8");
   const engine = fs.readFileSync(path.join(root, "app/plc-analyzer/l5k-analyzer-import-dependencies-v5-1.js"), "utf8");
@@ -124,7 +124,7 @@ test("v5.1 Import Assistant loads dependency parser before wrapper and keeps ana
   const wrapper = page.indexOf("l5k-analyzer-import-dependencies-v5-1.js?v=5.1");
   const uiScript = page.indexOf("plc-analyzer-import-v5-1.js?v=5.1");
   assert.ok(dependencies >= 0 && dependencies < baseImport && baseImport < wrapper && wrapper < uiScript);
-  assert.match(page, /PLC IMPORT ASSISTANT v5\.1 — DEPENDENCY EVIDENCE/);
+  assert.match(page, /PLC IMPORT ASSISTANT v(?:5\.1|6).*DEPENDENCY EVIDENCE/);
   assert.match(ui, /new Worker\("\.\/l5k-analyzer-worker\.js\?v=5"\)/);
   assert.doesNotMatch(ui, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
   assert.doesNotMatch(engine, /fetch\s*\(|XMLHttpRequest|localStorage|indexedDB/i);
