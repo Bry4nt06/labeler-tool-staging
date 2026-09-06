@@ -45,6 +45,8 @@ test("W 0005 remains pre-fault evidence and now exposes the full Cart-to-Labeler
   const plan = library.getAplCartLabelSupplyPlan("W 0005");
   assert.ok(plan.previousPlan, "v365 warning plan should remain underneath v366 chronology");
   assert.match(plan.producer, /StartupComplete/);
+  assert.match(plan.producer, /AutoChangeActive/);
+  assert.match(plan.producer, /ForceAutochange/);
   assert.match(plan.producer, /SS631/);
   assert.match(plan.producer, /Faults\[1\]\.9/);
   assert.match(plan.producer, /DataFromLS\.Par1\[0\]\.1/);
@@ -101,14 +103,14 @@ test("read-only chronology prioritizes local Cart evidence ahead of downstream L
   assert.match(downstream.summary, /composite bit alone/i);
 });
 
-test("existing APL source-isolation renderer can render v366 through getAplCartFoundationPlan", () => {
+test("v366 uses the shared foundation renderer only for chronology targets and leaves unrelated web faults on their existing renderer", () => {
   assert.match(library.getAplCartFoundationPlan("W 0005").id, /label-supply-v366/);
   assert.match(library.getAplCartFoundationPlan("00025").id, /label-supply-v366/);
   assert.match(library.getAplCartFoundationPlan(655).id, /label-supply-v366/);
-  assert.ok(library.getAplCartFoundationPlan("00028"), "unrelated Cart fault must still delegate to the existing plan");
+  assert.ok(library.getAplCartWebHandlingPlan("00028"), "unrelated Cart web fault must remain available to the existing v361 renderer");
 });
 
-test("v366 module is loaded after warnings and before search/controller startup", () => {
+test("v366 module remains loaded after warnings and before search/controller startup in later troubleshooting releases", () => {
   const warningIndex = page.indexOf("apl-cart-warning-status.js");
   const chronologyIndex = page.indexOf("apl-cart-label-supply-chronology.js");
   const bridgeIndex = page.indexOf("topmodul-live-00067-source-bridge.js");
@@ -116,6 +118,6 @@ test("v366 module is loaded after warnings and before search/controller startup"
   const appIndex = page.indexOf("troubleshooting-app.js");
   assert.ok(warningIndex >= 0 && chronologyIndex > warningIndex && bridgeIndex > chronologyIndex);
   assert.ok(searchIndex > bridgeIndex && appIndex > searchIndex);
-  assert.match(page, /data-troubleshooting-version="v366"/);
-  assert.match(page, /TROUBLESHOOTING v366/);
+  assert.match(page, /data-troubleshooting-version="v(?:36[6-9]|3[7-9]\d|[4-9]\d\d)"/);
+  assert.match(page, /apl-cart-label-supply-chronology\.js\?v=0\.9\.10&build=troubleshooting-apl-cart-label-supply-v366-20260906/);
 });

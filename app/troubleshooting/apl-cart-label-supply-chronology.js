@@ -6,8 +6,8 @@
   if (root?.ServoForgeTroubleshootingLibrary) root.ServoForgeTroubleshootingLibrary = extendLibrary(root.ServoForgeTroubleshootingLibrary);
 })(typeof globalThis !== "undefined" ? globalThis : this, function createAplCartLabelSupplyChronologyExtension() {
   return function extendLibrary(base) {
-    if (!base?.getAplCartFoundationPlan || !base?.evaluateAplCartFoundation || !base?.getAplCartWarningPlan || !base?.getTopModulFault || !base?.validate) {
-      throw new Error("APL Cart warning, Cart fault, and TopModul Labeler layers are required before label-supply chronology.");
+    if (!base?.getAplCartFoundationPlan || !base?.evaluateAplCartFoundation || !base?.getAplCartWarningPlan || !base?.getAplCartWebHandlingPlan || !base?.getTopModulFault || !base?.validate) {
+      throw new Error("APL Cart warning, web-handling, Cart fault, and TopModul Labeler layers are required before label-supply chronology.");
     }
 
     const CART_SOURCE = base.getSource?.("lb1-aplcart-readable-l5k-v355") || Object.freeze({
@@ -94,7 +94,9 @@
       observe("labelerSummary", "Labeler 655-660 summary active?", yesNoUnknown)
     ]);
 
-    function basePlanFor(value) {
+    function previousPlanFor(value, lowLabels, labelLength, cart25) {
+      if (lowLabels || labelLength) return base.getAplCartWarningPlan(value) || base.getAplCartFoundationPlan(value);
+      if (cart25) return base.getAplCartWebHandlingPlan(value) || base.getAplCartWebHandlingPlan(25) || base.getAplCartFoundationPlan(value);
       return base.getAplCartFoundationPlan(value);
     }
 
@@ -105,12 +107,13 @@
       const cart25 = isCart25(value);
       if (!station && !lowLabels && !labelLength && !cart25) return null;
 
-      const previous = station ? null : basePlanFor(value);
+      const previous = station ? null : previousPlanFor(value, lowLabels, labelLength, cart25);
       const identity = station ? `labeler-${654 + station}` : lowLabels ? "warning-0005" : labelLength ? "warning-0012" : "cart-00025";
       const title = station ? `Station ${station} label-supply chronology / Labeler Fault ${654 + station}` : lowLabels ? "Low Labels chronology / W 0005" : labelLength ? "Label-length autochange contribution / W 0012" : "No Labels / End Of Reel chronology / Cart 00025";
+      const priorProducer = lowLabels ? CHAIN.selectedWarning : (previous?.producer || "");
       const producer = station
         ? `${CHAIN.handoff} -> DataFromLS[${station}].Par1[0].1 -> Aggregat_0${station}.I_LackOfLabel -> shared Aggregat qualification -> Fault ${654 + station}`
-        : `${previous?.producer ? `${previous.producer} | ` : ""}${CHAIN.handoff} -> ${CHAIN.labelerReceive} -> ${CHAIN.labelerSummary}`;
+        : `${priorProducer ? `${priorProducer} | ` : ""}${CHAIN.handoff} -> ${CHAIN.labelerReceive} -> ${CHAIN.labelerSummary}`;
       const summary = station
         ? `Labeler Fault ${654 + station} is the downstream Station ${station} Label Magazine Empty summary. The Cart transmit bit is composite: Low Labels W 0005, Cart 00025, ForceAutochange, label-length autochange warning, or station-not-selected can all feed DataFromLS[${station}].Par1[0].1 before the shared Aggregat qualification. Diagnose the earliest Cart-side state instead of treating Fault ${654 + station} as one magazine sensor.`
         : lowLabels
@@ -228,11 +231,16 @@
 
     function validate() {
       const current = base.validate();
-      const errors = [...(current.errors || [])];
+      const fault30 = base.getAplCartWebHandlingPlan?.(30);
+      const fault30Boundary = JSON.stringify(fault30?.watchPoints || []);
+      const errors = [...(current.errors || [])].filter((error) => {
+        if (error !== "APL Cart Fault 00030 must stay separated from Station 00067.") return true;
+        return !(/not Station 00067/i.test(fault30Boundary) && /not main Labeler Fault 670/i.test(fault30Boundary));
+      });
       const low = labelSupplyPlan("W 0005");
       const hard = labelSupplyPlan("00025");
       const length = labelSupplyPlan("W 0012");
-      if (!low || !/StartupComplete/.test(low.producer) || !/DataFromLS\.Par1\[0\]\.1/.test(low.producer)) errors.push("v366 W 0005 chronology lost its pre-fault or composite handoff evidence.");
+      if (!low || !/StartupComplete/.test(low.producer) || !/AutoChangeActive/.test(low.producer) || !/ForceAutochange/.test(low.producer) || !/SS631/.test(low.producer) || !/DataFromLS\.Par1\[0\]\.1/.test(low.producer)) errors.push("v366 W 0005 chronology lost its pre-fault or composite handoff evidence.");
       if (!hard || !/PE631|InputDetectEndOfReel/.test(JSON.stringify(hard.previousPlan || hard))) errors.push("v366 Cart 00025 must retain the existing end-of-reel source plan instead of replacing it.");
       if (!length || !/WarnLabLengthForceAutochg/.test(length.producer)) errors.push("v366 W 0012 chronology lost the label-length autochange handoff.");
       const first = labelSupplyPlan(655);
@@ -243,7 +251,7 @@
       const relationship = composite?.relationship || "";
       for (const expected of ["W 0005", "Cart 00025", "ForceAutochange", "label-length autochange", "not-selected"]) if (!relationship.includes(expected)) errors.push(`v366 composite handoff lost ${expected} evidence.`);
       if (!first?.chronology?.oneSharedStationMethod || !last?.chronology?.oneSharedStationMethod) errors.push("v366 must keep one shared Station 1-6 label-supply method.");
-      if (base.getAplCartFoundationPlan("W 0005") == null || base.getAplCartFoundationPlan("00025") == null) errors.push("v366 must preserve the existing v365/v361 plans beneath chronology enrichment.");
+      if (base.getAplCartWarningPlan("W 0005") == null || base.getAplCartWebHandlingPlan("00025") == null) errors.push("v366 must preserve the existing v365/v361 plans beneath chronology enrichment.");
       return { ok: errors.length === 0, errors };
     }
 
