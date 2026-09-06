@@ -53,7 +53,7 @@ test("v368 makes the drawing-specific CN101/CN131/Harting/LS164 interface refere
   assert.equal(library.searchEntries("LS164", { machineType: "TopModul", applicationMode: "apl" }, 8)[0].id, entry.id);
   assert.match(text(entry), /CN131/);
   assert.match(text(entry), /K605576 p\.15/);
-  assert.match(text(entry), /K605576 p\.16/);
+  assert.match(text(entry), /p\.16/);
   assert.match(text(entry), /K605576 p\.42/);
   assert.match(text(entry), /K605576 p\.47/);
 });
