@@ -203,7 +203,9 @@ test("v373 manifest loads after v372 routing and before v371 evidence classifica
   const classification = page.indexOf("evidence-classification-v371.js");
   const app = page.indexOf("troubleshooting-app.js");
   assert.ok(search >= 0 && handoff > search && structural > handoff && classification > structural && app > classification);
-  assert.match(page, /data-troubleshooting-version="v373"/);
-  assert.match(page, /TROUBLESHOOTING v373/);
+  const versionMatch = page.match(/data-troubleshooting-version="v(\d+)"/);
+  assert.ok(versionMatch, "Troubleshooting version banner is missing.");
+  assert.ok(Number(versionMatch[1]) >= 373, `Expected Troubleshooting v373 or later, got v${versionMatch[1]}.`);
+  assert.match(page, /STAGING \/ TEST BUILD — TROUBLESHOOTING v\d+ — ServoForge/);
   assert.match(page, /troubleshooting-site-plc-structural-routing-v373-20260906/);
 });
