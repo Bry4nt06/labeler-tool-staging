@@ -10,15 +10,15 @@
     <link rel="icon" href="../../assets/labeler-tool-icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="../../styles.css?v=0.9.10" />
     <link rel="stylesheet" href="./plc-analyzer.css?v=1" />
-    <link rel="stylesheet" href="./plc-analyzer-import.css?v=8" />
+    <link rel="stylesheet" href="./plc-analyzer-import.css?v=9" />
   </head>
   <body>
-    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC IMPORT ASSISTANT v8 — STRUCTURAL SITE EVIDENCE • UNIVERSAL ROUTING — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC IMPORT ASSISTANT v9 — L5K / L5X SOURCE INTAKE • STRUCTURAL SITE EVIDENCE • UNIVERSAL ROUTING — NOT PRODUCTION</div>
     <main class="app plc-analyzer-app">
       <section class="topbar plc-analyzer-topbar">
         <div>
           <h1>ServoForge <span class="product-module">PLC Import Assistant</span></h1>
-          <p>Turn source-proven L5K fault logic, dependency paths, and bounded structural evidence into reviewable site evidence, then optionally carry it into the universal Troubleshooter for the current browser session.</p>
+          <p>Turn source-proven L5K or full-project L5X fault logic, dependency paths, and bounded structural evidence into reviewable site evidence, then optionally carry it into the universal Troubleshooter for the current browser session.</p>
         </div>
         <nav class="module-navigation" aria-label="ServoForge modules">
           <a class="module-navigation-link" href="../../index.html">Labeler Tool</a>
@@ -33,22 +33,22 @@
         <div>
           <span class="sf-eyebrow">REVIEW-ONLY IMPORT PIPELINE</span>
           <h2>Use local PLC evidence without making local tags universal</h2>
-          <p>The assistant parses one L5K locally, records optional site/asset identity plus source status, checks exact PLC target references against the currently loaded Troubleshooting Library, and attaches bounded dependency plus v12–v14 structural evidence for SME review. Known ServoForge reference mappings are optional; a controller from another site can be analyzed without pretending it matches CO85 naming.</p>
+          <p>The assistant parses one readable L5K or full-project L5X locally, records optional site/asset identity plus source status, checks exact PLC target references against the currently loaded Troubleshooting Library, and attaches bounded dependency plus v12–v14 structural evidence for SME review. L5X v15 source intake normalizes source-visible RLL and configuration metadata into the same analyzer model; non-RLL routine content is not silently interpreted. Known ServoForge reference mappings are optional; a controller from another site can be analyzed without pretending it matches CO85 naming.</p>
         </div>
         <div class="plc-local-badge" aria-label="Local-only file handling">
-          <strong>Local L5K parsing</strong>
+          <strong>Local L5K / L5X parsing</strong>
           <span>The selected PLC export is not uploaded.</span>
         </div>
       </section>
 
       <section class="panel plc-file-panel" aria-labelledby="plcImportFileHeading">
         <div class="sf-section-heading">
-          <div><span class="sf-eyebrow">1. SOURCE FILE</span><h2 id="plcImportFileHeading">Load a full-project L5K export</h2></div>
+          <div><span class="sf-eyebrow">1. SOURCE FILE</span><h2 id="plcImportFileHeading">Load a readable full-project L5K or L5X export</h2></div>
           <span id="plcImportFileStatus" class="plc-status" aria-live="polite">No file selected.</span>
         </div>
-        <div id="plcImportDropZone" class="plc-drop-zone" tabindex="0" role="button" aria-label="Drop L5K file or choose a file">
-          <input id="plcImportFileInput" type="file" accept=".l5k,.L5K,text/plain" hidden />
-          <strong>Drop .L5K here</strong>
+        <div id="plcImportDropZone" class="plc-drop-zone" tabindex="0" role="button" aria-label="Drop L5K or L5X source file or choose a file">
+          <input id="plcImportFileInput" type="file" accept=".l5k,.L5K,.l5x,.L5X,text/plain,application/xml,text/xml" hidden />
+          <strong>Drop .L5K or .L5X here</strong>
           <span>or click to browse</span>
           <small id="plcImportSelectedFile">No file selected</small>
         </div>
@@ -56,13 +56,13 @@
           <button id="plcImportAnalyzeButton" type="button" disabled>Analyze &amp; Build Review Queue</button>
           <button id="plcImportClearButton" type="button" class="secondary-button" disabled>Clear</button>
         </div>
-        <p class="plc-source-boundary"><strong>Export format:</strong> The current Import Assistant parses full-project <strong>.L5K</strong> text exports. Do not rename an .L5X or .ACD file to .L5K; L5X support requires a separate parser path and is not enabled in this build.</p>
+        <p class="plc-source-boundary"><strong>Export format:</strong> Import Assistant v9 accepts readable full-project <strong>.L5K</strong> and <strong>.L5X</strong> exports. L5X must contain a full Controller element; component-only L5X is not treated as a complete project. Source-visible RLL rung text, declarations, task scheduling, produced/consumed metadata, MESSAGE configuration, modules, UDTs, and AOI declarations can be normalized into the existing analyzer model. Non-RLL routine content and source-protected or missing rung text are reported as unsupported rather than interpreted. <strong>.ACD</strong> remains a binary project format and must be exported to readable L5K or L5X first. Do not rename an ACD or unrelated XML file to bypass these source checks.</p>
       </section>
 
       <section class="panel plc-import-controller-panel" aria-labelledby="plcControllerIntakeHeading">
         <div class="sf-section-heading">
           <div><span class="sf-eyebrow">2. CONTROLLER IDENTITY</span><h2 id="plcControllerIntakeHeading">Describe this source without assuming site naming</h2></div>
-          <span id="plcImportIdentityStatus" class="plc-status" aria-live="polite">Select an L5K export. Reference mapping is optional; source status is required.</span>
+          <span id="plcImportIdentityStatus" class="plc-status" aria-live="polite">Select an L5K or L5X export. Reference mapping is optional; source status is required.</span>
         </div>
         <p>If this controller matches a known ServoForge reference set, you can map it for comparison. Otherwise leave it site-specific and use the optional site, machine, and controller-purpose fields. ServoForge does not infer a universal machine identity from the file name or embedded controller name.</p>
         <div class="plc-import-controller-grid">
@@ -95,7 +95,7 @@
             <textarea id="plcImportIdentityNotes" rows="2" maxlength="500" placeholder="Optional: locked routines, known backup status, machine-specific notes"></textarea>
           </label>
         </div>
-        <p class="plc-source-boundary"><strong>Boundary:</strong> Controller intake metadata is operator-supplied context. It is carried into every review candidate and exported review package, but it does not prove that the source is the current running program unless that status has been independently confirmed. An unmatched PLC target is a review candidate, not proof that ServoForge is missing a diagnostic. Dependency traces, interlock/permissive paths, recovery paths, and AFI locations are static source evidence; they do not prove live gate state, complete Boolean branch semantics, reset safety, AFI causality, alarm identity, or physical device condition.</p>
+        <p class="plc-source-boundary"><strong>Boundary:</strong> Controller intake metadata is operator-supplied context. It is carried into every review candidate and exported review package, but it does not prove that the source is the current running program unless that status has been independently confirmed. An unmatched PLC target is a review candidate, not proof that ServoForge is missing a diagnostic. Dependency traces, interlock/permissive paths, recovery paths, and AFI locations are static source evidence; they do not prove live gate state, complete Boolean branch semantics, reset safety, AFI causality, alarm identity, or physical device condition. L5X normalization does not elevate site-specific tags, addresses, revisions, task settings, communication paths, timers, or reset structures into universal troubleshooting rules.</p>
       </section>
 
       <section class="panel plc-import-library-panel" aria-labelledby="plcLibraryBridgeHeading">
@@ -155,12 +155,14 @@
     <script src="./l5k-analyzer-core.js?v=1"></script>
     <script src="./l5k-analyzer-legacy-v4.js?v=4.1"></script>
     <script src="./l5k-analyzer-dependencies-v5.js?v=5"></script>
+    <script src="./l5x-analyzer-adapter-v15.js?v=15"></script>
     <script src="./l5k-analyzer-import.js?v=3"></script>
     <script src="./l5k-analyzer-import-dependencies-v5-1.js?v=5.1"></script>
     <script src="./l5k-analyzer-import-controller-v6.js?v=6"></script>
     <script src="./l5k-analyzer-import-structural-evidence-v8.js?v=8-structural-20260906"></script>
     <script src="./plc-analyzer-import-controller-v6.js?v=7-portable-20260906"></script>
     <script src="./plc-analyzer-import-structural-overlay-v8.js?v=8-structural-20260906"></script>
-    <script src="./plc-analyzer-import-v5-1.js?v=8-structural-20260906"></script>
+    <script src="./plc-analyzer-import-v5-1.js?v=9-l5x-20260906"></script>
+    <script src="./plc-source-intake-ui-v15.js?v=15"></script>
   </body>
 </html>

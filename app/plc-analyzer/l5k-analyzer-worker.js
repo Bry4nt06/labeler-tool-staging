@@ -12,14 +12,18 @@ importScripts(
   "./l5k-analyzer-sequence-v11.js?v=11",
   "./l5k-analyzer-interlocks-v12.js?v=12",
   "./l5k-analyzer-recovery-v13.js?v=13",
-  "./l5k-analyzer-afi-v14.js?v=14"
+  "./l5k-analyzer-afi-v14.js?v=14",
+  "./l5x-analyzer-adapter-v15.js?v=15",
+  "./l5x-source-provenance-v15.js?v=15"
 );
 
 self.addEventListener("message", (event) => {
   const payload = event.data || {};
   if (payload.type !== "analyze") return;
   try {
-    const project = self.ServoForgeL5KAnalyzer.parseL5K(payload.text || "", {
+    const analyzer = self.ServoForgeL5KAnalyzer;
+    const parseSource = analyzer.parseControllerSource || analyzer.parseL5K;
+    const project = parseSource(payload.text || "", {
       fileName: payload.fileName || null,
       byteLength: payload.byteLength || 0
     });
