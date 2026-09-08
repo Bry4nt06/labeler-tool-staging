@@ -7,7 +7,7 @@
     const gripperNodes = svg?.querySelectorAll?.("[data-animation-cold-glue-gripper]") || [];
     if (!gripperNodes.length) return;
     const headCount = Math.max(1, Number(state.headCount) || 60);
-    const directionSign = state.direction === "cw" ? -1 : 1;
+    const directionSign = state.direction === "cw" ? 1 : -1;
     gripperNodes.forEach((node) => {
       const aggregateAngle = num(node.getAttribute("data-gripper-aggregate-angle"), 0);
       const tabCount = Math.max(1, num(node.getAttribute("data-gripper-tab-count"), 8));
@@ -63,9 +63,10 @@
       node.setAttribute("transform", `translate(${head.x} ${head.y})`);
     });
 
-    // Cold-glue gripper cylinders counter-rotate against carousel travel. The
-    // head-count/tab-count ratio guarantees that one of the eight gripper tabs
-    // returns to the aggregate contact centerline for every bottle-plate pitch.
+    // Cold-glue gripper cylinders rotate in the same visual direction as the
+    // bottle plates. The head-count/tab-count ratio still guarantees that one
+    // of the eight gripper pads returns to the aggregate contact centerline for
+    // every bottle-plate pitch.
     updateColdGlueGripperWheels(svg);
 
     const rotatorHandle = svg.querySelector("[data-map-rotator-handle]");
