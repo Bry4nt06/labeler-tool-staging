@@ -5,12 +5,13 @@ const WIPE_SPONGE_PATTERN_ID = "servoforge-wipe-sponge-pattern";
 const ROLLER_SPONGE_PATTERN_ID = "servoforge-roller-sponge-pattern";
 const COLD_GLUE_GRIPPER_TAB_COUNT = 8;
 // Bottle top-view body diameter is 15 map units. The real cold-glue pad is
-// approximately three quarters of that width, so each pad is drawn at 11.25.
-const COLD_GLUE_GRIPPER_PAD_WIDTH = 11.25;
+// approximately three quarters of that width. The current visual is intentionally
+// scaled another 15% for top-view readability, so each pad is drawn at 12.94.
+const COLD_GLUE_GRIPPER_PAD_WIDTH = 12.94;
 const COLD_GLUE_GRIPPER_TAB_HALF_WIDTH = COLD_GLUE_GRIPPER_PAD_WIDTH / 2;
-const COLD_GLUE_GRIPPER_BODY_RADIUS = 14.0;
-const COLD_GLUE_GRIPPER_TAB_INNER_RADIUS = 13.4;
-const COLD_GLUE_GRIPPER_TAB_OUTER_RADIUS = 18.6;
+const COLD_GLUE_GRIPPER_BODY_RADIUS = 16.1;
+const COLD_GLUE_GRIPPER_TAB_INNER_RADIUS = 15.4;
+const COLD_GLUE_GRIPPER_TAB_OUTER_RADIUS = 21.4;
 
 function mapUnitsPerMillimeter() {
   const referenceRadiusMm = Math.abs(num(state.referencePitchRadiusMm || state.tablePitchRadiusMm, 0));
@@ -210,8 +211,15 @@ function drawAplSpenderAssembly(add, layer, aggregate) {
 function coldGlueGripperSpinDeg(aggregateAngle, tabCount = COLD_GLUE_GRIPPER_TAB_COUNT) {
   const headCount = Math.max(1, Number(state.headCount) || 60);
   const resolvedTabCount = Math.max(1, num(tabCount, COLD_GLUE_GRIPPER_TAB_COUNT));
-  const directionSign = state.direction === "cw" ? -1 : 1;
+  const directionSign = state.direction === "cw" ? 1 : -1;
   return directionSign * (num(state.previewAngle, 0) - num(aggregateAngle, 0)) * (headCount / resolvedTabCount);
+}
+
+function coldGlueGripperContactOffset() {
+  // Aggregate/gripper depth represents the application contact datum. Offset
+  // the wheel center outward by the pad tip radius so the active pad edge, not
+  // the hub, sits on that datum and stays clear of the bottle path.
+  return COLD_GLUE_GRIPPER_TAB_OUTER_RADIUS;
 }
 
 function drawColdGlueGripperWheel(add, parent, aggregateAngle, attributes = {}) {
@@ -300,7 +308,7 @@ function drawColdGlueGripperWheel(add, parent, aggregateAngle, attributes = {}) 
 function drawIndependentAggregates(add, layer) {
   activeAggregateDefinitions().forEach((aggregate) => {
     if (state.applicationMode !== "cold-glue") { drawAplSpenderAssembly(add, layer, aggregate); return; }
-    const xy = angleToXY(aggregate.angle, state.radius + state.depths.spender);
+    const xy = angleToXY(aggregate.angle, state.radius + state.depths.spender + coldGlueGripperContactOffset());
     const rotation = angleToSvgRotation(aggregate.angle) + 90;
     const group = add("g", { transform: `translate(${xy.x} ${xy.y}) rotate(${rotation})`, "data-aggregate-marker": aggregate.number }, layer);
     drawColdGlueGripperWheel(add, group, aggregate.angle, { "data-aggregate-gripper": aggregate.number });
@@ -351,11 +359,11 @@ function drawConfiguredAssemblies(add, layer) {
         if (!Number.isFinite(angle)) return;
         const duplicateAggregate = activeAggregateDefinitions().some((aggregate) => Math.abs(((aggregate.angle - angle + 540) % 360) - 180) < 0.25);
         if (duplicateAggregate) return;
-        const xy = angleToXY(angle, state.radius + state.depths.gripper);
+        const xy = angleToXY(angle, state.radius + state.depths.gripper + coldGlueGripperContactOffset());
         const rotation = angleToSvgRotation(angle) + 90;
         const group = add("g", { transform: `translate(${xy.x} ${xy.y}) rotate(${rotation})` }, objectLayer);
         drawColdGlueGripperWheel(add, group, angle, { "data-cold-glue-gripper": item.id });
-        drawMapObjectLabel(add, objectLayer, item, angle, state.radius + state.depths.gripper, 18);
+        drawMapObjectLabel(add, objectLayer, item, angle, state.radius + state.depths.gripper + coldGlueGripperContactOffset(), 18);
         return;
       }
       if (item.kind === "roller") {
