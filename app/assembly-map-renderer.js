@@ -4,9 +4,13 @@ const WIPE_DOWN_PAD_WIDTH_MM = 22;
 const WIPE_SPONGE_PATTERN_ID = "servoforge-wipe-sponge-pattern";
 const ROLLER_SPONGE_PATTERN_ID = "servoforge-roller-sponge-pattern";
 const COLD_GLUE_GRIPPER_TAB_COUNT = 8;
-const COLD_GLUE_GRIPPER_BODY_RADIUS = 8.2;
-const COLD_GLUE_GRIPPER_TAB_INNER_RADIUS = 7.25;
-const COLD_GLUE_GRIPPER_TAB_OUTER_RADIUS = 10.7;
+// Bottle top-view body diameter is 15 map units. The real cold-glue pad is
+// approximately three quarters of that width, so each pad is drawn at 11.25.
+const COLD_GLUE_GRIPPER_PAD_WIDTH = 11.25;
+const COLD_GLUE_GRIPPER_TAB_HALF_WIDTH = COLD_GLUE_GRIPPER_PAD_WIDTH / 2;
+const COLD_GLUE_GRIPPER_BODY_RADIUS = 14.0;
+const COLD_GLUE_GRIPPER_TAB_INNER_RADIUS = 13.4;
+const COLD_GLUE_GRIPPER_TAB_OUTER_RADIUS = 18.6;
 
 function mapUnitsPerMillimeter() {
   const referenceRadiusMm = Math.abs(num(state.referencePitchRadiusMm || state.tablePitchRadiusMm, 0));
@@ -216,49 +220,79 @@ function drawColdGlueGripperWheel(add, parent, aggregateAngle, attributes = {}) 
     "data-animation-cold-glue-gripper": attributes["data-cold-glue-gripper"] || attributes["data-aggregate-gripper"] || "true",
     "data-gripper-aggregate-angle": num(aggregateAngle, 0),
     "data-gripper-tab-count": COLD_GLUE_GRIPPER_TAB_COUNT,
-    "aria-label": "Cold glue eight-tab gripper cylinder",
+    "data-gripper-pad-width": COLD_GLUE_GRIPPER_PAD_WIDTH,
+    "aria-label": "Cold glue eight-pad gripper cylinder",
     ...attributes
   }, parent);
 
   Array.from({ length: COLD_GLUE_GRIPPER_TAB_COUNT }, (_, index) => index * 360 / COLD_GLUE_GRIPPER_TAB_COUNT).forEach((angle) => {
+    const outerHalfWidth = COLD_GLUE_GRIPPER_TAB_HALF_WIDTH * 0.9;
     add("polygon", {
-      points: `-2.85,-${COLD_GLUE_GRIPPER_TAB_INNER_RADIUS} 2.85,-${COLD_GLUE_GRIPPER_TAB_INNER_RADIUS} 3.2,-${COLD_GLUE_GRIPPER_TAB_OUTER_RADIUS} -3.2,-${COLD_GLUE_GRIPPER_TAB_OUTER_RADIUS}`,
+      points: `${-COLD_GLUE_GRIPPER_TAB_HALF_WIDTH},-${COLD_GLUE_GRIPPER_TAB_INNER_RADIUS} ${COLD_GLUE_GRIPPER_TAB_HALF_WIDTH},-${COLD_GLUE_GRIPPER_TAB_INNER_RADIUS} ${outerHalfWidth},-${COLD_GLUE_GRIPPER_TAB_OUTER_RADIUS} ${-outerHalfWidth},-${COLD_GLUE_GRIPPER_TAB_OUTER_RADIUS}`,
       transform: `rotate(${angle})`,
-      fill: "#1387bc",
-      stroke: "#071b2b",
-      "stroke-width": 0.8,
+      fill: "#151718",
+      stroke: "#050606",
+      "stroke-width": 0.9,
       "stroke-linejoin": "round",
-      "data-cold-glue-gripper-tab": angle
+      "data-cold-glue-gripper-tab": angle,
+      "data-sponge-material": "black-foam"
     }, wheel);
+
+    // Small irregular highlights make the contact pads read as porous black
+    // sponge rather than painted metal while remaining crisp when zoomed out.
+    [
+      { x: -2.3, y: -(COLD_GLUE_GRIPPER_TAB_INNER_RADIUS + 1.3), r: 0.48 },
+      { x: 1.5, y: -(COLD_GLUE_GRIPPER_TAB_INNER_RADIUS + 2.7), r: 0.62 },
+      { x: -0.6, y: -(COLD_GLUE_GRIPPER_TAB_INNER_RADIUS + 4.1), r: 0.4 }
+    ].forEach((pore) => {
+      add("circle", {
+        cx: pore.x,
+        cy: pore.y,
+        r: pore.r,
+        transform: `rotate(${angle})`,
+        fill: "#4a4d4f",
+        "fill-opacity": 0.62,
+        "pointer-events": "none"
+      }, wheel);
+    });
   });
 
   add("circle", {
     cx: 0,
     cy: 0,
     r: COLD_GLUE_GRIPPER_BODY_RADIUS,
-    fill: "#0e79a7",
-    stroke: "#071b2b",
-    "stroke-width": 1.1,
-    "data-cold-glue-gripper-body": "true"
+    fill: "#858b91",
+    stroke: "#3f454a",
+    "stroke-width": 1.25,
+    "data-cold-glue-gripper-body": "true",
+    "data-material": "metal-grey"
   }, wheel);
   add("circle", {
     cx: 0,
     cy: 0,
-    r: COLD_GLUE_GRIPPER_BODY_RADIUS - 0.9,
+    r: COLD_GLUE_GRIPPER_BODY_RADIUS - 1.05,
     fill: "none",
-    stroke: "#58b9dc",
-    "stroke-width": 0.55,
-    "stroke-opacity": 0.42,
+    stroke: "#c2c7cb",
+    "stroke-width": 0.62,
+    "stroke-opacity": 0.48,
     "pointer-events": "none"
   }, wheel);
   add("circle", {
     cx: 0,
     cy: 0,
-    r: 2.15,
-    fill: "#0b1118",
-    stroke: "#9bdcf2",
-    "stroke-width": 0.65,
+    r: 3.7,
+    fill: "#33383d",
+    stroke: "#c6cbd0",
+    "stroke-width": 0.8,
     "data-cold-glue-gripper-hub": "true"
+  }, wheel);
+  add("circle", {
+    cx: -1.0,
+    cy: -1.0,
+    r: 0.85,
+    fill: "#73797e",
+    "fill-opacity": 0.72,
+    "pointer-events": "none"
   }, wheel);
   return wheel;
 }
