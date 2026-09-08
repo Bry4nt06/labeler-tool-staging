@@ -3,6 +3,20 @@
 (function installMapAnimationRenderer(global) {
   const ROTATOR_HANDLE_OFFSET = 40;
 
+  function updateColdGlueGripperWheels(svg) {
+    const gripperNodes = svg?.querySelectorAll?.("[data-animation-cold-glue-gripper]") || [];
+    if (!gripperNodes.length) return;
+    const headCount = Math.max(1, Number(state.headCount) || 60);
+    const directionSign = state.direction === "cw" ? -1 : 1;
+    gripperNodes.forEach((node) => {
+      const aggregateAngle = num(node.getAttribute("data-gripper-aggregate-angle"), 0);
+      const tabCount = Math.max(1, num(node.getAttribute("data-gripper-tab-count"), 8));
+      const spinRatio = headCount / tabCount;
+      const spin = directionSign * (num(state.previewAngle, 0) - aggregateAngle) * spinRatio;
+      node.setAttribute("transform", `rotate(${spin})`);
+    });
+  }
+
   function updateAnimatedSvg(svg, program, fallbackRender) {
     if (!svg) return;
     const active = activeSegmentForProgram(program, state.previewAngle);
@@ -49,6 +63,11 @@
       node.setAttribute("transform", `translate(${head.x} ${head.y})`);
     });
 
+    // Cold-glue gripper cylinders counter-rotate against carousel travel. The
+    // head-count/tab-count ratio guarantees that one of the eight gripper tabs
+    // returns to the aggregate contact centerline for every bottle-plate pitch.
+    updateColdGlueGripperWheels(svg);
+
     const rotatorHandle = svg.querySelector("[data-map-rotator-handle]");
     if (rotatorHandle) {
       const rotator = angleToXY(state.previewAngle, state.radius + ROTATOR_HANDLE_OFFSET);
@@ -86,6 +105,8 @@
     updateAnimatedSvg,
     updateMapAnimationFrame,
     updateSimulationAnimationFrame,
-    synchronizedBottlePocketsV1: true
+    updateColdGlueGripperWheels,
+    synchronizedBottlePocketsV1: true,
+    synchronizedColdGlueGrippersV1: true
   });
 })(window);
