@@ -45,6 +45,19 @@
     return value;
   }
 
+  // A map datum can sit slightly behind the preceding generated row without
+  // meaning that the machine crossed the 360/0 seam. Preserve those local
+  // backtracks and only advance a full cycle when the backward jump is larger
+  // than half a revolution. This prevents e.g. 88.5 -> 87 from becoming 447,
+  // while a real 358 -> 2 seam crossing still resolves to 362.
+  function gripperCycleAngle(angle, reference) {
+    const minimum = finite(reference, 0);
+    let value = finite(angle, minimum);
+    while (value + FULL_CYCLE < minimum - EPSILON) value += FULL_CYCLE;
+    if (value < minimum - EPSILON && minimum - value > FULL_CYCLE / 2) value += FULL_CYCLE;
+    return value;
+  }
+
   function activeObjects(map) {
     const runtime = Array.isArray(state?.coldGlueMap) ? state.coldGlueMap : [];
     const saved = Array.isArray(map?.objects) ? map.objects : [];
@@ -150,7 +163,7 @@
   function tableAngleForGripper(map, station, minimumTable, originalBlock) {
     const gripper = gripperForStation(map, station);
     if (gripper) return {
-      tableAngle: atOrAfter(finite(gripper.angle, gripper.start), minimumTable),
+      tableAngle: gripperCycleAngle(finite(gripper.angle, gripper.start), minimumTable),
       source: "map-gripper",
       gripper
     };
@@ -164,7 +177,7 @@
       : Array.isArray(map?.enabledAggregates) ? map.enabledAggregates : [];
     if (enabledAggregates[Number(station) - 1] && Number.isFinite(Number(aggregateAngle))) {
       return {
-        tableAngle: atOrAfter(Number(aggregateAngle), minimumTable),
+        tableAngle: gripperCycleAngle(Number(aggregateAngle), minimumTable),
         source: "aggregate-spender",
         gripper: null
       };
@@ -173,7 +186,7 @@
       aggregateAngle,
       finite(originalBlock.find((row) => Number(row.cmd) === 3)?.tableAngle, minimumTable)
     );
-    return { tableAngle: atOrAfter(fallback, minimumTable), source: "aggregate-fallback", gripper: null };
+    return { tableAngle: gripperCycleAngle(fallback, minimumTable), source: "aggregate-fallback", gripper: null };
   }
 
   function buildAlignedChannelBlock(map, station, previousRow, originalBlock) {
