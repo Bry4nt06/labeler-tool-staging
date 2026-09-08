@@ -3,6 +3,10 @@
 const WIPE_DOWN_PAD_WIDTH_MM = 22;
 const WIPE_SPONGE_PATTERN_ID = "servoforge-wipe-sponge-pattern";
 const ROLLER_SPONGE_PATTERN_ID = "servoforge-roller-sponge-pattern";
+const COLD_GLUE_GRIPPER_TAB_COUNT = 8;
+const COLD_GLUE_GRIPPER_BODY_RADIUS = 8.2;
+const COLD_GLUE_GRIPPER_TAB_INNER_RADIUS = 7.25;
+const COLD_GLUE_GRIPPER_TAB_OUTER_RADIUS = 10.7;
 
 function mapUnitsPerMillimeter() {
   const referenceRadiusMm = Math.abs(num(state.referencePitchRadiusMm || state.tablePitchRadiusMm, 0));
@@ -199,13 +203,73 @@ function drawAplSpenderAssembly(add, layer, aggregate) {
   return group;
 }
 
+function coldGlueGripperSpinDeg(aggregateAngle, tabCount = COLD_GLUE_GRIPPER_TAB_COUNT) {
+  const headCount = Math.max(1, Number(state.headCount) || 60);
+  const resolvedTabCount = Math.max(1, num(tabCount, COLD_GLUE_GRIPPER_TAB_COUNT));
+  const directionSign = state.direction === "cw" ? -1 : 1;
+  return directionSign * (num(state.previewAngle, 0) - num(aggregateAngle, 0)) * (headCount / resolvedTabCount);
+}
+
+function drawColdGlueGripperWheel(add, parent, aggregateAngle, attributes = {}) {
+  const wheel = add("g", {
+    transform: `rotate(${coldGlueGripperSpinDeg(aggregateAngle)})`,
+    "data-animation-cold-glue-gripper": attributes["data-cold-glue-gripper"] || attributes["data-aggregate-gripper"] || "true",
+    "data-gripper-aggregate-angle": num(aggregateAngle, 0),
+    "data-gripper-tab-count": COLD_GLUE_GRIPPER_TAB_COUNT,
+    "aria-label": "Cold glue eight-tab gripper cylinder",
+    ...attributes
+  }, parent);
+
+  Array.from({ length: COLD_GLUE_GRIPPER_TAB_COUNT }, (_, index) => index * 360 / COLD_GLUE_GRIPPER_TAB_COUNT).forEach((angle) => {
+    add("polygon", {
+      points: `-2.85,-${COLD_GLUE_GRIPPER_TAB_INNER_RADIUS} 2.85,-${COLD_GLUE_GRIPPER_TAB_INNER_RADIUS} 3.2,-${COLD_GLUE_GRIPPER_TAB_OUTER_RADIUS} -3.2,-${COLD_GLUE_GRIPPER_TAB_OUTER_RADIUS}`,
+      transform: `rotate(${angle})`,
+      fill: "#1387bc",
+      stroke: "#071b2b",
+      "stroke-width": 0.8,
+      "stroke-linejoin": "round",
+      "data-cold-glue-gripper-tab": angle
+    }, wheel);
+  });
+
+  add("circle", {
+    cx: 0,
+    cy: 0,
+    r: COLD_GLUE_GRIPPER_BODY_RADIUS,
+    fill: "#0e79a7",
+    stroke: "#071b2b",
+    "stroke-width": 1.1,
+    "data-cold-glue-gripper-body": "true"
+  }, wheel);
+  add("circle", {
+    cx: 0,
+    cy: 0,
+    r: COLD_GLUE_GRIPPER_BODY_RADIUS - 0.9,
+    fill: "none",
+    stroke: "#58b9dc",
+    "stroke-width": 0.55,
+    "stroke-opacity": 0.42,
+    "pointer-events": "none"
+  }, wheel);
+  add("circle", {
+    cx: 0,
+    cy: 0,
+    r: 2.15,
+    fill: "#0b1118",
+    stroke: "#9bdcf2",
+    "stroke-width": 0.65,
+    "data-cold-glue-gripper-hub": "true"
+  }, wheel);
+  return wheel;
+}
+
 function drawIndependentAggregates(add, layer) {
   activeAggregateDefinitions().forEach((aggregate) => {
     if (state.applicationMode !== "cold-glue") { drawAplSpenderAssembly(add, layer, aggregate); return; }
     const xy = angleToXY(aggregate.angle, state.radius + state.depths.spender);
     const rotation = angleToSvgRotation(aggregate.angle) + 90;
     const group = add("g", { transform: `translate(${xy.x} ${xy.y}) rotate(${rotation})`, "data-aggregate-marker": aggregate.number }, layer);
-    add("line", { x1: -9, y1: 0, x2: 9, y2: 0, stroke: "#d71920", "stroke-width": 3, "stroke-linecap": "round" }, group);
+    drawColdGlueGripperWheel(add, group, aggregate.angle, { "data-aggregate-gripper": aggregate.number });
   });
 }
 
@@ -232,7 +296,6 @@ function drawConfiguredAssemblies(add, layer) {
   ensureWipeComponentVisualDefs(add, layer);
   if (state.applicationMode === "cold-glue") {
     const brushFill = "#6f6688";
-    const gripperHalfLength = 9;
     coldGlueMapObjects().forEach((raw) => {
       const item = { ...raw, kind: raw.kind === "wipe" ? "brush" : raw.kind };
       const objectLayer = add("g", { "data-map-object-id": item.id, class: state.selectedMapObjectId === item.id ? "map-object selected-map-object" : "map-object" }, layer);
@@ -257,7 +320,7 @@ function drawConfiguredAssemblies(add, layer) {
         const xy = angleToXY(angle, state.radius + state.depths.gripper);
         const rotation = angleToSvgRotation(angle) + 90;
         const group = add("g", { transform: `translate(${xy.x} ${xy.y}) rotate(${rotation})` }, objectLayer);
-        add("line", { x1: -gripperHalfLength, y1: 0, x2: gripperHalfLength, y2: 0, stroke: "#9b5558", "stroke-width": 2.5, "stroke-linecap": "round", "data-cold-glue-gripper": item.id }, group);
+        drawColdGlueGripperWheel(add, group, angle, { "data-cold-glue-gripper": item.id });
         drawMapObjectLabel(add, objectLayer, item, angle, state.radius + state.depths.gripper, 18);
         return;
       }
