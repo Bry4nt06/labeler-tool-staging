@@ -1,0 +1,149 @@
+name: Fix Cold Glue back-label channel entry v325
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/fix-back-label-channel-entry-v325.yml
+
+permissions:
+  contents: write
+
+env:
+  STAGING_BUILD: cold-glue-back-label-channel-entry-v325-20260909-1936
+  STAGING_UPDATED_AT: Sep 9, 2026 7:36 PM ET
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply label-relative channel-entry datum
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'app/cold-glue-profile-generation.js';
+          let text = fs.readFileSync(path, 'utf8');
+          const old = '    const common = {\n      labelDeg: wipe.labelDeg,\n';
+          const next = '    const common = {\n      labelDeg: wipe.labelDeg,\n      applicationPlateDeg: applicationTargets[section],\n';
+          if (!text.includes('applicationPlateDeg: applicationTargets[section]')) {
+            if (!text.includes(old)) throw new Error('Cold Glue brush-plan common block not found.');
+            text = text.replace(old, next);
+          }
+          fs.writeFileSync(path, text);
+          NODE
+
+      - name: Add back-label brush-entry regression
+        shell: bash
+        run: |
+          cat > tests/cold-glue-back-label-brush-entry-v325.test.js <<'TEST'
+          "use strict";
+
+          const assert = require("node:assert/strict");
+          const fs = require("node:fs");
+          const path = require("node:path");
+          const vm = require("node:vm");
+
+          const root = path.resolve(__dirname, "..");
+          const driverSource = fs.readFileSync(path.join(root, "drivers/mechanical/cold-glue-motion-driver.js"), "utf8");
+          const integrationSource = fs.readFileSync(path.join(root, "app/cold-glue-label-relative-brush-entry-integration.js"), "utf8");
+          const profileSource = fs.readFileSync(path.join(root, "app/cold-glue-profile-generation.js"), "utf8");
+
+          const context = { console };
+          context.window = context;
+          vm.createContext(context);
+          vm.runInContext(driverSource, context, { filename: "cold-glue-motion-driver.js" });
+          vm.runInContext(integrationSource, context, { filename: "cold-glue-label-relative-brush-entry-integration.js" });
+
+          assert.match(profileSource, /applicationPlateDeg:\s*applicationTargets\[section\]/,
+            "Cold Glue brush planner must receive the current section application datum");
+
+          const channel = {
+            id: "equal-channel",
+            outerStart: 10,
+            outerEnd: 30,
+            innerStart: 10,
+            innerEnd: 30
+          };
+
+          const front = context.LabelerColdGlueMotionDriver.createBrushChannelPlan({
+            labelDeg: 50,
+            overWipeDeg: 0,
+            mapDirection: "ccw",
+            applicationPlateDeg: 0,
+            channels: [channel]
+          });
+          const back = context.LabelerColdGlueMotionDriver.createBrushChannelPlan({
+            labelDeg: 50,
+            overWipeDeg: 0,
+            mapDirection: "ccw",
+            applicationPlateDeg: 180,
+            channels: [channel]
+          });
+
+          assert.equal(front.channelEntryAngle, 90, "front label should enter at +90° from its 0° application datum");
+          assert.equal(back.channelEntryAngle, 270, "back label should enter at +90° from its 180° application datum");
+          assert.equal(front.channelMoves[0].holdAngle, 90);
+          assert.equal(back.channelMoves[0].holdAngle, 270);
+          assert.equal((back.channelEntryAngle - front.channelEntryAngle + 360) % 360, 180,
+            "back-label brush entry must remain exactly 180° shifted from front-label brush entry");
+
+          console.log("Cold Glue back-label brush-entry v325 regression passed.");
+          TEST
+
+      - name: Publish staging v325 identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const build = process.env.STAGING_BUILD;
+          const updatedAt = process.env.STAGING_UPDATED_AT;
+          function edit(path, transform) {
+            const before = fs.readFileSync(path, 'utf8');
+            const after = transform(before);
+            fs.writeFileSync(path, after.endsWith('\n') ? after : `${after}\n`);
+          }
+          edit('app/bootstrap.js', (text) => text
+            .replace(/const build = "[^"]+";/, `const build = "${build}";`)
+            .replace(/const buildUpdatedAt = "[^"]+";/, `const buildUpdatedAt = "${updatedAt}";`));
+          edit('app/profile-generation.js', (text) => text.replace(/const moduleBuild = "[^"]+";/, `const moduleBuild = "${build}";`));
+          edit('app.js', (text) => text.replace(/const build = window\.ServoForgeBootstrapBuild \|\| "[^"]+";/, `const build = window.ServoForgeBootstrapBuild || "${build}";`));
+          edit('app/update-manager.js', (text) => text.replace(/const BUILD_ID = "[^"]+";/, `const BUILD_ID = "${build}";`));
+          edit('index.html', (text) => text.replace(/build=[^"&]+/g, `build=${build}`));
+          if (fs.existsSync('update-manifest.json')) {
+            const manifest = JSON.parse(fs.readFileSync('update-manifest.json', 'utf8'));
+            manifest.buildId = build;
+            manifest.notes = 'Cold Glue v325: back-label brush-channel entry and opposed hold angles are now relative to the active label application datum.';
+            fs.writeFileSync('update-manifest.json', `${JSON.stringify(manifest, null, 2)}\n`);
+          }
+          NODE
+
+      - name: Validate staging v325
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app/cold-glue-profile-generation.js
+          node --check app/cold-glue-label-relative-brush-entry-integration.js
+          node --check app/profile-generation.js
+          node --check app/bootstrap.js
+          node --test tests/cold-glue-back-label-brush-entry-v325.test.js
+          grep -q 'applicationPlateDeg: applicationTargets\[section\]' app/cold-glue-profile-generation.js
+          grep -q "$STAGING_BUILD" app/bootstrap.js
+          grep -q "$STAGING_BUILD" app/profile-generation.js
+          grep -q "$STAGING_BUILD" index.html
+
+      - name: Commit staging v325
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/fix-back-label-channel-entry-v325.yml
+          git config user.name "ServoForge Staging Fix"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix Cold Glue back-label brush-channel entry datum v325"
+          git push origin HEAD:main
