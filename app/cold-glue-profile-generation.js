@@ -197,9 +197,10 @@ function generatedColdGlueFixedProfile() {
     // passed. If an earlier full wrap truly extends beyond that 475° datum,
     // the existing skip behavior still applies.
     const aggregateAlreadyPassed = aggregateAngle <= lastTable + 0.001;
-    const applicationPlate = coldGlueDriver?.applicationTarget
-      ? coldGlueDriver.applicationTarget(applicationTargets[section], mapDirection, stationPlan?.labelDeg)
-      : applicationTargets[section];
+    // Each Cold Glue aggregate application is a fixed physical bottle
+    // center-line datum. Do not apply label-length or flow-direction offsets
+    // here; those are only for the later brush-entry alignment.
+    const applicationPlate = applicationTargets[section];
     const applicationMoveRequired = plateTravelTo(applicationPlate) > 0.001;
     if (section && !aggregateAlreadyPassed && applicationMoveRequired) {
       if (stationPlan?.fullWrap) {
