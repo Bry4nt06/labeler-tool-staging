@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "cold-glue-aggregate-centerline-datums-v322-20260909-1426";
-  const buildUpdatedAt = "Sep 9, 2026 2:26 PM ET";
+  const build = "cold-glue-centerline-return-v323-20260909-1853";
+  const buildUpdatedAt = "Sep 9, 2026 6:53 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
