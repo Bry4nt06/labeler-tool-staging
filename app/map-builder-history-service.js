@@ -73,13 +73,16 @@ function restoreColdGlueBuilderObjects(machineMap, snapshot) {
 
 function refreshAfterBuilderEdit({ persist = false, structural = false } = {}) {
   const machineMap = typeof activeMachineMap === "function" ? activeMachineMap() : null;
-  const preserveColdGlueObjects = machineMap?.applicationMode === "cold-glue"
-    ? cloneBuilderObjects(machineMap.objects)
-    : null;
 
   if (structural && machineMap) machineMap.localStructuralMapOverride = true;
 
+  // Allow the normal map adapter to canonicalize the just-edited object first,
+  // then freeze that canonical collection across profile generation. The servo
+  // generator is not allowed to delete/remap physical Map Builder objects.
   syncApplicationMapToLegacyState();
+  const preserveColdGlueObjects = machineMap?.applicationMode === "cold-glue"
+    ? cloneBuilderObjects(machineMap.objects)
+    : null;
   applyGeneratedServoProfile();
   restoreColdGlueBuilderObjects(machineMap, preserveColdGlueObjects);
   renderMap();
