@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-aggregate-centerline-datums-v322-20260909-1426",
+  "buildId": "cold-glue-back-label-channel-entry-v325-20260909-1936",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v322 makes Cold Glue aggregate application orientation use fixed physical center-line datums: Neck 0°, Body 0°, and Back 180°. These targets no longer inherit APL seed angles or shift for full-wrap labels. The smooth post-wipe handoff from v321 remains, so each CMD 7 starts from the achieved prior angle and reaches the required aggregate datum on CMD 3."
+  "notes": "Cold Glue v325: back-label brush-channel entry and opposed hold angles are now relative to the active label application datum."
 }
