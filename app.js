@@ -75,7 +75,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "cold-glue-single-brush-unified-visual-v320-20260909-0737";
+  const build = window.ServoForgeBootstrapBuild || "cold-glue-next-aggregate-handoff-v321-20260909-0843";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
