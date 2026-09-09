@@ -75,7 +75,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "cold-glue-next-aggregate-handoff-v321-20260909-0843";
+  const build = window.ServoForgeBootstrapBuild || "cold-glue-aggregate-centerline-datums-v322-20260909-1426";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
