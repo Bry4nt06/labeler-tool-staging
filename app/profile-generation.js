@@ -2,7 +2,7 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
-  const moduleBuild = "cold-glue-neck-wrap-overlap-v316-20260831-1730";
+  const moduleBuild = "cold-glue-station1-zero-single-brush-drag-v319-20260909-0721";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",
