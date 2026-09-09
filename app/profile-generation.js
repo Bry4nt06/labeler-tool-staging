@@ -2,11 +2,12 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
-  const moduleBuild = "cold-glue-centerline-return-v323-20260909-1853";
+  const moduleBuild = "cold-glue-back-label-brush-entry-v324-20260909-1908";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",
     "app/apl-seed-profile.js",
+    "app/cold-glue-label-relative-brush-entry-integration.js",
     "app/cold-glue-profile-generation.js",
     "app/apl-map-profile-generation.js",
     "app/apl-neck-pad-edge-lock-integration.js",
