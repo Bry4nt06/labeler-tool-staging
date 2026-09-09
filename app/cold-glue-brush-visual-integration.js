@@ -31,6 +31,15 @@
   }
 
   function brushRange(item, side) {
+    // Only a combined brush channel owns independent inside/outside ranges.
+    // Standalone brushes are edited through start/end; their side aliases are
+    // creation-time compatibility fields and must never pin the visual in place.
+    if (item?.kind !== "brush-channel") {
+      return {
+        start: number(item?.start, item?.angle),
+        end: number(item?.end, item?.start)
+      };
+    }
     if (side === "inner") {
       return {
         start: number(item?.innerStart, item?.start),
@@ -428,6 +437,7 @@
     BRISTLE_DEPTH_MM,
     BACKING_DEPTH_MM,
     TOTAL_DEPTH_MM,
+    brushRange,
     installTopDownBrushVisuals,
     install3DBrushLayout,
     install3DBrushVisuals,

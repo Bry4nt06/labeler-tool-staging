@@ -9,6 +9,7 @@ const root = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "app", "troubleshooting", "index.html"), "utf8");
 const bootstrap = fs.readFileSync(path.join(root, "app", "troubleshooting", "troubleshooting-bootstrap.js"), "utf8");
 const serviceWorker = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
+const releaseManifest = JSON.parse(fs.readFileSync(path.join(root, "update-manifest.json"), "utf8"));
 
 function manifestEntries() {
   const match = html.match(/<script id="troubleshootingScriptManifest" type="application\/json">\s*([\s\S]*?)\s*<\/script>/);
@@ -95,8 +96,11 @@ test("cache repair remains scoped to service workers and ServoForge caches", () 
   assert.match(bootstrap, /cacheRepair", "v359"/);
 });
 
-test("offline shell carries the v358 bootstrap instead of the stale v329 cache generation", () => {
-  assert.match(serviceWorker, /CACHE_NAME = "servoforge-labeler-staging-v0\.9\.10-troubleshooting-bootstrap-v358-20260904"/);
+test("offline shell carries the current staging build instead of the stale v329 cache generation", () => {
+  assert.ok(
+    serviceWorker.includes(`CACHE_NAME = "servoforge-labeler-staging-v${releaseManifest.version}-${releaseManifest.buildId}"`),
+    "the offline shell cache must follow the current release manifest build"
+  );
   assert.match(serviceWorker, /\.\/app\/troubleshooting\/troubleshooting-bootstrap\.js/);
   assert.doesNotMatch(serviceWorker, /servoforge-labeler-staging-v0\.9\.10-exact-circuit-v329-20260903-1920/);
 });

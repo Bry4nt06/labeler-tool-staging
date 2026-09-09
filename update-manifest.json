@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-station5-map-add-v316-20260908-2215",
+  "buildId": "cold-glue-station1-zero-single-brush-drag-v319-20260909-0721",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Staging delivery refresh for the Cold Glue Station 5 Add to Map fix. Unifies the banner, entry-page assets, update manager, manifest, and service-worker cache on cold-glue-station5-map-add-v316-20260908-2215. Troubleshooting v363 imports the remaining high-number LB1 APL Cart 1 tail: Fault 00060 Rewind Full, Cart-local base-machine encoder Faults 00064-00069, and catalog-only Fault 00074 Height Adjustment / Circuit Breaker Tripped. Rewind Full preserves the PE603 / DiameterSensorTimer source chain and K605163 hardware route. Encoder faults reuse the existing BaseMachineEncoderAxis Slot 11 1756-M02AE / CN131 / W131 authority. Existing field/source-backed 00067 remains the sole exact 00067 entry; v363 adds context without duplication. Fault 00074 remains searchable but producer-unresolved. v362 servo-status coverage, v361 label-web coverage, v360 exact-search precedence, and v358 responsive startup safeguards remain intact."
+  "notes": "v319 keeps the first Cold Glue application station at the configured zero datum through Aggregate 1 and begins bottle rotation only when the physical brush wipe requires it. Standalone inside and outside brushes now render and move from their live start/end angles while combined brush channels retain independent inside/outside ranges. This fixes the selected-but-visually-stuck single-brush drag defect without changing brush-channel geometry."
 }

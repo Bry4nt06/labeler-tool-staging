@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-cold-glue-station5-map-add-v316-20260908-2215";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-cold-glue-station1-zero-single-brush-drag-v319-20260909-0721";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 

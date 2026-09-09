@@ -15,6 +15,7 @@ function generatedColdGlueFixedProfile() {
     ? activeSlotNumbers(coldGlueSettings.enabledAggregates || machineMap.enabledAggregates)
     : [1, 2, 3];
   const stationNumbers = enabledStations.filter((station) => enabledAggregates.includes(station));
+  const firstApplicationStation = stationNumbers[0] || null;
   const objects = (Array.isArray(state.coldGlueMap) ? state.coldGlueMap : []).map((item) => ({
     ...item,
     station: Math.max(1, Math.min(6, Math.round(num(item.station, inferredMapObjectStation(item) || 1))))
@@ -164,10 +165,14 @@ function generatedColdGlueFixedProfile() {
     // second revolution. Its label is already on the bottle; continue with the
     // remaining physical brush windows in their actual table order.
     const aggregateAlreadyPassed = aggregateAngle <= lastTable + 0.001;
-    if (section && !aggregateAlreadyPassed) {
-      const applicationPlate = coldGlueDriver?.applicationTarget
+    const holdFirstApplicationDatum = section === "neck" && station === firstApplicationStation;
+    const applicationPlate = holdFirstApplicationDatum
+      ? startPlate
+      : coldGlueDriver?.applicationTarget
         ? coldGlueDriver.applicationTarget(applicationTargets[section], mapDirection, stationPlan?.labelDeg)
         : applicationTargets[section];
+    const applicationMoveRequired = plateTravelTo(applicationPlate) > 0.001;
+    if (section && !aggregateAlreadyPassed && applicationMoveRequired) {
       if (stationPlan?.fullWrap) {
         const applicationStart = unwrapAfter(aggregateAngle + 4, lastTable);
         const applicationTravel = plateTravelTo(applicationPlate) / Math.max(0.1, Math.min(state.maxMoveRatio * 0.9, 11.5));
@@ -196,11 +201,14 @@ function generatedColdGlueFixedProfile() {
           : applicationTargets[section] + (mapDirection === "ccw" ? -90 : 90);
         const brushEntryTable = firstBrush.start - Math.max(0, num(stationPlan.brushEntryLeadDeg, 0));
         const alignmentExtra = { station, section, brushEntryAlignment: true, preBrushRotation: true, centerTackOnly: true, tackMode: "center", leadingEdgeWipe: false, mapDirection, flowFacingOffsetDeg: mapDirection === "ccw" ? 90 : -90 };
-        if (stationPlan.fullWrap) {
-          const alignmentStart = Math.max(lastTable + 0.5, brushEntryTable - plateTravelTo(flowFacingPlate) / Math.max(0.1, Math.min(state.maxMoveRatio * 0.9, 7.5)));
-          moveInWindow(alignmentStart, brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Face Bottle With Flow Before Brush Channel`, alignmentExtra);
-        } else {
-          moveToReference(brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Pre-Spin Center-Tacked Label Before Brush Contact`, alignmentExtra);
+        const brushEntryMoveRequired = plateTravelTo(flowFacingPlate) > 0.001;
+        if (brushEntryMoveRequired) {
+          if (stationPlan.fullWrap) {
+            const alignmentStart = Math.max(lastTable + 0.5, brushEntryTable - plateTravelTo(flowFacingPlate) / Math.max(0.1, Math.min(state.maxMoveRatio * 0.9, 7.5)));
+            moveInWindow(alignmentStart, brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Face Bottle With Flow Before Brush Channel`, alignmentExtra);
+          } else {
+            moveToReference(brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Pre-Spin Center-Tacked Label Before Brush Contact`, alignmentExtra);
+          }
         }
       }
 
