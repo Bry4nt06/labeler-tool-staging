@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "cold-glue-next-aggregate-handoff-v321-20260909-0843";
+  const BUILD_ID = "cold-glue-aggregate-centerline-datums-v322-20260909-1426";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
