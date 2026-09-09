@@ -2,7 +2,7 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
-  const moduleBuild = "cold-glue-single-brush-unified-visual-v320-20260909-0737";
+  const moduleBuild = "cold-glue-next-aggregate-handoff-v321-20260909-0843";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",

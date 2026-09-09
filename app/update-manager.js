@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "cold-glue-single-brush-unified-visual-v320-20260909-0737";
+  const BUILD_ID = "cold-glue-next-aggregate-handoff-v321-20260909-0843";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
