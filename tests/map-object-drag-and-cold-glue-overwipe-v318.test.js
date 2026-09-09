@@ -243,4 +243,42 @@ assert.equal(firstStationTurn.tableAngle, 100,
 assert.equal(firstStationTurn.plateAngle, 0,
   "Station 1 must enter the brush at the zero-degree datum");
 
-console.log("Map object drag, unified standalone brush rendering, Station 1 zero datum, and Cold Glue neck over-wipe regression passed.");
+profileContext.state.coldGlueAggregateSettings.enabledStations = [true, false, true, false, false, false];
+profileContext.state.coldGlueAggregateSettings.enabledAggregates = [true, false, true, false, false, false];
+profileContext.state.coldGlueAggregateSettings.aggregateAngles = { "1": 68.5, "3": 137 };
+profileContext.activeMachineMap = () => ({
+  applicationMode: "cold-glue",
+  enabledStations: [true, false, true, false, false, false],
+  enabledAggregates: [true, false, true, false, false, false],
+  aggregateAngles: { "1": 68.5, "3": 137 },
+  machineSettings: { direction: "ccw" }
+});
+profileContext.selectedLabelApplicationState = () => ({ neck: true, body: true, back: false });
+profileContext.generatedAplSeedProfile = () => Array.from(
+  { length: 22 },
+  (_, index) => ({ plateAngle: index === 11 ? 90 : 0 })
+);
+const handoffRows = profileContext.generatedColdGlueFixedProfile();
+const neckWipeRestIndex = handoffRows.findIndex((row) =>
+  Number(row.cmd) === 3 && /Neck Outside Brush Opening.*Rest/.test(row.action)
+);
+assert.notEqual(neckWipeRestIndex, -1, "the test profile must include the outside brush exit Rest");
+const neckWipeRest = handoffRows[neckWipeRestIndex];
+const bodyTurn = handoffRows[neckWipeRestIndex + 1];
+const bodyReference = handoffRows[neckWipeRestIndex + 2];
+assert.equal(Number(bodyTurn.cmd), 7,
+  "the post-wipe handoff must start with a Correction for the next aggregate");
+assert.equal(bodyTurn.plateAngle, neckWipeRest.plateAngle,
+  "the next-aggregate Correction must start from the achieved outside-wipe angle without snapping");
+assert.ok(bodyTurn.tableAngle > neckWipeRest.tableAngle,
+  "the handoff Correction needs its own strictly increasing table waypoint");
+assert.equal(Number(bodyReference.cmd), 3,
+  "the next aggregate target must be stored on a Rest reference");
+assert.equal(bodyReference.tableAngle, 137,
+  "the target Rest must occur at Aggregate 3 instead of being stretched to a remote end-of-curve object");
+assert.equal(bodyReference.plateAngle, 90,
+  "the bottle must reach its configured Body application orientation at Aggregate 3");
+assert.equal(bodyReference.terminalRest, true,
+  "a missing downstream brush set must preserve the Aggregate 3 application reference as the terminal Rest");
+
+console.log("Map object drag, unified standalone brush rendering, Station 1 zero datum, Cold Glue neck over-wipe, and next-aggregate handoff regression passed.");
