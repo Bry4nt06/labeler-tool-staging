@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "bottle-orientation-wipe-direction-v127-20260816-0935";
+  const BUILD_ID = "cold-glue-station5-map-add-v316-20260908-2215";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
