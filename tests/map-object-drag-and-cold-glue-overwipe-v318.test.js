@@ -10,6 +10,7 @@ const controllerSource = fs.readFileSync(path.join(root, "app/controllers/map-co
 const sceneSource = fs.readFileSync(path.join(root, "app/mechanical-map-scene-renderer.js"), "utf8");
 const profileSource = fs.readFileSync(path.join(root, "app/cold-glue-profile-generation.js"), "utf8");
 const brushVisualSource = fs.readFileSync(path.join(root, "app/cold-glue-brush-visual-integration.js"), "utf8");
+const brushPanelSource = fs.readFileSync(path.join(root, "app/cold-glue-brush-bevel-back-panel-v23.js"), "utf8");
 const channelSource = fs.readFileSync(path.join(root, "app/cold-glue-gripper-channel-integration.js"), "utf8");
 
 const item = {
@@ -135,6 +136,31 @@ assert.equal(channelRange.start, 20,
   "a combined brush channel must retain its independent outside range");
 assert.equal(channelRange.end, 45);
 
+vm.runInContext(brushPanelSource, visualContext, { filename: "cold-glue-brush-bevel-back-panel-v23.js" });
+const panelBrushRange = visualContext.ServoForgeColdGlueBrushBevelBackPanel.brushRange;
+const standalonePanelRange = panelBrushRange({
+  kind: "brush",
+  side: "outer",
+  start: 140,
+  end: 165,
+  outerStart: 20,
+  outerEnd: 45
+}, "outer");
+assert.equal(standalonePanelRange.start, 140,
+  "the standalone brush bristle and back-panel layers must follow the same live range as the texture lines");
+assert.equal(standalonePanelRange.end, 165,
+  "the complete standalone brush assembly must move together after a drag");
+const channelPanelRange = panelBrushRange({
+  kind: "brush-channel",
+  start: 10,
+  end: 50,
+  outerStart: 20,
+  outerEnd: 45
+}, "outer");
+assert.equal(channelPanelRange.start, 20,
+  "the panel wrapper must preserve independent outside geometry for combined brush channels");
+assert.equal(channelPanelRange.end, 45);
+
 const profileContext = {
   console,
   state: {
@@ -217,4 +243,4 @@ assert.equal(firstStationTurn.tableAngle, 100,
 assert.equal(firstStationTurn.plateAngle, 0,
   "Station 1 must enter the brush at the zero-degree datum");
 
-console.log("Map object drag, standalone brush rendering, Station 1 zero datum, and Cold Glue neck over-wipe regression passed.");
+console.log("Map object drag, unified standalone brush rendering, Station 1 zero datum, and Cold Glue neck over-wipe regression passed.");

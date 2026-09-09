@@ -1,7 +1,7 @@
 (function installServoForgeColdGlueBrushBevelBackPanel(global) {
   "use strict";
 
-  const INTEGRATION_VERSION = "servoforge.cold-glue-brush-bevel-back-panel.v23";
+  const INTEGRATION_VERSION = "servoforge.cold-glue-brush-bevel-back-panel.v24";
   const SVG_NS = "http://www.w3.org/2000/svg";
   const BRUSH_HEIGHT_MM = 70;
   const BRISTLE_DEPTH_MM = 18;
@@ -29,6 +29,16 @@
   }
 
   function brushRange(item, side) {
+    const canonicalBrushRange = global.ServoForgeColdGlueBrushVisualIntegration?.brushRange;
+    if (typeof canonicalBrushRange === "function") {
+      return canonicalBrushRange(item, side);
+    }
+    if (item?.kind !== "brush-channel") {
+      return {
+        start: number(item?.start, item?.angle),
+        end: number(item?.end, item?.start)
+      };
+    }
     if (side === "inner") {
       return {
         start: number(item?.innerStart, item?.start),
@@ -367,7 +377,7 @@
 
     global.Labeler3DHardwareMeshFactory = Object.freeze({
       ...previousFactory,
-      FACTORY_VERSION: `${previousFactory.FACTORY_VERSION || "servoforge.3d-hardware-mesh"}+brush-bevel-panel-v23`,
+      FACTORY_VERSION: `${previousFactory.FACTORY_VERSION || "servoforge.3d-hardware-mesh"}+brush-bevel-panel-v24`,
       createBrushAssembly,
       createEquipmentAssembly
     });
@@ -379,6 +389,7 @@
 
   global.ServoForgeColdGlueBrushBevelBackPanel = Object.freeze({
     INTEGRATION_VERSION,
+    brushRange,
     beveledAnnularPath,
     beveledAnnularPrismGeometry,
     createBeveledBrushAssembly,

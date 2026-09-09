@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "cold-glue-station1-zero-single-brush-drag-v319-20260909-0721";
-  const buildUpdatedAt = "Sep 9, 2026 7:21 AM ET";
+  const build = "cold-glue-single-brush-unified-visual-v320-20260909-0737";
+  const buildUpdatedAt = "Sep 9, 2026 7:37 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
