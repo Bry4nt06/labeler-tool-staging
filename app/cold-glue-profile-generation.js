@@ -61,10 +61,25 @@ function generatedColdGlueFixedProfile() {
     lastTable = normalizedTable;
   };
   const moveToReference = (targetTable, targetPlate, action, extra = {}) => {
-    const target = unwrapAfter(targetTable, lastTable);
-    add(7, lastTable, plate, action, extra);
+    const applicationTransition = extra.applicationTransition === true;
+    // A new correction must begin from the bottle angle established by the
+    // preceding Rest. Give the handoff its own strictly-later table waypoint
+    // so table normalization cannot discard the correction start and place
+    // the target angle on CMD 7, which appears as an instantaneous snap.
+    const correctionStart = applicationTransition && Number(rows[rows.length - 1]?.cmd) === 3
+      ? lastTable + 0.5
+      : lastTable;
+    const target = unwrapAfter(targetTable, correctionStart);
+    add(7, correctionStart, plate, action, {
+      ...extra,
+      applicationReference: false
+    });
     plate = targetPlate;
-    add(3, target, plate, `${action} - Reference`, extra);
+    add(3, target, plate, `${action} - Reference`, {
+      ...extra,
+      applicationTransition: false,
+      applicationReference: applicationTransition
+    });
   };
   const moveToReferenceWithoutExtraLap = (targetTable, targetPlate, action, extra = {}) => {
     if (Math.abs(norm(num(targetTable, lastTable)) - norm(lastTable)) <= 0.001) {
@@ -176,9 +191,9 @@ function generatedColdGlueFixedProfile() {
       if (stationPlan?.fullWrap) {
         const applicationStart = unwrapAfter(aggregateAngle + 4, lastTable);
         const applicationTravel = plateTravelTo(applicationPlate) / Math.max(0.1, Math.min(state.maxMoveRatio * 0.9, 11.5));
-        moveInWindow(applicationStart, applicationStart + applicationTravel, applicationPlate, `Turn for ${sectionLabel(section)} Application at Aggregate ${station}`, { station, section, fullWrapApplication: true });
+        moveInWindow(applicationStart, applicationStart + applicationTravel, applicationPlate, `Turn for ${sectionLabel(section)} Application at Aggregate ${station}`, { station, section, fullWrapApplication: true, applicationTransition: true, applicationTargetSection: section });
       } else {
-        moveToReference(aggregateAngle, applicationPlate, `Turn for ${sectionLabel(section)} Application at Aggregate ${station}`, { station, section });
+        moveToReference(aggregateAngle, applicationPlate, `Turn for ${sectionLabel(section)} Application at Aggregate ${station}`, { station, section, applicationTransition: true, applicationTargetSection: section });
       }
     } else if (!section && stationObjects.length) {
       moveToReference(aggregateAngle, plate, `Aggregate ${station} Entry`, { station });
@@ -350,9 +365,26 @@ function generatedColdGlueFixedProfile() {
   });
 
   const finalObjectAngle = objects.reduce((best, item) => Math.max(best, num(item.end, num(item.angle, num(item.start, 0)))), 0);
-  const endCurveAngle = unwrapAfter(finalObjectAngle || (lastTable + Math.max(0.5, 360 / Math.max(1, state.headCount))), lastTable);
-  if (Number(rows[rows.length - 1]?.cmd) === 3) {
-    rows[rows.length - 1] = { ...rows[rows.length - 1], tableAngle: finishAngle(endCurveAngle), action: "End Curve - Rest", terminalRest: true, motionSource: "terminal-end-curve-rest" };
+  const finalRow = rows[rows.length - 1];
+  // When the last physical event is the next aggregate's application
+  // reference, that achieved CMD 3 is the correct terminal. Extending it to a
+  // remote map object erases the target waypoint and makes the prior Rest
+  // appear to snap directly to the target angle.
+  const preserveFinalApplicationReference = Number(finalRow?.cmd) === 3
+    && finalRow?.applicationReference === true;
+  const endCurveAngle = preserveFinalApplicationReference
+    ? lastTable
+    : unwrapAfter(finalObjectAngle || (lastTable + Math.max(0.5, 360 / Math.max(1, state.headCount))), lastTable);
+  if (Number(finalRow?.cmd) === 3) {
+    rows[rows.length - 1] = {
+      ...finalRow,
+      tableAngle: finishAngle(endCurveAngle),
+      action: preserveFinalApplicationReference
+        ? `${finalRow.action} - End Curve Rest`
+        : "End Curve - Rest",
+      terminalRest: true,
+      motionSource: "terminal-end-curve-rest"
+    };
     lastTable = endCurveAngle;
   } else {
     add(3, endCurveAngle, plate, "End Curve - Rest", { terminalRest: true, motionSource: "terminal-end-curve-rest" });
