@@ -9,6 +9,7 @@ const root = path.resolve(__dirname, "..");
 const controllerSource = fs.readFileSync(path.join(root, "app/controllers/map-controller.js"), "utf8");
 const sceneSource = fs.readFileSync(path.join(root, "app/mechanical-map-scene-renderer.js"), "utf8");
 const profileSource = fs.readFileSync(path.join(root, "app/cold-glue-profile-generation.js"), "utf8");
+const brushVisualSource = fs.readFileSync(path.join(root, "app/cold-glue-brush-visual-integration.js"), "utf8");
 const channelSource = fs.readFileSync(path.join(root, "app/cold-glue-gripper-channel-integration.js"), "utf8");
 
 const item = {
@@ -106,4 +107,114 @@ assert.match(profileSource, /overWipeDeg: section === "neck" \? 0 : wipe\.overWi
 assert.match(channelSource, /const overWipeDeg = 0;/,
   "the legacy channel adapter must enforce the same Cold Glue rule");
 
-console.log("Map object drag hit-testing and Cold Glue neck over-wipe authority regression passed.");
+const visualContext = { console, window: null };
+visualContext.window = visualContext;
+vm.createContext(visualContext);
+vm.runInContext(brushVisualSource, visualContext, { filename: "cold-glue-brush-visual-integration.js" });
+const brushRange = visualContext.ServoForgeColdGlueBrushVisualIntegration.brushRange;
+const standaloneRange = brushRange({
+  kind: "brush",
+  side: "outer",
+  start: 140,
+  end: 165,
+  outerStart: 20,
+  outerEnd: 45
+}, "outer");
+assert.equal(standaloneRange.start, 140,
+  "a standalone brush visual must follow its live start value instead of its creation-time side alias");
+assert.equal(standaloneRange.end, 165,
+  "a standalone brush visual must follow its live end value instead of its creation-time side alias");
+const channelRange = brushRange({
+  kind: "brush-channel",
+  start: 10,
+  end: 50,
+  outerStart: 20,
+  outerEnd: 45
+}, "outer");
+assert.equal(channelRange.start, 20,
+  "a combined brush channel must retain its independent outside range");
+assert.equal(channelRange.end, 45);
+
+const profileContext = {
+  console,
+  state: {
+    applicationMode: "cold-glue",
+    coldGlueAggregateSettings: {
+      enabledStations: [true, false, false, false, false, false],
+      enabledAggregates: [true, false, false, false, false, false],
+      aggregateAngles: { "1": 68.5 },
+      machineSettings: { direction: "ccw" }
+    },
+    coldGlueMap: [{
+      id: "station-1-channel",
+      kind: "brush-channel",
+      station: 1,
+      start: 100,
+      end: 120,
+      outerStart: 100,
+      outerEnd: 120,
+      innerStart: 110,
+      innerEnd: 130
+    }],
+    buildInputs: { plateStartPositionDeg: 0 },
+    maxMoveRatio: 21,
+    headCount: 60
+  },
+  activeMachineMap: () => ({
+    applicationMode: "cold-glue",
+    enabledStations: [true, false, false, false, false, false],
+    enabledAggregates: [true, false, false, false, false, false],
+    aggregateAngles: { "1": 68.5 },
+    machineSettings: { direction: "ccw" }
+  }),
+  activeSlotNumbers: (slots) => slots.map((enabled, index) => enabled ? index + 1 : null).filter(Boolean),
+  selectedLabelApplicationState: () => ({ neck: true, body: false, back: false }),
+  generatedAplSeedProfile: () => [{ plateAngle: 0 }, { plateAngle: 120 }],
+  sectionWipePlan: () => ({ labelDeg: 350, overWipeDeg: 0 }),
+  selectedNeckWrapPlan: () => ({ resolvedMode: "standard" }),
+  inferredMapObjectStation: (entry) => entry.station,
+  sectionLabel: (section) => section[0].toUpperCase() + section.slice(1),
+  num(value, fallback = 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  },
+  norm: (value) => ((Number(value) % 360) + 360) % 360,
+  finishAngle: (value) => Math.round(Number(value) * 2) / 2,
+  window: null
+};
+profileContext.window = profileContext;
+profileContext.LabelerServoCommandDriver = { finalize: (rows) => rows };
+profileContext.LabelerColdGlueMotionDriver = {
+  applicationTarget: () => 120,
+  flowFacingTarget: () => 0,
+  createBrushChannelPlan: () => ({
+    fullWrap: true,
+    labelDeg: 350,
+    brushEntryLeadDeg: 0,
+    channelMoves: [{
+      stage: "outer",
+      side: "outer",
+      start: 100,
+      end: 120,
+      rotation: 40,
+      direction: 1,
+      ratio: 2,
+      centerTackStage: "center-to-first-edge"
+    }],
+    issues: []
+  })
+};
+vm.createContext(profileContext);
+vm.runInContext(profileSource, profileContext, { filename: "cold-glue-profile-generation.js" });
+const stationOneRows = profileContext.generatedColdGlueFixedProfile();
+assert.equal(stationOneRows.some((row) => /Turn for Neck Application/.test(row.action)), false,
+  "Station 1 must remain at the zero datum through Aggregate 1");
+assert.equal(stationOneRows.some((row) => /Face Bottle With Flow|Pre-Spin/.test(row.action)), false,
+  "a zero-degree brush-entry target must not emit a redundant pre-brush correction");
+const firstStationTurn = stationOneRows.find((row) => Number(row.cmd) === 7);
+assert.equal(firstStationTurn.tableAngle, 100,
+  "the first Station 1 correction must begin at the physical brush window");
+assert.equal(firstStationTurn.plateAngle, 0,
+  "Station 1 must enter the brush at the zero-degree datum");
+
+console.log("Map object drag, standalone brush rendering, Station 1 zero datum, and Cold Glue neck over-wipe regression passed.");
