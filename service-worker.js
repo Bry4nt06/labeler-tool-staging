@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-cold-glue-single-brush-unified-visual-v320-20260909-0737";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-cold-glue-next-aggregate-handoff-v321-20260909-0843";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
