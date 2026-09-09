@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-next-aggregate-handoff-v321-20260909-0843",
+  "buildId": "cold-glue-aggregate-centerline-datums-v322-20260909-1426",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v321 preserves the Cold Glue bottle angle continuously between aggregates. After an outside brush wipe, the next CMD 7 starts from the achieved wipe-exit angle and reaches a CMD 3 application reference at the next aggregate; the target can no longer be shifted onto the correction-start row and appear as an instantaneous snap. Station 1 zero-datum behavior and unified standalone brush dragging remain intact."
+  "notes": "v322 makes Cold Glue aggregate application orientation use fixed physical center-line datums: Neck 0°, Body 0°, and Back 180°. These targets no longer inherit APL seed angles or shift for full-wrap labels. The smooth post-wipe handoff from v321 remains, so each CMD 7 starts from the achieved prior angle and reaches the required aggregate datum on CMD 3."
 }
