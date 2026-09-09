@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-station1-zero-single-brush-drag-v319-20260909-0721",
+  "buildId": "cold-glue-single-brush-unified-visual-v320-20260909-0737",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v319 keeps the first Cold Glue application station at the configured zero datum through Aggregate 1 and begins bottle rotation only when the physical brush wipe requires it. Standalone inside and outside brushes now render and move from their live start/end angles while combined brush channels retain independent inside/outside ranges. This fixes the selected-but-visually-stuck single-brush drag defect without changing brush-channel geometry."
+  "notes": "v320 keeps every standalone Cold Glue brush layer synchronized during drag. The white bristle face, dark back panel, texture lines, outline, and hit target now all use the brush's live start/end angles, while combined brush channels retain their independent inside/outside ranges. Station 1 remains at the zero datum through Aggregate 1 and starts rotating only when its physical brush wipe requires it."
 }
