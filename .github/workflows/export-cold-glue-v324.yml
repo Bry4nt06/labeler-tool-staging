@@ -1,0 +1,55 @@
+name: Export Cold Glue v324 runtime
+
+on:
+  push:
+    branches:
+      - ops/export-cold-glue-v324
+    paths:
+      - .github/workflows/export-cold-glue-v324.yml
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: a93ee0cbc8651b10786d23a77432472946de203c
+      - name: Verify staging source
+        run: |
+          set -euo pipefail
+          grep -q 'cold-glue-back-label-brush-entry-v324-20260909-1908' app/bootstrap.js
+          grep -q 'cold-glue-label-relative-brush-entry-integration.js' app/profile-generation.js
+          grep -q 'back: 180' app/cold-glue-profile-generation.js
+          grep -q 'aggregateTimeline' app/cold-glue-profile-generation.js
+      - name: Stage promotion bundle
+        run: |
+          set -euo pipefail
+          mkdir -p promotion-bundle/app promotion-bundle/drivers/mechanical promotion-bundle/tests
+          cp app/assembly-map-renderer.js promotion-bundle/app/
+          cp app/cold-glue-brush-bevel-back-panel-v23.js promotion-bundle/app/
+          cp app/cold-glue-brush-visual-integration.js promotion-bundle/app/
+          cp app/cold-glue-gripper-channel-integration.js promotion-bundle/app/
+          cp app/cold-glue-label-relative-brush-entry-integration.js promotion-bundle/app/
+          cp app/cold-glue-profile-generation.js promotion-bundle/app/
+          cp app/map-animation-renderer.js promotion-bundle/app/
+          cp app/map-builder-controller.js promotion-bundle/app/
+          cp app/map-builder-history-service.js promotion-bundle/app/
+          cp app/profile-generation.js promotion-bundle/app/
+          cp app/wipe-down-builder.js promotion-bundle/app/
+          cp drivers/mechanical/cold-glue-motion-driver.js promotion-bundle/drivers/mechanical/
+          cp tests/cold-glue-gripper-cycle-normalization.test.js promotion-bundle/tests/
+          cp tests/cold-glue-sparse-station-object-refresh.test.js promotion-bundle/tests/
+          cp tests/map-builder-add-object-v134.test.js promotion-bundle/tests/
+          cp tests/map-builder-machine-slot-v135.test.js promotion-bundle/tests/
+          cp tests/map-object-drag-and-cold-glue-overwipe-v318.test.js promotion-bundle/tests/
+          printf '%s\n' 'a93ee0cbc8651b10786d23a77432472946de203c' > promotion-bundle/STAGING_SOURCE_SHA
+          printf '%s\n' 'cold-glue-back-label-brush-entry-v324-20260909-1908' > promotion-bundle/STAGING_SOURCE_BUILD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cold-glue-v324-runtime
+          path: promotion-bundle
+          if-no-files-found: error
+          retention-days: 1
