@@ -38,7 +38,11 @@
   }
 
   function applicationTarget(baseTargetDeg, mapDirection = "cw", labelDeg = 0) {
-    if (finite(labelDeg, 0) >= 330) return normalizedDirection(mapDirection) === "ccw" ? 120 : -120;
+    // Aggregate application is an absolute bottle center-line reference:
+    // Neck/Body 0°, Back 180°. Map direction and wrap length affect the
+    // downstream brush wipe, never the aggregate application datum itself.
+    void mapDirection;
+    void labelDeg;
     return finite(baseTargetDeg, 0);
   }
 
