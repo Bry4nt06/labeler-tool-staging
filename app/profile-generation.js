@@ -2,7 +2,7 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
-  const moduleBuild = "cold-glue-next-aggregate-handoff-v321-20260909-0843";
+  const moduleBuild = "cold-glue-aggregate-centerline-datums-v322-20260909-1426";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",

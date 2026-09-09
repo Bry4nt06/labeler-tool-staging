@@ -9,6 +9,7 @@ const root = path.resolve(__dirname, "..");
 const controllerSource = fs.readFileSync(path.join(root, "app/controllers/map-controller.js"), "utf8");
 const sceneSource = fs.readFileSync(path.join(root, "app/mechanical-map-scene-renderer.js"), "utf8");
 const profileSource = fs.readFileSync(path.join(root, "app/cold-glue-profile-generation.js"), "utf8");
+const coldGlueMotionSource = fs.readFileSync(path.join(root, "drivers/mechanical/cold-glue-motion-driver.js"), "utf8");
 const brushVisualSource = fs.readFileSync(path.join(root, "app/cold-glue-brush-visual-integration.js"), "utf8");
 const brushPanelSource = fs.readFileSync(path.join(root, "app/cold-glue-brush-bevel-back-panel-v23.js"), "utf8");
 const channelSource = fs.readFileSync(path.join(root, "app/cold-glue-gripper-channel-integration.js"), "utf8");
@@ -161,6 +162,15 @@ assert.equal(channelPanelRange.start, 20,
   "the panel wrapper must preserve independent outside geometry for combined brush channels");
 assert.equal(channelPanelRange.end, 45);
 
+const motionContext = { console, window: null };
+motionContext.window = motionContext;
+vm.createContext(motionContext);
+vm.runInContext(coldGlueMotionSource, motionContext, { filename: "cold-glue-motion-driver.js" });
+assert.equal(motionContext.LabelerColdGlueMotionDriver.applicationTarget(0, "ccw", 350), 0,
+  "a full-wrap Neck or Body label must not move the aggregate application datum away from 0 degrees");
+assert.equal(motionContext.LabelerColdGlueMotionDriver.applicationTarget(180, "cw", 350), 180,
+  "a full-wrap Back label must retain the 180-degree aggregate application datum");
+
 const profileContext = {
   console,
   state: {
@@ -211,9 +221,7 @@ const profileContext = {
 profileContext.window = profileContext;
 profileContext.LabelerServoCommandDriver = { finalize: (rows) => rows };
 profileContext.LabelerColdGlueMotionDriver = {
-  applicationTarget: (baseTarget, direction, labelDeg) => Number(labelDeg) >= 330
-    ? (direction === "ccw" ? 120 : -120)
-    : baseTarget,
+  applicationTarget: (baseTarget) => baseTarget,
   flowFacingTarget: () => 0,
   createBrushChannelPlan: () => ({
     fullWrap: true,
@@ -245,17 +253,17 @@ assert.equal(firstStationTurn.tableAngle, 100,
 assert.equal(firstStationTurn.plateAngle, 0,
   "Station 1 must enter the brush at the zero-degree datum");
 
-profileContext.state.coldGlueAggregateSettings.enabledStations = [true, false, true, false, false, false];
-profileContext.state.coldGlueAggregateSettings.enabledAggregates = [true, false, true, false, false, false];
-profileContext.state.coldGlueAggregateSettings.aggregateAngles = { "1": 68.5, "3": 137 };
+profileContext.state.coldGlueAggregateSettings.enabledStations = [true, false, true, false, true, false];
+profileContext.state.coldGlueAggregateSettings.enabledAggregates = [true, false, true, false, true, false];
+profileContext.state.coldGlueAggregateSettings.aggregateAngles = { "1": 68.5, "3": 137, "5": 210 };
 profileContext.activeMachineMap = () => ({
   applicationMode: "cold-glue",
-  enabledStations: [true, false, true, false, false, false],
-  enabledAggregates: [true, false, true, false, false, false],
-  aggregateAngles: { "1": 68.5, "3": 137 },
+  enabledStations: [true, false, true, false, true, false],
+  enabledAggregates: [true, false, true, false, true, false],
+  aggregateAngles: { "1": 68.5, "3": 137, "5": 210 },
   machineSettings: { direction: "ccw" }
 });
-profileContext.selectedLabelApplicationState = () => ({ neck: true, body: true, back: false });
+profileContext.selectedLabelApplicationState = () => ({ neck: true, body: true, back: true });
 profileContext.generatedAplSeedProfile = () => Array.from(
   { length: 22 },
   (_, index) => ({ plateAngle: index === 11 ? 90 : 0 })
@@ -278,9 +286,22 @@ assert.equal(Number(bodyReference.cmd), 3,
   "the next aggregate target must be stored on a Rest reference");
 assert.equal(bodyReference.tableAngle, 137,
   "the target Rest must occur at Aggregate 3 instead of being stretched to a remote end-of-curve object");
-assert.equal(bodyReference.plateAngle, 90,
-  "the bottle must reach its configured Body application orientation at Aggregate 3");
-assert.equal(bodyReference.terminalRest, true,
-  "a missing downstream brush set must preserve the Aggregate 3 application reference as the terminal Rest");
+assert.equal(bodyReference.plateAngle, 0,
+  "the bottle center line must reach 0 degrees for Body application at Aggregate 3");
+assert.notEqual(bodyReference.terminalRest, true,
+  "the Body application reference must continue to the configured Back aggregate");
+const backTurn = handoffRows[neckWipeRestIndex + 3];
+const backReference = handoffRows[neckWipeRestIndex + 4];
+assert.equal(Number(backTurn.cmd), 7,
+  "the Back-label handoff must start with a Correction from the Body reference");
+assert.equal(backTurn.plateAngle, bodyReference.plateAngle,
+  "the Back-label Correction must start continuously from the 0-degree Body datum");
+assert.equal(Number(backReference.cmd), 3);
+assert.equal(backReference.tableAngle, 210,
+  "the Back-label target Rest must occur at Aggregate 5");
+assert.equal(backReference.plateAngle, 180,
+  "the bottle center line must reach 180 degrees for Back-label application");
+assert.equal(backReference.terminalRest, true,
+  "a missing downstream Back brush set must preserve its application reference as the terminal Rest");
 
-console.log("Map object drag, unified standalone brush rendering, Station 1 zero datum, Cold Glue neck over-wipe, and next-aggregate handoff regression passed.");
+console.log("Map object drag, unified standalone brush rendering, Station 1 zero datum, Cold Glue neck over-wipe, next-aggregate continuity, and 0/0/180 application datum regression passed.");
