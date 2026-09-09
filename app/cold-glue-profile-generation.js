@@ -170,16 +170,32 @@ function generatedColdGlueFixedProfile() {
     return finalizedBlankRows;
   }
 
+  // Aggregate map angles are physical 0-360° datums, while the generated
+  // TABLE curve is continuous and can run beyond 360°. Build the aggregate
+  // timeline once in physical traversal order so later Cold Glue aggregates
+  // stay ahead of the current curve instead of being mistaken for already
+  // passed after Aggregate 1 crosses the zero line.
+  const aggregateTimeline = new Map();
+  let aggregateTimelineCursor = lastTable;
+  stationNumbers.forEach((station) => {
+    const raw = num(aggregateAngles[String(station)], num(machineMap?.stationAngles?.[String(station)], station * 40 + 35));
+    const table = unwrapAfter(raw, aggregateTimelineCursor);
+    aggregateTimeline.set(station, { raw, table });
+    aggregateTimelineCursor = table;
+  });
+
   stationNumbers.forEach((station, index) => {
     const section = activeSections[index] || null;
     const stationObjects = objects.filter((item) => Number(item.station) === station);
-    const aggregateAngle = num(aggregateAngles[String(station)], num(machineMap?.stationAngles?.[String(station)], station * 40 + 35));
+    const aggregateDatum = aggregateTimeline.get(station) || {};
+    const rawAggregateAngle = num(aggregateDatum.raw, num(aggregateAngles[String(station)], num(machineMap?.stationAngles?.[String(station)], station * 40 + 35)));
+    const aggregateAngle = num(aggregateDatum.table, unwrapAfter(rawAggregateAngle, lastTable));
     const stationPlan = section ? pairedBrushPlan(section, stationObjects) : null;
-    // Cold-glue brush channels can service more than one label while the same
-    // bottle passes them. Once an earlier full-wrap wipe has carried the curve
-    // beyond a later aggregate point, do not unwrap that aggregate onto a
-    // second revolution. Its label is already on the bottle; continue with the
-    // remaining physical brush windows in their actual table order.
+    // Preserve the full-wrap protection, but compare against the aggregate's
+    // continuous TABLE datum. A later physical aggregate at e.g. 115° is 475°
+    // after a first aggregate near 355°, not an aggregate that has already
+    // passed. If an earlier full wrap truly extends beyond that 475° datum,
+    // the existing skip behavior still applies.
     const aggregateAlreadyPassed = aggregateAngle <= lastTable + 0.001;
     const applicationPlate = coldGlueDriver?.applicationTarget
       ? coldGlueDriver.applicationTarget(applicationTargets[section], mapDirection, stationPlan?.labelDeg)
@@ -352,7 +368,7 @@ function generatedColdGlueFixedProfile() {
         // the following station may not begin a new turn until after it ends.
         lastTable = Math.max(lastTable, placement + 1.5);
       });
-    stationPlans.push({ station, section, aggregateAngle, objects: stationObjects, plan: stationPlan });
+    stationPlans.push({ station, section, aggregateAngle: rawAggregateAngle, aggregateTableAngle: aggregateAngle, objects: stationObjects, plan: stationPlan });
   });
 
   const remainingObjects = objects
