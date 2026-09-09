@@ -44,13 +44,44 @@ function restoreBuilderHistory(direction) {
   renderWipeDownBuilder();
 }
 
-function refreshAfterBuilderEdit({ persist = false, structural = false } = {}) {
-  if (structural) {
-    const machineMap = typeof activeMachineMap === "function" ? activeMachineMap() : null;
-    if (machineMap) machineMap.localStructuralMapOverride = true;
+function cloneBuilderObjects(items) {
+  const source = Array.isArray(items) ? items : [];
+  if (typeof deepClone === "function") return deepClone(source);
+  return source.map((item) => ({ ...item }));
+}
+
+function restoreColdGlueBuilderObjects(machineMap, snapshot) {
+  if (!machineMap || !Array.isArray(snapshot)) return;
+
+  // Servo-profile generation is a consumer of the mechanical map, never its
+  // owner. Some legacy Cold Glue wrappers still infer a contiguous station set
+  // from stationCount and can rewrite the canonical object collection while a
+  // profile is regenerated. That drops valid sparse physical stations such as
+  // 1 / 3 / 5 when stationCount is 3. Restore the exact Map Builder collection
+  // after generation so physical station numbers remain authoritative.
+  const restored = cloneBuilderObjects(snapshot);
+  if (Array.isArray(machineMap.objects)) {
+    machineMap.objects.splice(0, machineMap.objects.length, ...restored);
+  } else {
+    machineMap.objects = restored;
   }
+
+  if (machineMap.applicationMode === "cold-glue") {
+    state.coldGlueMap = machineMap.objects.map((item) => ({ ...item }));
+  }
+}
+
+function refreshAfterBuilderEdit({ persist = false, structural = false } = {}) {
+  const machineMap = typeof activeMachineMap === "function" ? activeMachineMap() : null;
+  const preserveColdGlueObjects = machineMap?.applicationMode === "cold-glue"
+    ? cloneBuilderObjects(machineMap.objects)
+    : null;
+
+  if (structural && machineMap) machineMap.localStructuralMapOverride = true;
+
   syncApplicationMapToLegacyState();
   applyGeneratedServoProfile();
+  restoreColdGlueBuilderObjects(machineMap, preserveColdGlueObjects);
   renderMap();
   renderProgram();
   renderSimulation();
