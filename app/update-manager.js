@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "cold-glue-station5-map-add-v316-20260908-2215";
+  const BUILD_ID = "cold-glue-station1-zero-single-brush-drag-v319-20260909-0721";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
