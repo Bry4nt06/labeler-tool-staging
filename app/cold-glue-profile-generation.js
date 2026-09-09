@@ -15,7 +15,6 @@ function generatedColdGlueFixedProfile() {
     ? activeSlotNumbers(coldGlueSettings.enabledAggregates || machineMap.enabledAggregates)
     : [1, 2, 3];
   const stationNumbers = enabledStations.filter((station) => enabledAggregates.includes(station));
-  const firstApplicationStation = stationNumbers[0] || null;
   const objects = (Array.isArray(state.coldGlueMap) ? state.coldGlueMap : []).map((item) => ({
     ...item,
     station: Math.max(1, Math.min(6, Math.round(num(item.station, inferredMapObjectStation(item) || 1))))
@@ -23,12 +22,14 @@ function generatedColdGlueFixedProfile() {
   const aggregateAngles = coldGlueSettings.aggregateAngles || machineMap?.aggregateAngles || {};
   const mapDirection = (coldGlueSettings.machineSettings?.direction || machineMap?.machineSettings?.direction) === "ccw" ? "ccw" : "cw";
   const startPlate = num(state.buildInputs.plateStartPositionDeg, 0);
-  const aplSeed = generatedAplSeedProfile();
-  const applicationTargets = {
-    neck: num(aplSeed[1]?.plateAngle, startPlate),
-    body: num(aplSeed[11]?.plateAngle, startPlate),
-    back: num(aplSeed[21]?.plateAngle, startPlate)
-  };
+  // Cold Glue aggregate application references are fixed physical bottle
+  // center-line datums. They do not inherit APL section targets or change for
+  // full-wrap labels: Neck and Body apply at 0°, Back applies at 180°.
+  const applicationTargets = Object.freeze({
+    neck: 0,
+    body: 0,
+    back: 180
+  });
   const rows = [];
   const issues = [];
   const stationPlans = [];
@@ -180,12 +181,9 @@ function generatedColdGlueFixedProfile() {
     // second revolution. Its label is already on the bottle; continue with the
     // remaining physical brush windows in their actual table order.
     const aggregateAlreadyPassed = aggregateAngle <= lastTable + 0.001;
-    const holdFirstApplicationDatum = section === "neck" && station === firstApplicationStation;
-    const applicationPlate = holdFirstApplicationDatum
-      ? startPlate
-      : coldGlueDriver?.applicationTarget
-        ? coldGlueDriver.applicationTarget(applicationTargets[section], mapDirection, stationPlan?.labelDeg)
-        : applicationTargets[section];
+    const applicationPlate = coldGlueDriver?.applicationTarget
+      ? coldGlueDriver.applicationTarget(applicationTargets[section], mapDirection, stationPlan?.labelDeg)
+      : applicationTargets[section];
     const applicationMoveRequired = plateTravelTo(applicationPlate) > 0.001;
     if (section && !aggregateAlreadyPassed && applicationMoveRequired) {
       if (stationPlan?.fullWrap) {
