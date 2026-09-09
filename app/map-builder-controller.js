@@ -250,7 +250,7 @@ function addBuilderObjectFromControls() {
     outerEnd: end,
     innerStart: start,
     innerEnd: end,
-    angle: type === "sensor" || (state.applicationMode === "cold-glue" && type === "roller") ? start : undefined,
+    angle: type === "gripper" || type === "sensor" || (state.applicationMode === "cold-glue" && type === "roller") ? start : undefined,
     wipeSpanDeg: rollerCoverageDeg,
     extension: num(document.querySelector("#builderObjectExtension")?.value, 20),
     servoAssist: type === "sensor" && Boolean(document.querySelector("#builderSensorAssist")?.checked),
