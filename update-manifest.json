@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-single-brush-unified-visual-v320-20260909-0737",
+  "buildId": "cold-glue-next-aggregate-handoff-v321-20260909-0843",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "v320 keeps every standalone Cold Glue brush layer synchronized during drag. The white bristle face, dark back panel, texture lines, outline, and hit target now all use the brush's live start/end angles, while combined brush channels retain their independent inside/outside ranges. Station 1 remains at the zero datum through Aggregate 1 and starts rotating only when its physical brush wipe requires it."
+  "notes": "v321 preserves the Cold Glue bottle angle continuously between aggregates. After an outside brush wipe, the next CMD 7 starts from the achieved wipe-exit angle and reaches a CMD 3 application reference at the next aggregate; the target can no longer be shifted onto the correction-start row and appear as an instantaneous snap. Station 1 zero-datum behavior and unified standalone brush dragging remain intact."
 }
