@@ -211,7 +211,9 @@ const profileContext = {
 profileContext.window = profileContext;
 profileContext.LabelerServoCommandDriver = { finalize: (rows) => rows };
 profileContext.LabelerColdGlueMotionDriver = {
-  applicationTarget: () => 120,
+  applicationTarget: (baseTarget, direction, labelDeg) => Number(labelDeg) >= 330
+    ? (direction === "ccw" ? 120 : -120)
+    : baseTarget,
   flowFacingTarget: () => 0,
   createBrushChannelPlan: () => ({
     fullWrap: true,
