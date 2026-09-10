@@ -13,8 +13,8 @@
     }
   }
 
-  function isMultiModulCorrectionContext() {
-    const map = activeMapSafe();
+  function isMultiModulCorrectionContext(machineMap) {
+    const map = machineMap || activeMapSafe();
     const identity = [
       map?.machineType,
       map?.machineFamily,
@@ -26,8 +26,9 @@
       typeof state !== "undefined" ? state?.motionPlan?.translation?.machineProfile : ""
     ].filter(Boolean).join(" ").toUpperCase();
     const application = String(
-      (typeof state !== "undefined" ? state?.applicationMode : "")
-      || map?.applicationMode
+      map?.applicationMode
+      || map?.application
+      || (typeof state !== "undefined" ? state?.applicationMode : "")
       || ""
     ).toLowerCase();
     const selectedProfile = String(
@@ -42,24 +43,36 @@
   }
 
   function install() {
-    const base = global.LabelerServoCommandDriver;
+    const base = global.LabelerAplMapProfileGenerator;
     const normalizer = global.LabelerMultiModulCorrectionPairDriver;
-    if (!base || !normalizer?.normalize || !base.aplContinuousMotionEnabled) return false;
+    if (!base?.generate || !normalizer?.normalize) return false;
     if (base.multimodulCorrectionPairEnabled) return true;
 
-    function finalize(rows) {
-      const finalized = base.finalize(rows);
-      if (!isMultiModulCorrectionContext()) return finalized;
-      const result = normalizer.normalize(finalized, { referenceSpacingDeg: 0.5 });
+    function generate(machineMap) {
+      const generated = base.generate(machineMap);
+      if (!isMultiModulCorrectionContext(machineMap)) return generated;
+
+      const result = normalizer.normalize(generated, { referenceSpacingDeg: 0.5 });
       if (typeof state !== "undefined") {
         state.multiModulCorrectionPairRepairs = result.repairs;
+        if (state.motionPlan?.mapDriven) {
+          const finalRow = result.rows[result.rows.length - 1];
+          state.motionPlan = {
+            ...state.motionPlan,
+            rows: result.rows,
+            finalPlateAngle: finalRow?.plateAngle,
+            termination: state.motionPlan.termination
+              ? { ...state.motionPlan.termination, hmi: result.rows.length, tableAngle: finalRow?.tableAngle, command: "Rest" }
+              : state.motionPlan.termination
+          };
+        }
       }
       return result.rows;
     }
 
-    global.LabelerServoCommandDriver = Object.freeze({
+    global.LabelerAplMapProfileGenerator = Object.freeze({
       ...base,
-      finalize,
+      generate,
       multimodulCorrectionPairEnabled: true
     });
     return true;
