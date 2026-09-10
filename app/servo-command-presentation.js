@@ -1,8 +1,16 @@
 "use strict";
 
-function activeMachineUsesAutocolCommands() {
+function activeServoCommandMachineType() {
   const machineMap = typeof activeMachineMap === "function" ? activeMachineMap() : null;
-  return String(machineMap?.machineType || "").toLowerCase() === "autocol";
+  return machineMap?.machineType || state?.machineType || state?.selectedMachineType || "";
+}
+
+function activeMachineUsesAutocolCommands() {
+  return String(activeServoCommandMachineType() || "").toLowerCase() === "autocol";
+}
+
+function activeMachineUsesDts3Commands() {
+  return window.LabelerTopModulRpcAngleDriver?.variant?.(activeServoCommandMachineType()) === "dts3";
 }
 
 function autocolCommandLabel(row) {
@@ -11,8 +19,25 @@ function autocolCommandLabel(row) {
   return Number(row.cmd) === 7 ? "Correction" : "Rest";
 }
 
+function dts3CommandLabel(row) {
+  return window.LabelerTopModulRpcAngleDriver?.rpcCommandLabel?.(row, activeServoCommandMachineType())
+    ?? (Number(row?.cmd) === 7 ? "ELGa" : "Rest");
+}
+
+function servoCommandHeading() {
+  if (activeMachineUsesDts3Commands()) return "DTS3 command";
+  return activeMachineUsesAutocolCommands() ? "Travel command" : "CMD";
+}
+
 function servoCommandControl(row, allowAutocolBoundaries = false, attributes = "") {
   const extra = attributes ? ` ${attributes}` : "";
+  if (activeMachineUsesDts3Commands()) {
+    const value = Number(row?.cmd) === 7 ? "7" : "3";
+    const title = value === "7"
+      ? "ELGa — Electronic gear, absolute. Parameter 1 is the target table position and Parameter 2 is the absolute plate-angle target; the previous plate position is carried into the move."
+      : "Stopped reference used by ServoForge's internal 3/7 motion model. DTS3 motion commands are translated at the RPC boundary.";
+    return `<select class="compact-input"${extra} title="${title}"><option value="3"${value === "3" ? " selected" : ""}>Rest / reference</option><option value="7"${value === "7" ? " selected" : ""}>ELGa</option></select>`;
+  }
   if (!activeMachineUsesAutocolCommands()) {
     return `<input class="num compact-input"${extra} type="number" step="1" value="${row.cmd}">`;
   }
@@ -27,7 +52,11 @@ function servoCommandControl(row, allowAutocolBoundaries = false, attributes = "
 }
 
 window.LabelerServoCommandPresentation = Object.freeze({
+  activeServoCommandMachineType,
   activeMachineUsesAutocolCommands,
+  activeMachineUsesDts3Commands,
   autocolCommandLabel,
+  dts3CommandLabel,
+  servoCommandHeading,
   servoCommandControl
 });
