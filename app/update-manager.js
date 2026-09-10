@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "multimodul-router-cmd7-grammar-v327-20260910-1210";
+  const BUILD_ID = "troubleshooting-machine-scope-v375-20260910-1426";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 

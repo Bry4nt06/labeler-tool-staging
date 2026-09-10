@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "multimodul-router-cmd7-grammar-v327-20260910-1210",
+  "buildId": "troubleshooting-machine-scope-v375-20260910-1426",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "MultiModul v327: selected machine maps now route through the exported APL map generator so the MultiModul CMD 3 -> CMD 7 -> CMD 3 correction-pair normalizer is applied to the actual Servo Program before grammar validation."
+  "notes": "Troubleshooting v375: adds persistent Machine Scope and Application filters. Auto reads the active ServoForge map, while explicit Autocol, MultiModul, TopModul, APL, or Cold Glue scopes hide conflicting machine/application-specific records and retain universal diagnostic evidence."
 }

@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-multimodul-router-cmd7-grammar-v327-20260910-1210";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-troubleshooting-machine-scope-v375-20260910-1426";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -180,6 +180,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/troubleshooting/topmodul-station-cause-model.js",
   "./app/troubleshooting/topmodul-labeler-cause-model.js",
   "./app/troubleshooting/topmodul-circuit-trace.js",
+  "./app/troubleshooting/machine-scope-filter-v375.js",
   "./app/troubleshooting/troubleshooting-app.js",
   "./app/troubleshooting/topmodul-fault-drilldown-ui.js",
   "./app.js"
