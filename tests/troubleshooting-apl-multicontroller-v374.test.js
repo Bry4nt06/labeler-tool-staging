@@ -111,12 +111,12 @@ test("v374 validates all bounded multi-controller enrichments", () => {
   assert.match(lib.version, /apl-multicontroller-v374/);
 });
 
-test("v374 staging manifest loads after all APL Cart source modules and before search/routing layers", () => {
+test("v374 module remains ordered correctly under the current v375 troubleshooting shell", () => {
   const aplInterface = page.indexOf("apl-interface-reference.js");
   const v374 = page.indexOf("apl-multicontroller-validation-v374.js");
   const search = page.indexOf("troubleshooting-search-precedence.js");
   assert.ok(aplInterface >= 0 && v374 > aplInterface && search > v374);
-  assert.match(page, /data-troubleshooting-version="v374"/);
-  assert.match(page, /TROUBLESHOOTING v374/);
+  assert.match(page, /data-troubleshooting-version="v375"/);
+  assert.match(page, /TROUBLESHOOTING v375/);
   assert.match(page, /troubleshooting-apl-multicontroller-v374-20260906/);
 });
