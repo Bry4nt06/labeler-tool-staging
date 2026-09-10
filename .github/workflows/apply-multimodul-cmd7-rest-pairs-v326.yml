@@ -1,0 +1,107 @@
+name: Apply MultiModul CMD7 Rest Pairs v326
+
+on:
+  push:
+    branches:
+      - fix/multimodul-cmd7-rest-pairs-v326
+    paths:
+      - .github/workflows/apply-multimodul-cmd7-rest-pairs-v326.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out fix branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/multimodul-cmd7-rest-pairs-v326
+          fetch-depth: 0
+
+      - name: Apply v326 loader and build identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import json
+
+          old = "cold-glue-back-label-channel-entry-v325-20260909-1936"
+          new = "multimodul-cmd7-rest-pairs-v326-20260910-1110"
+          updated_at = "Sep 10, 2026 11:10 AM ET"
+
+          targets = [
+              Path("index.html"),
+              Path("app.js"),
+              Path("app/bootstrap.js"),
+              Path("app/profile-generation.js"),
+              Path("app/update-manager.js"),
+          ]
+          for path in targets:
+              text = path.read_text(encoding="utf-8")
+              if old not in text:
+                  raise SystemExit(f"expected build marker missing from {path}")
+              path.write_text(text.replace(old, new), encoding="utf-8")
+
+          bootstrap = Path("app/bootstrap.js")
+          text = bootstrap.read_text(encoding="utf-8")
+          text = text.replace('const buildUpdatedAt = "Sep 9, 2026 7:36 PM ET";', f'const buildUpdatedAt = "{updated_at}";')
+          bootstrap.write_text(text, encoding="utf-8")
+
+          app = Path("app.js")
+          text = app.read_text(encoding="utf-8")
+          anchor = '    progress?.set(74.7, "Enabling Community Admin delete…");\n'
+          if anchor not in text:
+              raise SystemExit("app.js loader anchor missing")
+          loader = (
+              '    progress?.set(74.6, "Applying MultiModul correction references…");\n'
+              '    await loadScript("drivers/servo/multimodul-correction-pair-driver.js", `${version}-multimodul-pairs-v326`);\n'
+              '    await loadScript("app/multimodul-correction-pair-integration.js", `${version}-multimodul-pairs-v326`);\n'
+              '    if (window.ServoForgeMultiModulCorrectionPairReady) await window.ServoForgeMultiModulCorrectionPairReady;\n\n'
+          )
+          if "multimodul-correction-pair-driver.js" not in text:
+              text = text.replace(anchor, loader + anchor)
+          app.write_text(text, encoding="utf-8")
+
+          manifest = {
+              "schemaVersion": 1,
+              "version": "0.9.10",
+              "buildId": new,
+              "releaseUrl": "./",
+              "downloadUrl": "./",
+              "notes": "MultiModul v326: map-generated CMD 7 correction moves now use Autocol-style stopped references, so each correction is isolated as CMD 3 -> CMD 7 -> CMD 3 before the next correction begins."
+          }
+          Path("update-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Validate syntax and MultiModul correction grammar
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check drivers/servo/multimodul-correction-pair-driver.js
+          node --check app/multimodul-correction-pair-integration.js
+          node --check app.js
+          node --test tests/multimodul-correction-pair-driver.test.js
+          grep -q 'multimodul-correction-pair-driver.js' app.js
+          grep -q 'multimodul-correction-pair-integration.js' app.js
+          grep -q 'multimodul-cmd7-rest-pairs-v326-20260910-1110' index.html
+          grep -q 'multimodul-cmd7-rest-pairs-v326-20260910-1110' app/bootstrap.js
+          grep -q 'multimodul-cmd7-rest-pairs-v326-20260910-1110' app/profile-generation.js
+          grep -q 'multimodul-cmd7-rest-pairs-v326-20260910-1110' app/update-manager.js
+          node --test tests/apl-roller-section-handoff.test.js
+
+      - name: Commit applied fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "ServoForge Staging Fix"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html app.js app/bootstrap.js app/profile-generation.js app/update-manager.js update-manifest.json
+          if git diff --cached --quiet; then
+            echo "No generated patch changes to commit."
+            exit 0
+          fi
+          git commit -m "fix: enforce MultiModul CMD 7 stopped references [skip ci]"
+          git push origin HEAD:fix/multimodul-cmd7-rest-pairs-v326
