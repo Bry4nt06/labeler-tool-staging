@@ -4,7 +4,14 @@ function generatedServoProfile() {
   if (state.applicationMode === "cold-glue") return generatedColdGlueFixedProfile();
   const applications = selectedLabelApplicationState();
   const machineMap = typeof activeMachineMap === "function" ? activeMachineMap() : null;
-  if (machineMap) return generatedAplMapDrivenProfile(machineMap);
+  if (machineMap) {
+    // Always resolve the exported generator at call time. MultiModul installs a
+    // grammar-normalizing wrapper around this API; calling the lexical base
+    // function directly bypasses that wrapper and can leave adjacent CMD 7 rows.
+    const mapGenerator = window.LabelerAplMapProfileGenerator;
+    if (mapGenerator?.generate) return mapGenerator.generate(machineMap);
+    return generatedAplMapDrivenProfile(machineMap);
+  }
   const compactStationsReady = [1, 2, 3, 4].every((station) => {
     const assembly = state.assemblies.find((item) => Number(item.station) === station);
     return assembly && stationIsOperational(assembly);

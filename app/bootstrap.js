@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "multimodul-cmd7-rest-pairs-v326-20260910-1110";
-  const buildUpdatedAt = "Sep 10, 2026 11:10 AM ET";
+  const build = "multimodul-router-cmd7-grammar-v327-20260910-1210";
+  const buildUpdatedAt = "Sep 10, 2026 12:10 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;

@@ -75,7 +75,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "multimodul-cmd7-rest-pairs-v326-20260910-1110";
+  const build = window.ServoForgeBootstrapBuild || "multimodul-router-cmd7-grammar-v327-20260910-1210";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

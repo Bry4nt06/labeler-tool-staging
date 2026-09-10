@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-multimodul-cmd7-rest-pairs-v326-20260910-1110";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-multimodul-router-cmd7-grammar-v327-20260910-1210";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 

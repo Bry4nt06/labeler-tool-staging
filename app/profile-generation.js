@@ -2,7 +2,7 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
-  const moduleBuild = "multimodul-cmd7-rest-pairs-v326-20260910-1110";
+  const moduleBuild = "multimodul-router-cmd7-grammar-v327-20260910-1210";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",
