@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "topmodul-dts3-rpc-angle-v328-20260910-1832",
+  "buildId": "topmodul-dts3-elga-correction-v329-20260910-1942",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "TopModul DTS variant support v328. Existing TopModul maps are treated as DTS4. New TopModul (DTS3) maps keep physical machine geometry at 0-360 degrees but present/edit/export RPC table angles on the legacy 0-45 degree command domain (8 physical degrees per 1 DTS3 RPC table degree). Adds 4-decimal DTS3 table-angle precision and preserves TopModul family validation."
+  "notes": "TopModul DTS3 ELGa correction support v329. DTS3 keeps ServoForge's internal stopped-reference/correction planning model but presents correction turns as ELGa (Electronic gear, absolute). ELGa Parameter 1 is the target DTS3 table position on the 0-45 command domain and Parameter 2 is the absolute plate-angle target; the previous plate position is carried into the move. Existing TopModul two-consecutive-correction support remains available. Autocol, MultiModul, and DTS4 command presentation remain unchanged."
 }
