@@ -40,32 +40,51 @@
     return driver?.variant?.(machineType) === "dts3" ? result.toFixed(4) : (actions.call("oneDecimalOutput", result) ?? result);
   }
 
+  function dts3ExportValues(row, machineType) {
+    const driver = global.LabelerTopModulRpcAngleDriver;
+    const target = driver?.dts3ElgaTarget?.(row, machineType);
+    if (!target) return null;
+    return {
+      command: target.command,
+      tablePosition: Number.isFinite(target.parameter1) ? target.parameter1.toFixed(4) : "",
+      plateTarget: Number.isFinite(target.parameter2) ? (actions.call("oneDecimalOutput", target.parameter2) ?? target.parameter2) : ""
+    };
+  }
+
   function exportCsv() {
     const autocol = Boolean(actions.call("activeMachineUsesAutocolCommands"));
     const machineType = activeRpcMachineType();
-    const dts3 = global.LabelerTopModulRpcAngleDriver?.variant?.(machineType) === "dts3";
+    const rpcDriver = global.LabelerTopModulRpcAngleDriver;
+    const dts3 = rpcDriver?.variant?.(machineType) === "dts3";
     const rows = [[
       "HMI",
       "PLC",
-      autocol ? "Travel Command" : "CMD",
-      dts3 ? "Table Angle (DTS3 0-45)" : "Table Angle",
-      "Plate Angle",
+      autocol ? "Travel Command" : dts3 ? "DTS3 Command" : "CMD",
+      dts3 ? "Parameter 1 / Table Position (DTS3 0-45)" : "Table Angle",
+      dts3 ? "Parameter 2 / Absolute Plate Target" : "Plate Angle",
       "Table Travel",
       "Plate Travel",
       "Turn Speed",
       "Action"
     ]];
-    (actions.call("programSegments", state.program) || []).forEach((row) => rows.push([
-      row.hmi,
-      row.plc,
-      autocol ? actions.call("autocolCommandLabel", row) : row.cmd,
-      rpcTableOutput(row.tableAngle, machineType),
-      actions.call("oneDecimalOutput", row.plateAngle) ?? row.plateAngle,
-      rpcTableOutput(row.tableTravel, machineType),
-      actions.call("oneDecimalOutput", row.plateTravel) ?? row.plateTravel,
-      actions.call("oneDecimalOutput", row.absSpeed) ?? row.absSpeed,
-      row.action
-    ]));
+    (actions.call("programSegments", state.program) || []).forEach((row) => {
+      const dts3Values = dts3ExportValues(row, machineType);
+      rows.push([
+        row.hmi,
+        row.plc,
+        autocol
+          ? actions.call("autocolCommandLabel", row)
+          : dts3
+            ? (rpcDriver?.rpcCommandLabel?.(row, machineType) ?? row.cmd)
+            : row.cmd,
+        dts3Values?.tablePosition ?? rpcTableOutput(row.tableAngle, machineType),
+        dts3Values?.plateTarget ?? (actions.call("oneDecimalOutput", row.plateAngle) ?? row.plateAngle),
+        rpcTableOutput(row.tableTravel, machineType),
+        actions.call("oneDecimalOutput", row.plateTravel) ?? row.plateTravel,
+        actions.call("oneDecimalOutput", row.absSpeed) ?? row.absSpeed,
+        row.action
+      ]);
+    });
     const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
     actions.call("download", "labeler-servo-program.csv", "text/csv", csv);
   }
