@@ -67,6 +67,7 @@ jobs:
               applicationMode: "apl",
               motionPlan: { mapDriven: true, rows: sourceRows(), termination: { section: "body" } }
             };
+            global.selectedLabelApplicationState = () => ({ neck: true, body: true, back: true });
             global.activeMachineMap = () => machineMap;
             global.LabelerAplMapProfileGenerator = Object.freeze({ generate: () => sourceRows() });
 
