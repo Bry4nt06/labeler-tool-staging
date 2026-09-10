@@ -1,0 +1,25 @@
+name: Validate MultiModul selected-map CMD grammar v327
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - app/profile-routing.js
+      - app/multimodul-correction-pair-integration.js
+      - drivers/servo/multimodul-correction-pair-driver.js
+      - tests/multimodul-profile-router-integration.test.js
+      - tests/multimodul-correction-pair-driver.test.js
+      - .github/workflows/validate-multimodul-profile-router-v327.yml
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate selected-map MultiModul command isolation
+        run: |
+          node --check app/profile-routing.js
+          node --check app/multimodul-correction-pair-integration.js
+          node --check drivers/servo/multimodul-correction-pair-driver.js
+          node --test tests/multimodul-correction-pair-driver.test.js tests/multimodul-profile-router-integration.test.js
+          node --test tests/apl-roller-section-handoff.test.js

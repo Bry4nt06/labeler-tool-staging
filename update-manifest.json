@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "multimodul-cmd7-rest-pairs-v326-20260910-1110",
+  "buildId": "multimodul-router-cmd7-grammar-v327-20260910-1210",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "MultiModul v326: map-generated CMD 7 correction moves now use Autocol-style stopped references, so each correction is isolated as CMD 3 -> CMD 7 -> CMD 3 before the next correction begins."
+  "notes": "MultiModul v327: selected machine maps now route through the exported APL map generator so the MultiModul CMD 3 -> CMD 7 -> CMD 3 correction-pair normalizer is applied to the actual Servo Program before grammar validation."
 }
