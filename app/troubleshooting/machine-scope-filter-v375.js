@@ -6,13 +6,14 @@
 
   const SCOPE_KEY = "servoforge-troubleshooting-scope-v1";
   const SETTINGS_KEY = "labelerToolSettings";
-  const VALID_MACHINES = new Set(["auto", "all", "autocol", "multimodul", "topmodul"]);
+  const VALID_MACHINES = new Set(["auto", "all", "autocol", "multimodul", "topmodul-dts4", "topmodul-dts3"]);
   const VALID_APPLICATIONS = new Set(["auto", "all", "apl", "cold-glue"]);
   const MACHINE_LABELS = Object.freeze({
     all: "All Machines",
     autocol: "Autocol",
     multimodul: "MultiModul",
-    topmodul: "TopModul"
+    "topmodul-dts4": "TopModul (DTS4)",
+    "topmodul-dts3": "TopModul (DTS3)"
   });
   const APPLICATION_LABELS = Object.freeze({
     all: "All Applications",
@@ -37,7 +38,10 @@
     const text = normalizeText(value).replaceAll(" ", "");
     if (text.includes("AUTOCOL")) return "autocol";
     if (text.includes("MULTIMODUL")) return "multimodul";
-    if (text.includes("TOPMODUL")) return "topmodul";
+    if (text.includes("TOPMODUL") && text.includes("DTS3")) return "topmodul-dts3";
+    if (text.includes("TOPMODUL") && text.includes("DTS4")) return "topmodul-dts4";
+    // Existing saved TopModul maps predate the explicit DTS split and are DTS4.
+    if (text.includes("TOPMODUL")) return "topmodul-dts4";
     return "all";
   }
 
@@ -62,7 +66,11 @@
   function readSelections() {
     let stored = {};
     try { stored = safeJson(global.localStorage?.getItem(SCOPE_KEY), {}) || {}; } catch { stored = {}; }
-    const machine = VALID_MACHINES.has(String(stored.machine || "")) ? String(stored.machine) : "auto";
+    let machine = String(stored.machine || "");
+    // v375 originally stored the generic value "topmodul". Preserve that user's
+    // intent by migrating it to the current DTS4 family, which is the legacy map.
+    if (machine === "topmodul") machine = "topmodul-dts4";
+    machine = VALID_MACHINES.has(machine) ? machine : "auto";
     const application = VALID_APPLICATIONS.has(String(stored.application || "")) ? String(stored.application) : "auto";
     return { machine, application };
   }
@@ -128,7 +136,20 @@
     const machines = new Set();
     if (/\bAUTOCOL\b/.test(text)) machines.add("autocol");
     if (/\bMULTI\s*MODUL\b/.test(text) || /\bMULTIMODUL\b/.test(text)) machines.add("multimodul");
-    if (/\bTOP\s*MODUL\b/.test(text) || /\bTOPMODUL\b/.test(text)) machines.add("topmodul");
+
+    const hasTopModul = /\bTOP\s*MODUL\b/.test(text) || /\bTOPMODUL\b/.test(text);
+    if (hasTopModul) {
+      const hasDts3 = /\bDTS\s*3\b/.test(text) || /\bDTS3\b/.test(text);
+      const hasDts4 = /\bDTS\s*4\b/.test(text) || /\bDTS4\b/.test(text);
+      if (hasDts3) machines.add("topmodul-dts3");
+      if (hasDts4) machines.add("topmodul-dts4");
+      // A generic TopModul reference predates/does not declare the RPC revision,
+      // so keep it available to both variants rather than pretending it is DTS4-only.
+      if (!hasDts3 && !hasDts4) {
+        machines.add("topmodul-dts3");
+        machines.add("topmodul-dts4");
+      }
+    }
     return machines;
   }
 
@@ -173,7 +194,8 @@
   }
 
   function setMachineScope(value) {
-    const next = String(value || "auto");
+    let next = String(value || "auto");
+    if (next === "topmodul") next = "topmodul-dts4";
     selections.machine = VALID_MACHINES.has(next) ? next : "auto";
     writeSelections();
     return selections.machine;
@@ -191,7 +213,7 @@
   }
 
   const api = Object.freeze({
-    version: "v375",
+    version: "v375.1",
     getScope,
     setMachineScope,
     setApplicationScope,
@@ -221,7 +243,8 @@
           <option value="auto">Auto (current setup)</option>
           <option value="autocol">Autocol</option>
           <option value="multimodul">MultiModul</option>
-          <option value="topmodul">TopModul</option>
+          <option value="topmodul-dts4">TopModul (DTS4)</option>
+          <option value="topmodul-dts3">TopModul (DTS3)</option>
           <option value="all">All Machines</option>
         </select>
       </label>
