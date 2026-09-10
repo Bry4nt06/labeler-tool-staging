@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-cold-glue-aggregate-centerline-datums-v322-20260909-1426";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-multimodul-cmd7-rest-pairs-v326-20260910-1110";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -42,6 +42,7 @@ const CORE_ASSETS = Object.freeze([
   "./drivers/mechanical/cold-glue-motion-driver.js",
   "./drivers/servo/servo-command-driver.js",
   "./drivers/servo/rest-correction-grammar-driver.js",
+  "./drivers/servo/multimodul-correction-pair-driver.js",
   "./drivers/planning/motion-planner-driver.js",
   "./drivers/planning/mechanical-event-planner-driver.js",
   "./drivers/planning/incremental-rotation-driver.js",
@@ -134,6 +135,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/map-object-orientation-controls-integration.js",
   "./app/motion-profile-regeneration-integration.js",
   "./app/apl-continuous-motion-integration.js",
+  "./app/multimodul-correction-pair-integration.js",
   "./app/cold-glue-label-geometry-fallback-integration.js",
   "./app/cold-glue-gripper-channel-integration.js",
   "./app/cold-glue-parameter-editor-integration.js",

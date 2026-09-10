@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "cold-glue-back-label-channel-entry-v325-20260909-1936";
+  const BUILD_ID = "multimodul-cmd7-rest-pairs-v326-20260910-1110";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
