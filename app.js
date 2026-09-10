@@ -75,7 +75,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "cold-glue-back-label-channel-entry-v325-20260909-1936";
+  const build = window.ServoForgeBootstrapBuild || "multimodul-cmd7-rest-pairs-v326-20260910-1110";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
@@ -202,6 +202,11 @@
 
     progress?.set(74.5, "Following physical machine wipe direction…");
     await loadScript("app/physical-wipe-direction-v125.js", version);
+
+    progress?.set(74.6, "Applying MultiModul correction references…");
+    await loadScript("drivers/servo/multimodul-correction-pair-driver.js", `${version}-multimodul-pairs-v326`);
+    await loadScript("app/multimodul-correction-pair-integration.js", `${version}-multimodul-pairs-v326`);
+    if (window.ServoForgeMultiModulCorrectionPairReady) await window.ServoForgeMultiModulCorrectionPairReady;
 
     progress?.set(74.7, "Enabling Community Admin delete…");
     await loadScript("app/community-admin-delete-v126.js", version);
