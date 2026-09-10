@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-troubleshooting-machine-scope-v375-20260910-1426";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-topmodul-dts3-rpc-angle-v328-20260910-1832";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -46,6 +46,7 @@ const CORE_ASSETS = Object.freeze([
   "./drivers/planning/motion-planner-driver.js",
   "./drivers/planning/mechanical-event-planner-driver.js",
   "./drivers/planning/incremental-rotation-driver.js",
+  "./drivers/translation/topmodul-rpc-angle-driver.js",
   "./drivers/translation/profile-translator-driver.js",
   "./drivers/validation/motion-validation-driver.js",
   "./drivers/validation/servo-pipeline-validator-driver.js",
@@ -71,6 +72,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/cold-glue-profile-generation.js",
   "./app/apl-map-profile-generation.js",
   "./app/profile-routing.js",
+  "./app/topmodul-dts-machine-variant-integration.js",
   "./app/machine-profile-framing.js",
   "./app/servo-overrides.js",
   "./app/profile-translation-service.js",

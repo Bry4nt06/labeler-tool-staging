@@ -23,13 +23,32 @@
     actions.call("download", "labeler-tool-settings.json", "application/json", JSON.stringify(portable, null, 2));
   }
 
+  function activeRpcMachineType() {
+    try {
+      const map = typeof activeMachineMap === "function" ? activeMachineMap() : null;
+      return map?.machineType || state?.machineType || state?.selectedMachineType || "";
+    } catch {
+      return state?.machineType || state?.selectedMachineType || "";
+    }
+  }
+
+  function rpcTableOutput(value, machineType) {
+    const driver = global.LabelerTopModulRpcAngleDriver;
+    const converted = driver?.physicalToRpcTableAngle?.(value, machineType);
+    const result = Number.isFinite(converted) ? converted : Number(value);
+    if (!Number.isFinite(result)) return value;
+    return driver?.variant?.(machineType) === "dts3" ? result.toFixed(4) : (actions.call("oneDecimalOutput", result) ?? result);
+  }
+
   function exportCsv() {
     const autocol = Boolean(actions.call("activeMachineUsesAutocolCommands"));
+    const machineType = activeRpcMachineType();
+    const dts3 = global.LabelerTopModulRpcAngleDriver?.variant?.(machineType) === "dts3";
     const rows = [[
       "HMI",
       "PLC",
       autocol ? "Travel Command" : "CMD",
-      "Table Angle",
+      dts3 ? "Table Angle (DTS3 0-45)" : "Table Angle",
       "Plate Angle",
       "Table Travel",
       "Plate Travel",
@@ -40,9 +59,9 @@
       row.hmi,
       row.plc,
       autocol ? actions.call("autocolCommandLabel", row) : row.cmd,
-      actions.call("oneDecimalOutput", row.tableAngle) ?? row.tableAngle,
+      rpcTableOutput(row.tableAngle, machineType),
       actions.call("oneDecimalOutput", row.plateAngle) ?? row.plateAngle,
-      actions.call("oneDecimalOutput", row.tableTravel) ?? row.tableTravel,
+      rpcTableOutput(row.tableTravel, machineType),
       actions.call("oneDecimalOutput", row.plateTravel) ?? row.plateTravel,
       actions.call("oneDecimalOutput", row.absSpeed) ?? row.absSpeed,
       row.action

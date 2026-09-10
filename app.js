@@ -75,7 +75,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "troubleshooting-machine-scope-v375-20260910-1426";
+  const build = window.ServoForgeBootstrapBuild || "topmodul-dts3-rpc-angle-v328-20260910-1832";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

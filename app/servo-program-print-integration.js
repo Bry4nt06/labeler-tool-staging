@@ -35,6 +35,12 @@
       .find((map) => String(map?.id) === String(state?.activeMapId)) || {};
   }
 
+  function rpcTableValue(value, machineType) {
+    const driver = global.LabelerTopModulRpcAngleDriver;
+    const converted = driver?.physicalToRpcTableAngle?.(value, machineType);
+    return Number.isFinite(converted) ? converted : value;
+  }
+
   function selectedLabelSnapshot() {
     try {
       if (typeof selectedLabelSpec === "function") return selectedLabelSpec() || {};
@@ -125,6 +131,15 @@
     const label = selectedLabelSnapshot();
     const bottle = selectedBottleSnapshot();
     const rows = programRows(sourceKind);
+    const rpcDriver = global.LabelerTopModulRpcAngleDriver;
+    const dts3 = rpcDriver?.variant?.(map?.machineType) === "dts3";
+    const rpcTableDigits = rpcDriver?.displayDigits?.(map?.machineType) ?? 1;
+    const displayRows = rows.map((row) => ({
+      ...row,
+      tableAngle: rpcTableValue(row?.tableAngle, map?.machineType),
+      generatedTableAngle: rpcTableValue(row?.generatedTableAngle, map?.machineType),
+      tableTravel: rpcTableValue(row?.tableTravel, map?.machineType)
+    }));
     const profile = sourceKind === "simulation" ? activeProfileSnapshot() : null;
     const profileSaved = sourceKind === "simulation" && profileMatchesCurrentSimulation(profile);
     const profileName = sourceKind === "simulation"
@@ -170,7 +185,10 @@
       speedFaults,
       maxMoveRatio: number(state?.maxMoveRatio, number(map?.machineSettings?.maxMoveRatio, 0)),
       status: speedFaults ? "REVIEW" : "PASS",
-      rows,
+      rows: displayRows,
+      rpcTableDigits,
+      rpcTableHeading: dts3 ? "Table Angle (DTS3 0–45°)" : "Table Angle",
+      rpcTableScale: dts3 ? "45° RPC = 360° physical table" : "360° RPC = 360° physical table",
       parameters: [
         ["Neck contact", `${formatted(buildInputs.neckContactMm, 1)} mm`],
         ["Body contact", `${formatted(buildInputs.bodyContactMm, 1)} mm`],
@@ -188,16 +206,16 @@
     return `<div class="summary-item${wide ? " wide" : ""}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
   }
 
-  function printRowsHtml(rows) {
+  function printRowsHtml(rows, tableDigits = 1) {
     return rows.map((row, index) => {
       const speed = number(row?.absSpeed, 0);
       const status = row?.moveFault ? "FAULT" : "OK";
       const dataRow = `<tr>
         <td>${escapeHtml(row?.hmi ?? "")}</td>
         <td class="cmd">${escapeHtml(row?.cmd ?? "")}</td>
-        <td class="num">${escapeHtml(formatted(row?.tableAngle ?? row?.generatedTableAngle, 1))}</td>
+        <td class="num">${escapeHtml(formatted(row?.tableAngle ?? row?.generatedTableAngle, tableDigits))}</td>
         <td class="num">${escapeHtml(formatted(row?.plateAngle ?? row?.generatedPlateAngle, 1))}</td>
-        <td class="num">${escapeHtml(formatted(row?.tableTravel, 1))}</td>
+        <td class="num">${escapeHtml(formatted(row?.tableTravel, tableDigits))}</td>
         <td class="num">${escapeHtml(formatted(row?.plateTravel, 1))}</td>
         <td class="num">${escapeHtml(formatted(speed, 1))}</td>
         <td class="status ${row?.moveFault ? "bad" : "ok"}">${status}</td>
@@ -226,6 +244,7 @@
       summaryItem("Spec #", model.specNumber),
       summaryItem("Labeler Map", model.mapName, true),
       summaryItem("Machine Type", model.machineType),
+      summaryItem("RPC Table Scale", model.rpcTableScale, true),
       summaryItem("Application", model.application, true),
       summaryItem("Program Type", model.programType, true),
       summaryItem("Heads", model.headCount || "—"),
@@ -308,8 +327,8 @@
     <section class="program-section">
       <div class="section-head"><h2>${escapeHtml(model.sectionTitle)}</h2><small>${escapeHtml(model.sectionNote)}</small></div>
       <table>
-        <thead><tr><th>HMI</th><th>CMD</th><th>Table Angle</th><th>Bottle Angle</th><th>Table Travel</th><th>Bottle Travel</th><th>Turn Speed</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody>${printRowsHtml(model.rows)}</tbody>
+        <thead><tr><th>HMI</th><th>CMD</th><th>${escapeHtml(model.rpcTableHeading)}</th><th>Bottle Angle</th><th>Table Travel</th><th>Bottle Travel</th><th>Turn Speed</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>${printRowsHtml(model.rows, model.rpcTableDigits)}</tbody>
       </table>
     </section>
     <section class="parameters"><h2>Build Parameters</h2><div class="parameter-grid">${parameters}</div></section>

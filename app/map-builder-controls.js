@@ -96,6 +96,11 @@ function renderMachineLayoutControls(machineMap) {
 function renderMapLibraryControls() {
   const map = activeMachineMap();
   if (!map) return;
+  const topModulVariant = window.LabelerTopModulMachineVariant;
+  if (topModulVariant?.canonicalMachineType) {
+    const canonicalType = topModulVariant.canonicalMachineType(map.machineType);
+    if (canonicalType) map.machineType = canonicalType;
+  }
   const libraryLocation = mapLibraryLocation();
   const visibleMaps = mapsForMapLibraryLocation();
   if (els.mapLibrarySelect) {
@@ -133,12 +138,18 @@ function renderMapLibraryControls() {
   }
   if (els.mapHeadCount) els.mapHeadCount.value = map.headCount;
   if (els.mapMachineType) {
-    const types = [...new Set(["TopMatic", "Autocol", "TopModul", "MultiModul", ...(state.machineTypes || []), map.machineType || "TopModul"])];
+    const canonicalMachineType = (value) => topModulVariant?.canonicalMachineType?.(value) || String(value || "");
+    const selectedMachineType = canonicalMachineType(map.machineType || "TopModul (DTS4)") || "TopModul (DTS4)";
+    map.machineType = selectedMachineType;
+    const types = [...new Set([
+      "TopMatic", "Autocol", "TopModul (DTS4)", "TopModul (DTS3)", "MultiModul",
+      ...(state.machineTypes || []).map(canonicalMachineType), selectedMachineType
+    ])].filter((type) => type && type !== "TopModul");
     els.mapMachineType.replaceChildren(...types.map((type) => {
       const option = document.createElement("option");
       option.value = type;
       option.textContent = type;
-      option.selected = type === (map.machineType || "TopModul");
+      option.selected = type === selectedMachineType;
       return option;
     }));
   }

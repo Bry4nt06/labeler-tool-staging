@@ -23,17 +23,32 @@
     return field === "tableAngle" || field === "plateAngle";
   }
 
+  function internalOverrideValue(field, value) {
+    if (field !== "tableAngle" || String(value ?? "").trim() === "") return value;
+    const driver = global.LabelerTopModulRpcAngleDriver;
+    if (!driver?.rpcToPhysicalTableAngle) return value;
+    let machineType = "";
+    try {
+      const map = typeof activeMachineMap === "function" ? activeMachineMap() : null;
+      machineType = map?.machineType || state?.machineType || state?.selectedMachineType || "";
+    } catch {
+      machineType = state?.machineType || state?.selectedMachineType || "";
+    }
+    const converted = driver.rpcToPhysicalTableAngle(value, machineType);
+    return Number.isFinite(converted) ? String(converted) : value;
+  }
+
   function stageOverride(target) {
     const context = programContext(target);
     if (!context || !isOverrideField(context.field)) return false;
-    program.updateOverride(context.hmi, context.field, target.value);
+    program.updateOverride(context.hmi, context.field, internalOverrideValue(context.field, target.value));
     return true;
   }
 
   function commitOverride(target) {
     const context = programContext(target);
     if (!context || !isOverrideField(context.field)) return false;
-    program.commitOverride(context.hmi, context.field, target.value);
+    program.commitOverride(context.hmi, context.field, internalOverrideValue(context.field, target.value));
     return true;
   }
 

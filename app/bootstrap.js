@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "troubleshooting-machine-scope-v375-20260910-1426";
-  const buildUpdatedAt = "Sep 10, 2026 2:26 PM ET";
+  const build = "topmodul-dts3-rpc-angle-v328-20260910-1832";
+  const buildUpdatedAt = "Sep 10, 2026 6:32 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
@@ -12,6 +12,8 @@
 
   const modules = Object.freeze([
     "app/staging-build-banner-authority-v2-integration.js",
+    "drivers/translation/topmodul-rpc-angle-driver.js",
+    "app/topmodul-dts-machine-variant-integration.js",
     "app/update-loop-guard-integration.js",
     "app/startup-dom-binding-guard-integration.js",
     "app/export-service.js",
