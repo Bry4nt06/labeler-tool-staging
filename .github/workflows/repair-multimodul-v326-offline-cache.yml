@@ -1,0 +1,72 @@
+name: Repair MultiModul v326 Offline Cache
+
+on:
+  push:
+    branches:
+      - fix/multimodul-cmd7-rest-pairs-v326
+    paths:
+      - .github/workflows/repair-multimodul-v326-offline-cache.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/multimodul-cmd7-rest-pairs-v326
+          fetch-depth: 0
+
+      - name: Align service-worker cache with v326
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path('service-worker.js')
+          text = path.read_text(encoding='utf-8')
+          old_cache = 'servoforge-labeler-staging-v0.9.10-cold-glue-aggregate-centerline-datums-v322-20260909-1426'
+          new_cache = 'servoforge-labeler-staging-v0.9.10-multimodul-cmd7-rest-pairs-v326-20260910-1110'
+          if old_cache not in text:
+              raise SystemExit('expected service-worker cache marker missing')
+          text = text.replace(old_cache, new_cache)
+
+          driver_anchor = '  "./drivers/servo/rest-correction-grammar-driver.js",\n'
+          driver_line = '  "./drivers/servo/multimodul-correction-pair-driver.js",\n'
+          if driver_line not in text:
+              if driver_anchor not in text:
+                  raise SystemExit('servo driver cache anchor missing')
+              text = text.replace(driver_anchor, driver_anchor + driver_line)
+
+          app_anchor = '  "./app/apl-continuous-motion-integration.js",\n'
+          app_line = '  "./app/multimodul-correction-pair-integration.js",\n'
+          if app_line not in text:
+              if app_anchor not in text:
+                  raise SystemExit('APL integration cache anchor missing')
+              text = text.replace(app_anchor, app_anchor + app_line)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validate offline cache regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check service-worker.js
+          node --test tests/troubleshooting-cache-recovery.test.js
+          grep -q 'multimodul-cmd7-rest-pairs-v326-20260910-1110' service-worker.js
+          grep -q 'drivers/servo/multimodul-correction-pair-driver.js' service-worker.js
+          grep -q 'app/multimodul-correction-pair-integration.js' service-worker.js
+
+      - name: Commit service-worker repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "ServoForge Staging Fix"
+          git config user.email "actions@users.noreply.github.com"
+          git add service-worker.js
+          git commit -m "fix: align v326 offline cache [skip ci]"
+          git push origin HEAD:fix/multimodul-cmd7-rest-pairs-v326
