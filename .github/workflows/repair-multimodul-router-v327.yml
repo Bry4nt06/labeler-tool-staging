@@ -1,0 +1,161 @@
+name: Repair MultiModul Router v327
+
+on:
+  push:
+    branches:
+      - fix/multimodul-router-cmd7-grammar-v327
+    paths:
+      - .github/workflows/repair-multimodul-router-v327.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/multimodul-router-cmd7-grammar-v327
+          fetch-depth: 0
+
+      - name: Route selected maps through the exported APL generator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path('app/profile-routing.js')
+          text = path.read_text(encoding='utf-8')
+          old = '  if (machineMap) return generatedAplMapDrivenProfile(machineMap);\n'
+          new = '''  if (machineMap) {\n    // Always resolve the exported generator at call time. MultiModul installs a\n    // grammar-normalizing wrapper around this API; calling the lexical base\n    // function directly bypasses that wrapper and can leave adjacent CMD 7 rows.\n    const mapGenerator = window.LabelerAplMapProfileGenerator;\n    if (mapGenerator?.generate) return mapGenerator.generate(machineMap);\n    return generatedAplMapDrivenProfile(machineMap);\n  }\n'''
+          if old not in text:
+              raise SystemExit('profile router map-generation anchor missing')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Add selected-map regression coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > tests/multimodul-profile-router-integration.test.js <<'EOF'
+          "use strict";
+
+          const test = require("node:test");
+          const assert = require("node:assert/strict");
+
+          global.window = global;
+          require("../drivers/servo/multimodul-correction-pair-driver.js");
+          require("../drivers/validation/machine-family-grammar-driver.js");
+
+          const sourceRows = () => [
+            { hmi: 1, plc: 0, cmd: 3, tableAngle: 0, plateAngle: 0, action: "Zero Line" },
+            { hmi: 2, plc: 1, cmd: 7, tableAngle: 10, plateAngle: 0, action: "Wipe Turn 1 Body - Agg 1", stage: "set-down", plannedRotation: 30 },
+            { hmi: 3, plc: 2, cmd: 7, tableAngle: 20, plateAngle: 30, action: "Wipe Turn 2 Body - Agg 1", stage: "wipe", plannedRotation: 30 },
+            { hmi: 4, plc: 3, cmd: 3, tableAngle: 30, plateAngle: 60, action: "End Curve Rest", terminalRest: true }
+          ];
+
+          test("selected MultiModul maps pass through the correction-pair wrapper before grammar validation", async () => {
+            const machineMap = {
+              name: "MultiModul APL 6-Aggregate",
+              machineType: "MultiModul",
+              applicationMode: "apl"
+            };
+
+            global.state = {
+              applicationMode: "apl",
+              motionPlan: { mapDriven: true, rows: sourceRows(), termination: { section: "body" } }
+            };
+            global.activeMachineMap = () => machineMap;
+            global.LabelerAplMapProfileGenerator = Object.freeze({ generate: () => sourceRows() });
+
+            delete global.ServoForgeMultiModulCorrectionPairReady;
+            delete require.cache[require.resolve("../app/multimodul-correction-pair-integration.js")];
+            require("../app/multimodul-correction-pair-integration.js");
+            await global.ServoForgeMultiModulCorrectionPairReady;
+
+            delete require.cache[require.resolve("../app/profile-routing.js")];
+            require("../app/profile-routing.js");
+            const rows = global.LabelerProfileRouter.generate();
+
+            assert.deepEqual(rows.map((row) => Number(row.cmd)), [3, 7, 3, 7, 3]);
+            rows.forEach((row, index) => {
+              if (Number(row.cmd) !== 7) return;
+              assert.equal(Number(rows[index - 1]?.cmd), 3, `HMI ${index + 1} must have a leading CMD 3`);
+              assert.equal(Number(rows[index + 1]?.cmd), 3, `HMI ${index + 1} must have a trailing CMD 3`);
+            });
+
+            const validation = global.LabelerMachineFamilyGrammarDriver.analyze(rows, {
+              family: "MultiModul",
+              machineType: "MultiModul",
+              applicationMode: "apl"
+            });
+            assert.equal(validation.valid, true, JSON.stringify(validation.issues, null, 2));
+            assert.equal(global.state.multiModulCorrectionPairRepairs.length, 1);
+            assert.deepEqual(global.state.motionPlan.rows.map((row) => Number(row.cmd)), [3, 7, 3, 7, 3]);
+          });
+          EOF
+
+      - name: Bump staging build identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import json
+
+          old = 'multimodul-cmd7-rest-pairs-v326-20260910-1110'
+          new = 'multimodul-router-cmd7-grammar-v327-20260910-1210'
+          files = [
+              'app.js',
+              'app/bootstrap.js',
+              'app/profile-generation.js',
+              'app/update-manager.js',
+              'index.html',
+              'service-worker.js',
+          ]
+          for name in files:
+              path = Path(name)
+              text = path.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'expected v326 build id missing from {name}')
+              text = text.replace(old, new)
+              if name == 'app/bootstrap.js':
+                  text = text.replace('Sep 10, 2026 11:10 AM ET', 'Sep 10, 2026 12:10 PM ET')
+              path.write_text(text, encoding='utf-8')
+
+          manifest_path = Path('update-manifest.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          if manifest.get('buildId') != old:
+              raise SystemExit(f'unexpected update manifest build: {manifest.get("buildId")}')
+          manifest['buildId'] = new
+          manifest['notes'] = ('MultiModul v327: selected machine maps now route through the exported APL map generator so the '
+                               'MultiModul CMD 3 -> CMD 7 -> CMD 3 correction-pair normalizer is applied to the actual Servo Program '
+                               'before grammar validation.')
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Validate v327 regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app/profile-routing.js
+          node --check app/multimodul-correction-pair-integration.js
+          node --check drivers/servo/multimodul-correction-pair-driver.js
+          node --test tests/multimodul-correction-pair-driver.test.js tests/multimodul-profile-router-integration.test.js
+          node --test tests/apl-roller-section-handoff.test.js
+          grep -q 'multimodul-router-cmd7-grammar-v327-20260910-1210' app.js
+          grep -q 'multimodul-router-cmd7-grammar-v327-20260910-1210' service-worker.js
+          grep -q 'drivers/servo/multimodul-correction-pair-driver.js' service-worker.js
+          grep -q 'app/multimodul-correction-pair-integration.js' service-worker.js
+
+      - name: Commit v327 repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "ServoForge Staging Fix"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/profile-routing.js tests/multimodul-profile-router-integration.test.js app.js app/bootstrap.js app/profile-generation.js app/update-manager.js index.html service-worker.js update-manifest.json
+          git commit -m "fix: route MultiModul maps through CMD 7 grammar normalizer [skip ci]"
+          git push origin HEAD:fix/multimodul-router-cmd7-grammar-v327
