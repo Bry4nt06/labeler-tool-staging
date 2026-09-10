@@ -16,10 +16,12 @@ function rpcTableValue(value, machineType) {
 }
 
 function renderProgram() {
-  const commandHeading = activeMachineUsesAutocolCommands() ? "Travel command" : "CMD";
   const machineType = activeServoProgramMachineType();
   const rpcAngleDriver = window.LabelerTopModulRpcAngleDriver;
   const dts3 = rpcAngleDriver?.variant?.(machineType) === "dts3";
+  const commandHeading = typeof servoCommandHeading === "function"
+    ? servoCommandHeading()
+    : activeMachineUsesAutocolCommands() ? "Travel command" : dts3 ? "DTS3 command" : "CMD";
   const tableDigits = rpcAngleDriver?.displayDigits?.(machineType) ?? 1;
   const tableHeading = dts3 ? "Table angle (DTS3 0–45°)" : "Table angle";
   const tableStep = dts3 ? "0.0001" : "0.5";
