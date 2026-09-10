@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "troubleshooting-machine-scope-v375-20260910-1426";
+  const BUILD_ID = "topmodul-dts3-rpc-angle-v328-20260910-1832";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 

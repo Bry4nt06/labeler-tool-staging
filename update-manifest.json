@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "troubleshooting-machine-scope-v375-20260910-1426",
+  "buildId": "topmodul-dts3-rpc-angle-v328-20260910-1832",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Troubleshooting v375: adds persistent Machine Scope and Application filters. Auto reads the active ServoForge map, while explicit Autocol, MultiModul, TopModul, APL, or Cold Glue scopes hide conflicting machine/application-specific records and retain universal diagnostic evidence."
+  "notes": "TopModul DTS variant support v328. Existing TopModul maps are treated as DTS4. New TopModul (DTS3) maps keep physical machine geometry at 0-360 degrees but present/edit/export RPC table angles on the legacy 0-45 degree command domain (8 physical degrees per 1 DTS3 RPC table degree). Adds 4-decimal DTS3 table-angle precision and preserves TopModul family validation."
 }

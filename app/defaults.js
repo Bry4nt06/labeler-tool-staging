@@ -169,7 +169,7 @@ const state = {
   mapLibrary: [],
   servoProfileLibrary: [],
   activeServoProfileId: "",
-  machineTypes: ["TopMatic", "Autocol", "TopModul"],
+  machineTypes: ["TopMatic", "Autocol", "TopModul (DTS4)", "TopModul (DTS3)", "MultiModul"],
   mapLocked: true,
   previewBottleAngle: null,
   activeMapId: "",

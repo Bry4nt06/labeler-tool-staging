@@ -103,6 +103,22 @@
     return Number.isFinite(number) ? number : Number(value);
   }
 
+  function activeRpcMachineType() {
+    try {
+      const map = typeof activeMachineMap === "function" ? activeMachineMap() : null;
+      return map?.machineType || state?.machineType || state?.selectedMachineType || "";
+    } catch {
+      return state?.machineType || state?.selectedMachineType || "";
+    }
+  }
+
+  function displayTableMetric(value) {
+    const machineType = activeRpcMachineType();
+    const driver = global.LabelerTopModulRpcAngleDriver;
+    const converted = driver?.physicalToRpcTableAngle?.(value, machineType);
+    return { value: Number.isFinite(converted) ? converted : value, digits: driver?.displayDigits?.(machineType) ?? 1 };
+  }
+
   function refreshProgramMetricsInPlace() {
     let programNode = null;
     try { programNode = typeof els !== "undefined" ? els.program : null; } catch { programNode = null; }
@@ -129,7 +145,8 @@
         : null;
 
       tr.classList?.toggle?.("move-fault-row", Boolean(row.moveFault));
-      cells[7].textContent = formatMetric(row.tableTravel, 1);
+      const tableMetric = displayTableMetric(row.tableTravel);
+      cells[7].textContent = formatMetric(tableMetric.value, tableMetric.digits);
       cells[8].textContent = formatMetric(row.plateTravel, 1);
       cells[9].textContent = Number.isFinite(encoderTravel) ? formatMetric(finishedMetric(encoderTravel), 1) : "";
       cells[10].className = status[0];
