@@ -7,11 +7,16 @@ const v104 = fs.readFileSync(path.join(root, "app/community-library-v104-metadat
 const bootstrap = fs.readFileSync(path.join(root, "app/bootstrap.js"), "utf8");
 
 assert.ok(v104.includes("input.required = true"), "Zone and Site must be required.");
+assert.ok(v104.includes("input.minLength = 2"), "Zone and Site must require at least two characters.");
+assert.ok(v104.includes('input.pattern = "[A-Z0-9]{2,3}"'), "Zone and Site must accept only 2–3 alphanumeric characters.");
+assert.ok(v104.includes("author.required = true"), "Display Name must be required.");
+assert.ok(v104.includes('option[value="bundle"]'), "Recovered dialogs must remove the Complete Setup upload option.");
 assert.ok(v104.includes('communityUploadBottleSpecNumber'), "Bottle Spec # input is required in the Community upload UI.");
 assert.ok(v104.includes('communityUploadBrandSpecNumber'), "Brand/Label Spec # input is required in the Community upload UI.");
 assert.ok(v104.includes('communityBottleSpecNumber'), "Bottle Spec # must be submitted as Community metadata.");
 assert.ok(v104.includes('communityBrandSpecNumber'), "Brand Spec # must be submitted as Community metadata.");
-assert.ok(v104.includes('Zone and Site are required.'), "Blank Zone/Site submissions must be blocked.");
+assert.ok(v104.includes('Zone and Site must be 2–3 characters.'), "Invalid Zone/Site submissions must be blocked.");
+assert.ok(v104.includes('Display Name is required.'), "Blank Display Name submissions must be blocked.");
 assert.ok(v104.includes('.slice(0, 3)'), "Zone and Site remain capped at three characters.");
 const base = bootstrap.indexOf('"app/community-library-integration.js"');
 const v104Index = bootstrap.indexOf('"app/community-library-v104-metadata-integration.js"');
