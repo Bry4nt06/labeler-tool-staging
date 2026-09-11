@@ -75,7 +75,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "topmodul-dts3-rpc-angle-v328-20260910-1832";
+  const build = window.ServoForgeBootstrapBuild || "apl-center-tack-inside-wipe-v330-20260911-0130";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

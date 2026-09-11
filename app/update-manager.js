@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "topmodul-dts3-rpc-angle-v328-20260910-1832";
+  const BUILD_ID = "apl-center-tack-inside-wipe-v330-20260911-0130";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
