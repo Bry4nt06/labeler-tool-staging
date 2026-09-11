@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "topmodul-dts3-rpc-angle-v328-20260910-1832";
-  const buildUpdatedAt = "Sep 10, 2026 6:32 PM ET";
+  const build = "community-library-metadata-filters-v329-20260911-0010";
+  const buildUpdatedAt = "Sep 10, 2026 8:10 PM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;

@@ -5,9 +5,10 @@
   const base = global.LabelerCommunityLibrary;
   if (!base?.installed) return;
 
-  const BUILD = "community-railway-native-launch-v130-20260816-1555";
+  const BUILD = "community-required-metadata-v131-20260911-0010";
   const normalizeCode = (value) => String(value ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
   const normalizeSpec = (value) => String(value ?? "").trim().slice(0, 80);
+  const validCode = (value) => /^[A-Z0-9]{2,3}$/.test(value);
   const baseApi = base.api.bind(base);
   const railwayHost = /\.up\.railway\.app$/i.test(String(global.location?.hostname || ""));
   let recoveryLoadPromise = null;
@@ -16,11 +17,16 @@
   async function api(action, payload = {}) {
     if (action !== "upload") return baseApi(action, payload);
     const form = document.getElementById("communityUploadForm");
+    const type = String(payload.type || form?.elements?.type?.value || "");
+    const authorName = String(payload.authorName || form?.elements?.authorName?.value || "").trim().slice(0, 60);
     const zone = normalizeCode(form?.elements?.communityZone?.value);
     const site = normalizeCode(form?.elements?.communitySite?.value);
-    if (!zone || !site) throw new Error("Zone and Site are required.");
+    if (type === "bundle") throw new Error("Complete Setup uploads are no longer supported.");
+    if (!authorName) throw new Error("Display Name is required.");
+    if (!validCode(zone) || !validCode(site)) throw new Error("Zone and Site must be 2–3 characters.");
     return baseApi(action, {
       ...payload,
+      authorName,
       validationSummary: {
         ...(payload.validationSummary || {}),
         communityZone: zone,
@@ -60,14 +66,30 @@
   }
 
   function enhance() {
+    const form = document.getElementById("communityUploadForm");
+    const type = form?.elements?.type;
+    type?.querySelector?.('option[value="bundle"]')?.remove();
+    if (type?.value === "bundle") type.value = "map";
+    const author = form?.elements?.authorName;
+    if (author) {
+      author.required = true;
+      author.setAttribute("aria-required", "true");
+      author.removeAttribute("placeholder");
+      const span = author.closest("label")?.querySelector("span");
+      if (span) span.textContent = "Display name (required)";
+    }
     const zone = document.getElementById("communityUploadZone");
     const site = document.getElementById("communityUploadSite");
     [[zone, "Zone"], [site, "Site"]].forEach(([input, label]) => {
       if (!input) return;
       input.required = true;
+      input.minLength = 2;
+      input.maxLength = 3;
+      input.pattern = "[A-Z0-9]{2,3}";
       input.setAttribute("aria-required", "true");
+      input.title = `${label} must be 2–3 letters or numbers.`;
       const span = input.closest("label")?.querySelector("span");
-      if (span) span.textContent = `${label} (required, max 3)`;
+      if (span) span.textContent = `${label} (required, 2–3)`;
     });
     makeSpecInput("communityUploadBottleField", "communityUploadBottleSelect", "communityUploadBottleSpecNumber", "communityBottleSpecNumber");
     makeSpecInput("communityUploadBrandField", "communityUploadBrandSelect", "communityUploadBrandSpecNumber", "communityBrandSpecNumber");

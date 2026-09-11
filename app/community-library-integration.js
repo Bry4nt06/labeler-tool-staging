@@ -5,7 +5,7 @@
 
   const API_URL = "https://dtdewgbfckwvldceussa.supabase.co/functions/v1/servoforge-community";
   const ADMIN_KEY = "servoforge-feedback-admin-session-v1";
-  const BUILD_MARKER = "community-library-v97-20260812-1918";
+  const BUILD_MARKER = "community-library-metadata-filters-v131-20260911-0010";
   const LEGACY_SETTINGS_ACTIONS = new Set([
     "Export Settings",
     "Import Settings",
@@ -152,14 +152,7 @@
         rpcProgram
       };
     }
-    if (!map || !bottle || !brand) throw new Error("A complete setup requires the current Map, Bottle, and Brand.");
-    return {
-      payload: { map: deepClone(map), bottle: deepClone(bottle), brand: deepClone(brand) },
-      name: `${brand.brand || "Brand"} • ${map.name || "Map"}`,
-      map,
-      bottle,
-      brand
-    };
+    throw new Error("Choose a supported Community package type.");
   }
 
   function statusLabel(status) {
@@ -239,7 +232,7 @@
       dialog.className = "sf-community-dialog";
       dialog.innerHTML = `
         <div class="sf-community-shell">
-          <header class="sf-community-head"><div><h2>ServoForge Community Library</h2><p>Share approved maps, bottles, brands, RPC programs, and complete setup packages. No account required.</p></div><button type="button" class="sf-community-close" data-community-close>Close</button></header>
+          <header class="sf-community-head"><div><h2>ServoForge Community Library</h2><p>Share approved maps, bottles, brands, and RPC programs. No account required.</p></div><button type="button" class="sf-community-close" data-community-close>Close</button></header>
           <nav class="sf-community-tabs" aria-label="Community Library sections"><button type="button" class="active" data-community-tab="browse">Browse</button><button type="button" data-community-tab="upload">Upload</button><button type="button" data-community-tab="mine">My Uploads</button><button type="button" data-community-tab="admin">Community Admin</button></nav>
           <div class="sf-community-body">
             <section class="sf-community-pane" data-community-pane="browse">
@@ -250,9 +243,9 @@
             <section class="sf-community-pane" data-community-pane="upload" hidden>
               <form id="communityUploadForm">
                 <div class="sf-community-grid">
-                  <label class="sf-community-field"><span>Package type</span><select name="type"><option value="bundle">Complete Setup — Map + Bottle + Brand</option><option value="map">Machine Map</option><option value="bottle">Bottle</option><option value="brand">Brand / Label</option><option value="rpc_program">RPC Program</option></select></label>
+                  <label class="sf-community-field"><span>Package type</span><select name="type"><option value="map">Machine Map</option><option value="bottle">Bottle</option><option value="brand">Brand / Label</option><option value="rpc_program">RPC Program</option></select></label>
                   <label id="communityRpcProgramField" class="sf-community-field" hidden><span>Saved RPC program</span><select id="communityRpcProgram" name="rpcProgramId"></select></label>
-                  <label class="sf-community-field"><span>Display name <small>(optional)</small></span><input name="authorName" maxlength="60" placeholder="Anonymous" /></label>
+                  <label class="sf-community-field"><span>Display name <small>(required)</small></span><input name="authorName" maxlength="60" autocomplete="name" required aria-required="true" /></label>
                   <label class="sf-community-field full"><span>Listing name</span><input name="name" maxlength="160" required /></label>
                   <label class="sf-community-field full"><span>Description</span><textarea name="description" maxlength="600" placeholder="Describe where this setup is used, machine/application notes, or anything another user should know."></textarea></label>
                   <div class="sf-community-field full"><span>Current ServoForge configuration</span><div id="communityUploadSummary" class="sf-community-preview"></div><small class="sf-community-note">Uploads are copied from your current saved configuration and sent for admin review. Community packages contain JSON configuration only—no scripts or executable files.</small></div>
@@ -285,9 +278,33 @@
     return [typeLabel(item.type), item.machineType, item.application, item.brandName, item.bottleName].filter(Boolean).join(" • ");
   }
 
+  function metadataTags(item) {
+    const summary = item?.validationSummary || {};
+    const code = (value) => String(value ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
+    const spec = (value) => String(value ?? "").trim().toUpperCase().slice(0, 80);
+    return {
+      zone: code(item?.zoneCode || summary.communityZone || summary.communityLocation?.zone),
+      site: code(item?.siteCode || summary.communitySite || summary.communityLocation?.site),
+      specs: [...new Set([
+        spec(summary.communityBottleSpecNumber),
+        spec(summary.communityBrandSpecNumber)
+      ].filter(Boolean))]
+    };
+  }
+
+  function metadataTagHtml(kind, value, label) {
+    return `<button type="button" class="sf-community-location-chip" data-community-tag-filter="${esc(kind)}" data-community-tag-value="${esc(value)}">${esc(label)} ${esc(value)}</button>`;
+  }
+
   function cardHtml(item, mode = "browse") {
     const average = Number(item.ratingAverage || 0);
     const approved = item.status === "published";
+    const tags = metadataTags(item);
+    const tagLine = [
+      tags.zone ? metadataTagHtml("zone", tags.zone, "Zone") : "",
+      tags.site ? metadataTagHtml("site", tags.site, "Site") : "",
+      ...tags.specs.map((value) => metadataTagHtml("spec", value, "Spec"))
+    ].filter(Boolean).join("");
     const ratingEditor = mode === "browse" ? `<div class="sf-community-rating-editor">${stars(item.myRating?.rating || 0, true, item.id)}<input class="sf-community-review" maxlength="200" value="${esc(item.myRating?.review || "")}" placeholder="Optional review (200 characters)" /><button type="button" class="sf-community-save-rating">Save Rating</button></div>` : "";
     const actions = mode === "browse"
       ? `<button type="button" class="sf-community-preview-button">Preview / Import</button>`
@@ -296,6 +313,7 @@
         : "";
     return `<article class="sf-community-card" data-community-package-id="${esc(item.id)}">
       <div class="sf-community-card-head"><div><h3>#SF-C${esc(item.packageNumber)} · ${esc(item.name)}</h3><div class="sf-community-meta">${esc(metadata(item))}</div></div><span class="sf-community-badge">${esc(statusLabel(item.status))}</span></div>
+      ${tagLine ? `<div class="sf-community-location-line" data-community-zone="${esc(tags.zone)}" data-community-site="${esc(tags.site)}" data-community-specs="${esc(tags.specs.join("|"))}">${tagLine}</div>` : ""}
       ${item.description ? `<div class="sf-community-description">${esc(item.description)}</div>` : ""}
       <div class="sf-community-meta">${stars(average)} <strong>${average ? average.toFixed(1) : "No ratings"}</strong>${item.ratingCount ? ` · ${esc(item.ratingCount)} rating${item.ratingCount === 1 ? "" : "s"}` : ""} · ${esc(item.downloadCount || 0)} download${Number(item.downloadCount || 0) === 1 ? "" : "s"}${item.authorName ? ` · Shared by ${esc(item.authorName)}` : ""}${approved ? " · Admin approved" : ""}</div>
       ${item.rejectionReason ? `<div class="notice bad"><strong>Review note</strong><span>${esc(item.rejectionReason)}</span></div>` : ""}
@@ -311,7 +329,10 @@
     try {
       const data = await api("browse", {
         type: document.getElementById("communityTypeFilter")?.value || "",
-        search: document.getElementById("communitySearch")?.value || ""
+        search: document.getElementById("communitySearch")?.value || "",
+        zone: document.getElementById("communityZoneFilter")?.value || "",
+        site: document.getElementById("communitySiteFilter")?.value || "",
+        spec: document.getElementById("communitySpecFilter")?.value || ""
       });
       browseItems = Array.isArray(data.packages) ? data.packages : [];
       host.innerHTML = browseItems.length ? browseItems.map((item) => cardHtml(item)).join("") : `<div class="sf-community-empty">No published packages match this search.</div>`;
