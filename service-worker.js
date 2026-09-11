@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-community-library-metadata-filters-v329-20260911-0010";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-apl-center-tack-inside-wipe-v330-20260911-0130";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -314,3 +314,4 @@ self.addEventListener("fetch", (event) => {
       })
   );
 });
+
