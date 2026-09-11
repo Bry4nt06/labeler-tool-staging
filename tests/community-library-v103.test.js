@@ -11,7 +11,10 @@ assert.ok(integration.includes('select.id = "communityZoneFilter"'), "Zone brows
 assert.ok(integration.includes('Zone: All'), "Zone filter must include All.");
 assert.ok(integration.includes('select.id = "communitySiteFilter"'), "Site browse filter must exist.");
 assert.ok(integration.includes('Site: All'), "Site filter must include All.");
+assert.ok(integration.includes('select.id = "communitySpecFilter"'), "Spec browse filter must exist.");
+assert.ok(integration.includes('Spec: All'), "Spec filter must include All.");
 assert.ok(integration.includes('maxlength="3"'), "Community Zone/Site upload inputs must be capped at 3 characters.");
+assert.ok(integration.includes('minlength="2"'), "Community Zone/Site upload inputs must require at least 2 characters.");
 assert.ok(integration.includes('.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3)'), "Community location codes must normalize to uppercase alphanumeric values capped at three characters.");
 
 for (const source of ["mapLibrary", "bottleSpecs", "labelSpecs"]) {
@@ -23,7 +26,10 @@ for (const control of ["communityUploadMapSelect", "communityUploadBottleSelect"
 assert.ok(integration.includes('form.addEventListener("submit", submitSelectedPackage, true)'), "v103 upload handler must run in capture mode before the legacy current-selection submit handler.");
 assert.ok(integration.includes("communityZone: zone"));
 assert.ok(integration.includes("communitySite: site"));
-assert.ok(integration.includes("grid-template-columns:minmax(220px,1fr) 108px 108px 150px auto"), "Browse toolbar should use the compact five-control layout.");
+assert.ok(integration.includes("grid-template-columns:minmax(220px,1fr) 108px 108px 132px 150px auto"), "Browse toolbar should include compact Zone, Site, Spec, and type filters.");
+assert.ok(integration.includes('data-community-tag-filter="spec"'), "Spec tags must be interactive browse filters.");
+assert.ok(integration.includes("communityBottleSpecNumber"));
+assert.ok(integration.includes("communityBrandSpecNumber"));
 assert.ok(integration.includes(".sf-community-card{padding:9px 10px"), "Community cards should use compact spacing.");
 assert.ok(integration.includes('document.addEventListener("DOMContentLoaded", bind, { once: true })'), "Community v103 must wait for the base Community dialog on fresh page loads.");
 
