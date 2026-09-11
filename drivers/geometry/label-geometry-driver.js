@@ -369,15 +369,39 @@
       : finite(degreesFromMm(options?.overWipeMm, options?.circumferenceMm), 0));
     if (!Number.isFinite(labelDeg)) return null;
     if (mode === "center-tack-two-stage") {
-      const stageRequired = labelDeg / 2 + overWipeDeg;
-      return { mode, labelDeg, contactDeg, overWipeDeg, baseCoveragePerStage: labelDeg / 2, stageRequired, baseCoverageRequired: labelDeg, overWipeRequired: overWipeDeg * 2, totalRequired: stageRequired * 2, stages: [{ key: "outer", requiredRotation: stageRequired }, { key: "inner", requiredRotation: stageRequired }] };
+      // A center-tacked label does not use two equal half-label turns. The
+      // first surface wipes from the tack center to one edge. The second
+      // surface starts at that edge and must reverse through the center to the
+      // opposite edge, so it travels the full developed label length.
+      const halfCoverage = labelDeg / 2;
+      const firstEdgeRequired = halfCoverage + overWipeDeg;
+      const oppositeEdgeRequired = labelDeg + overWipeDeg * 2;
+      return {
+        mode,
+        labelDeg,
+        contactDeg,
+        overWipeDeg,
+        wipeAllowance: overWipeDeg,
+        baseCoveragePerStage: halfCoverage,
+        baseCoverageRequired: halfCoverage + labelDeg,
+        labelCoverageRequired: labelDeg,
+        overWipeRequired: overWipeDeg * 3,
+        stageRequired: firstEdgeRequired,
+        firstEdgeRequired,
+        oppositeEdgeRequired,
+        totalRequired: firstEdgeRequired + oppositeEdgeRequired,
+        stages: [
+          { key: "outer", requiredRotation: firstEdgeRequired },
+          { key: "inner", requiredRotation: oppositeEdgeRequired }
+        ]
+      };
     }
     // Workbook leading-edge sequence:
     //   1. back-spin by contact + one over-wipe allowance
     //   2. forward wipe by the full label + two over-wipe allowances
     const backSpinRequired = contactDeg + overWipeDeg;
     const forwardWipeRequired = labelDeg + overWipeDeg * 2;
-    return { mode, labelDeg, contactDeg, overWipeDeg, contactSetDown: contactDeg, backSpinRequired, forwardWipeRequired, baseCoverageRequired: labelDeg + contactDeg, overWipeRequired: overWipeDeg * 3, stageRequired: forwardWipeRequired, totalRequired: backSpinRequired + forwardWipeRequired, stages: [{ key: "set-down", requiredRotation: backSpinRequired }, { key: "wipe", requiredRotation: forwardWipeRequired }] };
+    return { mode, labelDeg, contactDeg, overWipeDeg, wipeAllowance: overWipeDeg, contactSetDown: contactDeg, backSpinRequired, forwardWipeRequired, baseCoverageRequired: labelDeg + contactDeg, overWipeRequired: overWipeDeg * 3, stageRequired: forwardWipeRequired, totalRequired: backSpinRequired + forwardWipeRequired, stages: [{ key: "set-down", requiredRotation: backSpinRequired }, { key: "wipe", requiredRotation: forwardWipeRequired }] };
   }
   function planTwoSurfaceWipe(options) {
     const labelDeg = Math.max(0, finite(options?.labelDeg, 0));

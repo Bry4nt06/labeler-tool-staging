@@ -57,13 +57,17 @@ function generatedAplMapDrivenProfile(machineMap) {
   };
   const moveToReference = (tableAngle, targetPlate, action, extra = {}) => {
     const targetTable = unwrapAfter(tableAngle, lastTable);
-    const rotation = targetPlate - plate;
+    // Bottle orientation repeats every revolution. Keep the nearest equivalent
+    // servo coordinate so a completed wipe that lands at -360° does not create
+    // a false +360° correction or push the next aggregate into another cycle.
+    const equivalentTarget = targetPlate + 360 * Math.round((plate - targetPlate) / 360);
+    const rotation = equivalentTarget - plate;
     if (Math.abs(rotation) <= 0.001) {
       if (!motionStarted) add(3, targetTable, plate, action, extra);
       return;
     }
     add(7, lastTable + 0.5, plate, action, extra);
-    plate = targetPlate;
+    plate = equivalentTarget;
     add(3, targetTable, plate, `${action} - Reference`, extra);
   };
   const applyTurn = (startAngle, endAngle, rotation, action, extra = {}) => {
@@ -173,6 +177,18 @@ function generatedAplMapDrivenProfile(machineMap) {
       plateAngle: targets[nextSection],
       action: `Hold for ${sectionLabel(nextSection)} Application - Agg ${nextStation}`
     } : null;
+    const completeWipeAndAlign = (requiredRotation) => {
+      const signedRequired = num(requiredRotation, 0);
+      if (!Number.isFinite(sectionBoundary?.plateAngle) || Math.abs(signedRequired) <= 0.001) return signedRequired;
+      const minimumTarget = plate + signedRequired;
+      let alignedTarget = num(sectionBoundary.plateAngle, minimumTarget);
+      if (signedRequired < 0) {
+        while (alignedTarget > minimumTarget + 0.001) alignedTarget -= 360;
+      } else {
+        while (alignedTarget < minimumTarget - 0.001) alignedTarget += 360;
+      }
+      return alignedTarget - plate;
+    };
 
     const moves = [];
     let valid = true;
@@ -188,13 +204,14 @@ function generatedAplMapDrivenProfile(machineMap) {
     if (preferredKind === "roller") {
       const outside = contactRange(preferredObjects.filter((item) => item.side !== "inner"));
       const inside = contactRange(preferredObjects.filter((item) => item.side === "inner"));
-      const required = num(wipe.stageRequired, num(wipe.totalRequired, 0) / 2);
+      const firstRequired = num(wipe.stages?.[0]?.requiredRotation, num(wipe.stageRequired, num(wipe.totalRequired, 0) / 2));
+      const secondRequired = num(wipe.stages?.[1]?.requiredRotation, firstRequired);
       const longNeckPlan = section === "neck" ? adaptiveLongNeckPlan(outside, inside, wipe, station) : null;
       if (!outside || !inside) {
         valid = false;
         issues.push({ level: "bad", code: "apl-neck-roller-side-missing", station, section, message: `Station ${station} needs both outside and inside roller objects to complete the two-direction ${section} wipe.` });
       }
-      if (outside) moves.push(applyTurn(outside.start, outside.end, longNeckPlan?.outsideRotation ?? required, `Wipe Turn 1 ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: "outer" }));
+      if (outside) moves.push(applyTurn(outside.start, outside.end, longNeckPlan?.outsideRotation ?? firstRequired, `Wipe Turn 1 ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: "outer" }));
       if (inside) {
         // At the neck-to-body boundary, finish the neck wipe at the body's
         // required bottle angle. The terminal CMD 3 is a Rest, so the next
@@ -204,7 +221,8 @@ function generatedAplMapDrivenProfile(machineMap) {
           ? Math.min(...(nextEntry?.[1] || []).filter((item) => item.kind === "roller" || item.kind === "pad").map((item) => num(item.start, Infinity)))
           : NaN;
         const transitionEnd = Number.isFinite(nextWipeStart) ? nextWipeStart - 1.5 : inside.end;
-        const secondRotation = neckToBody ? sectionBoundary.plateAngle - plate : -(longNeckPlan?.insideRotation ?? required);
+        const naturalSecondRotation = -(longNeckPlan?.insideRotation ?? secondRequired);
+        const secondRotation = neckToBody ? completeWipeAndAlign(naturalSecondRotation) : naturalSecondRotation;
         moves.push(applyTurn(inside.start, transitionEnd, secondRotation, `Wipe Turn 2 ${sectionLabel(section)} - Agg ${station}`, {
           station, section, stage: "inner", endAction: neckToBody ? "Rest" : undefined, phaseTransition: neckToBody ? "neck-to-body" : undefined
         }));
@@ -224,20 +242,25 @@ function generatedAplMapDrivenProfile(machineMap) {
         : configuredPadRange;
       if (!padRange) return;
       if (section === "neck") {
-        const required = num(wipe.stageRequired, num(wipe.totalRequired, 0) / 2);
+        const firstRequired = num(wipe.stages?.[0]?.requiredRotation, num(wipe.stageRequired, num(wipe.totalRequired, 0) / 2));
+        const secondRequired = num(wipe.stages?.[1]?.requiredRotation, firstRequired);
+        const neckToNextSection = sectionBoundary?.section === "body";
         if (outsidePad && insidePad) {
           const longNeckPlan = adaptiveLongNeckPlan(outsidePad, insidePad, wipe, station);
-          moves.push(applyTurn(outsidePad.start, outsidePad.end, longNeckPlan?.outsideRotation ?? required, `Wipe Turn 1 ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: "outer-pad" }));
-          const secondRotation = -(longNeckPlan?.insideRotation ?? required);
+          moves.push(applyTurn(outsidePad.start, outsidePad.end, longNeckPlan?.outsideRotation ?? firstRequired, `Wipe Turn 1 ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: "outer-pad" }));
+          const naturalSecondRotation = -(longNeckPlan?.insideRotation ?? secondRequired);
+          const secondRotation = neckToNextSection ? completeWipeAndAlign(naturalSecondRotation) : naturalSecondRotation;
           moves.push(applyTurn(insidePad.start, insidePad.end, secondRotation, `Wipe Turn 2 ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: "inner-pad" }));
         } else {
           const midpoint = padRange.start + (padRange.end - padRange.start) / 2;
           const longNeckPlan = adaptiveLongNeckPlan({ start: padRange.start, end: midpoint }, { start: midpoint, end: padRange.end }, wipe, station);
-          const firstRotation = longNeckPlan?.outsideRotation ?? required;
-          const naturalSecondRotation = longNeckPlan?.insideRotation ?? required;
+          const firstRotation = longNeckPlan?.outsideRotation ?? firstRequired;
+          const naturalSecondRotation = longNeckPlan?.insideRotation ?? secondRequired;
           const splitFraction = longNeckPlan?.totalRequired > 0 ? longNeckPlan.outsideRotation / longNeckPlan.totalRequired : 0.5;
           const split = padRange.start + (padRange.end - padRange.start) * splitFraction;
-          const secondRotation = -naturalSecondRotation;
+          const secondRotation = neckToNextSection
+            ? completeWipeAndAlign(-naturalSecondRotation)
+            : -naturalSecondRotation;
           moves.push(...applyContinuousPadTurns(padRange.start, split, padRange.end, firstRotation, secondRotation, section, station, ["outer-pad", "inner-pad"]));
         }
       } else {
