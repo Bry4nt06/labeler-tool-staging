@@ -9,9 +9,11 @@ const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const sw = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "update-manifest.json"), "utf8"));
 
-for (const feature of ["Browse", "Upload", "My Uploads", "Community Admin", "Complete Setup", "Submit for Review"]) {
+for (const feature of ["Browse", "Upload", "My Uploads", "Community Admin", "Submit for Review"]) {
   assert.ok(community.includes(feature), `Community feature missing: ${feature}`);
 }
+assert.ok(!community.includes('<option value="bundle">Complete Setup — Map + Bottle + Brand</option>'), "Complete Setup must not remain an upload option.");
+assert.ok(community.includes('name="authorName" maxlength="60" autocomplete="name" required'), "Display Name must be required in the upload form.");
 assert.ok(community.includes('maxlength="200"'));
 assert.ok(community.includes('data-community-import="add"'));
 assert.ok(community.includes('data-community-import="replace"'));
