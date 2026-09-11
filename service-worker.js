@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-topmodul-dts3-rpc-angle-v328-20260910-1832";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-community-library-metadata-filters-v329-20260911-0010";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -172,6 +172,10 @@ const CORE_ASSETS = Object.freeze([
   "./app/update-manager.js",
   "./app/feedback-center-integration.js",
   "./app/community-library-integration.js",
+  "./app/community-library-v104-metadata-integration.js",
+  "./app/community-library-v103-integration.js",
+  "./app/community-library-runtime-stability-integration.js",
+  "./app/community-library-cart-integration.js",
   "./app/troubleshooting/diagnostic-library.js",
   "./app/troubleshooting/topmodul-live-diagnostics.js",
   "./app/troubleshooting/topmodul-plc-fault-data.js",
