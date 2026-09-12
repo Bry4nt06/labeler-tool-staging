@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "apl-center-tack-inside-wipe-v330-20260911-0130",
+  "buildId": "dts3-map-program-isolation-v331-20260912-0934",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "APL center-tack inside wipe v330. Completes the inside neck-label wipe from the first edge through center to the opposite edge, preserves modulo-equivalent next-aggregate alignment, and reports 100% wipe coverage after Turn 2."
+  "notes": "DTS3 map isolation v331. The complete center-tack inside wipe and modulo-equivalent next-aggregate alignment now apply only when the active map is explicitly TopModul (DTS3). DTS4, legacy TopModul, Autocol, MultiModul, and other maps retain their established servo programs."
 }

@@ -2,6 +2,7 @@
 
 function generatedAplMapDrivenProfile(machineMap) {
   const commandDriver = window.LabelerServoCommandDriver;
+  const dts3Programming = window.LabelerTopModulRpcAngleDriver?.variant?.(machineMap?.machineType) === "dts3";
   const mapZero = num(machineMap?.machineSettings?.zeroAngle, state.zeroAngle || 0);
   // Map geometry is stored in physical bottle-table degrees. Head count changes
   // the head pitch, but it must never move aggregates or objects around the table.
@@ -57,17 +58,18 @@ function generatedAplMapDrivenProfile(machineMap) {
   };
   const moveToReference = (tableAngle, targetPlate, action, extra = {}) => {
     const targetTable = unwrapAfter(tableAngle, lastTable);
-    // Bottle orientation repeats every revolution. Keep the nearest equivalent
-    // servo coordinate so a completed wipe that lands at -360° does not create
-    // a false +360° correction or push the next aggregate into another cycle.
-    const equivalentTarget = targetPlate + 360 * Math.round((plate - targetPlate) / 360);
-    const rotation = equivalentTarget - plate;
+    // DTS3 may finish its full inside wipe on a modulo-equivalent coordinate.
+    // All other maps retain their established absolute reference behavior.
+    const referenceTarget = dts3Programming
+      ? targetPlate + 360 * Math.round((plate - targetPlate) / 360)
+      : targetPlate;
+    const rotation = referenceTarget - plate;
     if (Math.abs(rotation) <= 0.001) {
       if (!motionStarted) add(3, targetTable, plate, action, extra);
       return;
     }
     add(7, lastTable + 0.5, plate, action, extra);
-    plate = equivalentTarget;
+    plate = referenceTarget;
     add(3, targetTable, plate, `${action} - Reference`, extra);
   };
   const applyTurn = (startAngle, endAngle, rotation, action, extra = {}) => {
@@ -222,7 +224,9 @@ function generatedAplMapDrivenProfile(machineMap) {
           : NaN;
         const transitionEnd = Number.isFinite(nextWipeStart) ? nextWipeStart - 1.5 : inside.end;
         const naturalSecondRotation = -(longNeckPlan?.insideRotation ?? secondRequired);
-        const secondRotation = neckToBody ? completeWipeAndAlign(naturalSecondRotation) : naturalSecondRotation;
+        const secondRotation = neckToBody
+          ? (dts3Programming ? completeWipeAndAlign(naturalSecondRotation) : sectionBoundary.plateAngle - plate)
+          : naturalSecondRotation;
         moves.push(applyTurn(inside.start, transitionEnd, secondRotation, `Wipe Turn 2 ${sectionLabel(section)} - Agg ${station}`, {
           station, section, stage: "inner", endAction: neckToBody ? "Rest" : undefined, phaseTransition: neckToBody ? "neck-to-body" : undefined
         }));
@@ -258,7 +262,7 @@ function generatedAplMapDrivenProfile(machineMap) {
           const naturalSecondRotation = longNeckPlan?.insideRotation ?? secondRequired;
           const splitFraction = longNeckPlan?.totalRequired > 0 ? longNeckPlan.outsideRotation / longNeckPlan.totalRequired : 0.5;
           const split = padRange.start + (padRange.end - padRange.start) * splitFraction;
-          const secondRotation = neckToNextSection
+          const secondRotation = neckToNextSection && dts3Programming
             ? completeWipeAndAlign(-naturalSecondRotation)
             : -naturalSecondRotation;
           moves.push(...applyContinuousPadTurns(padRange.start, split, padRange.end, firstRotation, secondRotation, section, station, ["outer-pad", "inner-pad"]));
@@ -343,3 +347,4 @@ function generatedAplMapDrivenProfile(machineMap) {
 }
 
 window.LabelerAplMapProfileGenerator = Object.freeze({ generate: generatedAplMapDrivenProfile });
+

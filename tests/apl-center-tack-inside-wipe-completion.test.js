@@ -14,6 +14,10 @@ const generatorSource = fs.readFileSync(
   path.join(root, "app", "apl-map-profile-generation.js"),
   "utf8"
 );
+const rpcAngleSource = fs.readFileSync(
+  path.join(root, "drivers", "translation", "topmodul-rpc-angle-driver.js"),
+  "utf8"
+);
 const telemetrySource = fs.readFileSync(
   path.join(root, "app", "wipe-telemetry-service.js"),
   "utf8"
@@ -115,16 +119,20 @@ context.window = context;
 context.globalThis = context;
 
 vm.createContext(context);
+vm.runInContext(rpcAngleSource, context, { filename: "topmodul-rpc-angle-driver.js" });
 vm.runInContext(geometrySource, context, { filename: "label-geometry-driver.js" });
 context.sectionWipePlan = (section) => context.LabelerGeometryDriver.solveSection({
   mode: section === "neck" ? "center-tack-two-stage" : "leading-edge",
   labelLengthMm: section === "neck" ? labelLengthMm : 70,
   circumferenceMm: section === "neck" ? neckCircumferenceMm : 182.212,
   contactMm: section === "neck" ? 0 : 5,
-  overWipeDeg: 0
+  overWipeDeg: 0,
+  completeCenterTackInsideWipe:
+    context.LabelerTopModulRpcAngleDriver.variant(context.activeMachineMap?.()?.machineType) === "dts3"
 });
 vm.runInContext(generatorSource, context, { filename: "apl-map-profile-generation.js" });
 
+context.activeMachineMap = () => ({ machineType: "TopModul (DTS3)" });
 const wipePlan = context.sectionWipePlan("neck");
 assert.ok(Math.abs(wipePlan.stages[0].requiredRotation - labelDeg / 2) < 1e-9);
 assert.ok(
@@ -134,6 +142,7 @@ assert.ok(
 assert.ok(Math.abs(wipePlan.totalRequired - labelDeg * 1.5) < 1e-9);
 
 const machineMap = {
+  machineType: "TopModul (DTS3)",
   applicationMode: "apl",
   machineSettings: { zeroAngle: 0 },
   aggregateAngles: { "1": 68.5, "3": 148.5 },
@@ -176,3 +185,26 @@ const coverage = context.LabelerWipeTelemetryService.contactedLabelCoverage(
 assert.equal(coverage.percentage, 100, "the wipe-down panel must show the neck label fully wiped after Turn 2");
 
 console.log("APL center-tack inside wipe completion regression passed.");
+
+
+const legacyWipePlan = context.LabelerGeometryDriver.solveSection({
+  mode: "center-tack-two-stage",
+  labelLengthMm,
+  circumferenceMm: neckCircumferenceMm,
+  contactMm: 0,
+  overWipeDeg: 0,
+  completeCenterTackInsideWipe: false
+});
+assert.ok(Math.abs(legacyWipePlan.stages[0].requiredRotation - labelDeg / 2) < 1e-9);
+assert.ok(Math.abs(legacyWipePlan.stages[1].requiredRotation - labelDeg / 2) < 1e-9);
+assert.ok(Math.abs(legacyWipePlan.totalRequired - labelDeg) < 1e-9);
+
+const dts4Map = { ...machineMap, machineType: "TopModul (DTS4)" };
+context.activeMachineMap = () => dts4Map;
+const dts4Rows = context.generatedAplMapDrivenProfile(dts4Map);
+const dts4Turn2 = dts4Rows.find((row) => /Wipe Turn 2 Neck/.test(row.action));
+assert.ok(dts4Turn2, "the established DTS4 profile must retain its inside neck turn");
+assert.ok(
+  Math.abs(dts4Turn2.plannedRotation + labelDeg / 2) < 0.001,
+  "non-DTS3 maps must retain the established half-label inside turn"
+);

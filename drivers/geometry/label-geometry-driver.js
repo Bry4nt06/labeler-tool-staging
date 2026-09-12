@@ -369,12 +369,29 @@
       : finite(degreesFromMm(options?.overWipeMm, options?.circumferenceMm), 0));
     if (!Number.isFinite(labelDeg)) return null;
     if (mode === "center-tack-two-stage") {
-      // A center-tacked label does not use two equal half-label turns. The
-      // first surface wipes from the tack center to one edge. The second
-      // surface starts at that edge and must reverse through the center to the
-      // opposite edge, so it travels the full developed label length.
       const halfCoverage = labelDeg / 2;
       const firstEdgeRequired = halfCoverage + overWipeDeg;
+      if (options?.completeCenterTackInsideWipe !== true) {
+        // Preserve the established two-half-turn program for every map that is
+        // not explicitly TopModul (DTS3).
+        return {
+          mode,
+          labelDeg,
+          contactDeg,
+          overWipeDeg,
+          baseCoveragePerStage: halfCoverage,
+          stageRequired: firstEdgeRequired,
+          baseCoverageRequired: labelDeg,
+          overWipeRequired: overWipeDeg * 2,
+          totalRequired: firstEdgeRequired * 2,
+          stages: [
+            { key: "outer", requiredRotation: firstEdgeRequired },
+            { key: "inner", requiredRotation: firstEdgeRequired }
+          ]
+        };
+      }
+      // DTS3 completes the inside turn from the first edge, through center,
+      // to the opposite edge.
       const oppositeEdgeRequired = labelDeg + overWipeDeg * 2;
       return {
         mode,
@@ -499,3 +516,4 @@
   }
   global.LabelerGeometryDriver = { effectiveDiameterMm, circumferenceFromDiameterMm, bodyCircumferenceMm, degreesFromMm, mmFromDegrees, normalizeNeckWrapType, normalizeOverlapEdge, neckWrapPlan, tableDegreesFromArcMm, tableArcMmFromDegrees, scaleTableAngle, encoderCountsFromPlateDegrees, solveSection, planTwoSurfaceWipe, planColdGlueSection };
 })(window);
+

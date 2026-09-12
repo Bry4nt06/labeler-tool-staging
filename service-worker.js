@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-apl-center-tack-inside-wipe-v330-20260911-0130";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-dts3-map-program-isolation-v331-20260912-0934";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
