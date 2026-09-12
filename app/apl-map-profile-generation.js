@@ -347,4 +347,3 @@ function generatedAplMapDrivenProfile(machineMap) {
 }
 
 window.LabelerAplMapProfileGenerator = Object.freeze({ generate: generatedAplMapDrivenProfile });
-
