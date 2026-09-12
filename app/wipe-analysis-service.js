@@ -19,7 +19,19 @@ function sectionWipePlan(section) {
   const overWipeDeg = section === "neck" ? state.buildInputs.neckOverWipeDeg : section === "body" ? state.buildInputs.bodyOverWipeDeg : state.buildInputs.backOverWipeDeg;
   const coldGlueLabel = normalizeLabelApplicationMode(label.applicationMode) === "cold-glue";
   const mode = coldGlueLabel || (section === "neck" && state.buildInputs.neckApplication === "Center") ? "center-tack-two-stage" : "leading-edge";
-  return window.LabelerGeometryDriver?.solveSection({ mode, labelLengthMm, circumferenceMm, contactMm, overWipeDeg }) ?? null;
+  const activeMap = typeof activeMachineMap === "function" ? activeMachineMap() : null;
+  const completeCenterTackInsideWipe = Boolean(
+    activeMap
+      && window.LabelerTopModulRpcAngleDriver?.variant?.(activeMap.machineType) === "dts3"
+  );
+  return window.LabelerGeometryDriver?.solveSection({
+    mode,
+    labelLengthMm,
+    circumferenceMm,
+    contactMm,
+    overWipeDeg,
+    completeCenterTackInsideWipe
+  }) ?? null;
 }
 
 function sectionWipeRequirement(section) {

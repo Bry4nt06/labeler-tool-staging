@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "apl-center-tack-inside-wipe-v330-20260911-0130";
+  const BUILD_ID = "dts3-map-program-isolation-v331-20260912-0934";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 

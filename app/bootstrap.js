@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "apl-center-tack-inside-wipe-v330-20260911-0130";
-  const buildUpdatedAt = "Sep 10, 2026 9:30 PM ET";
+  const build = "dts3-map-program-isolation-v331-20260912-0934";
+  const buildUpdatedAt = "Sep 12, 2026 9:34 AM ET";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;

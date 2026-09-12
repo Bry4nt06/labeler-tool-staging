@@ -75,7 +75,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "apl-center-tack-inside-wipe-v330-20260911-0130";
+  const build = window.ServoForgeBootstrapBuild || "dts3-map-program-isolation-v331-20260912-0934";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

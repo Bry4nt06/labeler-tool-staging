@@ -85,6 +85,19 @@
     return Number.isFinite(width) ? center - width / 2 : center;
   }
 
+  function activeMapUsesDts3Programming() {
+    let map = null;
+    try {
+      map = typeof global.activeMachineMap === "function" ? global.activeMachineMap() : null;
+    } catch {
+      map = null;
+    }
+    return Boolean(
+      map
+        && global.LabelerTopModulRpcAngleDriver?.variant?.(map.machineType) === "dts3"
+    );
+  }
+
   function solveAplWipe(section) {
     const target = stateRef();
     if (String(target?.applicationMode || "").toLowerCase() !== "apl") return null;
@@ -119,7 +132,8 @@
       labelLengthMm,
       circumferenceMm,
       contactMm,
-      overWipeDeg
+      overWipeDeg,
+      completeCenterTackInsideWipe: activeMapUsesDts3Programming()
     }) || null;
   }
 
