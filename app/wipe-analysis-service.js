@@ -144,4 +144,3 @@ function stationWipeAnalysis(assembly, program = state.program) {
 
   return { station: normalized.station, section, active: true, requiredRotation, contactRotation, outsideRotation, window, stages: stageWindows, wipePlan };
 }
-
