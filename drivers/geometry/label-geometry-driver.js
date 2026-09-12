@@ -254,7 +254,6 @@
   });
   set(7, "Loading core modules…");
 })(window);
-
 (function (global) {
   "use strict";
   function finite(value, fallback = 0) { const n = Number(value); return Number.isFinite(n) ? n : fallback; }
@@ -516,4 +515,3 @@
   }
   global.LabelerGeometryDriver = { effectiveDiameterMm, circumferenceFromDiameterMm, bodyCircumferenceMm, degreesFromMm, mmFromDegrees, normalizeNeckWrapType, normalizeOverlapEdge, neckWrapPlan, tableDegreesFromArcMm, tableArcMmFromDegrees, scaleTableAngle, encoderCountsFromPlateDegrees, solveSection, planTwoSurfaceWipe, planColdGlueSection };
 })(window);
-
