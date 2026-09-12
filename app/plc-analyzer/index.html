@@ -13,12 +13,12 @@
     <link rel="stylesheet" href="./plc-analyzer-v14.css?v=14" />
   </head>
   <body>
-    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER v9 — MSG MESSAGE TOPOLOGY • v10 INTRA-PROJECT CONSISTENCY REVIEW • v11 SEQUENCE TOPOLOGY • v12 INTERLOCK / PERMISSIVE PATHS • v13 RESET / RECOVERY TOPOLOGY • v14 AFI AUDIT / UI FIXES — NOT PRODUCTION</div>
+    <div class="staging-environment-banner" role="status">STAGING / TEST BUILD — PLC ANALYZER v15 — L5K / L5X SOURCE INTAKE • v12 INTERLOCK / PERMISSIVE • v13 RESET / RECOVERY • v14 AFI AUDIT — NOT PRODUCTION</div>
     <main class="app plc-analyzer-app">
       <section class="topbar plc-analyzer-topbar">
         <div>
           <h1>ServoForge <span class="product-module">PLC Analyzer</span></h1>
-          <p>Read-only static analysis of Allen-Bradley / Rockwell L5K exports.</p>
+          <p>Read-only static analysis of readable Allen-Bradley / Rockwell L5K and full-project L5X source exports.</p>
         </div>
         <nav class="module-navigation" aria-label="ServoForge modules">
           <a class="module-navigation-link" href="../../index.html">Labeler Tool</a>
@@ -33,7 +33,7 @@
         <div>
           <span class="sf-eyebrow">SOURCE ANALYSIS</span>
           <h2>What does the PLC export actually say?</h2>
-          <p>Drop an L5K export to inventory logic, fault writers, timers, counters, I/O, module status reads, motion references, dependency paths, task/program scheduling, produced/consumed communication tags, explicit MSG/MESSAGE paths, and source-review discrepancies. v10 reviews source-proven same-name program-scoped peers for timer/counter/threshold differences. v11 adds a static sequence graph for source-visible state/step logic. v12 adds source-visible interlock/permissive paths for OTE/OTL and supported motion actions. v13 adds source-visible OTU/RES reset and recovery topology, latch-to-unlatch relationships, reset gate evidence, and recovery-gap review cues. v14 inventories every source-visible AFI() instruction with its exact program, routine, rung, and source line.</p>
+          <p>Drop a readable L5K or full-project L5X export to inventory source-visible logic, fault writers, timers, counters, I/O, module status reads, motion references, dependency paths, task/program scheduling, produced/consumed communication tags, explicit MSG/MESSAGE paths, and source-review discrepancies. v10 reviews source-proven same-name program-scoped peers for timer/counter/threshold differences. v11 adds a static sequence graph for source-visible state/step logic. v12 adds source-visible interlock/permissive paths for OTE/OTL and supported motion actions. v13 adds source-visible OTU/RES reset and recovery topology, latch-to-unlatch relationships, reset gate evidence, and recovery-gap review cues. v14 inventories source-visible AFI() instructions. v15 adds full-project L5X intake by normalizing source-visible RLL and configuration metadata into the same bounded analyzer model used for L5K.</p>
         </div>
         <div class="plc-local-badge" aria-label="Local-only file handling">
           <strong>Local only</strong>
@@ -43,12 +43,12 @@
 
       <section class="panel plc-file-panel" aria-labelledby="plcFileHeading">
         <div class="sf-section-heading">
-          <div><span class="sf-eyebrow">1. SOURCE FILE</span><h2 id="plcFileHeading">Load an L5K export</h2></div>
+          <div><span class="sf-eyebrow">1. SOURCE FILE</span><h2 id="plcFileHeading">Load an L5K or full-project L5X export</h2></div>
           <span id="plcFileStatus" class="plc-status" aria-live="polite">No file selected.</span>
         </div>
-        <div id="plcDropZone" class="plc-drop-zone" tabindex="0" role="button" aria-label="Drop L5K file or choose a file">
-          <input id="plcFileInput" type="file" accept=".l5k,.L5K,text/plain" hidden />
-          <strong>Drop .L5K here</strong>
+        <div id="plcDropZone" class="plc-drop-zone" tabindex="0" role="button" aria-label="Drop L5K or L5X source file or choose a file">
+          <input id="plcFileInput" type="file" accept=".l5k,.L5K,.l5x,.L5X,text/plain,application/xml,text/xml" hidden />
+          <strong>Drop .L5K or .L5X here</strong>
           <span>or click to browse</span>
           <small id="plcSelectedFile">No file selected</small>
         </div>
@@ -56,7 +56,7 @@
           <button id="plcAnalyzeButton" type="button" disabled>Analyze PLC Project</button>
           <button id="plcClearButton" type="button" class="secondary-button" disabled>Clear</button>
         </div>
-        <p class="plc-source-boundary"><strong>Boundary:</strong> This is static source analysis, not PLC simulation. Task-aware reachability follows source-visible TASK → PROGRAM MAIN → JSR relationships. Produced/consumed mappings and MSG/MESSAGE configuration follow source-visible export attributes only. The v11 static sequence graph infers an edge only when an exact numeric EQU state gate and a numeric MOV/CLR/CPT assignment to the same scoped symbol occur on the same ladder rung. v12 preserves same-rung XIC/XIO/comparison evidence that appears before supported output/motion actions, but it is not a complete Boolean branch solver and does not prove the current permissive/interlock state or that every displayed condition is series-required. v13 maps source-visible OTU and RES call sites and preceding supported gate evidence, but it does not prove a reset rung executes, the originating cause has cleared, the machine is safe to restart, or that a reset should be performed. v14 reports source-visible AFI locations without inferring why the AFI exists, whether adjacent branches remain active, or whether an entire routine is disabled. Same-name program-scoped peers are inferred comparison families, not proof of identical machine function. Numeric PRE/threshold/state values are source evidence only and are not adjustment recommendations. The analyzer does not prove live execution, current state, transition order, branch selection, timer completion, task inhibit state, current permissive state, physical interlock state, peer availability, route health, packet delivery, message completion, current EN/DN/ER state, payload freshness, scan time, wiring condition, device health, reset safety, or that a source-review item is defective.</p>
+        <p class="plc-source-boundary"><strong>Boundary:</strong> This is static source analysis, not PLC simulation. v15 accepts readable L5K and full-project L5X exports that contain a Controller element. L5X RLL rung text and source-visible declarations/configuration are normalized into the existing analyzer model; non-RLL routine content and source-protected or missing rung text are reported as unsupported rather than interpreted. Component-only L5X is not treated as a complete controller project. ACD remains a binary project format and must be exported to readable L5K or L5X first. Task-aware reachability follows source-visible TASK → PROGRAM MAIN → JSR relationships. Produced/consumed mappings and MSG/MESSAGE configuration follow source-visible export attributes only. The v11 static sequence graph infers an edge only when an exact numeric EQU state gate and a numeric MOV/CLR/CPT assignment to the same scoped symbol occur on the same ladder rung. v12 preserves same-rung XIC/XIO/comparison evidence that appears before supported output/motion actions, but it is not a complete Boolean branch solver and does not prove the current permissive/interlock state or that every displayed condition is series-required. v13 maps source-visible OTU and RES call sites and preceding supported gate evidence, but it does not prove a reset rung executes, the originating cause has cleared, the machine is safe to restart, or that a reset should be performed. v14 reports source-visible AFI locations without inferring why the AFI exists, whether adjacent branches remain active, or whether an entire routine is disabled. Same-name program-scoped peers are inferred comparison families, not proof of identical machine function. Numeric PRE/threshold/state values are source evidence only and are not adjustment recommendations. The analyzer does not prove live execution, current state, transition order, branch selection, timer completion, task inhibit state, current permissive state, physical interlock state, peer availability, route health, packet delivery, message completion, current EN/DN/ER state, payload freshness, scan time, wiring condition, device health, reset safety, or that a source-review item is defective.</p>
       </section>
 
       <section id="plcResults" hidden>
@@ -162,8 +162,10 @@
     <script src="./l5k-analyzer-interlocks-v12.js?v=12"></script>
     <script src="./l5k-analyzer-recovery-v13.js?v=13"></script>
     <script src="./l5k-analyzer-afi-v14.js?v=14"></script>
-    <script src="./plc-analyzer.js?v=13"></script>
+    <script src="./l5x-analyzer-adapter-v15.js?v=15"></script>
+    <script src="./plc-analyzer.js?v=15"></script>
     <script src="./plc-analyzer-dependencies-v5.js?v=11"></script>
     <script src="./plc-analyzer-afi-ui-v14.js?v=14"></script>
+    <script src="./plc-source-intake-ui-v15.js?v=15"></script>
   </body>
 </html>
