@@ -45,4 +45,3 @@ jobs:
         run: npm run prestart
       - name: Check whitespace
         run: git diff --check HEAD^ HEAD
-

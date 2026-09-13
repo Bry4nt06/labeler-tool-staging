@@ -96,4 +96,3 @@ test("station-only and no-op changes do not clear the custom simulation", () => 
   assert.equal(state.simulation.useCustom, true);
   assert.equal(events.some(event => event[0] === "clear"), false);
 });
-
