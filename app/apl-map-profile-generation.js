@@ -152,6 +152,13 @@ function generatedAplMapDrivenProfile(machineMap) {
   });
 
   const orderedStationGroups = [...stationGroups.entries()].sort((a, b) => a[0] - b[0]);
+  const configuredAggregateCount = num(machineMap?.aggregateCount, num(machineMap?.stationCount, 0));
+  const enabledAggregateCount = Array.isArray(machineMap?.enabledAggregates)
+    ? machineMap.enabledAggregates.filter(Boolean).length
+    : configuredAggregateCount;
+  const activeNeckStations = orderedStationGroups.filter(([station]) =>
+    (sections[String(station)] || labelSectionForStation(station)) === "neck");
+  const oneNeckThreeAggregateLayout = enabledAggregateCount === 3 && activeNeckStations.length === 1;
   orderedStationGroups.forEach(([station, stationObjects], stationIndex) => {
     const section = sections[String(station)] || labelSectionForStation(station);
     const wipe = sectionWipePlan(section);
@@ -203,10 +210,20 @@ function generatedAplMapDrivenProfile(machineMap) {
         const nextWipeStart = neckToBody
           ? Math.min(...(nextEntry?.[1] || []).filter((item) => item.kind === "roller" || item.kind === "pad").map((item) => num(item.start, Infinity)))
           : NaN;
-        const transitionEnd = Number.isFinite(nextWipeStart) ? nextWipeStart - 1.5 : inside.end;
-        const secondRotation = neckToBody ? sectionBoundary.plateAngle - plate : -(longNeckPlan?.insideRotation ?? required);
+        const preserveNeckContactWindow = oneNeckThreeAggregateLayout && neckToBody;
+        const transitionEnd = preserveNeckContactWindow
+          ? inside.end
+          : (Number.isFinite(nextWipeStart) ? nextWipeStart - 1.5 : inside.end);
+        const secondRotation = preserveNeckContactWindow
+          ? -(longNeckPlan?.insideRotation ?? required)
+          : (neckToBody ? sectionBoundary.plateAngle - plate : -(longNeckPlan?.insideRotation ?? required));
         moves.push(applyTurn(inside.start, transitionEnd, secondRotation, `Wipe Turn 2 ${sectionLabel(section)} - Agg ${station}`, {
-          station, section, stage: "inner", endAction: neckToBody ? "Rest" : undefined, phaseTransition: neckToBody ? "neck-to-body" : undefined
+          station,
+          section,
+          stage: "inner",
+          endAction: neckToBody ? "Rest" : undefined,
+          phaseTransition: neckToBody ? "neck-to-body" : undefined,
+          physicalContactWindowComplete: preserveNeckContactWindow
         }));
       }
     } else {

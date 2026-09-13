@@ -1,0 +1,46 @@
+name: Validate one-neck three-aggregate wipe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - app/apl-map-profile-generation.js
+      - app/profile-generation.js
+      - tests/apl-one-neck-three-aggregate-contact-window.test.js
+      - .github/workflows/validate-apl-one-neck-three-aggregate-wipe.yml
+  push:
+    branches: [main]
+    paths:
+      - app/apl-map-profile-generation.js
+      - app/profile-generation.js
+      - tests/apl-one-neck-three-aggregate-contact-window.test.js
+      - .github/workflows/validate-apl-one-neck-three-aggregate-wipe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check changed JavaScript
+        run: |
+          node --check app/apl-map-profile-generation.js
+          node --check app/profile-generation.js
+          node --check tests/apl-one-neck-three-aggregate-contact-window.test.js
+      - name: Run contact-window regression
+        run: node --test tests/apl-one-neck-three-aggregate-contact-window.test.js
+      - name: Run adjacent APL handoff regression
+        run: npm run test:apl-handoff
+      - name: Run update lifecycle regression
+        run: npm run test:update
+      - name: Run startup smoke checks
+        run: npm run prestart
+      - name: Check whitespace
+        run: git diff --check HEAD^ HEAD
+
