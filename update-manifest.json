@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "dts3-map-program-isolation-v331-20260912-0934",
+  "buildId": "apl-neck-complete-wipe-v332-20260913",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "DTS3 map isolation v331. The complete center-tack inside wipe and modulo-equivalent next-aggregate alignment now apply only when the active map is explicitly TopModul (DTS3). DTS4, legacy TopModul, Autocol, MultiModul, and other maps retain their established servo programs."
+  "notes": "APL neck wipe completion: preserve the first turn and finish the full reverse wipe on all map families, including DTS3. Neck-to-body handoffs cannot shorten physical wiping."
 }
