@@ -13,8 +13,8 @@ assert.match(loaderSource, /app\/controllers\/map-builder-action-controller\.js/
   "Map Builder action ownership must load with the builder");
 assert.match(loaderSource, /app\/controllers\/map-builder-event-controller\.js/,
   "Map Builder event ownership must load with the builder");
-assert.match(loaderSource, /map-builder-station5-add-v316/,
-  "Map Builder loader must use the current v316 Station 5 cache boundary");
+assert.match(loaderSource, /aggregate-custom-reset-v334/,
+  "Map Builder loader must use the current v334 aggregate reset cache boundary");
 assert.match(actionSource, /dynamicWorkspaceActionResolutionV134:\s*true/,
   "early-bound Map Builder actions must resolve the workspace service dynamically");
 

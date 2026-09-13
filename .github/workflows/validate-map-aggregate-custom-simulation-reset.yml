@@ -1,0 +1,47 @@
+name: Validate aggregate custom-simulation reset
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - app/map-builder-slot-service.js
+      - app/wipe-down-builder.js
+      - tests/map-aggregate-custom-simulation-reset.test.js
+      - .github/workflows/validate-map-aggregate-custom-simulation-reset.yml
+  push:
+    branches: [main]
+    paths:
+      - app/map-builder-slot-service.js
+      - app/wipe-down-builder.js
+      - tests/map-aggregate-custom-simulation-reset.test.js
+      - .github/workflows/validate-map-aggregate-custom-simulation-reset.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check changed JavaScript
+        run: |
+          node --check app/map-builder-slot-service.js
+          node --check app/wipe-down-builder.js
+          node --check tests/map-aggregate-custom-simulation-reset.test.js
+      - name: Run aggregate-reset regression
+        run: node --test tests/map-aggregate-custom-simulation-reset.test.js
+      - name: Run existing Map Builder slot regression
+        run: node tests/map-builder-machine-slot-v135.test.js
+      - name: Run custom simulation regression
+        run: npm run test:simulation
+      - name: Run startup smoke checks
+        run: npm run prestart
+      - name: Check whitespace
+        run: git diff --check HEAD^ HEAD

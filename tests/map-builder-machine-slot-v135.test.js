@@ -33,7 +33,7 @@ assert.match(loaderSource, /app\/map-builder-slot-service\.js/,
   "slot service must load as part of Map Builder startup");
 assert.match(loaderSource, /app\/cold-glue-slot-topology-guard-v315\.js/,
   "Map Builder startup must load the explicit Cold Glue topology guard");
-assert.match(loaderSource, /map-builder-station5-add-v316/,
+assert.match(loaderSource, /aggregate-custom-reset-v334/,
   "Map Builder must cross a fresh cache boundary for the Station 5 object-add fix");
 assert.match(bootstrapSource, /app\/map-builder-slot-service\.js/,
   "workspace bootstrap must independently guarantee the canonical slot service before layout controllers install");

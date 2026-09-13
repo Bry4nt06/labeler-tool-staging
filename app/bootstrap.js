@@ -2,7 +2,7 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "one-neck-three-aggregate-wipe-v333-20260913";
+  const build = "aggregate-topology-custom-reset-v334-20260913";
   const buildUpdatedAt = "Sep 13, 2026";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
