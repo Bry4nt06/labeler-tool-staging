@@ -94,6 +94,8 @@ function finishedPlanFor(machineType) {
     selectedBottleSpec: () => ({}),
     bodyCircumference: () => 200,
     selectedLabelApplicationState: () => ({ neck: true, body: false, back: false }),
+    normalizeLabelApplicationMode: value => value,
+    num: (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback,
     finishAngle: (value) => Number(value),
     sectionWipePlan: () => null,
     generatedAplMapDrivenProfile: () => [],
@@ -110,6 +112,7 @@ function finishedPlanFor(machineType) {
   context.globalThis = context;
   vm.createContext(context);
   vm.runInContext(rpcSource, context, { filename: "topmodul-rpc-angle-driver.js" });
+  vm.runInContext(wipeSource, context, { filename: "wipe-analysis-service.js" });
   vm.runInContext(finishedSource, context, { filename: "apl-finished-centerline-completion-integration.js" });
   context.LabelerAplFinishedCenterlineCompletion.solveAplWipe("neck");
   return captured;

@@ -122,6 +122,8 @@ vm.createContext(context);
 vm.runInContext(rpcAngleSource, context, { filename: "topmodul-rpc-angle-driver.js" });
 vm.runInContext(geometrySource, context, { filename: "label-geometry-driver.js" });
 context.sectionWipePlan = (section) => context.LabelerGeometryDriver.solveSection({
+  section,
+  applicationMode: "apl",
   mode: section === "neck" ? "center-tack-two-stage" : "leading-edge",
   labelLengthMm: section === "neck" ? labelLengthMm : 70,
   circumferenceMm: section === "neck" ? neckCircumferenceMm : 182.212,
@@ -205,6 +207,6 @@ const dts4Rows = context.generatedAplMapDrivenProfile(dts4Map);
 const dts4Turn2 = dts4Rows.find((row) => /Wipe Turn 2 Neck/.test(row.action));
 assert.ok(dts4Turn2, "the established DTS4 profile must retain its inside neck turn");
 assert.ok(
-  Math.abs(dts4Turn2.plannedRotation + labelDeg / 2) < 0.001,
-  "non-DTS3 maps must retain the established half-label inside turn"
+  dts4Turn2.plannedRotation <= -labelDeg,
+  "full neck coverage is a physical requirement on DTS4 as well as DTS3"
 );

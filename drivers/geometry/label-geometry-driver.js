@@ -370,9 +370,9 @@
     if (mode === "center-tack-two-stage") {
       const halfCoverage = labelDeg / 2;
       const firstEdgeRequired = halfCoverage + overWipeDeg;
-      if (options?.completeCenterTackInsideWipe !== true) {
-        // Preserve the established two-half-turn program for every map that is
-        // not explicitly TopModul (DTS3).
+      const completeNeckWipe = options?.applicationMode === "apl" && options?.section === "neck";
+      if (!completeNeckWipe && options?.completeCenterTackInsideWipe !== true) {
+        // Keep legacy non-neck/cold-glue geometry unless explicitly opted in.
         return {
           mode,
           labelDeg,
@@ -389,7 +389,7 @@
           ]
         };
       }
-      // DTS3 completes the inside turn from the first edge, through center,
+      // APL neck wiping completes the inside turn from the first edge, through center,
       // to the opposite edge.
       const oppositeEdgeRequired = labelDeg + overWipeDeg * 2;
       return {
@@ -418,6 +418,18 @@
     const backSpinRequired = contactDeg + overWipeDeg;
     const forwardWipeRequired = labelDeg + overWipeDeg * 2;
     return { mode, labelDeg, contactDeg, overWipeDeg, wipeAllowance: overWipeDeg, contactSetDown: contactDeg, backSpinRequired, forwardWipeRequired, baseCoverageRequired: labelDeg + contactDeg, overWipeRequired: overWipeDeg * 3, stageRequired: forwardWipeRequired, totalRequired: backSpinRequired + forwardWipeRequired, stages: [{ key: "set-down", requiredRotation: backSpinRequired }, { key: "wipe", requiredRotation: forwardWipeRequired }] };
+  }
+  function completeNeckReverseWipe(firstRotation, proposedRotation, wipe) {
+    if (wipe?.mode !== "center-tack-two-stage") return proposedRotation;
+    const first = finite(firstRotation, 0);
+    if (!first) return proposedRotation;
+    // Preserve Turn 1. From its endpoint, reverse through the tack center and
+    // then cover the opposite half-label plus its over-wipe allowance.
+    const minimum = Math.abs(first) + Math.max(0, finite(wipe.labelDeg, 0)) / 2
+      + Math.max(0, finite(wipe.overWipeDeg, 0));
+    const direction = -Math.sign(first);
+    const proposed = finite(proposedRotation, 0);
+    return direction * Math.max(minimum, Math.sign(proposed) === direction ? Math.abs(proposed) : 0);
   }
   function planTwoSurfaceWipe(options) {
     const labelDeg = Math.max(0, finite(options?.labelDeg, 0));
@@ -513,5 +525,5 @@
       issues
     };
   }
-  global.LabelerGeometryDriver = { effectiveDiameterMm, circumferenceFromDiameterMm, bodyCircumferenceMm, degreesFromMm, mmFromDegrees, normalizeNeckWrapType, normalizeOverlapEdge, neckWrapPlan, tableDegreesFromArcMm, tableArcMmFromDegrees, scaleTableAngle, encoderCountsFromPlateDegrees, solveSection, planTwoSurfaceWipe, planColdGlueSection };
+  global.LabelerGeometryDriver = { effectiveDiameterMm, circumferenceFromDiameterMm, bodyCircumferenceMm, degreesFromMm, mmFromDegrees, normalizeNeckWrapType, normalizeOverlapEdge, neckWrapPlan, tableDegreesFromArcMm, tableArcMmFromDegrees, scaleTableAngle, encoderCountsFromPlateDegrees, solveSection, completeNeckReverseWipe, planTwoSurfaceWipe, planColdGlueSection };
 })(window);

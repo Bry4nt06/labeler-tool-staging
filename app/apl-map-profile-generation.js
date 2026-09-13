@@ -58,9 +58,10 @@ function generatedAplMapDrivenProfile(machineMap) {
   };
   const moveToReference = (tableAngle, targetPlate, action, extra = {}) => {
     const targetTable = unwrapAfter(tableAngle, lastTable);
-    // DTS3 may finish its full inside wipe on a modulo-equivalent coordinate.
-    // All other maps retain their established absolute reference behavior.
-    const referenceTarget = dts3Programming
+    // A completed neck wipe may end at an equivalent next-aggregate coordinate.
+    // Keep that handoff continuous without changing other non-DTS3 references.
+    const neckHandoff = rows.at(-1)?.section === "neck" && rows.at(-1)?.neckWipeComplete === true;
+    const referenceTarget = dts3Programming || neckHandoff
       ? targetPlate + 360 * Math.round((plate - targetPlate) / 360)
       : targetPlate;
     const rotation = referenceTarget - plate;
@@ -106,7 +107,7 @@ function generatedAplMapDrivenProfile(machineMap) {
     plate += firstRotation;
     add(7, split, plate, `Wipe Turn 2 ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: stageNames[1], plannedRotation: secondRotation, plannedRatio: secondRatio });
     plate += secondRotation;
-    add(3, end, plate, endAction || `Wipe Hold ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: "complete" });
+    add(3, end, plate, endAction || `Wipe Hold ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: "complete", neckWipeComplete: section === "neck" });
     [[firstRatio, firstRotation, split - start, 1], [secondRatio, secondRotation, end - split, 2]].forEach(([ratio, rotation, span, turn]) => {
       if (ratio < state.maxMoveRatio) return;
       issues.push({
@@ -179,17 +180,17 @@ function generatedAplMapDrivenProfile(machineMap) {
       plateAngle: targets[nextSection],
       action: `Hold for ${sectionLabel(nextSection)} Application - Agg ${nextStation}`
     } : null;
-    const completeWipeAndAlign = (requiredRotation) => {
+    const completeWipeAndAlign = (requiredRotation, startPlate = plate) => {
       const signedRequired = num(requiredRotation, 0);
       if (!Number.isFinite(sectionBoundary?.plateAngle) || Math.abs(signedRequired) <= 0.001) return signedRequired;
-      const minimumTarget = plate + signedRequired;
+      const minimumTarget = startPlate + signedRequired;
       let alignedTarget = num(sectionBoundary.plateAngle, minimumTarget);
       if (signedRequired < 0) {
         while (alignedTarget > minimumTarget + 0.001) alignedTarget -= 360;
       } else {
         while (alignedTarget < minimumTarget - 0.001) alignedTarget += 360;
       }
-      return alignedTarget - plate;
+      return alignedTarget - startPlate;
     };
 
     const moves = [];
@@ -224,11 +225,17 @@ function generatedAplMapDrivenProfile(machineMap) {
           : NaN;
         const transitionEnd = Number.isFinite(nextWipeStart) ? nextWipeStart - 1.5 : inside.end;
         const naturalSecondRotation = -(longNeckPlan?.insideRotation ?? secondRequired);
-        const secondRotation = neckToBody
-          ? (dts3Programming ? completeWipeAndAlign(naturalSecondRotation) : sectionBoundary.plateAngle - plate)
+        const requiredSecondRotation = section === "neck"
+          ? window.LabelerGeometryDriver.completeNeckReverseWipe(moves[0], naturalSecondRotation, wipe)
           : naturalSecondRotation;
+        const proposedSecondRotation = neckToBody
+          ? completeWipeAndAlign(requiredSecondRotation)
+          : naturalSecondRotation;
+        const secondRotation = section === "neck"
+          ? window.LabelerGeometryDriver.completeNeckReverseWipe(moves[0], proposedSecondRotation, wipe)
+          : proposedSecondRotation;
         moves.push(applyTurn(inside.start, transitionEnd, secondRotation, `Wipe Turn 2 ${sectionLabel(section)} - Agg ${station}`, {
-          station, section, stage: "inner", endAction: neckToBody ? "Rest" : undefined, phaseTransition: neckToBody ? "neck-to-body" : undefined
+          station, section, stage: "inner", neckWipeComplete: section === "neck", endAction: neckToBody ? "Rest" : undefined, phaseTransition: neckToBody ? "neck-to-body" : undefined
         }));
       }
     } else {
@@ -253,8 +260,9 @@ function generatedAplMapDrivenProfile(machineMap) {
           const longNeckPlan = adaptiveLongNeckPlan(outsidePad, insidePad, wipe, station);
           moves.push(applyTurn(outsidePad.start, outsidePad.end, longNeckPlan?.outsideRotation ?? firstRequired, `Wipe Turn 1 ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: "outer-pad" }));
           const naturalSecondRotation = -(longNeckPlan?.insideRotation ?? secondRequired);
-          const secondRotation = neckToNextSection ? completeWipeAndAlign(naturalSecondRotation) : naturalSecondRotation;
-          moves.push(applyTurn(insidePad.start, insidePad.end, secondRotation, `Wipe Turn 2 ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: "inner-pad" }));
+          const requiredSecondRotation = window.LabelerGeometryDriver.completeNeckReverseWipe(moves[0], naturalSecondRotation, wipe);
+          const secondRotation = neckToNextSection ? completeWipeAndAlign(requiredSecondRotation) : requiredSecondRotation;
+          moves.push(applyTurn(insidePad.start, insidePad.end, secondRotation, `Wipe Turn 2 ${sectionLabel(section)} - Agg ${station}`, { station, section, stage: "inner-pad", neckWipeComplete: true }));
         } else {
           const midpoint = padRange.start + (padRange.end - padRange.start) / 2;
           const longNeckPlan = adaptiveLongNeckPlan({ start: padRange.start, end: midpoint }, { start: midpoint, end: padRange.end }, wipe, station);
@@ -262,9 +270,10 @@ function generatedAplMapDrivenProfile(machineMap) {
           const naturalSecondRotation = longNeckPlan?.insideRotation ?? secondRequired;
           const splitFraction = longNeckPlan?.totalRequired > 0 ? longNeckPlan.outsideRotation / longNeckPlan.totalRequired : 0.5;
           const split = padRange.start + (padRange.end - padRange.start) * splitFraction;
-          const secondRotation = neckToNextSection && dts3Programming
-            ? completeWipeAndAlign(-naturalSecondRotation)
-            : -naturalSecondRotation;
+          const requiredSecondRotation = window.LabelerGeometryDriver.completeNeckReverseWipe(firstRotation, -naturalSecondRotation, wipe);
+          const secondRotation = neckToNextSection
+            ? completeWipeAndAlign(requiredSecondRotation, plate + firstRotation)
+            : requiredSecondRotation;
           moves.push(...applyContinuousPadTurns(padRange.start, split, padRange.end, firstRotation, secondRotation, section, station, ["outer-pad", "inner-pad"]));
         }
       } else {
