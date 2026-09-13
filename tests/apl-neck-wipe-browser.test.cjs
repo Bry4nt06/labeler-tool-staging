@@ -7,10 +7,11 @@ const puppeteer = require("puppeteer-core");
 (async () => {
   const executablePath = ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"].find(fs.existsSync);
   assert.ok(executablePath, "Chrome is required");
-  const browser = await puppeteer.launch({ executablePath, headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+  const browser = await puppeteer.launch({ executablePath, headless: true, protocolTimeout: 30000, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
   try {
     const page = await browser.newPage();
-    await page.goto("http://127.0.0.1:8000/index.html", { waitUntil: "networkidle0", timeout: 60000 });
+    page.setDefaultTimeout(30000);
+    await page.goto("http://127.0.0.1:8000/index.html", { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForFunction(() => window.LabelerAplFinishedCenterlineCompletion && window.LabelerAplRollerSectionHandoff && typeof applyGeneratedServoProfile === "function");
     const results = await page.evaluate(async () => {
       const [labels, bottles, template] = await Promise.all([
