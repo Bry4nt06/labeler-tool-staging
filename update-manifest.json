@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "one-neck-three-aggregate-wipe-v333-20260913",
+  "buildId": "aggregate-topology-custom-reset-v334-20260913",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Three-aggregate APL layouts with one neck station now finish the reverse neck wipe entirely inside the second contact surface, then perform body orientation as a separate move. Existing wipe rules for other layouts remain unchanged."
+  "notes": "Adding or removing an aggregate now discards the active custom simulation and regenerates the original map program for the new aggregate layout. Saved custom/RPC programs remain available, and station-only or no-op changes do not reset the simulation."
 }

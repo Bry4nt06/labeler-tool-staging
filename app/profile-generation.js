@@ -2,7 +2,7 @@
 
 (function loadServoForgeProfileGenerationModules() {
   const version = document.querySelector('meta[name="application-version"]')?.content || "0.9.10";
-  const moduleBuild = "one-neck-three-aggregate-wipe-v333-20260913";
+  const moduleBuild = "aggregate-topology-custom-reset-v334-20260913";
   const modules = Object.freeze([
     "drivers/profile/apl-contact-window-driver.js",
     "app/sensor-station-cycle-anchor-integration.js",

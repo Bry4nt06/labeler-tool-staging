@@ -61,6 +61,12 @@
     };
   }
 
+  function clearCustomSimulationForAggregateChange() {
+    const clear = global.LabelerMapBuilderDomainActions?.clearServoSimulationForSelectedMap
+      || global.clearServoSimulationForSelectedMap;
+    if (typeof clear === "function") clear();
+  }
+
   function setEnabled(kind, slotNumber, enabled) {
     const configuration = slotConfiguration(String(kind || ""));
     const slot = Math.round(Number(slotNumber));
@@ -94,6 +100,7 @@
       machineMap.localStructuralMapOverride = true;
 
       if (kind === "aggregate") {
+        clearCustomSimulationForAggregateChange();
         machineMap.aggregateAngles = global.normalizeAggregateAngles?.(
           machineMap.aggregateAngles,
           machineMap.applicationMode,
@@ -135,6 +142,7 @@
     version: 2,
     setEnabled,
     mirrorColdGlueTopology,
+    clearCustomSimulationForAggregateChange,
     machineSlotAuthorityV135: true,
     sparseSlotTransactionGuardV315: true
   });

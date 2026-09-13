@@ -75,7 +75,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "one-neck-three-aggregate-wipe-v333-20260913";
+  const build = window.ServoForgeBootstrapBuild || "aggregate-topology-custom-reset-v334-20260913";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
