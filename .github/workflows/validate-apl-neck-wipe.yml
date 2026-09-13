@@ -6,6 +6,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,4 +35,4 @@ jobs:
       - name: Exercise final generated program in Chrome
         run: |
           python3 -m http.server 8000 >/tmp/neck-wipe-http.log 2>&1 &
-          node tests/apl-neck-wipe-browser.test.cjs
+          timeout 90s node tests/apl-neck-wipe-browser.test.cjs
