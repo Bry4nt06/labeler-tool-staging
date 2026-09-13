@@ -220,6 +220,10 @@
       if (!Number.isFinite(mergedTarget)) continue;
       const mergedTravel = mergedTarget - wipeStartPlate;
       if (Math.sign(mergedTravel) !== wipeDirection) continue;
+      // Optimization may absorb a correction, but never remove physical wiping.
+      // Retain the separate correction (and its capacity fault) if merging would
+      // stop the neck turn before its already-planned endpoint.
+      if (Math.abs(mergedTravel) + EPS < Math.abs(originalWipeTravel)) continue;
 
       const wipeSpan = wipeStopTable - wipeStartTable;
       if (wipeSpan <= EPS) continue;
