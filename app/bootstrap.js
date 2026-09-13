@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "dts3-map-program-isolation-v331-20260912-0934";
-  const buildUpdatedAt = "Sep 12, 2026 9:34 AM ET";
+  const build = "apl-neck-complete-wipe-v332-20260913";
+  const buildUpdatedAt = "Sep 13, 2026";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;
