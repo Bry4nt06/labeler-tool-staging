@@ -18,24 +18,8 @@ function sectionWipePlan(section) {
   const contactMm = section === "neck" ? state.buildInputs.neckContactMm : section === "body" ? state.buildInputs.bodyContactMm : state.buildInputs.backContactMm;
   const overWipeDeg = section === "neck" ? state.buildInputs.neckOverWipeDeg : section === "body" ? state.buildInputs.bodyOverWipeDeg : state.buildInputs.backOverWipeDeg;
   const coldGlueLabel = normalizeLabelApplicationMode(label.applicationMode) === "cold-glue";
-  const reference = window.LabelerLabelCenterlinePolicy?.applicationReference?.(section, null, state)
-    || String(state.buildInputs[`${section}ApplicationReference`] || (section === "neck" ? state.buildInputs.neckApplication : "Leading Edge"));
-  const mode = coldGlueLabel || /center/i.test(reference) ? "center-tack-two-stage" : "leading-edge";
-  const activeMap = typeof activeMachineMap === "function" ? activeMachineMap() : null;
-  const completeCenterTackInsideWipe = Boolean(
-    activeMap
-      && window.LabelerTopModulRpcAngleDriver?.variant?.(activeMap.machineType) === "dts3"
-  );
-  return window.LabelerGeometryDriver?.solveSection({
-    mode,
-    section,
-    applicationMode: coldGlueLabel ? "cold-glue" : "apl",
-    labelLengthMm,
-    circumferenceMm,
-    contactMm,
-    overWipeDeg,
-    completeCenterTackInsideWipe
-  }) ?? null;
+  const mode = coldGlueLabel || (section === "neck" && state.buildInputs.neckApplication === "Center") ? "center-tack-two-stage" : "leading-edge";
+  return window.LabelerGeometryDriver?.solveSection({ mode, labelLengthMm, circumferenceMm, contactMm, overWipeDeg }) ?? null;
 }
 
 function sectionWipeRequirement(section) {

@@ -75,7 +75,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "apl-neck-complete-wipe-v332-20260913";
+  const build = window.ServoForgeBootstrapBuild || "topmodul-dts3-rpc-angle-v328-20260910-1832";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {

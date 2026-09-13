@@ -85,11 +85,62 @@
     return Number.isFinite(width) ? center - width / 2 : center;
   }
 
-  // The shared service owns label dimensions, application reference, and wipe geometry.
-  // Keep this exported entry point as an orchestration call, not a second solver.
   function solveAplWipe(section) {
-    if (String(stateRef()?.applicationMode || "").toLowerCase() !== "apl") return null;
-    return global.sectionWipePlan?.(section) || null;
+    const target = stateRef();
+    if (String(target?.applicationMode || "").toLowerCase() !== "apl") return null;
+    const label = global.selectedLabelSpec?.();
+    const bottle = global.selectedBottleSpec?.();
+    if (!label) return null;
+    const circumferenceMm = section === "neck"
+      ? finite(label.neckBottomCircumferenceMm, NaN)
+      : global.bodyCircumference?.(bottle);
+    const neckCurveMm = finite(label.neckBottomCurveMm, 0);
+    const neckLengthMm = finite(label.neckLengthMm, 0);
+    const labelLengthMm = section === "neck"
+      ? (neckCurveMm > 0 ? neckCurveMm : neckLengthMm)
+      : section === "body"
+        ? label.bodyLengthMm
+        : label.backLengthMm;
+    const contactMm = section === "neck"
+      ? target.buildInputs?.neckContactMm
+      : section === "body"
+        ? target.buildInputs?.bodyContactMm
+        : target.buildInputs?.backContactMm;
+    const overWipeDeg = section === "neck"
+      ? target.buildInputs?.neckOverWipeDeg
+      : section === "body"
+        ? target.buildInputs?.bodyOverWipeDeg
+        : target.buildInputs?.backOverWipeDeg;
+    const mode = applicationReference(section) === "center-tack"
+      ? "center-tack-two-stage"
+      : "leading-edge";
+    return global.LabelerGeometryDriver?.solveSection?.({
+      mode,
+      labelLengthMm,
+      circumferenceMm,
+      contactMm,
+      overWipeDeg
+    }) || null;
+  }
+
+  function wrapSectionWipePlan() {
+    const current = global.sectionWipePlan;
+    if (typeof current !== "function") return false;
+    if (current.labelDatumServoFlowV40) return true;
+    const base = current;
+    const wrapped = function sectionWipePlanWithPerSectionApplicationReference(section) {
+      const normalized = text(section).toLowerCase();
+      if (!["neck", "body", "back"].includes(normalized)
+        || String(stateRef()?.applicationMode || "").toLowerCase() !== "apl") {
+        return base.apply(this, arguments);
+      }
+      return solveAplWipe(normalized) || base.apply(this, arguments);
+    };
+    wrapped.labelDatumServoFlowV40 = true;
+    wrapped.finishedCenterlineCompletionV39 = true;
+    wrapped.previousSectionWipePlan = base;
+    global.sectionWipePlan = wrapped;
+    return true;
   }
 
   function stationSections(machineMap) {
@@ -192,12 +243,7 @@
     }
     const existingFirst = finite(rows[group.w1]?.plannedRotation, NaN);
     const existingSecond = finite(rows[group.w2]?.plannedRotation, NaN);
-    if (Number.isFinite(existingFirst) && Number.isFinite(existingSecond)) {
-      const second = section === "neck"
-        ? global.LabelerGeometryDriver.completeNeckReverseWipe(existingFirst, existingSecond, wipe)
-        : existingSecond;
-      return [existingFirst, second];
-    }
+    if (Number.isFinite(existingFirst) && Number.isFinite(existingSecond)) return [existingFirst, existingSecond];
     const firstRequired = Math.abs(finite(wipe?.stages?.[0]?.requiredRotation, finite(wipe?.stageRequired, 0)));
     const secondRequired = Math.abs(finite(wipe?.stages?.[1]?.requiredRotation, finite(wipe?.stageRequired, firstRequired)));
     return [firstRequired * orientation, -secondRequired * orientation];
@@ -415,7 +461,7 @@
   }
 
   function ensureInstalled() {
-    const wipeReady = typeof global.sectionWipePlan === "function";
+    const wipeReady = wrapSectionWipePlan();
     const mapReady = wrapMapGenerator();
     if (!wipeReady || !mapReady) global.setTimeout?.(ensureInstalled, RETRY_MS);
     return wipeReady && mapReady;
@@ -439,5 +485,6 @@
   ensureInstalled();
   global.setTimeout?.(() => {
     if (!global.generatedAplMapDrivenProfile?.labelDatumServoFlowV40) wrapMapGenerator();
+    if (!global.sectionWipePlan?.labelDatumServoFlowV40) wrapSectionWipePlan();
   }, 500);
 })(typeof window !== "undefined" ? window : globalThis);

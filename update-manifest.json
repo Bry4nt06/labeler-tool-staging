@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "apl-neck-complete-wipe-v332-20260913",
+  "buildId": "community-library-metadata-filters-v329-20260911-0010",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "APL neck wipe completion: preserve the first turn and finish the full reverse wipe on all map families, including DTS3. Neck-to-body handoffs cannot shorten physical wiping."
+  "notes": "Community Library metadata filters v329. Removes new Complete Setup uploads, requires Display Name, enforces 2-3 character Zone and Site codes, and adds interactive Zone, Site, and Spec filtering in Browse while preserving legacy package imports."
 }
