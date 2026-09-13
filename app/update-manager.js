@@ -2,7 +2,7 @@
 
 (function installServoForgeUpdateManager() {
   const RELEASE_VERSION = "0.9.10";
-  const BUILD_ID = "apl-neck-complete-wipe-v332-20260913";
+  const BUILD_ID = "topmodul-dts3-rpc-angle-v328-20260910-1832";
   const APP_SCOPE = new URL("./", window.location.href).href;
   const CACHE_PREFIX = "servoforge-labeler-";
 
