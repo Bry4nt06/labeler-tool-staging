@@ -75,7 +75,7 @@
 
 (async function startServoForge() {
   const progress = window.ServoForgeStartupProgress;
-  const build = window.ServoForgeBootstrapBuild || "dts3-map-program-isolation-v331-20260912-0934";
+  const build = window.ServoForgeBootstrapBuild || "apl-neck-complete-wipe-v332-20260913";
 
   function loadScript(path, version) {
     return new Promise((resolve, reject) => {
