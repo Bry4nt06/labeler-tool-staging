@@ -29,3 +29,9 @@ jobs:
           npm run prestart
       - name: Check whitespace
         run: git diff --check HEAD^ HEAD
+      - name: Install browser harness
+        run: npm install --no-save puppeteer-core@24.16.0
+      - name: Exercise final generated program in Chrome
+        run: |
+          python3 -m http.server 8000 >/tmp/neck-wipe-http.log 2>&1 &
+          node tests/apl-neck-wipe-browser.test.cjs
