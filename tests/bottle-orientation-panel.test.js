@@ -12,6 +12,10 @@ const animationRuntime=fs.readFileSync(path.join(root,"app/animation-runtime.js"
 const manifest=JSON.parse(fs.readFileSync(path.join(root,"update-manifest.json"),"utf8"));
 assert.match(source,/Bottle Orientation<\/strong>/);
 assert.match(source,/synchronized to labeler animation/);
+assert.match(source,/const SIMULATION_ORIENTATION_PANEL_ENABLED = false;/);
+assert.match(source,/if \(source === "simulation" && !SIMULATION_ORIENTATION_PANEL_ENABLED\)/);
+assert.match(source,/removePanel\("simulation"\);/);
+assert.match(source,/simulationBottleOrientationPanelRemovedV335: true/);
 assert.match(source,/data-orientation-top/);
 assert.doesNotMatch(source,/data-orientation-side/);
 assert.doesNotMatch(source,/function sideViewSvg/);
@@ -34,6 +38,8 @@ assert.doesNotMatch(markup,/data-orientation-scrubber/);
 assert.doesNotMatch(markup,/data-orientation-speed/);
 assert.doesNotMatch(markup,/data-orientation-action-button/);
 assert.match(recovery,/nativeBottleDatumCompatibilityV79: true/);
+assert.match(recovery,/const sources = \["program"\];/);
+assert.match(recovery,/simulationBottleOrientationRecoveryRemovedV335: true/);
 
 // Delivery checks are capability-based rather than pinned to an obsolete build ID.
 // New releases must continue loading and caching both Top View modules.
