@@ -2,8 +2,8 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "aggregate-topology-custom-reset-v334-20260913";
-  const buildUpdatedAt = "Sep 13, 2026";
+  const build = "servo-simulation-no-bottle-orientation-v335-20260914";
+  const buildUpdatedAt = "Sep 14, 2026";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
   window.ServoForgeBootstrapUpdatedAt = buildUpdatedAt;

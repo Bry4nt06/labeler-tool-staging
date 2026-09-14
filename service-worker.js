@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-aggregate-topology-custom-reset-v334-20260913";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-servo-simulation-no-bottle-orientation-v335-20260914";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 

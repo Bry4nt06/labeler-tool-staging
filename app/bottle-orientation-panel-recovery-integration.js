@@ -4,7 +4,7 @@
   if (global.ServoForgeBottleOrientationPanelRecovery?.installed) return;
 
   const VERSION = 5;
-  const sources = ["program", "simulation"];
+  const sources = ["program"];
   const observers = new Map();
   const TOP_CORRECTION_ATTR = "data-machine-direction-bottle-datum-v79";
   // The v78 top-view polar basis used 0 degrees at 6 o'clock. The shared
@@ -207,7 +207,8 @@
     machineBottleDatumAlignedV79: true,
     oppositeCarouselBottleSpinV79: true,
     rightFrontZeroDatumV79: true,
-    nativeBottleDatumCompatibilityV79: true
+    nativeBottleDatumCompatibilityV79: true,
+    simulationBottleOrientationRecoveryRemovedV335: true
   });
 })(typeof window !== "undefined" ? window : globalThis);
 

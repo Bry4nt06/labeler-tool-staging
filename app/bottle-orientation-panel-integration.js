@@ -6,6 +6,7 @@
   const VERSION = 11;
   const STYLE_ID = "servoforge-bottle-orientation-panel-style";
   const PANEL_ATTR = "data-bottle-orientation-panel";
+  const SIMULATION_ORIENTATION_PANEL_ENABLED = false;
   const BASE_DEG_PER_SECOND = 18;
   const SECTION_COLORS = Object.freeze({
     neck: "#ff8a32",
@@ -613,7 +614,15 @@ function topViewWipeDirection() {
     document.head.appendChild(style);
   }
 
+  function removePanel(source) {
+    document.getElementById(source)?.querySelector?.(`[${PANEL_ATTR}="${source}"]`)?.remove();
+  }
+
   function panelHost(source) {
+    if (source === "simulation" && !SIMULATION_ORIENTATION_PANEL_ENABLED) {
+      removePanel(source);
+      return null;
+    }
     return document.getElementById(source === "simulation" ? "simulation" : "program");
   }
 
@@ -671,7 +680,8 @@ function topViewWipeDirection() {
   }
 
   function renderAll() {
-    ["program", "simulation"].forEach((source) => {
+    removePanel("simulation");
+    ["program"].forEach((source) => {
       if (panelHost(source)) renderSource(source);
     });
   }
@@ -831,6 +841,7 @@ function topViewWipeDirection() {
     headOneWorldVisualAngle,
     topViewSvg,
     ensurePanel,
+    removePanel,
     renderSource,
     renderAll,
     startPlayback,
@@ -859,5 +870,6 @@ function topViewWipeDirection() {
     staleSideViewExportRemovedV86: true,
     physicalMachineDirectionWipeV127: true,
     topViewAngularWipeParityV127: true,
+    simulationBottleOrientationPanelRemovedV335: true,
   });
 })(typeof window !== "undefined" ? window : globalThis);

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "aggregate-topology-custom-reset-v334-20260913",
+  "buildId": "servo-simulation-no-bottle-orientation-v335-20260914",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Adding or removing an aggregate now discards the active custom simulation and regenerates the original map program for the new aggregate layout. Saved custom/RPC programs remain available, and station-only or no-op changes do not reset the simulation."
+  "notes": "Servo Simulation no longer mounts or recovers the Bottle Orientation panel. Servo Program keeps the orientation view, and underlying bottle-angle/wipe geometry is unchanged."
 }
