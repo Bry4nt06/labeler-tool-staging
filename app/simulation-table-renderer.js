@@ -59,7 +59,8 @@ function renderSimulation() {
   const maxSpeed = segments.reduce((best, segment) => Number.isFinite(segment.absSpeed) && segment.absSpeed > (best?.absSpeed ?? -Infinity) ? segment : best, null);
   els.simulation.innerHTML = `${servoProfileLibraryMarkup()}
     <div class="sim-tools">
-      <div class="sim-summary">${maxSpeed ? `Max custom speed: ${fmt(finishAngle(maxSpeed.absSpeed), 1)} deg bottle / 1 deg table at HMI ${maxSpeed.hmi}` : "Enter custom turns to calculate speed."}</div>
+      <div class="sim-summary">${maxSpeed ? `Max custom speed: ${fmt(finishAngle(maxSpeed.absSpeed), 1)} deg bottle / 1 deg table at HMI ${maxSpeed.hmi}` : "Blank independent program. Add a line or load the generated Servo Program."}</div>
+      <button class="small-button simulation-add-line" type="button">Add Line</button>
     </div>
     <table><thead><tr><th>HMI</th><th>PLC</th><th>${activeMachineUsesAutocolCommands() ? "Travel command" : "CMD"}</th><th class="num">Table angle</th><th class="num">Plate angle</th><th class="num">Table travel</th><th class="num">Plate travel</th><th class="num">Encoder travel</th><th>Status</th><th class="num">Turn speed</th><th>Action</th><th>Line</th></tr></thead><tbody></tbody></table>`;
 
@@ -75,11 +76,10 @@ function renderSimulation() {
     if (row.moveFault) tr.classList.add("move-fault-row");
     const speedClass = maxSpeed && row.hmi === maxSpeed.hmi && row.absSpeed > 0 ? "speed-max" : "";
     const boundaryLine = ["start-shape", "end-curve"].includes(row.autocolBoundary);
-    const lineControl = row.autocolBoundary === "end-curve"
+    const insertControl = row.autocolBoundary === "end-curve"
       ? `<button class="small-button simulation-add-line" type="button" title="Add one simulator line above End curve">Add</button>`
-      : row.autocolBoundary === "start-shape"
-        ? ""
-        : `<span class="simulation-line-actions"><button class="small-button simulation-insert-pair" type="button" data-simulation-line-index="${index}" title="Insert a Correction and Rest pair below this line" aria-label="Insert Correction and Rest below HMI ${row.hmi}">+</button><button class="danger small-button simulation-delete-line" type="button" title="Delete this simulator line">Delete</button></span>`;
+      : `<button class="small-button simulation-insert-pair" type="button" data-simulation-line-index="${index}" title="Insert a Correction and Rest pair below this line" aria-label="Insert Correction and Rest below HMI ${row.hmi}">+</button>`;
+    const lineControl = `<span class="simulation-line-actions">${insertControl}<button class="danger small-button simulation-delete-line" type="button" title="Delete this simulator line">Delete</button></span>`;
     tr.innerHTML = `<td>${row.hmi}</td><td>${row.plc}</td><td>${servoCommandControl(row, true, 'data-simulation-field="command"')}</td><td><input class="num compact-input" data-simulation-field="tableAngle" type="number" step="0.5" value="${fmt(row.tableAngle, 1)}"${boundaryLine ? " readonly" : ""}></td><td><input class="num compact-input" data-simulation-field="plateAngle" type="number" step="0.5" value="${Number.isFinite(row.plateAngle) ? fmt(row.plateAngle, 1) : ""}"></td><td class="num">${fmt(row.tableTravel, 1)}</td><td class="num">${fmt(row.plateTravel, 1)}</td><td class="num">${Number.isFinite(row.plateTravel) ? fmt(finishAngle(window.LabelerGeometryDriver?.encoderCountsFromPlateDegrees(row.plateTravel, state.encoderCountsPerRev, state.servoGearRatio)), 1) : ""}</td><td class="${status[0]}">${status[1]}</td><td class="num ${speedClass}">${Number.isFinite(row.absSpeed) ? fmt(finishAngle(row.absSpeed), 1) : ""}</td><td><input data-simulation-field="action" value="${row.action}"${boundaryLine ? " readonly" : ""}></td><td>${lineControl}</td>`;
     body.appendChild(tr);
   });

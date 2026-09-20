@@ -36,6 +36,7 @@ function simulationFixture() {
   const context = {
     console,
     state,
+    els: {},
     activeMachineUsesAutocolCommands: () => true,
     norm(value) {
       const normalized = Number(value) % 360;

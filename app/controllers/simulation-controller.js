@@ -37,29 +37,49 @@
   function loadGeneratedTurns() {
     actions.execute({
       mutate() {
+        if (!state.simulation || typeof state.simulation !== "object") state.simulation = {};
         state.simulation.turns = state.program.map((row) => Number.isFinite(row.plateAngle) ? row.plateAngle : null);
         state.simulation.rows = state.program.map((row) => ({ cmd: row.cmd, tableAngle: row.tableAngle, action: row.action }));
         state.simulation.deletedRows = [];
         state.simulation.lines = state.program.map((row) => ({ ...row }));
         state.simulation.useCustom = true;
+        state.simulation.source = "generated-copy";
+        state.simulation.generatedSignature = state.program.map((row) =>
+          [row.cmd, row.tableAngle, row.plateAngle, row.action || ""].join("|")
+        ).join(";");
+        state.simulation.loadedAt = new Date().toISOString();
       },
       persist: true,
       render: "all"
     });
   }
 
-  function clearCustomTurns() {
+  function resetToBlankProgram() {
+    if (!state.simulation || typeof state.simulation !== "object") state.simulation = {};
+    state.simulation.turns = [];
+    state.simulation.rows = [];
+    state.simulation.deletedRows = [];
+    state.simulation.lines = [];
+    state.simulation.useCustom = true;
+    state.simulation.source = "blank";
+    state.simulation.generatedSignature = "";
+    state.simulation.loadedAt = "";
+    state.simulation.draftName = "";
+    state.simulation.draftDescription = "";
+    state.activeServoProfileId = "";
+  }
+
+  function openBlankWorkspace() {
+    pause();
     actions.execute({
-      mutate() {
-        state.simulation.turns = state.program.map(() => null);
-        state.simulation.rows = [];
-        state.simulation.deletedRows = [];
-        state.simulation.lines = [];
-        state.simulation.useCustom = false;
-      },
+      mutate: resetToBlankProgram,
       persist: true,
       render: "all"
     });
+  }
+
+  function clearCustomTurns() {
+    openBlankWorkspace();
   }
 
   function insertPair(lineIndex) {
@@ -73,6 +93,7 @@
     pause,
     setSpeed,
     loadGeneratedTurns,
+    openBlankWorkspace,
     clearCustomTurns,
     insertPair
   });

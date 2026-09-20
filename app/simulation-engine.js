@@ -11,13 +11,31 @@ function heads() {
 }
 
 function ensureSimulationRows() {
+  if (!state.simulation || typeof state.simulation !== "object") state.simulation = {};
+  if (!Array.isArray(state.simulation.turns)) state.simulation.turns = [];
   if (!Array.isArray(state.simulation.rows)) state.simulation.rows = [];
   if (!Array.isArray(state.simulation.deletedRows)) state.simulation.deletedRows = [];
   if (!Array.isArray(state.simulation.lines)) state.simulation.lines = [];
-  while (state.simulation.rows.length < state.program.length) state.simulation.rows.push({});
-  if (!state.simulation.useCustom) {
-    state.simulation.lines = state.program.map((row) => ({ ...row }));
-  } else if (!state.simulation.lines.length && state.program.length) {
+
+  const hasLegacyDraft = state.simulation.useCustom === true
+    && !state.simulation.lines.length
+    && (
+      state.simulation.rows.some((row) => row && Object.keys(row).length)
+      || state.simulation.turns.some((value) => Number.isFinite(Number(value)))
+      || state.simulation.deletedRows.length > 0
+    );
+
+  if (!state.simulation.source) {
+    state.simulation.source = state.simulation.lines.length
+      ? "manual"
+      : hasLegacyDraft
+        ? "legacy-custom"
+        : "blank";
+  }
+
+  // One-time compatibility for saved custom drafts from builds that stored
+  // overrides separately. A blank simulator never hydrates from state.program.
+  if (hasLegacyDraft && state.simulation.source === "legacy-custom" && state.program.length) {
     const deletedRows = new Set(state.simulation.deletedRows);
     state.simulation.lines = state.program.map((row, index) => {
       const simRow = state.simulation.rows[index] ?? {};
@@ -26,16 +44,25 @@ function ensureSimulationRows() {
         ...row,
         cmd: Number.isFinite(simRow.cmd) ? simRow.cmd : row.cmd,
         tableAngle: Number.isFinite(simRow.tableAngle) ? simRow.tableAngle : row.tableAngle,
-        plateAngle: Number.isFinite(customTurn) ? customTurn : row.plateAngle,
+        plateAngle: Number.isFinite(Number(customTurn)) ? Number(customTurn) : row.plateAngle,
         action: simRow.action ?? row.action
       };
     }).filter((row, index) => !deletedRows.has(index));
+    state.simulation.source = "manual";
   }
+
+  // The simulator is always an independent editable workspace. Generated rows
+  // enter it only through LabelerSimulationController.loadGeneratedTurns().
+  state.simulation.useCustom = true;
+}
+
+function markSimulationManual() {
+  state.simulation.useCustom = true;
+  state.simulation.source = "manual";
 }
 
 function simulationProgram() {
   ensureSimulationRows();
-  if (typeof activeMachineUsesAutocolCommands === "function" && activeMachineUsesAutocolCommands()) normalizeAutocolSimulationLines();
   return state.simulation.lines.map((row, index) => ({
     ...row,
     simulationSourceIndex: index,
@@ -46,11 +73,9 @@ function simulationProgram() {
 
 function deleteSimulationLine(sourceIndex) {
   ensureSimulationRows();
-  if (!Number.isInteger(sourceIndex)) return;
-  if (["start-shape", "end-curve"].includes(state.simulation.lines[sourceIndex]?.autocolBoundary)) return;
-  state.simulation.useCustom = true;
+  if (!Number.isInteger(sourceIndex) || !state.simulation.lines[sourceIndex]) return;
+  markSimulationManual();
   state.simulation.lines.splice(sourceIndex, 1);
-  if (typeof activeMachineUsesAutocolCommands === "function" && activeMachineUsesAutocolCommands()) normalizeAutocolSimulationLines();
 }
 
 function simulationRestLine(reference = {}) {
@@ -114,13 +139,24 @@ function normalizeAutocolSimulationLines() {
 
 function addSimulationLineBeforeEnd() {
   ensureSimulationRows();
-  state.simulation.useCustom = true;
-  normalizeAutocolSimulationLines();
+  markSimulationManual();
   const endIndex = state.simulation.lines.findIndex((line) => line?.autocolBoundary === "end-curve");
-  if (endIndex < 0) return;
-  const reference = state.simulation.lines[endIndex - 1] || state.simulation.lines[0] || {};
-  state.simulation.lines.splice(endIndex, 0, {
-    ...simulationRestLine(reference),
+  const insertIndex = endIndex >= 0 ? endIndex : state.simulation.lines.length;
+  const reference = state.simulation.lines[insertIndex - 1] || {};
+  const next = state.simulation.lines[insertIndex] || null;
+  const referenceTable = Number(reference.tableAngle);
+  const nextTable = Number(next?.tableAngle);
+  const tableAngle = Number.isFinite(referenceTable) && Number.isFinite(nextTable) && nextTable > referenceTable
+    ? referenceTable + (nextTable - referenceTable) / 2
+    : Number.isFinite(referenceTable)
+      ? referenceTable + 1
+      : 0;
+  const plateAngle = Number.isFinite(Number(reference.plateAngle)) ? Number(reference.plateAngle) : 0;
+  state.simulation.lines.splice(insertIndex, 0, {
+    cmd: 3,
+    tableAngle,
+    plateAngle,
+    action: "Rest",
     simulatorInserted: true
   });
 }
@@ -130,7 +166,7 @@ function insertSimulationPairAfter(sourceIndex) {
   if (!Number.isInteger(sourceIndex)) return;
   const reference = state.simulation.lines[sourceIndex];
   if (!reference || reference.autocolBoundary === "end-curve") return;
-  state.simulation.useCustom = true;
+  markSimulationManual();
   const next = state.simulation.lines[sourceIndex + 1] || reference;
   const startTable = Number(reference.tableAngle);
   const nextTable = Number(next.tableAngle);
@@ -153,50 +189,30 @@ function insertSimulationPairAfter(sourceIndex) {
 function setSimulationCommand(sourceIndex, commandValue) {
   ensureSimulationRows();
   if (!Number.isInteger(sourceIndex) || !state.simulation.lines[sourceIndex]) return;
-  state.simulation.useCustom = true;
-  const selected = state.simulation.lines[sourceIndex];
+  markSimulationManual();
+  const line = state.simulation.lines[sourceIndex];
   const command = String(commandValue);
   if (command === "start-shape") {
-    state.simulation.lines.forEach((line) => {
-      if (line.autocolBoundary === "start-shape") delete line.autocolBoundary;
-    });
-    const line = { ...selected, cmd: 3, tableAngle: 0, plateAngle: Number.isFinite(selected.plateAngle) ? selected.plateAngle : 0, action: "Spec.-shap. plate corners", autocolBoundary: "start-shape" };
-    state.simulation.lines.splice(sourceIndex, 1);
-    state.simulation.lines.unshift(line);
-    normalizeAutocolSimulationLines();
+    line.cmd = 3;
+    line.tableAngle = 0;
+    line.action = "Spec.-shap. plate corners";
+    line.autocolBoundary = "start-shape";
     return;
   }
   if (command === "end-curve") {
-    state.simulation.lines.forEach((line) => {
-      if (line.autocolBoundary === "end-curve") delete line.autocolBoundary;
-    });
-    const line = { ...selected, cmd: 3, tableAngle: 359, action: "End of curve", autocolBoundary: "end-curve" };
-    state.simulation.lines.splice(sourceIndex, 1);
-    state.simulation.lines.push(line);
-    normalizeAutocolSimulationLines();
+    line.cmd = 3;
+    line.tableAngle = 359;
+    line.action = "End of curve";
+    line.autocolBoundary = "end-curve";
     return;
   }
-  const line = state.simulation.lines[sourceIndex];
   delete line.autocolBoundary;
   line.cmd = command === "7" ? 7 : 3;
   line.action = command === "7" ? "Correction" : "Rest";
-  if (command !== "7") {
-    normalizeAutocolSimulationLines();
-    return;
-  }
-  const next = state.simulation.lines[sourceIndex + 1];
-  if (next && Number(next.cmd) === 3 && next.autocolBoundary !== "end-curve") return;
-  state.simulation.lines.splice(sourceIndex + 1, 0, {
-    cmd: 3,
-    tableAngle: Number(line.tableAngle),
-    plateAngle: Number(line.plateAngle),
-    action: "Rest"
-  });
-  normalizeAutocolSimulationLines();
 }
 
 function currentProgram() {
-  return state.activeTab === "simulation" || state.simulation.useCustom ? simulationProgram() : state.program;
+  return state.activeTab === "simulation" ? simulationProgram() : state.program;
 }
 
 function programSegments(program = currentProgram()) {

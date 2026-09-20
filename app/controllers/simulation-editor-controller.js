@@ -16,6 +16,11 @@
     return actions.call("deepClone", value) || JSON.parse(JSON.stringify(value));
   }
 
+  function markManualProgram() {
+    state.simulation.useCustom = true;
+    state.simulation.source = "manual";
+  }
+
   function updateDraftMetadata(field, value) {
     if (!["name", "description"].includes(field)) return false;
     const key = field === "name" ? "draftName" : "draftDescription";
@@ -39,7 +44,7 @@
     const current = line(sourceIndex);
     if (!current) return;
     renderAll(() => {
-      state.simulation.useCustom = true;
+      markManualProgram();
       state.simulation.lines[sourceIndex] = {
         ...current,
         tableAngle: actions.number(value, current.tableAngle)
@@ -51,7 +56,7 @@
     const current = line(sourceIndex);
     if (!current) return;
     renderAll(() => {
-      state.simulation.useCustom = true;
+      markManualProgram();
       state.simulation.lines[sourceIndex] = {
         ...current,
         plateAngle: value === "" ? null : actions.number(value, current.plateAngle)
@@ -64,7 +69,7 @@
     if (!current) return;
     actions.execute({
       mutate() {
-        state.simulation.useCustom = true;
+        markManualProgram();
         state.simulation.lines[sourceIndex] = { ...current, action: String(value ?? "") };
       },
       persist: true,
@@ -156,6 +161,8 @@
         if (state.labelSpecs.some((entry) => entry.brand === profile.brand)) state.selectedBrand = profile.brand;
         if (state.bottleSpecs.some((entry) => entry.bottleType === profile.bottleType)) state.selectedBottle = profile.bottleType;
         state.simulation = clone(profile.simulation);
+        state.simulation.useCustom = true;
+        if (!state.simulation.source) state.simulation.source = "saved-profile";
         state.simulation.draftName = profile.name || "";
         state.simulation.draftDescription = profile.description || "";
         actions.call("ensureSimulationRows");
