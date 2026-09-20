@@ -79,6 +79,18 @@ test("blank simulation never hydrates itself from the generated program", () => 
   assert.equal(state.program.length, 3);
 });
 
+test("a blank simulator can add its first manual line", () => {
+  const { context, state } = simulationFixture();
+
+  context.addSimulationLineBeforeEnd();
+  assert.equal(state.simulation.lines.length, 1);
+  assert.deepEqual(
+    { cmd: state.simulation.lines[0].cmd, tableAngle: state.simulation.lines[0].tableAngle, plateAngle: state.simulation.lines[0].plateAngle },
+    { cmd: 3, tableAngle: 0, plateAngle: 0 }
+  );
+  assert.equal(state.simulation.source, "manual");
+});
+
 test("generated rows are copied only by the explicit load action", () => {
   const { context, state } = simulationFixture();
 

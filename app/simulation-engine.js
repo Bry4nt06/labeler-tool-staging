@@ -21,7 +21,7 @@ function ensureSimulationRows() {
     && !state.simulation.lines.length
     && (
       state.simulation.rows.some((row) => row && Object.keys(row).length)
-      || state.simulation.turns.some((value) => Number.isFinite(Number(value)))
+      || state.simulation.turns.some((value) => value !== null && value !== "" && Number.isFinite(Number(value)))
       || state.simulation.deletedRows.length > 0
     );
 
@@ -94,47 +94,6 @@ function simulationCorrectionLine(reference = {}) {
     plateAngle: Number.isFinite(Number(reference.plateAngle)) ? Number(reference.plateAngle) : 0,
     action: "Correction"
   };
-}
-
-function normalizeAutocolSimulationLines() {
-  if (!Array.isArray(state.simulation.lines)) state.simulation.lines = [];
-  const source = state.simulation.lines;
-  const existingStart = source.find((line) => line?.autocolBoundary === "start-shape");
-  const existingEnd = source.find((line) => line?.autocolBoundary === "end-curve");
-  const start = {
-    ...(existingStart || {}),
-    cmd: 3,
-    tableAngle: 0,
-    plateAngle: Number.isFinite(Number(existingStart?.plateAngle)) ? Number(existingStart.plateAngle) : 0,
-    action: "Spec.-shap. plate corners",
-    autocolBoundary: "start-shape"
-  };
-  const end = {
-    ...(existingEnd || {}),
-    cmd: 3,
-    tableAngle: 359,
-    plateAngle: Number.isFinite(Number(existingEnd?.plateAngle)) ? Number(existingEnd.plateAngle) : Number(start.plateAngle),
-    action: "End of curve",
-    autocolBoundary: "end-curve"
-  };
-  const editable = source.filter((line) => !["start-shape", "end-curve"].includes(line?.autocolBoundary)).map((line) => ({
-    ...line,
-    cmd: Number(line.cmd) === 7 ? 7 : 3,
-    action: Number(line.cmd) === 7 ? (line.action || "Correction") : (line.action || "Rest")
-  }));
-  const alternating = [];
-  editable.forEach((line) => {
-    const command = Number(line.cmd) === 7 ? 7 : 3;
-    // Deleting a line can bring two equal commands together. Collapse that
-    // duplicate instead of inserting the deleted opposite command again, so
-    // users can reduce a generated profile one move at a time.
-    if (Number(alternating.at(-1)?.cmd) === command && !line.simulatorInserted) return;
-    alternating.push(line);
-  });
-  if (!alternating.length || Number(alternating[0].cmd) !== 3) alternating.unshift(simulationRestLine(alternating[0] || start));
-  if (!alternating.some((line) => Number(line.cmd) === 7)) alternating.push(simulationCorrectionLine(alternating.at(-1)));
-  if (Number(alternating.at(-1)?.cmd) !== 3) alternating.push(simulationRestLine(alternating.at(-1)));
-  state.simulation.lines = [start, ...alternating, end];
 }
 
 function addSimulationLineBeforeEnd() {
