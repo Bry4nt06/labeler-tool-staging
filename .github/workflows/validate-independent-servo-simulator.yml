@@ -17,9 +17,10 @@ on:
       - package.json
       - tests/simulation-independent-workspace.test.js
       - tests/simulation-draft-persistence-and-print.test.js
+      - tests/servo-program-print-browser.test.cjs
       - .github/workflows/validate-independent-servo-simulator.yml
   push:
-    branches: [main]
+    branches: [main, codex/independent-servo-simulator]
     paths:
       - app/simulation-engine.js
       - app/simulation-table-renderer.js
@@ -33,6 +34,7 @@ on:
       - package.json
       - tests/simulation-independent-workspace.test.js
       - tests/simulation-draft-persistence-and-print.test.js
+      - tests/servo-program-print-browser.test.cjs
       - .github/workflows/validate-independent-servo-simulator.yml
 
 permissions:
@@ -64,6 +66,11 @@ jobs:
         run: npm run test:simulation
       - name: Run adjacent navigation and map reset regressions
         run: node --test tests/top-navigation-recovery.test.js tests/map-aggregate-custom-simulation-reset.test.js
+      - name: Run browser simulator and print flow
+        run: |
+          npm install --no-save puppeteer-core@24.16.0
+          python3 -m http.server 8000 >/tmp/servoforge-http.log 2>&1 &
+          node tests/servo-program-print-browser.test.cjs
       - name: Run update lifecycle regression
         run: npm run test:update
       - name: Run startup smoke checks
