@@ -214,6 +214,7 @@ const state = {
   simulation: {
     useCustom: true,
     source: "blank",
+    sessionOpened: false,
     turns: [],
     rows: [],
     deletedRows: [],

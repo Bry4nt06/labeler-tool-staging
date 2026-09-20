@@ -135,4 +135,4 @@ window.LabelerStartupRuntime = Object.freeze({
   initialize: initializeLabelerApp,
   showError: showStartupError,
   releaseVersion: runtimeReleaseVersion
-});\n
+});

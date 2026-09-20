@@ -48,6 +48,7 @@
           [row.cmd, row.tableAngle, row.plateAngle, row.action || ""].join("|")
         ).join(";");
         state.simulation.loadedAt = new Date().toISOString();
+        state.simulation.sessionOpened = true;
       },
       persist: true,
       render: "all"
@@ -62,6 +63,7 @@
     state.simulation.lines = [];
     state.simulation.useCustom = true;
     state.simulation.source = "blank";
+    state.simulation.sessionOpened = true;
     state.simulation.generatedSignature = "";
     state.simulation.loadedAt = "";
     state.simulation.draftName = "";

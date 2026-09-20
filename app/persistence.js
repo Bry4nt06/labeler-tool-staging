@@ -101,6 +101,7 @@ function loadSavedSettings() {
       state.simulation = {
         useCustom: true,
         source: String(saved.simulation.source || (saved.simulation.lines?.length ? "manual" : "blank")),
+        sessionOpened: false,
         turns: Array.isArray(saved.simulation.turns) ? saved.simulation.turns : [],
         rows: Array.isArray(saved.simulation.rows) ? saved.simulation.rows : [],
         deletedRows: Array.isArray(saved.simulation.deletedRows)

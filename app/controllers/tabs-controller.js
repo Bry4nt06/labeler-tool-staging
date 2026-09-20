@@ -56,7 +56,9 @@
   function activate(tabName, tabElement = null) {
     if (!tabName) return false;
     const source = stateRef();
-    const enteringSimulation = tabName === "simulation" && source?.activeTab !== "simulation";
+    const enteringSimulation = tabName === "simulation"
+      && source?.activeTab !== "simulation"
+      && source?.simulation?.sessionOpened !== true;
     const opened = setDirectTabState(tabName, tabElement);
     if (!opened) return false;
     if (enteringSimulation) global.LabelerSimulationController?.openBlankWorkspace?.();

@@ -21,6 +21,7 @@ function simulationFixture() {
     simulation: {
       useCustom: false,
       source: "blank",
+      sessionOpened: false,
       turns: [],
       rows: [],
       deletedRows: [],
@@ -96,6 +97,7 @@ test("generated rows are copied only by the explicit load action", () => {
 
   context.LabelerSimulationController.loadGeneratedTurns();
   assert.equal(state.simulation.source, "generated-copy");
+  assert.equal(state.simulation.sessionOpened, true);
   assert.equal(state.simulation.lines.length, state.program.length);
   assert.notEqual(state.simulation.lines[0], state.program[0]);
 
@@ -149,7 +151,7 @@ test("clearing creates a truly blank independent program", () => {
   assert.deepEqual(Array.from(context.simulationProgram()), []);
 });
 
-test("entering the simulator starts blank once per tab opening", () => {
+test("the first simulator opening starts blank while tab re-entry preserves the draft", () => {
   const openCalls = [];
   const panels = new Map();
   const makePanel = id => {
@@ -172,10 +174,13 @@ test("entering the simulator starts blank once per tab opening", () => {
 
   const context = {
     console,
-    state: { activeTab: "program", wipeBuilderOpen: false },
+    state: { activeTab: "program", wipeBuilderOpen: false, simulation: { sessionOpened: false } },
     Element: class Element {},
     LabelerSimulationController: {
-      openBlankWorkspace() { openCalls.push("blank"); }
+      openBlankWorkspace() {
+        openCalls.push("blank");
+        context.state.simulation.sessionOpened = true;
+      }
     },
     saveCurrentSettings() {},
     document: {
@@ -197,7 +202,7 @@ test("entering the simulator starts blank once per tab opening", () => {
   assert.deepEqual(openCalls, ["blank"], "Clicking the already-open simulator must not erase the current draft.");
   context.LabelerTabsController.activate("program");
   context.LabelerTabsController.activate("simulation");
-  assert.deepEqual(openCalls, ["blank", "blank"]);
+  assert.deepEqual(openCalls, ["blank"], "Returning to Simulation during the same app session must preserve the draft.");
 });
 
 const rendererSource = read("app/simulation-table-renderer.js");
