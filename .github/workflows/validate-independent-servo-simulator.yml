@@ -14,6 +14,8 @@ on:
       - app/persistence.js
       - app/startup-runtime.js
       - index.html
+      - service-worker.js
+      - update-manifest.json
       - package.json
       - tests/simulation-independent-workspace.test.js
       - tests/simulation-draft-persistence-and-print.test.js
@@ -31,6 +33,8 @@ on:
       - app/persistence.js
       - app/startup-runtime.js
       - index.html
+      - service-worker.js
+      - update-manifest.json
       - package.json
       - tests/simulation-independent-workspace.test.js
       - tests/simulation-draft-persistence-and-print.test.js
