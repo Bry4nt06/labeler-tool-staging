@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "servo-simulation-no-bottle-orientation-v335-20260914",
+  "buildId": "servo-simulation-independent-workspace-v336-20260920",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Servo Simulation no longer mounts or recovers the Bottle Orientation panel. Servo Program keeps the orientation view, and underlying bottle-angle/wipe geometry is unchanged."
+  "notes": "Servo Simulation now opens as a blank independent workspace, loads generated rows only on request, keeps row deletions durable, and drives the top-down bottle motion from simulator table and plate inputs."
 }

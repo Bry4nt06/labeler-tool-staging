@@ -201,8 +201,9 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
         deletedRows: [],
         lines: state.program.map((row) => ({ ...row }))
       };
-      state.simulation.lines[0].action = "Custom simulation print marker";
       window.LabelerTabsController.activate("simulation", document.querySelector('.tab[data-tab="simulation"]'));
+      window.LabelerSimulationController.loadGeneratedTurns();
+      state.simulation.lines[0].action = "Custom simulation print marker";
       renderSimulation();
 
       const name = document.querySelector("#servoProfileName");

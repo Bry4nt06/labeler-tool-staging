@@ -212,8 +212,10 @@ const state = {
   program: deepClone(defaultProgram),
   servoOverrides: {},
   simulation: {
-    useCustom: false,
-    turns: Array.from({ length: defaultProgram.length }, () => null),
+    useCustom: true,
+    source: "blank",
+    sessionOpened: false,
+    turns: [],
     rows: [],
     deletedRows: [],
     lines: []

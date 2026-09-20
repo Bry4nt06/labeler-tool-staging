@@ -99,13 +99,19 @@ function loadSavedSettings() {
     if (Array.isArray(saved.assemblies)) state.assemblies = saved.assemblies.map((item, index) => normalizeAssembly({ ...defaultAssemblies[index], ...item }));
     if (saved.simulation) {
       state.simulation = {
-        useCustom: Boolean(saved.simulation.useCustom),
-        turns: Array.isArray(saved.simulation.turns) ? saved.simulation.turns : state.simulation.turns,
+        useCustom: true,
+        source: String(saved.simulation.source || (saved.simulation.lines?.length ? "manual" : "blank")),
+        sessionOpened: false,
+        turns: Array.isArray(saved.simulation.turns) ? saved.simulation.turns : [],
         rows: Array.isArray(saved.simulation.rows) ? saved.simulation.rows : [],
         deletedRows: Array.isArray(saved.simulation.deletedRows)
           ? saved.simulation.deletedRows.map(Number).filter(Number.isInteger)
           : [],
-        lines: Array.isArray(saved.simulation.lines) ? saved.simulation.lines : []
+        lines: Array.isArray(saved.simulation.lines) ? saved.simulation.lines : [],
+        draftName: String(saved.simulation.draftName || ""),
+        draftDescription: String(saved.simulation.draftDescription || ""),
+        generatedSignature: String(saved.simulation.generatedSignature || ""),
+        loadedAt: String(saved.simulation.loadedAt || "")
       };
     }
   } catch {

@@ -20,15 +20,6 @@ function showStartupError(error) {
   if (validationList) validationList.innerHTML = `<div class="notice bad">Startup failed: ${message}</div>`;
 }
 
-function loadSimulatorRuntime() {
-  const version = runtimeReleaseVersion();
-  if (document.querySelector("script[data-servoforge-simulator]")) return;
-  const script = document.createElement("script");
-  script.src = `app/simulator-milestone.js?v=${encodeURIComponent(version)}`;
-  script.dataset.servoforgeSimulator = version;
-  document.head.appendChild(script);
-}
-
 async function initializeLabelerApp() {
   const progress = window.ServoForgeStartupProgress;
   try {
@@ -132,7 +123,6 @@ async function initializeLabelerApp() {
 
     progress?.set(98, "Registering update service…");
     await registerToolUpdateService();
-    loadSimulatorRuntime();
     return true;
   } catch (error) {
     showStartupError(error);
@@ -144,6 +134,5 @@ async function initializeLabelerApp() {
 window.LabelerStartupRuntime = Object.freeze({
   initialize: initializeLabelerApp,
   showError: showStartupError,
-  loadSimulator: loadSimulatorRuntime,
   releaseVersion: runtimeReleaseVersion
 });

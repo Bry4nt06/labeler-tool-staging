@@ -1,0 +1,83 @@
+name: Validate independent Servo Simulation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+    paths:
+      - app/simulation-engine.js
+      - app/simulation-table-renderer.js
+      - app/controllers/simulation-controller.js
+      - app/controllers/simulation-editor-controller.js
+      - app/controllers/tabs-controller.js
+      - app/defaults.js
+      - app/persistence.js
+      - app/startup-runtime.js
+      - index.html
+      - service-worker.js
+      - update-manifest.json
+      - package.json
+      - tests/simulation-independent-workspace.test.js
+      - tests/simulation-draft-persistence-and-print.test.js
+      - tests/servo-program-print-browser.test.cjs
+      - .github/workflows/validate-independent-servo-simulator.yml
+  push:
+    branches: [main, codex/independent-servo-simulator]
+    paths:
+      - app/simulation-engine.js
+      - app/simulation-table-renderer.js
+      - app/controllers/simulation-controller.js
+      - app/controllers/simulation-editor-controller.js
+      - app/controllers/tabs-controller.js
+      - app/defaults.js
+      - app/persistence.js
+      - app/startup-runtime.js
+      - index.html
+      - service-worker.js
+      - update-manifest.json
+      - package.json
+      - tests/simulation-independent-workspace.test.js
+      - tests/simulation-draft-persistence-and-print.test.js
+      - tests/servo-program-print-browser.test.cjs
+      - .github/workflows/validate-independent-servo-simulator.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check changed JavaScript
+        run: |
+          node --check app/simulation-engine.js
+          node --check app/simulation-table-renderer.js
+          node --check app/controllers/simulation-controller.js
+          node --check app/controllers/simulation-editor-controller.js
+          node --check app/controllers/tabs-controller.js
+          node --check app/defaults.js
+          node --check app/persistence.js
+          node --check app/startup-runtime.js
+          node --check tests/simulation-independent-workspace.test.js
+      - name: Run simulation regressions
+        run: npm run test:simulation
+      - name: Run adjacent navigation and map reset regressions
+        run: node --test tests/top-navigation-recovery.test.js tests/map-aggregate-custom-simulation-reset.test.js
+      - name: Run browser simulator and print flow
+        run: |
+          npm install --no-save puppeteer-core@24.16.0
+          python3 -m http.server 8000 >/tmp/servoforge-http.log 2>&1 &
+          node tests/servo-program-print-browser.test.cjs
+      - name: Run update lifecycle regression
+        run: npm run test:update
+      - name: Run startup smoke checks
+        run: npm run prestart
+      - name: Check whitespace
+        run: git diff --check HEAD^ HEAD
