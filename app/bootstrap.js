@@ -54,7 +54,6 @@
     "app/spec-number-retirement-integration.js",
     "app/servo-program-eight-row-grouping-integration.js",
     "app/bottle-orientation-panel-integration.js",
-    "app/bottle-orientation-panel-recovery-integration.js",
     "app/controllers/simulation-editor-controller.js",
     "app/controllers/station-table-controller.js",
     "app/controllers/station-table-event-controller.js",
