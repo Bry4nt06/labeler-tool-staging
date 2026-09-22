@@ -1,3 +1,0 @@
-Trigger Railway staging deploy for troubleshooting Labeler electrical-protection v341 after PR #72 merge.
-Merged commit: dbc782d72d15b08ebbc5d7c39230dedc39fd0644
-Production unchanged.
