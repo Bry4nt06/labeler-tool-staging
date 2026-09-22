@@ -1,3 +1,0 @@
-ServoForge troubleshooting staging deploy trigger: v346 alarm stack / first-fault analyzer.
-Merged PR #78 at dd16cac1225ef5bc4cc0d8f641ca55c4f75dcab9.
-Production remains untouched.
