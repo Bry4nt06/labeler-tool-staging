@@ -1,7 +1,0 @@
-ServoForge staging troubleshooting refresh
-Troubleshooting phase: v336
-ServoForge version: 0.9.10
-Source: staging main after PR #67 / a5db7f64ebf0fa795f312e96b4f4eb2993331aaf
-Scope: TopModul Labeler E-stop and guard safety circuit tracing using K407039 authority.
-Purpose: force Railway staging source refresh after validated Labeler safety merge.
-Production unchanged.
