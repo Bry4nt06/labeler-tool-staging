@@ -290,12 +290,6 @@
       (item.kind === "roller" || item.kind === "pad")
       && isStationEnabled(machineMap, Number(item.station))
     );
-    const rollerStations = [...new Set(mechanical
-      .filter((item) => item.kind === "roller")
-      .map((item) => Number(item.station)))].sort((a, b) => a - b);
-    const padStations = [...new Set(mechanical
-      .filter((item) => item.kind === "pad")
-      .map((item) => Number(item.station)))].sort((a, b) => a - b);
     const installedStations = [...new Set(mechanical
       .map((item) => Number(item.station)))].sort((a, b) => a - b);
 
@@ -307,11 +301,13 @@
       return result;
     }
 
-    rollerStations.forEach((station) => {
-      if (!result[String(station)]) result[String(station)] = "neck";
-    });
-    padStations.forEach((station, index) => {
-      if (!result[String(station)]) result[String(station)] = index < 2 ? "body" : "back";
+    // On conventional paired APL layouts, the label section belongs to the
+    // physical station pair, not to the installed wipe hardware. Station 1/2
+    // therefore remain Neck stations when rollers are replaced by inside and
+    // outside wipe-down pads.
+    installedStations.forEach((station) => {
+      if (result[String(station)]) return;
+      result[String(station)] = station <= 2 ? "neck" : station <= 4 ? "body" : "back";
     });
     return result;
   }

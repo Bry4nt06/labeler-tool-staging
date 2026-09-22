@@ -61,6 +61,25 @@ const sections = driver.inferAplStationSections({
 });
 assert.deepEqual(sections, { "1": "neck", "3": "body", "5": "back" });
 
+const pairedPadSections = driver.inferAplStationSections({
+  applicationMode: "apl",
+  enabledStations: [true, true, true, true, true, true],
+  stationCount: 6,
+  stationSections: {},
+  objects: [1, 2, 3, 4, 5, 6].flatMap((station) => [
+    { kind: "pad", side: "outer", station },
+    { kind: "pad", side: "inner", station }
+  ])
+});
+assert.deepEqual(pairedPadSections, {
+  "1": "neck",
+  "2": "neck",
+  "3": "body",
+  "4": "body",
+  "5": "back",
+  "6": "back"
+}, "APL wipe-down pads inherit the physical station pair's label section");
+
 const map = driver.createMachineMap({
   id: "map-1",
   name: "45H TopModul 3 label",
