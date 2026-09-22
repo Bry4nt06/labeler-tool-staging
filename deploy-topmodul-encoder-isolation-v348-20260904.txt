@@ -1,3 +1,0 @@
-ServoForge staging deployment trigger for troubleshooting v348 — source-backed TopModul encoder isolation workflow.
-Merged PR #80 at 9a89c078cf0c7acca85d95fbdd716dc687fb6143.
-Production intentionally untouched.
