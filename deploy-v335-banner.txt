@@ -1,5 +1,0 @@
-ServoForge staging troubleshooting banner refresh
-Troubleshooting phase: v335
-ServoForge version: 0.9.10
-Purpose: force Railway staging source refresh after PR #66 so the troubleshooting banner visibly identifies the active phase.
-Production unchanged.
