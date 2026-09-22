@@ -1,3 +1,0 @@
-ServoForge staging deployment trigger for troubleshooting v350 — read-only TopModul Cart encoder verification matrix.
-Merged PR #82 at af64cd2ec11d90d755a5fb88d595bfe487a92871.
-Production intentionally untouched.
