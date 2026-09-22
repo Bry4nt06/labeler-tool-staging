@@ -4,17 +4,6 @@
   const RETRY_MS = 50;
   let installed = false;
 
-  function explicitSections(machineMap) {
-    const source = machineMap?.stationSections && typeof machineMap.stationSections === "object"
-      ? machineMap.stationSections
-      : {};
-    const result = {};
-    Object.entries(source).forEach(([station, section]) => {
-      if (["neck", "body", "back", "none"].includes(section)) result[String(station)] = section;
-    });
-    return result;
-  }
-
   function installedApplicationStations(machineMap) {
     return [...new Set((machineMap?.objects || [])
       .filter((item) => item?.kind === "roller" || item?.kind === "pad")
@@ -24,35 +13,10 @@
       .sort((a, b) => a - b);
   }
 
-  function stationOwnedSection(station) {
-    const number = Number(station);
-    if (number <= 2) return "neck";
-    if (number <= 4) return "body";
-    return "back";
-  }
-
   function inferSections(machineMap) {
-    if (!machineMap || machineMap.applicationMode !== "apl") return {};
-    const result = explicitSections(machineMap);
-    const installed = installedApplicationStations(machineMap);
-
-    // Three-application machines may use sparse physical stations such as
-    // 1/3/5. Preserve their physical order as Neck, Body, Back.
-    if (installed.length === 3) {
-      ["neck", "body", "back"].forEach((section, index) => {
-        const station = installed[index];
-        if (station && !result[String(station)]) result[String(station)] = section;
-      });
-      return result;
-    }
-
-    // On conventional paired APL layouts, the label section belongs to the
-    // physical station pair—not to the installed wipe hardware. A wipe-down
-    // pad in Station 1 or 2 therefore remains a Neck center-tack station.
-    installed.forEach((station) => {
-      if (!result[String(station)]) result[String(station)] = stationOwnedSection(station);
-    });
-    return result;
+    return typeof window.inferAplStationSections === "function"
+      ? window.inferAplStationSections(machineMap)
+      : {};
   }
 
   function singleSidedNeckPadStations(machineMap) {
@@ -77,10 +41,6 @@
     installed = true;
     const baseGenerate = window.generatedAplMapDrivenProfile;
 
-    window.inferAplStationSections = inferSections;
-    // Keep identifier-based calls in older classic scripts synchronized with
-    // the replaced global function binding.
-    try { inferAplStationSections = inferSections; } catch { /* global property is sufficient */ }
 
     window.generatedAplMapDrivenProfile = function generatedAplMapDrivenProfileWithNeckPads(machineMap) {
       const singleSided = singleSidedNeckPadStations(machineMap);
