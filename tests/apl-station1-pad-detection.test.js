@@ -116,7 +116,7 @@ assert.equal(
 );
 assert.doesNotMatch(
   read("app/apl-neck-pad-center-tack-integration.js"),
-  /window\\.inferAplStationSections\\s*=(?!=)/,
+  /window\.inferAplStationSections\s*=(?!=)/,
   "the neck-pad integration must not replace the map-schema driver's station-section owner"
 );
 
