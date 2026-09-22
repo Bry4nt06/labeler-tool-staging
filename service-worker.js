@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-servo-simulation-independent-workspace-v336-20260920";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-cleanup-stale-assets-20260922";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -101,7 +101,6 @@ const CORE_ASSETS = Object.freeze([
   "./app/compact-build-parameters-integration.js",
   "./app/map-workspace-compact-support-integration.js",
   "./app/bottle-orientation-panel-integration.js",
-  "./app/bottle-orientation-panel-recovery-integration.js",
   "./app/export-service.js",
   "./app/global-actions.js",
   "./app/animation-runtime.js",
@@ -138,13 +137,11 @@ const CORE_ASSETS = Object.freeze([
   "./app/motion-profile-regeneration-integration.js",
   "./app/apl-continuous-motion-integration.js",
   "./app/multimodul-correction-pair-integration.js",
-  "./app/cold-glue-label-geometry-fallback-integration.js",
   "./app/cold-glue-gripper-channel-integration.js",
   "./app/cold-glue-parameter-editor-integration.js",
   "./app/cold-glue-gripper-sequence-integration-v2.js",
   "./app/map-builder-station-authority-integration.js",
   "./app/map-object-builder-selection-integration.js",
-  "./app/map-object-double-click-open-fix-integration.js",
   "./app/label-spec-section-selection-integration.js",
   "./app/company-default-programs-integration.js",
   "./app/default-bottle-spec-retirement-integration.js",
@@ -156,7 +153,6 @@ const CORE_ASSETS = Object.freeze([
   "./app/orientation-constraint-program-planner.js",
   "./app/orientation-constraint-planner-integration.js",
   "./app/sensor-post-inspection-release-integration.js",
-  "./app/sensor-orientation-default-map-fix-integration.js",
   "./app/sensor-station-label-inheritance-integration.js",
   "./app/inactive-label-sensor-suppression-integration.js",
   "./app/company-default-map-catalog-integration.js",
@@ -167,7 +163,6 @@ const CORE_ASSETS = Object.freeze([
   "./app/motion-profile-workbench-integration.js",
   "./app/optimizer-map-contact-integration.js",
   "./app/optimizer-brush-channel-expansion-integration.js",
-  "./app/optimizer-post-wipe-coverage-fix-integration.js",
   "./app/apl-final-aggregate-terminal-integration.js",
   "./app/update-manager.js",
   "./app/feedback-center-integration.js",
