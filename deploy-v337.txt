@@ -1,7 +1,0 @@
-ServoForge staging troubleshooting refresh
-Troubleshooting phase: v337
-ServoForge version: 0.9.10
-Source: staging main after PR #68 / 1e3efc33f70cc91a490f0078c934d343bdef9dd7
-Scope: TopModul Labeler main-drive, discharge-conveyor, shared overload summary, and air-pressure source-discipline tracing.
-Purpose: force Railway staging source refresh after validated v337 merge.
-Production unchanged.
