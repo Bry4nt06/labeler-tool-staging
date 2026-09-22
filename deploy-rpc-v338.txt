@@ -1,3 +1,0 @@
-Trigger Railway staging deploy for troubleshooting RPC method bridge v338 after PR #69 merge.
-Merged commit: bbbf2c58eacccc3731e04026a9a249af06a2e736
-Production unchanged.
