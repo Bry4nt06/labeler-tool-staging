@@ -1,5 +1,0 @@
-ServoForge staging troubleshooting Station foundation v335
-source: staging main after PR #65
-merge: c84987d57f91ee4f42e14d587b973653cc0fd8d2
-purpose: explicit Railway refresh for Station E-stop/controller diagnostics and source-gap coverage
-production: untouched
