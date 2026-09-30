@@ -124,6 +124,7 @@
   function isDeleteObjectControl(control) {
     if (!control || control.id === "deleteMachineMap") return false;
     if (control.matches?.(deleteObjectSelectors)) return true;
+    if (!builderContains(control)) return false;
     const label = normalizedControlText(control);
     if (label === "delete object" || label === "delete selected object") return true;
     return label === "delete" && Boolean(objectIdFromControl(control, false));
@@ -132,6 +133,7 @@
   function isDeleteStationControl(control) {
     if (!control) return false;
     if (control.matches?.(deleteStationSelectors)) return true;
+    if (!builderContains(control)) return false;
     const label = normalizedControlText(control);
     if (label === "delete station" || label === "remove station") return true;
     return label === "delete" && Number.isFinite(stationFromControl(control, false));
