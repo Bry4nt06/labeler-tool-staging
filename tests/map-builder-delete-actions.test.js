@@ -10,10 +10,11 @@ const source = fs.readFileSync(path.join(root, "app", "controllers", "map-builde
 assert.doesNotThrow(() => new vm.Script(source, { filename: "map-builder-row-controller.js" }));
 
 class FakeElement {
-  constructor({ textContent = "", dataset = {}, id = "" } = {}) {
+  constructor({ textContent = "", dataset = {}, id = "", insideBuilder = true } = {}) {
     this.textContent = textContent;
     this.dataset = dataset;
     this.id = id;
+    this.insideBuilder = insideBuilder;
   }
 
   closest() { return null; }
@@ -49,7 +50,7 @@ const sandbox = {
   Element: FakeElement,
   console,
   state,
-  els: { wipeBuilderList: { contains: () => true } },
+  els: { wipeBuilderList: { contains: (node) => node?.insideBuilder !== false } },
   builderExpandedStation: null,
   editableMachineMap: () => machineMap,
   normalizeBuilderObject: (item) => ({ ...item }),
@@ -79,6 +80,11 @@ const controller = sandbox.LabelerMapBuilderRowController;
 assert.ok(controller?.installed);
 assert.strictEqual(controller.isDeleteObjectControl(new FakeElement({ textContent: "Delete Object" })), true);
 assert.strictEqual(controller.isDeleteStationControl(new FakeElement({ textContent: "Delete Station" })), true);
+assert.strictEqual(
+  controller.isDeleteStationControl(new FakeElement({ textContent: "Delete", dataset: { station: "1" }, insideBuilder: false })),
+  false,
+  "A simulator Delete button outside the map builder must not be intercepted as a station delete."
+);
 
 assert.strictEqual(controller.deleteObject("pad-1", false), true);
 assert.strictEqual(machineMap.objects.some((item) => item.id === "pad-1"), false);
