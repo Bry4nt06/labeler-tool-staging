@@ -41,6 +41,8 @@ Object.entries(depthInputs).forEach(([id, key]) => {
 
 assert.match(renderer, /state\.depths\.sensor/, "sensor must use its own depth");
 assert.match(renderer, /state\.depths\.coding/, "coding must use its own depth");
+assert.match(defaults, /coding:\s*19/, "coder depth default must be 19");
+assert.match(renderer, /data-coding-centerline/, "coder map visual must include a visible center line");
 assert.match(renderer, /state\.depths\.gripper/, "gripper must use its own depth");
 assert.match(renderer, /state\.depths\.brushOuter/, "outside brush must use its own depth");
 assert.match(renderer, /state\.depths\.brushInner/, "inside brush must use its own depth");
@@ -59,7 +61,7 @@ const legacy = context.LabelerMapRuntimeService.completeObjectDepths({
   wipeOuter: 16,
   wipeInner: -16
 });
-assert.equal(legacy.coding, 3, "legacy coder placement must inherit outside roller depth");
+assert.equal(legacy.coding, 19, "maps without an explicit coder depth must use the 19-unit coder default");
 assert.equal(legacy.sensor, 10, "legacy sensor placement must inherit outside roller depth + 7");
 assert.equal(legacy.gripper, 8, "legacy gripper placement must inherit spender depth");
 assert.equal(legacy.brushOuter, 16, "legacy outside brush must inherit outside wipe depth");
