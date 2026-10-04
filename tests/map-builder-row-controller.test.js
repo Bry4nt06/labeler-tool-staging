@@ -10,6 +10,8 @@ const source = fs.readFileSync(path.join(root, "app", "controllers", "map-builde
 const rendererSource = fs.readFileSync(path.join(root, "app", "map-builder-renderer.js"), "utf8");
 const bootstrapSource = fs.readFileSync(path.join(root, "app", "bootstrap.js"), "utf8");
 const startupSource = fs.readFileSync(path.join(root, "app", "startup-runtime.js"), "utf8");
+const builderControlsSource = fs.readFileSync(path.join(root, "app", "map-builder-controls.js"), "utf8");
+const replaySource = fs.readFileSync(path.join(root, "app", "servo-replay-integration.js"), "utf8");
 
 class FakeElement {
   constructor({ dataset = {}, value = "", checked = false, row = null } = {}) {
@@ -138,6 +140,9 @@ assert.ok(rendererSource.includes("data-station-section"));
 assert.ok(rendererSource.includes("builder-duplicate"));
 assert.ok(rendererSource.includes("builder-remove"));
 assert.ok(rendererSource.includes("builder-duplicate-station"));
+assert.ok(rendererSource.includes('isCoding ? "Coder center"'), "Configured coder editor must expose its center angle.");
+assert.ok(builderControlsSource.includes('"Coder center (deg) "'), "New coder placement must be labeled as a center angle.");
+assert.ok(replaySource.includes("pauseAtReferences: false"), "Servo Simulation must open with Pause at references unchecked.");
 assert.ok(!rendererSource.includes("recordBuilderHistory("), "History ownership belongs to the delegated row controller.");
 assert.ok(!rendererSource.includes("refreshAfterBuilderEdit("), "Row mutation ownership belongs to the delegated row controller.");
 
