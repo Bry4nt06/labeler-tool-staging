@@ -34,6 +34,28 @@ assert.equal(sensor.end, 294);
 assert.equal(sensor.angle, 291);
 assert.equal(sensor.requiredVisibilityPercent, 100);
 
+const coder = driver.normalizeBuilderObject({
+  id: "coder-1",
+  kind: "coding",
+  application: "apl",
+  angle: 315
+}, "apl", 6);
+assert.equal(coder.angle, 315);
+assert.equal(coder.start, 312.5);
+assert.equal(coder.end, 317.5);
+assert.equal(coder.station, null);
+
+const legacyCoder = driver.normalizeBuilderObject({
+  id: "coder-legacy",
+  kind: "coding",
+  application: "apl",
+  start: 304,
+  end: 309
+}, "apl", 6);
+assert.equal(legacyCoder.angle, 306.5);
+assert.equal(legacyCoder.start, 304);
+assert.equal(legacyCoder.end, 309);
+
 const channel = driver.normalizeBuilderObject({
   id: "channel-1",
   kind: "brush-channel",
