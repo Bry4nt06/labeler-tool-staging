@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-servo-simulation-independent-workspace-v336-20260920";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-community-custom-servo-programs-v337-20261004";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
@@ -174,6 +174,7 @@ const CORE_ASSETS = Object.freeze([
   "./app/community-library-integration.js",
   "./app/community-library-v104-metadata-integration.js",
   "./app/community-library-v103-integration.js",
+  "./app/custom-programs-community-integration.js",
   "./app/community-library-runtime-stability-integration.js",
   "./app/community-library-cart-integration.js",
   "./app/troubleshooting/diagnostic-library.js",
