@@ -123,7 +123,7 @@ const defaultLabelSpecs = [
 
 const defaultObjectDepths = Object.freeze({
   spender: 12,
-  coding: 14,
+  coding: 19,
   sensor: 21,
   gripper: 12,
   opRoller: 14,
