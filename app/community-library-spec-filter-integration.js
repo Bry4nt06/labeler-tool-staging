@@ -3,7 +3,7 @@
 (function installCommunitySpecFilter(global) {
   if (global.ServoForgeCommunitySpecFilter?.installed) return;
 
-  const BUILD = "community-spec-filter-v112-20260813-2008";
+  const BUILD = "community-spec-filter-v113-20261004-freeze-guard";
   const specById = new Map();
   let observer = null;
 
@@ -64,7 +64,7 @@
       const title = card.querySelector(".sf-community-card-head h3, h3");
       if (!title) return;
       if (!title.dataset.specBaseTitle) title.dataset.specBaseTitle = String(title.textContent || "").trim();
-      title.textContent = `${title.dataset.specBaseTitle}${suffix(specById.get(id))}`;
+      const nextTitle = `${title.dataset.specBaseTitle}${suffix(specById.get(id))}`;\n      if (title.textContent !== nextTitle) title.textContent = nextTitle;
     });
   }
 
