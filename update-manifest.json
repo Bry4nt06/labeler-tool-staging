@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "simulation-context-selectors-v342-20261004",
+  "buildId": "simulation-context-selectors-v343-20261004",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Servo Simulation now includes in-place Brand and Bottle dropdowns so custom servo program context can be changed without leaving the Simulation tab. Coder center-anchor, depth-19 default, and Custom Programs updates remain included."
+  "notes": "Servo Simulation includes in-place Brand and Bottle dropdowns; coder objects default to depth 19 and use a center anchor/centerline; Community Custom Programs include cart/import support; and the Community Spec filter browser syntax/freeze guard is corrected."
 }
