@@ -11,6 +11,8 @@ const community = fs.readFileSync(path.join(root, "app/community-library-integra
 const bootstrap = fs.readFileSync(path.join(root, "app/bootstrap.js"), "utf8");
 const sw = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 const customPrograms = fs.readFileSync(path.join(root, "app/custom-programs-community-integration.js"), "utf8");
+const simulationRenderer = fs.readFileSync(path.join(root, "app/simulation-table-renderer.js"), "utf8");
+const setupEvents = fs.readFileSync(path.join(root, "app/controllers/setup-event-controller-integration.js"), "utf8");
 const cart = fs.readFileSync(path.join(root, "app/community-library-cart-integration.js"), "utf8");
 
 const calls = [];
@@ -93,6 +95,14 @@ for (const required of [
 
 assert.ok(community.includes('item?.type !== "rpc_program"'),
   "Normal Community Browse must exclude custom servo programs.");
+assert.ok(simulationRenderer.includes('id="simulationBrandSelect"'),
+  "Servo Simulation must expose an in-place Brand selector.");
+assert.ok(simulationRenderer.includes('id="simulationBottleSelect"'),
+  "Servo Simulation must expose an in-place Bottle selector.");
+assert.ok(setupEvents.includes('target.id === "simulationBrandSelect"'));
+assert.ok(setupEvents.includes('target.id === "simulationBottleSelect"'));
+assert.ok(editorSource.includes("selectContextBrand"));
+assert.ok(editorSource.includes("selectContextBottle"));
 assert.ok(bootstrap.includes('"app/custom-programs-community-integration.js"'));
 assert.ok(sw.includes("./app/custom-programs-community-integration.js"));
 assert.ok(cart.includes('button?.closest?.("[data-community-package-id]")'),
