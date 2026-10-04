@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "community-custom-servo-programs-v340-20261004",
+  "buildId": "coder-center-anchor-v341-20261004",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Custom Programs now supports Add to Cart, reliable Preview / Import actions regardless of Community dialog load order, portable servo imports, and the Community freeze guard."
+  "notes": "Coder objects now default to depth 19, use their visual/placement center as the table-angle anchor with a center line on the map, and Servo Simulation opens with Pause at references unchecked."
 }
