@@ -97,6 +97,44 @@
     };
   }
 
+  function selectContextBrand(value) {
+    const requested = String(value || "");
+    const selected = (Array.isArray(state.labelSpecs) ? state.labelSpecs : [])
+      .find((entry) => String(entry?.brand || "") === requested);
+    if (!selected) return false;
+
+    actions.execute({
+      mutate() {
+        state.selectedBrand = selected.brand;
+        actions.call("ensureBottleReferenceForLabel", selected);
+        actions.call("applyLabelLengthStationRules");
+        global.LabelerLabelCenterlinePolicy?.ensureApplicationReferenceDefaults?.(state);
+      },
+      persist: true,
+      render: "all"
+    });
+    return true;
+  }
+
+  function selectContextBottle(value) {
+    const requested = String(value || "").trim().toLowerCase();
+    const selected = (Array.isArray(state.bottleSpecs) ? state.bottleSpecs : [])
+      .find((entry) => String(entry?.bottleType || "").trim().toLowerCase() === requested);
+    if (!selected) return false;
+
+    actions.execute({
+      mutate() {
+        state.selectedBottle = selected.bottleType;
+        const label = (Array.isArray(state.labelSpecs) ? state.labelSpecs : [])
+          .find((entry) => String(entry?.brand || "") === String(state.selectedBrand || ""));
+        if (label) label.bottleType = selected.bottleType;
+      },
+      persist: true,
+      render: "all"
+    });
+    return true;
+  }
+
   function saveProfile(nameValue, descriptionValue) {
     const name = String(nameValue || "").trim();
     if (!name) {
@@ -195,6 +233,8 @@
     updateAction,
     deleteLine,
     addLineBeforeEnd,
+    selectContextBrand,
+    selectContextBottle,
     saveProfile,
     selectProfile,
     loadProfile,
