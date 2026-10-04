@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "servo-simulation-independent-workspace-v336-20260920",
+  "buildId": "community-custom-servo-programs-v337-20261004",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Servo Simulation now opens as a blank independent workspace, loads generated rows only on request, keeps row deletions durable, and drives the top-down bottle motion from simulator table and plate inputs."
+  "notes": "Community Library now separates shared servo programs into a Custom Programs tab, supports local .sfservo import/export for person-to-person sharing, and keeps standard maps, bottles, and brands out of the custom-program list."
 }
