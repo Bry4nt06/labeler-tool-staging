@@ -28,7 +28,7 @@
   function replayState() {
     state.servoReplay ||= {
       selectedIndex: 0,
-      pauseAtReferences: true,
+      pauseAtReferences: false,
       lastFrameIndex: -1,
       lastPausedHmi: null,
       signature: ""
