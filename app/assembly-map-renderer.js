@@ -333,6 +333,34 @@ function labelSensorMapColor(item) {
   return labelSensorMapStatus(item).color;
 }
 
+function drawCoderMapObject(add, parent, item) {
+  const centerRadius = state.radius + state.depths.coding;
+  const centerAngle = num(item.angle, (num(item.start) + num(item.end)) / 2);
+  add("path", {
+    d: arcPath(num(item.start), num(item.end), centerRadius - 7, centerRadius + 7),
+    fill: "#8f7a48",
+    "fill-opacity": 0.62,
+    stroke: "none",
+    "data-coding-object": item.id,
+    "data-coding-center-angle": centerAngle
+  }, parent);
+  const inner = angleToXY(centerAngle, centerRadius - 10);
+  const outer = angleToXY(centerAngle, centerRadius + 10);
+  add("line", {
+    x1: inner.x,
+    y1: inner.y,
+    x2: outer.x,
+    y2: outer.y,
+    stroke: "#ffd27a",
+    "stroke-width": 1.6,
+    "stroke-linecap": "round",
+    "pointer-events": "none",
+    "data-coding-centerline": item.id,
+    "data-coding-center-angle": centerAngle
+  }, parent);
+  drawMapObjectLabel(add, parent, item, centerAngle, centerRadius, 18);
+}
+
 function drawConfiguredAssemblies(add, layer) {
   ensurePersistentApplicationMaps();
   ensureWipeComponentVisualDefs(add, layer);
@@ -349,9 +377,7 @@ function drawConfiguredAssemblies(add, layer) {
         return;
       }
       if (item.kind === "coding") {
-        const centerRadius = state.radius + state.depths.coding;
-        add("path", { d: arcPath(num(item.start), num(item.end), centerRadius - 7, centerRadius + 7), fill: "#8f7a48", "fill-opacity": 0.62, stroke: "none", "data-coding-object": item.id }, objectLayer);
-        drawMapObjectLabel(add, objectLayer, item, (num(item.start) + num(item.end)) / 2, centerRadius, 18);
+        drawCoderMapObject(add, objectLayer, item);
         return;
       }
       if (item.kind === "gripper") {
@@ -414,9 +440,7 @@ function drawConfiguredAssemblies(add, layer) {
       return;
     }
     if (item.kind === "coding") {
-      const centerRadius = state.radius + state.depths.coding;
-      add("path", { d: arcPath(num(item.start), num(item.end), centerRadius - 7, centerRadius + 7), fill: "#8f7a48", "fill-opacity": 0.62, stroke: "none", "data-coding-object": item.id }, objectLayer);
-      drawMapObjectLabel(add, objectLayer, item, (num(item.start) + num(item.end)) / 2, centerRadius, 18);
+      drawCoderMapObject(add, objectLayer, item);
       return;
     }
     if (item.kind === "roller") {
