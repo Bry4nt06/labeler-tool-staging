@@ -266,6 +266,7 @@
       event.target.value = "";
       importLocalFile(file);
     });
+    document.getElementById("communityCustomProgramRefresh")?.addEventListener("click", loadCommunityPrograms);
     document.getElementById("communityCustomProgramSearch")?.addEventListener("input", () => {
       clearTimeout(searchTimer);
       searchTimer = setTimeout(loadCommunityPrograms, 250);
