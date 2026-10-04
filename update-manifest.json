@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "coder-center-anchor-v341-20261004",
+  "buildId": "simulation-context-selectors-v342-20261004",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Coder objects now default to depth 19, use their visual/placement center as the table-angle anchor with a center line on the map, and Servo Simulation opens with Pause at references unchecked."
+  "notes": "Servo Simulation now includes in-place Brand and Bottle dropdowns so custom servo program context can be changed without leaving the Simulation tab. Coder center-anchor, depth-19 default, and Custom Programs updates remain included."
 }
