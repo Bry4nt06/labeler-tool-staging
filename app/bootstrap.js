@@ -2,7 +2,7 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "community-custom-servo-programs-v337-20261004";
+  const build = "community-custom-servo-programs-v338-20261004";
   const buildUpdatedAt = "Oct 4, 2026";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
