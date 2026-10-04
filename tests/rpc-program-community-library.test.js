@@ -10,6 +10,7 @@ const editorSource = fs.readFileSync(path.join(root, "app/controllers/simulation
 const community = fs.readFileSync(path.join(root, "app/community-library-integration.js"), "utf8");
 const bootstrap = fs.readFileSync(path.join(root, "app/bootstrap.js"), "utf8");
 const sw = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
+const customPrograms = fs.readFileSync(path.join(root, "app/custom-programs-community-integration.js"), "utf8");
 
 const calls = [];
 const state = {
@@ -78,10 +79,19 @@ assert.deepEqual(calls, ["save", "flush", "servoforge:rpc-program-saved"],
   "RPC program must persist locally before opening the optional Community upload.");
 
 for (const required of [
-  'value="rpc_program"', "RPC Programs", "servoforge:rpc-program-saved",
+  'value="rpc_program"', "Custom Programs", "servoforge:rpc-program-saved",
   "payload.rpcProgram", "source.servoProfileLibrary"
 ]) assert.ok(community.includes(required), `RPC Community behavior missing: ${required}`);
 
+for (const required of [
+  "ServoForge Servo Program", ".sfservo", "communityCustomLocalProgram",
+  "loadCommunityPrograms", 'type: "rpc_program"', "importPackage"
+]) assert.ok(customPrograms.includes(required), `Custom Program behavior missing: ${required}`);
+
+assert.ok(community.includes('item?.type !== "rpc_program"'),
+  "Normal Community Browse must exclude custom servo programs.");
+assert.ok(bootstrap.includes('"app/custom-programs-community-integration.js"'));
+assert.ok(sw.includes("./app/custom-programs-community-integration.js"));
 assert.ok(bootstrap.includes('"app/controllers/simulation-editor-controller.js"'));
 assert.ok(!bootstrap.includes('"app/rpc-program-library-integration.js"'),
   "Bootstrap must not load a competing RPC profile controller.");
