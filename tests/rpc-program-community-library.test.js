@@ -11,6 +11,7 @@ const community = fs.readFileSync(path.join(root, "app/community-library-integra
 const bootstrap = fs.readFileSync(path.join(root, "app/bootstrap.js"), "utf8");
 const sw = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 const customPrograms = fs.readFileSync(path.join(root, "app/custom-programs-community-integration.js"), "utf8");
+const cart = fs.readFileSync(path.join(root, "app/community-library-cart-integration.js"), "utf8");
 
 const calls = [];
 const state = {
@@ -85,13 +86,18 @@ for (const required of [
 
 for (const required of [
   "ServoForge Servo Program", ".sfservo", "communityCustomLocalProgram",
-  "loadCommunityPrograms", 'type: "rpc_program"', "importPackage"
+  "loadCommunityPrograms", 'type: "rpc_program"', "importPackage",
+  "data-custom-program-preview", "data-custom-program-import", "data-community-cart-add",
+  "bindDelegatedEvents"
 ]) assert.ok(customPrograms.includes(required), `Custom Program behavior missing: ${required}`);
 
 assert.ok(community.includes('item?.type !== "rpc_program"'),
   "Normal Community Browse must exclude custom servo programs.");
 assert.ok(bootstrap.includes('"app/custom-programs-community-integration.js"'));
 assert.ok(sw.includes("./app/custom-programs-community-integration.js"));
+assert.ok(cart.includes('button?.closest?.("[data-community-package-id]")'),
+  "Community cart must accept Custom Program cards.");
+assert.ok(cart.includes("community-batch-cart-v3-20261004-custom-programs"));
 assert.ok(bootstrap.includes('"app/controllers/simulation-editor-controller.js"'));
 assert.ok(!bootstrap.includes('"app/rpc-program-library-integration.js"'),
   "Bootstrap must not load a competing RPC profile controller.");
