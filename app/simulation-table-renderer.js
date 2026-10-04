@@ -25,11 +25,26 @@ function currentServoProfileContext() {
   };
 }
 
+function servoSimulationSelectOptions(values, selectedValue) {
+  const selected = String(selectedValue || "");
+  return [...new Set((Array.isArray(values) ? values : []).map((value) => String(value || "").trim()).filter(Boolean))]
+    .map((value) => `<option value="${escapeServoProfileHtml(value)}"${value === selected ? " selected" : ""}>${escapeServoProfileHtml(value)}</option>`)
+    .join("");
+}
+
 function servoProfileLibraryMarkup() {
   const context = currentServoProfileContext();
   const draftName = String(state.simulation?.draftName || "");
   const draftDescription = String(state.simulation?.draftDescription || "");
   const profiles = Array.isArray(state.servoProfileLibrary) ? state.servoProfileLibrary : [];
+  const brandOptions = servoSimulationSelectOptions(
+    (Array.isArray(state.labelSpecs) ? state.labelSpecs : []).map((entry) => entry?.brand),
+    state.selectedBrand
+  );
+  const bottleOptions = servoSimulationSelectOptions(
+    (Array.isArray(state.bottleSpecs) ? state.bottleSpecs : []).map((entry) => entry?.bottleType),
+    state.selectedBottle
+  );
   const selectedId = profiles.some((entry) => entry.id === state.activeServoProfileId)
     ? state.activeServoProfileId
     : profiles[0]?.id || "";
@@ -42,6 +57,10 @@ function servoProfileLibraryMarkup() {
     : '<div class="servo-profile-details empty"><span>Save the current custom simulation lines and angles as an RPC program.</span></div>';
   return `<section class="servo-profile-library" aria-labelledby="servoProfileLibraryTitle">
     <div class="servo-profile-library-head"><div><h2 id="servoProfileLibraryTitle">RPC Program Library</h2><p>Save and restore custom simulation settings by brand, bottle, and map.</p></div><span>${profiles.length} saved</span></div>
+    <div class="servo-profile-context-selectors" aria-label="Servo Simulation brand and bottle context">
+      <label>Brand<select id="simulationBrandSelect"${brandOptions ? "" : " disabled"}>${brandOptions || '<option value="">No brands configured</option>'}</select></label>
+      <label>Bottle<select id="simulationBottleSelect"${bottleOptions ? "" : " disabled"}>${bottleOptions || '<option value="">No bottles configured</option>'}</select></label>
+    </div>
     <div class="servo-profile-save-grid">
       <label>Profile name<input id="servoProfileName" type="text" maxlength="80" value="${escapeServoProfileHtml(draftName)}" placeholder="Example: Bud Light Lime production"></label>
       <label>Description<input id="servoProfileDescription" type="text" maxlength="180" value="${escapeServoProfileHtml(draftDescription)}" placeholder="Optional notes about this setup"></label>
@@ -89,6 +108,7 @@ window.LabelerSimulationTableRenderer = Object.freeze({
   escapeServoProfileHtml,
   servoProfileSavedDate,
   currentServoProfileContext,
+  servoSimulationSelectOptions,
   servoProfileLibraryMarkup,
   renderSimulation
 });
