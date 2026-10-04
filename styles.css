@@ -2871,6 +2871,26 @@ body.builder-pane-open {
 .servo-profile-details small,
 .servo-profile-details time { color: var(--muted); }
 
+.servo-profile-context-selectors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.servo-profile-context-selectors label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+}
+
+.servo-profile-context-selectors select {
+  width: 100%;
+  color: var(--ink);
+  background: var(--input);
+  border: 1px solid var(--line);
+}
+
 .servo-profile-save-grid {
   display: grid;
   gap: 10px;
@@ -2901,6 +2921,7 @@ body.builder-pane-open {
 .servo-profile-details.empty { align-self: center; }
 
 @media (max-width: 850px) {
+  .servo-profile-context-selectors { grid-template-columns: 1fr; }
   .servo-profile-save-grid { grid-template-columns: 1fr; }
   .servo-profile-library-grid { align-items: stretch; flex-direction: column; }
   .servo-profile-details { margin-left: 0; }
