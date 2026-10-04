@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "community-custom-servo-programs-v338-20261004",
+  "buildId": "community-custom-servo-programs-v339-20261004",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Community Library custom servo programs remain separated under Custom Programs with .sfservo local sharing. This build also prevents the Spec filter observer from recursively mutating Community card titles and freezing the page."
+  "notes": "Custom Programs now includes photo-transcribed field-reference RPC programs in Supabase, supports portable .sfservo sharing, loads community servo profiles even when the uploader's map is not installed locally, and retains the Community freeze guard."
 }
