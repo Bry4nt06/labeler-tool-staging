@@ -3,12 +3,13 @@
 (function installServoForgeCommunityCart(global) {
   if (global.LabelerCommunityCartIntegration?.installed) return;
 
-  const BUILD_MARKER = "community-batch-cart-v2-20260820";
+  const BUILD_MARKER = "community-batch-cart-v3-20261004-custom-programs";
   const cart = new Map();
   let cartOpen = false;
   let busy = false;
   let statusMessage = "";
   let browseObserver = null;
+  let installedEvents = false;
 
   function esc(value) {
     return String(value ?? "")
@@ -168,7 +169,7 @@
 
   function addToCart(button) {
     if (busy) return;
-    const card = button?.closest?.(".sf-community-card[data-community-package-id]");
+    const card = button?.closest?.("[data-community-package-id]");
     const item = readCard(card);
     if (!item.id) return;
     cart.set(item.id, item);
@@ -305,14 +306,24 @@
   function install() {
     const controls = ensureControls();
     if (!controls) return false;
-    document.addEventListener("click", handleClick);
+    if (!installedEvents) {
+      installedEvents = true;
+      document.addEventListener("click", handleClick);
+    }
     attachBrowseObserver();
     renderCart();
     return true;
   }
 
   function start() {
-    if (!install()) console.warn("ServoForge Community cart could not find the Community Library dialog.");
+    let attempts = 0;
+    const settle = () => {
+      attempts += 1;
+      if (install()) return;
+      if (attempts < 240) setTimeout(settle, 25);
+      else console.warn("ServoForge Community cart could not find the Community Library dialog.");
+    };
+    settle();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
