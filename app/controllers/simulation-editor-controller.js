@@ -149,14 +149,15 @@
       global.alert("This older profile does not contain custom simulation settings.");
       return;
     }
-    const map = state.mapLibrary.find((entry) => entry.id === profile.mapId);
-    if (!map) {
-      global.alert(`The saved map “${profile.mapName || "Unknown"}” is no longer available.`);
-      return;
-    }
+    const map = state.mapLibrary.find((entry) => entry.id === profile.mapId)
+      || state.mapLibrary.find((entry) => profile.mapName && entry.name === profile.mapName)
+      || null;
     actions.execute({
       mutate() {
-        actions.call("loadMachineMapIntoRuntime", map, false);
+        // Servo Simulation is an independent workspace. Portable/community
+        // programs may not have the uploader's machine map locally, so only
+        // restore the map when a compatible local record exists.
+        if (map) actions.call("loadMachineMapIntoRuntime", map, false);
         if (profile.applicationMode) state.applicationMode = profile.applicationMode;
         if (state.labelSpecs.some((entry) => entry.brand === profile.brand)) state.selectedBrand = profile.brand;
         if (state.bottleSpecs.some((entry) => entry.bottleType === profile.bottleType)) state.selectedBottle = profile.bottleType;
