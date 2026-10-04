@@ -13,7 +13,7 @@
 
   function completeObjectDepths(rawDepths = {}) {
     const defaults = global.LabelerDefaultObjectDepths || {
-      spender: 12, coding: 14, sensor: 21, gripper: 12,
+      spender: 12, coding: 19, sensor: 21, gripper: 12,
       opRoller: 14, nonOpRoller: -18, wipeInner: -4, wipeOuter: 16,
       brushInner: -4, brushOuter: 16
     };
@@ -31,7 +31,7 @@
       ...defaults,
       ...source,
       spender,
-      coding: finite(source.coding, opRoller),
+      coding: finite(source.coding, defaults.coding),
       sensor: finite(source.sensor, opRoller + 7),
       gripper: finite(source.gripper, spender),
       opRoller,
