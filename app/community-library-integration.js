@@ -160,7 +160,7 @@
   }
 
   function typeLabel(type) {
-    return ({ map: "Machine Map", bottle: "Bottle", brand: "Brand / Label", bundle: "Complete Setup", rpc_program: "RPC Program" })[type] || type;
+    return ({ map: "Machine Map", bottle: "Bottle", brand: "Brand / Label", bundle: "Complete Setup", rpc_program: "Custom Servo Program" })[type] || type;
   }
 
   function stars(value, editable = false, packageId = "") {
@@ -232,19 +232,27 @@
       dialog.className = "sf-community-dialog";
       dialog.innerHTML = `
         <div class="sf-community-shell">
-          <header class="sf-community-head"><div><h2>ServoForge Community Library</h2><p>Share approved maps, bottles, brands, and RPC programs. No account required.</p></div><button type="button" class="sf-community-close" data-community-close>Close</button></header>
-          <nav class="sf-community-tabs" aria-label="Community Library sections"><button type="button" class="active" data-community-tab="browse">Browse</button><button type="button" data-community-tab="upload">Upload</button><button type="button" data-community-tab="mine">My Uploads</button><button type="button" data-community-tab="admin">Community Admin</button></nav>
+          <header class="sf-community-head"><div><h2>ServoForge Community Library</h2><p>Share approved maps, bottles, brands, and custom servo programs. No account required.</p></div><button type="button" class="sf-community-close" data-community-close>Close</button></header>
+          <nav class="sf-community-tabs" aria-label="Community Library sections"><button type="button" class="active" data-community-tab="browse">Browse</button><button type="button" data-community-tab="custom-programs">Custom Programs</button><button type="button" data-community-tab="upload">Upload</button><button type="button" data-community-tab="mine">My Uploads</button><button type="button" data-community-tab="admin">Community Admin</button></nav>
           <div class="sf-community-body">
             <section class="sf-community-pane" data-community-pane="browse">
-              <div class="sf-community-toolbar"><input id="communitySearch" type="search" placeholder="Search maps, brands, bottles, machine types…" /><select id="communityTypeFilter"><option value="">All package types</option><option value="bundle">Complete Setups</option><option value="map">Machine Maps</option><option value="bottle">Bottles</option><option value="brand">Brands / Labels</option><option value="rpc_program">RPC Programs</option></select><button id="communityRefresh" type="button">Refresh</button></div>
+              <div class="sf-community-toolbar"><input id="communitySearch" type="search" placeholder="Search maps, brands, bottles, machine types…" /><select id="communityTypeFilter"><option value="">All package types</option><option value="bundle">Complete Setups</option><option value="map">Machine Maps</option><option value="bottle">Bottles</option><option value="brand">Brands / Labels</option></select><button id="communityRefresh" type="button">Refresh</button></div>
               <div id="communityBrowseList" class="sf-community-list"><div class="sf-community-empty">Loading Community Library…</div></div>
               <div id="communityPreviewHost"></div>
+            </section>
+            <section class="sf-community-pane" data-community-pane="custom-programs" hidden>
+              <div class="sf-custom-program-intro">Community servo programs are kept separate from maps, bottles, and brand files. Keep a program local, exchange it person-to-person as a .sfservo file, or publish it to the Community Library.</div>
+              <div class="sf-custom-program-tools"><label>Local servo program<select id="communityCustomLocalProgram"></select></label><button id="communityCustomExport" type="button" class="secondary-button">Export .sfservo</button><button id="communityCustomImportButton" type="button" class="secondary-button">Import .sfservo</button><button id="communityCustomShare" type="button">Share Selected</button><input id="communityCustomImportFile" type="file" accept=".sfservo,application/json" hidden /></div>
+              <div class="sf-community-toolbar"><input id="communityCustomProgramSearch" type="search" placeholder="Search custom servo programs…" /><span></span><button id="communityCustomProgramRefresh" type="button">Refresh</button></div>
+              <div id="communityCustomProgramStatus" class="sf-community-status" aria-live="polite"></div>
+              <div id="communityCustomProgramList" class="sf-community-list"><div class="sf-community-empty">Open Custom Programs to load Community servo programs.</div></div>
+              <div id="communityCustomProgramPreview"></div>
             </section>
             <section class="sf-community-pane" data-community-pane="upload" hidden>
               <form id="communityUploadForm">
                 <div class="sf-community-grid">
-                  <label class="sf-community-field"><span>Package type</span><select name="type"><option value="map">Machine Map</option><option value="bottle">Bottle</option><option value="brand">Brand / Label</option><option value="rpc_program">RPC Program</option></select></label>
-                  <label id="communityRpcProgramField" class="sf-community-field" hidden><span>Saved RPC program</span><select id="communityRpcProgram" name="rpcProgramId"></select></label>
+                  <label class="sf-community-field"><span>Package type</span><select name="type"><option value="map">Machine Map</option><option value="bottle">Bottle</option><option value="brand">Brand / Label</option><option value="rpc_program">Custom Servo Program</option></select></label>
+                  <label id="communityRpcProgramField" class="sf-community-field" hidden><span>Saved servo program</span><select id="communityRpcProgram" name="rpcProgramId"></select></label>
                   <label class="sf-community-field"><span>Display name <small>(required)</small></span><input name="authorName" maxlength="60" autocomplete="name" required aria-required="true" /></label>
                   <label class="sf-community-field full"><span>Listing name</span><input name="name" maxlength="160" required /></label>
                   <label class="sf-community-field full"><span>Description</span><textarea name="description" maxlength="600" placeholder="Describe where this setup is used, machine/application notes, or anything another user should know."></textarea></label>
@@ -269,6 +277,7 @@
     document.querySelectorAll("[data-community-tab]").forEach((button) => button.classList.toggle("active", button.dataset.communityTab === name));
     document.querySelectorAll("[data-community-pane]").forEach((pane) => { pane.hidden = pane.dataset.communityPane !== name; });
     if (name === "browse") loadBrowse();
+    if (name === "custom-programs") global.ServoForgeCustomProgramsIntegration?.loadCommunityPrograms?.();
     if (name === "upload") refreshUploadSummary();
     if (name === "mine") loadMine();
     if (name === "admin" && adminKey()) unlockAdmin(adminKey(), true);
@@ -334,7 +343,7 @@
         site: document.getElementById("communitySiteFilter")?.value || "",
         spec: document.getElementById("communitySpecFilter")?.value || ""
       });
-      browseItems = Array.isArray(data.packages) ? data.packages : [];
+      browseItems = (Array.isArray(data.packages) ? data.packages : []).filter((item) => item?.type !== "rpc_program");
       host.innerHTML = browseItems.length ? browseItems.map((item) => cardHtml(item)).join("") : `<div class="sf-community-empty">No published packages match this search.</div>`;
     } catch (error) { host.innerHTML = `<div class="sf-community-empty">${esc(error.message)}</div>`; }
     finally { global.LabelerCommunityCartIntegration?.decorate?.(); }
@@ -360,7 +369,7 @@
       const current = currentPackage(form.elements.type.value);
       if (!form.elements.name.value.trim()) form.elements.name.value = current.name;
       host.innerHTML = rpcMode
-        ? `<strong>RPC Program</strong><div class="sf-community-meta">Program: ${esc(current.rpcProgram?.name || "—")} • Map: ${esc(current.rpcProgram?.mapName || current.map?.name || "—")} • Brand: ${esc(current.rpcProgram?.brand || current.brand?.brand || "—")} • Bottle: ${esc(current.rpcProgram?.bottleType || current.bottle?.bottleType || "—")}</div>`
+        ? `<strong>Custom Servo Program</strong><div class="sf-community-meta">Program: ${esc(current.rpcProgram?.name || "—")} • Map: ${esc(current.rpcProgram?.mapName || current.map?.name || "—")} • Brand: ${esc(current.rpcProgram?.brand || current.brand?.brand || "—")} • Bottle: ${esc(current.rpcProgram?.bottleType || current.bottle?.bottleType || "—")}</div>`
         : `<strong>${esc(typeLabel(form.elements.type.value))}</strong><div class="sf-community-meta">Map: ${esc(current.map?.name || "—")} • Bottle: ${esc(current.bottle?.bottleType || "—")} • Brand: ${esc(current.brand?.brand || "—")}</div>`;
     } catch (error) { host.innerHTML = `<div class="notice bad">${esc(error.message)}</div>`; }
   }
