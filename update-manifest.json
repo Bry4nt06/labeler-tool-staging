@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "community-custom-servo-programs-v337-20261004",
+  "buildId": "community-custom-servo-programs-v338-20261004",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Community Library now separates shared servo programs into a Custom Programs tab, supports local .sfservo import/export for person-to-person sharing, and keeps standard maps, bottles, and brands out of the custom-program list."
+  "notes": "Community Library custom servo programs remain separated under Custom Programs with .sfservo local sharing. This build also prevents the Spec filter observer from recursively mutating Community card titles and freezing the page."
 }
