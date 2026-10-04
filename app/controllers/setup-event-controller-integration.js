@@ -96,6 +96,16 @@
       simulationEditor.selectProfile(target.value);
       return true;
     }
+    if (target.id === "simulationBrandSelect") {
+      const accepted = simulationEditor.selectContextBrand(target.value);
+      if (accepted === false) target.value = state.selectedBrand;
+      return true;
+    }
+    if (target.id === "simulationBottleSelect") {
+      const accepted = simulationEditor.selectContextBottle(target.value);
+      if (accepted === false) target.value = state.selectedBottle;
+      return true;
+    }
     const row = target.closest?.("tr[data-simulation-source-index]");
     const sourceIndex = Number(row?.dataset.simulationSourceIndex);
     const field = target.dataset?.simulationField;
