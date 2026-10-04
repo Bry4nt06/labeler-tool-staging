@@ -67,13 +67,22 @@
     const singlePoint = kind === "gripper"
       || kind === "sensor"
       || (application === "cold-glue" && kind === "roller");
-    const start = finite(singlePoint ? item?.angle : item?.start, 0);
-    const originalEnd = finite(singlePoint ? item?.angle : item?.end, start + APL_ROLLER_COVERAGE_DEFAULT_DEG);
+    const rawStart = finite(item?.start, finite(item?.angle, 0));
+    const rawEnd = finite(item?.end, rawStart + APL_ROLLER_COVERAGE_DEFAULT_DEG);
+    const codingCenter = kind === "coding"
+      ? finite(item?.angle, rawStart + (rawEnd - rawStart) / 2)
+      : null;
+    const start = kind === "coding"
+      ? codingCenter - 2.5
+      : finite(singlePoint ? item?.angle : item?.start, 0);
+    const originalEnd = kind === "coding"
+      ? codingCenter + 2.5
+      : finite(singlePoint ? item?.angle : item?.end, start + APL_ROLLER_COVERAGE_DEFAULT_DEG);
     const wipeSpanDeg = aplRoller
       ? Math.max(0.1, finite(item?.wipeSpanDeg, Math.abs(originalEnd - start) || APL_ROLLER_COVERAGE_DEFAULT_DEG))
       : 0;
     const end = kind === "coding"
-      ? start + 5
+      ? codingCenter + 2.5
       : kind === "sensor"
         ? start + 3
         : aplRoller
@@ -115,7 +124,7 @@
       innerStart,
       innerEnd,
       wipeSpanDeg,
-      angle: singlePoint ? start : item?.angle,
+      angle: kind === "coding" ? codingCenter : singlePoint ? start : item?.angle,
       holdBottleAngle: application === "cold-glue"
         && (kind === "brush" || kind === "brush-channel")
         && Boolean(item?.holdBottleAngle),
@@ -345,6 +354,7 @@
         name: "Coding",
         kind: "coding",
         side: "outer",
+        angle: 306.5,
         start: 304,
         end: 309,
         extension: 14,
