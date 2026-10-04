@@ -92,6 +92,28 @@ assert.equal(saved.simulation.lines[0].plateAngle, 33);
 assert.ok(editorCalls.some((entry) => entry[0] === "event" && entry[1] === "servoforge:rpc-program-saved"),
   "The authoritative save path must open the optional Community upload handoff after local persistence.");
 
+editorState.servoProfileLibrary.push({
+  id: "rpc-portable",
+  name: "Portable Community RPC",
+  mapId: "map-not-installed",
+  mapName: "Remote Plant Map",
+  brand: "Brand A",
+  bottleType: "Bottle A",
+  applicationMode: "apl",
+  simulation: {
+    useCustom: true,
+    source: "field-reference",
+    turns: [],
+    rows: [],
+    deletedRows: [],
+    lines: [{ cmd: 3, tableAngle: 2, plateAngle: 0, action: "Rest" }]
+  }
+});
+editor.loadProfile("rpc-portable");
+assert.equal(editorState.activeServoProfileId, "rpc-portable");
+assert.equal(editorState.simulation.lines[0].tableAngle, 2,
+  "Portable Community RPC programs must load even when the uploader's map is not installed locally.");
+
 const printState = {
   activeTab: "simulation",
   activeMapId: "map-1",
