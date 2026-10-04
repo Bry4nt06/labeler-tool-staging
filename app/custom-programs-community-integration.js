@@ -7,6 +7,7 @@
   const EXTENSION = ".sfservo";
   let activePackage = null;
   let searchTimer = null;
+  let delegatedEventsBound = false;
 
   function community() {
     const value = global.LabelerCommunityLibrary;
@@ -153,11 +154,11 @@
 
   function cardHtml(item) {
     const average = Number(item.ratingAverage || 0);
-    return `<article class="sf-custom-program-card" data-custom-program-id="${esc(item.id)}">
+    return `<article class="sf-custom-program-card sf-community-card" data-custom-program-id="${esc(item.id)}" data-community-package-id="${esc(item.id)}">
       <div class="sf-community-card-head"><div><h3>#SF-C${esc(item.packageNumber)} · ${esc(item.name)}</h3><div class="sf-community-meta">Custom Servo Program${metadata(item) ? " • " + esc(metadata(item)) : ""}</div></div><span class="sf-community-badge">Published</span></div>
       ${item.description ? `<p>${esc(item.description)}</p>` : ""}
       <div class="sf-community-meta">${average ? average.toFixed(1) + " ★" : "No ratings"} · ${esc(item.downloadCount || 0)} download${Number(item.downloadCount || 0) === 1 ? "" : "s"}${item.authorName ? " · Shared by " + esc(item.authorName) : ""}</div>
-      <div class="sf-community-card-actions"><button type="button" data-custom-program-preview>Preview / Import</button><button type="button" class="secondary-button" data-custom-program-download>Download .sfservo</button></div>
+      <div class="sf-community-card-actions"><button type="button" data-custom-program-preview>Preview / Import</button><button type="button" class="secondary-button" data-custom-program-download>Download .sfservo</button><button type="button" data-community-cart-add="${esc(item.id)}">Add to Cart</button></div>
     </article>`;
   }
 
@@ -199,6 +200,7 @@
         <div class="sf-community-meta">${esc(metadata(activePackage))}</div>
         <p>This custom servo program contains ${Number(simulation.lines?.length || 0)} simulation line(s) and will be added to your local RPC Program Library.</p>
         <div class="sf-community-import-actions"><button type="button" data-custom-program-import="add">Add as New</button><button type="button" class="secondary-button" data-custom-program-import="replace">Replace Matching Name</button><button type="button" class="secondary-button" data-custom-program-import="cancel">Cancel</button></div></section>`;
+      host.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
     } catch (error) {
       host.innerHTML = `<section class="sf-community-preview notice bad">${esc(error?.message || "Unable to preview this program.")}</section>`;
     }
@@ -242,36 +244,92 @@
     }
   }
 
-  function bind() {
-    ensureStyles();
-    refreshLocalSelector();
-    const dialog = document.getElementById("servoforgeCommunityDialog");
-    if (!dialog) return;
+  function bindDelegatedEvents() {
+    if (delegatedEventsBound) return;
+    delegatedEventsBound = true;
 
-    dialog.addEventListener("click", (event) => {
+    document.addEventListener("click", (event) => {
+      const dialog = document.getElementById("servoforgeCommunityDialog");
+      if (!dialog || !dialog.contains(event.target)) return;
+
       if (event.target.closest?.('[data-community-tab="custom-programs"]')) setTimeout(loadCommunityPrograms, 0);
+
       const previewButton = event.target.closest?.("[data-custom-program-preview]");
-      if (previewButton) preview(previewButton.closest("[data-custom-program-id]"));
+      if (previewButton) {
+        event.preventDefault();
+        void preview(previewButton.closest("[data-custom-program-id]"));
+        return;
+      }
+
       const downloadButton = event.target.closest?.("[data-custom-program-download]");
-      if (downloadButton) downloadCommunityProgram(downloadButton.closest("[data-custom-program-id]"));
+      if (downloadButton) {
+        event.preventDefault();
+        void downloadCommunityProgram(downloadButton.closest("[data-custom-program-id]"));
+        return;
+      }
+
       const importButton = event.target.closest?.("[data-custom-program-import]");
-      if (importButton) importPreview(importButton.dataset.customProgramImport);
-      if (event.target.closest?.("#communityCustomExport")) exportLocalProgram();
-      if (event.target.closest?.("#communityCustomImportButton")) document.getElementById("communityCustomImportFile")?.click();
-      if (event.target.closest?.("#communityCustomShare")) shareSelected();
+      if (importButton) {
+        event.preventDefault();
+        importPreview(importButton.dataset.customProgramImport);
+        return;
+      }
+
+      if (event.target.closest?.("#communityCustomExport")) {
+        event.preventDefault();
+        exportLocalProgram();
+        return;
+      }
+      if (event.target.closest?.("#communityCustomImportButton")) {
+        event.preventDefault();
+        document.getElementById("communityCustomImportFile")?.click();
+        return;
+      }
+      if (event.target.closest?.("#communityCustomShare")) {
+        event.preventDefault();
+        shareSelected();
+        return;
+      }
+      if (event.target.closest?.("#communityCustomProgramRefresh")) {
+        event.preventDefault();
+        void loadCommunityPrograms();
+      }
     });
 
-    document.getElementById("communityCustomImportFile")?.addEventListener("change", (event) => {
+    document.addEventListener("change", (event) => {
+      if (event.target?.id !== "communityCustomImportFile") return;
       const file = event.target.files?.[0];
       event.target.value = "";
-      importLocalFile(file);
+      void importLocalFile(file);
     });
-    document.getElementById("communityCustomProgramRefresh")?.addEventListener("click", loadCommunityPrograms);
-    document.getElementById("communityCustomProgramSearch")?.addEventListener("input", () => {
+
+    document.addEventListener("input", (event) => {
+      if (event.target?.id !== "communityCustomProgramSearch") return;
       clearTimeout(searchTimer);
       searchTimer = setTimeout(loadCommunityPrograms, 250);
     });
+
     global.addEventListener?.("servoforge:rpc-program-saved", refreshLocalSelector);
+  }
+
+  function bind() {
+    ensureStyles();
+    bindDelegatedEvents();
+    refreshLocalSelector();
+
+    // The Community dialog is constructed by another integration. Do not make
+    // Custom Programs depend on which module reaches DOMContentLoaded first.
+    if (document.getElementById("servoforgeCommunityDialog")) return;
+    let attempts = 0;
+    const waitForDialog = () => {
+      attempts += 1;
+      if (document.getElementById("servoforgeCommunityDialog")) {
+        refreshLocalSelector();
+        return;
+      }
+      if (attempts < 240) setTimeout(waitForDialog, 25);
+    };
+    waitForDialog();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once: true });
