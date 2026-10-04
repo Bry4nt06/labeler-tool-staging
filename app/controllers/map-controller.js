@@ -258,11 +258,19 @@
         item.innerStart = normalize(actions.number(original.innerStart, original.start) + delta);
         item.innerEnd = item.innerStart + (actions.number(original.innerEnd, original.end) - actions.number(original.innerStart, original.start));
       }
-      if (Number.isFinite(Number(original.angle))) item.angle = normalize(actions.number(original.angle, original.start) + delta);
-      item.start = normalize(actions.number(original.start, 0) + delta);
-      if (item.kind === "sensor") item.end = item.start + 3;
-      else if (item.kind === "coding") item.end = item.start + 5;
-      else item.end = item.start + (actions.number(original.end, original.start) - actions.number(original.start, 0));
+      if (item.kind === "coding") {
+        const originalCenter = Number.isFinite(Number(original.angle))
+          ? actions.number(original.angle, 0)
+          : actions.number(original.start, 0) + (actions.number(original.end, original.start + 5) - actions.number(original.start, 0)) / 2;
+        item.angle = normalize(originalCenter + delta);
+        item.start = item.angle - 2.5;
+        item.end = item.angle + 2.5;
+      } else {
+        if (Number.isFinite(Number(original.angle))) item.angle = normalize(actions.number(original.angle, original.start) + delta);
+        item.start = normalize(actions.number(original.start, 0) + delta);
+        if (item.kind === "sensor") item.end = item.start + 3;
+        else item.end = item.start + (actions.number(original.end, original.start) - actions.number(original.start, 0));
+      }
       drag.moved = Math.abs(delta) >= 0.05;
       actions.execute({ syncMap: true, regenerate: true, render: "map" });
       return true;
