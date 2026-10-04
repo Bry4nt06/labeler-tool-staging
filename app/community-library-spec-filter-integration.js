@@ -64,7 +64,8 @@
       const title = card.querySelector(".sf-community-card-head h3, h3");
       if (!title) return;
       if (!title.dataset.specBaseTitle) title.dataset.specBaseTitle = String(title.textContent || "").trim();
-      const nextTitle = `${title.dataset.specBaseTitle}${suffix(specById.get(id))}`;\n      if (title.textContent !== nextTitle) title.textContent = nextTitle;
+      const nextTitle = `${title.dataset.specBaseTitle}${suffix(specById.get(id))}`;
+      if (title.textContent !== nextTitle) title.textContent = nextTitle;
     });
   }
 
