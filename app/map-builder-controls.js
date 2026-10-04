@@ -47,7 +47,7 @@ function updateBuilderTypeControls() {
   const startLabel = document.querySelector("#builderObjectStartLabel");
   const endLabel = document.querySelector("#builderObjectEndLabel");
   const isSinglePlacement = select.value === "coding" || select.value === "sensor";
-  if (startLabel) startLabel.firstChild.textContent = select.value === "sensor" ? "Placement (deg) " : isAplRoller ? "Roller center (deg) " : "Start / point 1 (deg) ";
+  if (startLabel) startLabel.firstChild.textContent = select.value === "coding" ? "Coder center (deg) " : select.value === "sensor" ? "Placement (deg) " : isAplRoller ? "Roller center (deg) " : "Start / point 1 (deg) ";
   if (endLabel) {
     endLabel.hidden = isSinglePlacement;
     endLabel.firstChild.textContent = isAplRoller ? "Roller surface coverage (table deg) " : "Stop / point 2 (deg) ";
