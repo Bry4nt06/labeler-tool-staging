@@ -17,6 +17,7 @@
           normalized.start = start;
           normalized.end = end;
           if (normalized.kind === "sensor") normalized.angle = Number(item.angle ?? start);
+          if (normalized.kind === "coding") normalized.angle = Number(item.angle ?? (start + end) / 2);
           normalized.workbookExactWindow = true;
         }
       }
