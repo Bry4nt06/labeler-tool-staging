@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "rpc-upload-transport-v353-20261007",
+  "buildId": "rpc-upload-handler-v354-20261007",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Custom RPC Community upload now sends the selected saved Servo Simulation profile in both the canonical configPayload.rpcProgram field and an explicit rpcProgram transport fallback. The Community Edge Function accepts either form, preventing missing-program errors caused by stale or competing upload handlers."
+  "notes": "Fixes the remaining Custom RPC upload failure caused by the Top Action Community fallback treating rpc_program as a retired Complete Setup. All Community upload handlers now build and send the selected RPC program payload correctly."
 }
