@@ -2,7 +2,7 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "cold-glue-final-brush-handoff-v350-20261006";
+  const build = "cold-glue-gripper-entry-v351-20261006";
   const buildUpdatedAt = "Oct 6, 2026";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
