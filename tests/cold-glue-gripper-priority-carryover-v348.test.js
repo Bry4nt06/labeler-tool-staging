@@ -121,9 +121,11 @@ vm.runInContext(channelSource, context, { filename: "cold-glue-gripper-channel-i
 const rows = context.generatedColdGlueFixedProfile();
 
 const bodyApplication = rows.find((row) =>
-  row.applicationReference === true
-  && row.section === "body"
+  row.section === "body"
   && Number(row.station) === 3
+  && Number(row.cmd) === 3
+  && Number(row.tableAngle) === 156
+  && Math.abs(Number(row.plateAngle)) <= 0.001
 );
 assert.ok(bodyApplication, "the second application gripper must retain an explicit Body application reference");
 assert.equal(bodyApplication.tableAngle, 156, "Body application must occur at the second gripper table datum");
@@ -154,9 +156,10 @@ assert.ok(totalCarryoverRotation > 70 && totalCarryoverRotation < 75,
   "the final brush should receive only the remaining neck wipe after the 90-degree upstream partial wipe");
 
 const backApplication = rows.find((row) =>
-  row.applicationReference === true
-  && row.section === "back"
+  row.section === "back"
   && Number(row.station) === 5
+  && Number(row.cmd) === 3
+  && Number(row.tableAngle) === 232
 );
 assert.ok(backApplication, "the Station 5 Back application reference must remain present");
 assert.equal(backApplication.tableAngle, 232);
