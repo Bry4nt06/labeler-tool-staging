@@ -2,7 +2,7 @@
 
 function builderTypeOptions() {
   return state.applicationMode === "cold-glue"
-    ? [["brush-channel", "Brush Channel (Inside + Outside)"], ["brush-outer", "Outside Brush"], ["brush-inner", "Inside Brush"], ["gripper", "Gripper / Spender Plate"], ["roller", "Roller"]]
+    ? [["brush-channel", "Brush Channel (Inside + Outside)"], ["brush-outer", "Outside Brush"], ["brush-inner", "Inside Brush"], ["flick-brush", "Flick Brush (1°)"], ["gripper", "Gripper / Spender Plate"], ["roller", "Roller"]]
     : [["pad", "Wipe-Down Pad"], ["roller", "Roller"], ["coding", "Coding"], ["sensor", "Label Sensor"]];
 }
 
@@ -36,7 +36,8 @@ function updateBuilderTypeControls() {
     if (stations.includes(Number(previousStation))) stationSelect.value = previousStation;
   }
   const selectedBrush = select.value === "brush-outer" || select.value === "brush-inner";
-  if (extensionLabel) extensionLabel.hidden = !selectedBrush && select.value !== "brush-channel";
+  const selectedFlickBrush = select.value === "flick-brush";
+  if (extensionLabel) extensionLabel.hidden = !selectedBrush && !selectedFlickBrush && select.value !== "brush-channel";
   if (sensorAssistLabel) sensorAssistLabel.hidden = select.value !== "sensor";
   if (sensorVisibilityLabel) sensorVisibilityLabel.hidden = select.value !== "sensor";
   if (stationLabel) stationLabel.hidden = select.value === "coding";
@@ -46,8 +47,8 @@ function updateBuilderTypeControls() {
   const isAplRoller = state.applicationMode === "apl" && select.value === "roller";
   const startLabel = document.querySelector("#builderObjectStartLabel");
   const endLabel = document.querySelector("#builderObjectEndLabel");
-  const isSinglePlacement = select.value === "coding" || select.value === "sensor";
-  if (startLabel) startLabel.firstChild.textContent = select.value === "coding" ? "Coder center (deg) " : select.value === "sensor" ? "Placement (deg) " : isAplRoller ? "Roller center (deg) " : "Start / point 1 (deg) ";
+  const isSinglePlacement = select.value === "coding" || select.value === "sensor" || selectedFlickBrush;
+  if (startLabel) startLabel.firstChild.textContent = select.value === "coding" ? "Coder center (deg) " : select.value === "sensor" || selectedFlickBrush ? "Placement (deg) " : isAplRoller ? "Roller center (deg) " : "Start / point 1 (deg) ";
   if (endLabel) {
     endLabel.hidden = isSinglePlacement;
     endLabel.firstChild.textContent = isAplRoller ? "Roller surface coverage (table deg) " : "Stop / point 2 (deg) ";
