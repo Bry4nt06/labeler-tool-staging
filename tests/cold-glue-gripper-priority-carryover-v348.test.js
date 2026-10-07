@@ -55,6 +55,8 @@ const map = {
       application: "cold-glue",
       station: 5,
       labelSection: "neck",
+      role: "final",
+      coveragePercent: 100,
       side: "outer",
       start: 212.2,
       end: 243
