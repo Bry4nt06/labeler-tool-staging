@@ -136,8 +136,10 @@ const neckCarryover = rows.filter((row) => row.carryoverWipe === true && row.sec
 assert.ok(neckCarryover.length >= 2, "the later Station 5 neck brush must remain a Neck carry-over wipe");
 assert.ok(neckCarryover.some((row) => row.carryoverPhase === "before-application"),
   "the neck finishing brush must use its available travel before the next gripper");
-assert.ok(neckCarryover.some((row) => row.carryoverPhase === "after-application"),
-  "a finishing brush that spans a gripper must resume after the application centerline");
+const carryoverTurnRows = neckCarryover.filter((row) => Number(row.cmd) === 7 && Number.isFinite(Number(row.plannedRotation)));
+const totalCarryoverRotation = carryoverTurnRows.reduce((sum, row) => sum + Math.abs(Number(row.plannedRotation)), 0);
+assert.ok(totalCarryoverRotation <= 327 / 2 + 0.001,
+  "the neck finishing brush must not restart a full-label rotation after upstream wipe coverage");
 
 const backApplication = rows.find((row) =>
   row.applicationReference === true
@@ -151,12 +153,13 @@ assert.equal(backApplication.plateAngle, 180);
 const lastPreCarry = Math.max(...neckCarryover
   .filter((row) => row.carryoverPhase === "before-application")
   .map((row) => Number(row.tableAngle)));
-const firstPostCarry = Math.min(...neckCarryover
-  .filter((row) => row.carryoverPhase === "after-application")
-  .map((row) => Number(row.tableAngle)));
 assert.ok(lastPreCarry < backApplication.tableAngle,
   "gripper priority requires the pre-application neck wipe to stop before the Back gripper");
-assert.ok(firstPostCarry > backApplication.tableAngle,
-  "remaining neck wipe must resume only after the Back label application reference");
+const postCarryRows = neckCarryover.filter((row) => row.carryoverPhase === "after-application");
+if (postCarryRows.length) {
+  const firstPostCarry = Math.min(...postCarryRows.map((row) => Number(row.tableAngle)));
+  assert.ok(firstPostCarry > backApplication.tableAngle,
+    "if neck coverage remains, the finishing brush may resume only after the Back application reference");
+}
 
 console.log("Cold Glue gripper-priority and cross-station neck carry-over regression passed.");
