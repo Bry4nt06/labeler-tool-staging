@@ -15,6 +15,7 @@ const customPrograms = fs.readFileSync(path.join(root, "app/custom-programs-comm
 const simulationRenderer = fs.readFileSync(path.join(root, "app/simulation-table-renderer.js"), "utf8");
 const setupEvents = fs.readFileSync(path.join(root, "app/controllers/setup-event-controller-integration.js"), "utf8");
 const cart = fs.readFileSync(path.join(root, "app/community-library-cart-integration.js"), "utf8");
+const topActions = fs.readFileSync(path.join(root, "app/top-action-icons-integration.js"), "utf8");
 
 const calls = [];
 const state = {
@@ -120,6 +121,15 @@ assert.ok(community.includes('rpcProgram: type === "rpc_program" ? sanitize(curr
   "Base Community uploader must send the selected RPC program explicitly.");
 assert.ok(communityV103.includes('rpcProgram: type === "rpc_program" ? library.sanitize(current.rpcProgram) : undefined'),
   "V103 Community uploader must send the selected RPC program explicitly.");
+
+assert.ok(topActions.includes('if (type === "rpc_program")'),
+  "Top-action Community fallback must recognize Custom RPC packages.");
+assert.ok(topActions.includes('return library.currentPackage("rpc_program")'),
+  "Top-action Community fallback must delegate RPC payload construction to the Community library.");
+assert.ok(topActions.includes('rpcProgram: form.elements.type.value === "rpc_program"'),
+  "Top-action Community fallback must send the selected RPC program explicitly.");
+assert.ok(!topActions.includes('A Complete Setup requires a Machine Map, Bottle spec, and Brand / Label spec.'),
+  "Top-action Community fallback must not route unknown types through the retired Complete Setup package path.");
 assert.ok(bootstrap.includes('"app/controllers/simulation-editor-controller.js"'));
 assert.ok(!bootstrap.includes('"app/rpc-program-library-integration.js"'),
   "Bootstrap must not load a competing RPC profile controller.");
