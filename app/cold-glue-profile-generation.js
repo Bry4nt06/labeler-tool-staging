@@ -392,10 +392,22 @@ function generatedColdGlueFixedProfile() {
       if (stationPlan?.fullWrap) {
         const applicationStart = unwrapAfter(aggregateAngle + 4, lastTable);
         const applicationTravel = plateTravelTo(applicationPlate) / Math.max(0.1, Math.min(state.maxMoveRatio * 0.9, 11.5));
-        moveInWindow(applicationStart, applicationStart + applicationTravel, applicationPlate, `Turn for ${sectionLabel(section)} Application at Aggregate ${station}`, { station, section, fullWrapApplication: true, applicationTransition: true, applicationTargetSection: section });
+        moveInWindow(applicationStart, applicationStart + applicationTravel, applicationPlate, `Turn for ${sectionLabel(section)} Application at Aggregate ${station}`, { station, section, fullWrapApplication: true, applicationTransition: true, applicationTargetSection: section, applicationReference: true });
       } else {
-        moveToReference(aggregateAngle, applicationPlate, `Turn for ${sectionLabel(section)} Application at Aggregate ${station}`, { station, section, applicationTransition: true, applicationTargetSection: section });
+        moveToReference(aggregateAngle, applicationPlate, `Turn for ${sectionLabel(section)} Application at Aggregate ${station}`, { station, section, applicationTransition: true, applicationTargetSection: section, applicationReference: true });
       }
+    } else if (section && !aggregateAlreadyPassed) {
+      // Even when the bottle is already at the correct application angle, the
+      // gripper is still a hard physical datum. Hold through that exact table
+      // position before allowing any post-application brush-entry rotation.
+      add(3, aggregateAngle, applicationPlate, `Hold ${sectionLabel(section)} Application Centerline at Aggregate ${station}`, {
+        station,
+        section,
+        applicationReference: true,
+        applicationTransition: false,
+        applicationTargetSection: section,
+        gripperCenterline: true
+      });
     } else if (!section && stationObjects.length) {
       moveToReference(aggregateAngle, plate, `Aggregate ${station} Entry`, { station });
     }
