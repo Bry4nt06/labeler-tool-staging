@@ -512,6 +512,7 @@
       const previous = result[first - 1] || null;
       const originalBlock = result.slice(first, last + 1);
       if (originalBlock.length && originalBlock.every((row) => row?.carryoverWipe === true)) return;
+      if (originalBlock.some((row) => row?.canonicalColdGlueBrushPlan === true)) return;
       const replacement = buildAlignedChannelBlock(map, station, previous, originalBlock);
       result.splice(first, last - first + 1, ...replacement);
     });
