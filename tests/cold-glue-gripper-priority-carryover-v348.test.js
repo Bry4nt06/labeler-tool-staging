@@ -179,7 +179,7 @@ assert.equal(bodyPreSpinTurn.tableAngle, 156,
   "Body pre-spin must start at the application gripper, not inside the brush channel");
 assert.equal(bodyPreSpinReference.tableAngle, 178.2,
   "Body pre-spin must be complete when the bottle reaches the simultaneous brush-channel entry");
-assert.equal(bodyPreSpinReference.plateAngle, -90,
-  "CCW-stored MAB1 must face the body label into the parallel brush channel before contact");
+assert.equal(bodyPreSpinReference.plateAngle, 90,
+  "MAB1 must face the body label into the parallel brush channel before contact");
 
 console.log("Cold Glue gripper-priority and cross-station neck carry-over regression passed.");
