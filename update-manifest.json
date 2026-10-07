@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-flick-brush-v344-20261006",
+  "buildId": "cold-glue-flick-brush-v345-20261006",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Cold Glue Map Builder adds a fixed 1° Flick Brush object, preserves coder/sensor ancillary objects during Cold Glue conversion, and supports the new MAB1 Cold Glue community map cloned from #SF-C41."
+  "notes": "Cold Glue Map Builder adds a fixed 1° Flick Brush object, preserves coder/sensor ancillary objects during Cold Glue conversion, and keeps canonical brush-object references stable for map-point editing."
 }
