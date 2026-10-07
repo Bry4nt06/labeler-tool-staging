@@ -1,9 +1,24 @@
 "use strict";
 
+const COLD_GLUE_PROCESS_KINDS = Object.freeze(["brush", "brush-channel", "wipe", "roller", "gripper"]);
+
+function coldGlueProcessObjects(items) {
+  return (Array.isArray(items) ? items : []).filter((item) => COLD_GLUE_PROCESS_KINDS.includes(item?.kind));
+}
+
 function normalizeColdGlueMap(items) {
-  return (Array.isArray(items) ? items : [])
-    .filter((item) => ["brush", "brush-channel", "wipe", "roller", "gripper"].includes(item?.kind))
+  return coldGlueProcessObjects(items)
     .map((item) => ({ ...item, kind: item.kind === "wipe" ? "brush" : item.kind }));
+}
+
+function normalizeColdGlueMachineMapObjects(items, stationCount = 6) {
+  return (Array.isArray(items) ? items : []).map((item) => {
+    if (!COLD_GLUE_PROCESS_KINDS.includes(item?.kind)) return { ...item };
+    const source = { ...item, kind: item.kind === "wipe" ? "brush" : item.kind, application: "cold-glue" };
+    return typeof normalizeBuilderObject === "function"
+      ? normalizeBuilderObject(source, "cold-glue", stationCount)
+      : source;
+  });
 }
 
 function activeColdGlueMachineMap() {
@@ -33,10 +48,10 @@ function coldGlueMapObjects() {
   // generation must never depend on the mirror being current.
   const machineMap = activeColdGlueMachineMap();
   if (machineMap) {
+    machineMap.objects = normalizeColdGlueMachineMapObjects(machineMap.objects, machineMap.stationCount || 6);
     const normalized = normalizeCanonicalColdGlueObjects(machineMap.objects, machineMap.stationCount || 6);
-    machineMap.objects = normalized;
     state.coldGlueMap = normalized.map((item) => ({ ...item }));
-    return machineMap.objects;
+    return normalized;
   }
 
   const legacy = normalizeCanonicalColdGlueObjects(state.coldGlueMap, 6);
@@ -92,6 +107,8 @@ function finishAngle(value) {
 
 window.LabelerColdGlueMapService = Object.freeze({
   normalizeColdGlueMap,
+  coldGlueProcessObjects,
+  normalizeColdGlueMachineMapObjects,
   activeColdGlueMachineMap,
   normalizeCanonicalColdGlueObjects,
   coldGlueMapObjects,
