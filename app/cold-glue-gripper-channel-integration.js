@@ -160,6 +160,26 @@
     });
   }
 
+  function nextApplicationBoundary(map, station, currentTable) {
+    const enabled = typeof normalizeEnabledSlots === "function"
+      ? normalizeEnabledSlots(map?.enabledAggregates, map?.aggregateCount)
+      : Array.isArray(map?.enabledAggregates) ? map.enabledAggregates : [];
+    const angles = map?.aggregateAngles || map?.stationAngles || {};
+    const candidates = enabled
+      .map((on, index) => on ? index + 1 : null)
+      .filter((candidate) => candidate && Number(candidate) !== Number(station))
+      .map((candidate) => {
+        const raw = Number(angles?.[String(candidate)]);
+        if (!Number.isFinite(raw)) return null;
+        let table = raw;
+        while (table <= currentTable + EPSILON) table += FULL_CYCLE;
+        return table;
+      })
+      .filter(Number.isFinite)
+      .sort((left, right) => left - right);
+    return candidates[0] ?? null;
+  }
+
   function tableAngleForGripper(map, station, minimumTable, originalBlock) {
     const gripper = gripperForStation(map, station);
     if (gripper) return {
@@ -272,7 +292,15 @@
     }
     lastTable = gripperTable;
 
-    const segments = brushSegments(brushes, gripperTable + EPSILON);
+    let segments = brushSegments(brushes, gripperTable + EPSILON);
+    const nextBoundary = nextApplicationBoundary(map, station, gripperTable);
+    if (Number.isFinite(nextBoundary)) {
+      const reserve = 0.5 + 180 / safeRatio;
+      const authorityEnd = nextBoundary - reserve;
+      segments = segments
+        .map((segment) => ({ ...segment, end: Math.min(segment.end, authorityEnd) }))
+        .filter((segment) => segment.end > segment.start + EPSILON);
+    }
     if (!segments.length || segments[0].stage !== "opposed") {
       appendIssue({
         level: "bad",
@@ -483,6 +511,7 @@
       const last = indexes[indexes.length - 1];
       const previous = result[first - 1] || null;
       const originalBlock = result.slice(first, last + 1);
+      if (originalBlock.length && originalBlock.every((row) => row?.carryoverWipe === true)) return;
       const replacement = buildAlignedChannelBlock(map, station, previous, originalBlock);
       result.splice(first, last - first + 1, ...replacement);
     });
