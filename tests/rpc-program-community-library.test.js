@@ -8,6 +8,7 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const editorSource = fs.readFileSync(path.join(root, "app/controllers/simulation-editor-controller.js"), "utf8");
 const community = fs.readFileSync(path.join(root, "app/community-library-integration.js"), "utf8");
+const communityV103 = fs.readFileSync(path.join(root, "app/community-library-v103-integration.js"), "utf8");
 const bootstrap = fs.readFileSync(path.join(root, "app/bootstrap.js"), "utf8");
 const sw = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 const customPrograms = fs.readFileSync(path.join(root, "app/custom-programs-community-integration.js"), "utf8");
@@ -108,6 +109,12 @@ assert.ok(sw.includes("./app/custom-programs-community-integration.js"));
 assert.ok(cart.includes('button?.closest?.("[data-community-package-id]")'),
   "Community cart must accept Custom Program cards.");
 assert.ok(cart.includes("community-batch-cart-v3-20261004-custom-programs"));
+for (const required of [
+  "selectedRpcUploadProgram",
+  "validateRpcUploadProgram",
+  "payload: { rpcProgram: clone(rpcProgram) }",
+  "RPC upload preparation failed"
+]) assert.ok(communityV103.includes(required), `RPC upload handoff regression missing: ${required}`);
 assert.ok(bootstrap.includes('"app/controllers/simulation-editor-controller.js"'));
 assert.ok(!bootstrap.includes('"app/rpc-program-library-integration.js"'),
   "Bootstrap must not load a competing RPC profile controller.");
