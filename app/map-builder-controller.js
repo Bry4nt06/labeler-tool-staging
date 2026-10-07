@@ -34,7 +34,7 @@ function saveMapDefinitionFromControls(event) {
   state.applicationMode = els.applicationMode?.value === "cold-glue" ? "cold-glue" : "apl";
   map.applicationMode = state.applicationMode;
   if (map.applicationMode === "cold-glue") {
-    map.objects = normalizeColdGlueMap(map.objects);
+    map.objects = normalizeColdGlueMachineMapObjects(map.objects, map.stationCount || 6);
     map.restoreDefaultObjects = false;
   }
   ensureSelectedBrandForApplication();
@@ -218,7 +218,8 @@ function addBuilderObjectFromControls() {
   const machineMap = editableMachineMap();
   if (!machineMap) return null;
   const selectedType = document.querySelector("#builderObjectType")?.value || (state.applicationMode === "cold-glue" ? "brush-outer" : "pad");
-  const type = selectedType === "brush-outer" || selectedType === "brush-inner" ? "brush" : selectedType;
+  const isFlickBrush = selectedType === "flick-brush";
+  const type = selectedType === "brush-outer" || selectedType === "brush-inner" || isFlickBrush ? "brush" : selectedType;
   const side = selectedType === "brush-inner"
     ? "inner"
     : selectedType === "brush-outer"
@@ -229,7 +230,7 @@ function addBuilderObjectFromControls() {
   const endControl = document.querySelector("#builderObjectEnd");
   const isAplRoller = state.applicationMode === "apl" && type === "roller";
   const rollerCoverageDeg = isAplRoller ? Math.max(0.1, num(endControl?.value, 5)) : undefined;
-  const end = isAplRoller ? start + rollerCoverageDeg : num(endControl?.value, start + 10);
+  const end = isFlickBrush ? start + 1 : isAplRoller ? start + rollerCoverageDeg : num(endControl?.value, start + 10);
   const name = String(document.querySelector("#builderObjectName")?.value || "").trim()
     || (type === "coding"
       ? "Coding"
@@ -237,11 +238,14 @@ function addBuilderObjectFromControls() {
         ? "Label Sensor"
         : type === "brush-channel"
           ? "Inside + Outside Brush Channel"
-          : `${side === "inner" ? "Inside" : "Outside"} ${type === "pad" ? "wipe-down pad" : type}`);
+          : isFlickBrush
+            ? "Flick Brush"
+            : `${side === "inner" ? "Inside" : "Outside"} ${type === "pad" ? "wipe-down pad" : type}`);
   const addedObject = normalizeBuilderObject({
     id: uniqueMapId(state.applicationMode),
     name,
     kind: type,
+    brushSubtype: isFlickBrush ? "flick" : undefined,
     application: state.applicationMode,
     side,
     start: type === "coding" ? start - 2.5 : start,
@@ -259,9 +263,9 @@ function addBuilderObjectFromControls() {
   }, machineMap.applicationMode, machineMap.stationCount);
   machineMap.objects.push(addedObject);
   if (machineMap.applicationMode === "cold-glue") {
-    const normalizedColdGlueObjects = normalizeColdGlueMap(machineMap.objects);
+    const normalizedColdGlueObjects = normalizeColdGlueMachineMapObjects(machineMap.objects, machineMap.stationCount || 6);
     machineMap.objects.splice(0, machineMap.objects.length, ...normalizedColdGlueObjects);
-    state.coldGlueMap = machineMap.objects.map((item) => ({ ...item }));
+    state.coldGlueMap = coldGlueProcessObjects(machineMap.objects).map((item) => ({ ...item }));
   }
   builderExpandedStation = String(type === "coding" ? "coding" : station);
   if (els.configuredMapObjectsSection) els.configuredMapObjectsSection.open = true;
