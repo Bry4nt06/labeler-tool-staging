@@ -2,7 +2,7 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "rpc-upload-payload-v352-20261007";
+  const build = "rpc-upload-transport-v353-20261007";
   const buildUpdatedAt = "Oct 7, 2026";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
