@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-gripper-entry-v351-20261006",
+  "buildId": "rpc-upload-payload-v352-20261007",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Cold Glue neck wiping now stops the upstream one-sided brush exactly at the next gripper centerline and defers only the remaining wipe debt to the downstream final brush. Explicit label ownership no longer relocates physical brush stations. Body brush-entry rotation starts at the application gripper and Autocol framing preserves the 90° brush-entry Rest through the parallel channel."
+  "notes": "Community Custom RPC upload now builds the rpc_program payload directly from the selected saved Servo Simulation profile, validates all simulation arrays before submission, and prevents empty RPC payloads from reaching the Community API."
 }
