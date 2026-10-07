@@ -156,10 +156,28 @@ const lastPreCarry = Math.max(...neckCarryover
 assert.ok(lastPreCarry < backApplication.tableAngle,
   "gripper priority requires the pre-application neck wipe to stop before the Back gripper");
 const postCarryRows = neckCarryover.filter((row) => row.carryoverPhase === "after-application");
-if (postCarryRows.length) {
-  const firstPostCarry = Math.min(...postCarryRows.map((row) => Number(row.tableAngle)));
-  assert.ok(firstPostCarry > backApplication.tableAngle,
-    "if neck coverage remains, the finishing brush may resume only after the Back application reference");
-}
+assert.equal(postCarryRows.length, 0,
+  "Cold Glue finishing-brush rotation must never resume across a newly applied label after the gripper");
+
+const bodyPreSpinTurn = rows.find((row) =>
+  row.postApplicationBrushEntry === true
+  && row.section === "body"
+  && Number(row.station) === 3
+  && Number(row.cmd) === 7
+);
+const bodyPreSpinReference = rows.find((row) =>
+  row.postApplicationBrushEntry === true
+  && row.section === "body"
+  && Number(row.station) === 3
+  && Number(row.cmd) === 3
+);
+assert.ok(bodyPreSpinTurn, "Body must begin rotating immediately after application toward the brush-channel entry");
+assert.ok(bodyPreSpinReference, "Body must finish its pre-spin at the brush-channel entry reference");
+assert.equal(bodyPreSpinTurn.tableAngle, 156,
+  "Body pre-spin must start at the application gripper, not inside the brush channel");
+assert.equal(bodyPreSpinReference.tableAngle, 178.2,
+  "Body pre-spin must be complete when the bottle reaches the simultaneous brush-channel entry");
+assert.equal(bodyPreSpinReference.plateAngle, -90,
+  "CCW-stored MAB1 must face the body label into the parallel brush channel before contact");
 
 console.log("Cold Glue gripper-priority and cross-station neck carry-over regression passed.");
