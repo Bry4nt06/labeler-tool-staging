@@ -134,14 +134,24 @@ const preBodyRows = rows.slice(0, bodyIndex);
 assert.ok(preBodyRows.every((row) => Number(row.tableAngle) < 156),
   "Neck brush authority must end before the second gripper instead of carrying through Body application");
 
+const station1Inside = rows.find((row) =>
+  row.section === "neck"
+  && Number(row.station) === 1
+  && row.brushSide === "inner"
+  && Number(row.cmd) === 7
+);
+assert.ok(station1Inside, "Station 1 inside brush must retain a one-sided neck wipe");
+assert.equal(Number(station1Inside.plannedRotation.toFixed(1)), 90,
+  "Station 1 inside brush must stop at the Body gripper centerline instead of crossing it");
+
 const neckCarryover = rows.filter((row) => row.carryoverWipe === true && row.section === "neck");
-assert.ok(neckCarryover.length >= 2, "the later Station 5 neck brush must remain a Neck carry-over wipe");
-assert.ok(neckCarryover.some((row) => row.carryoverPhase === "before-application"),
-  "the neck finishing brush must use its available travel before the next gripper");
+assert.ok(neckCarryover.length >= 2, "the downstream Station 5 final brush must receive the remaining Neck wipe debt");
+assert.ok(neckCarryover.every((row) => Number(row.station) === 5),
+  "explicit Neck ownership must not move the Station 5 finishing brush back to Station 1");
 const carryoverTurnRows = neckCarryover.filter((row) => Number(row.cmd) === 7 && Number.isFinite(Number(row.plannedRotation)));
 const totalCarryoverRotation = carryoverTurnRows.reduce((sum, row) => sum + Math.abs(Number(row.plannedRotation)), 0);
-assert.ok(totalCarryoverRotation <= 327 / 2 + 0.001,
-  "the neck finishing brush must not restart a full-label rotation after upstream wipe coverage");
+assert.ok(totalCarryoverRotation > 70 && totalCarryoverRotation < 75,
+  "the final brush should receive only the remaining neck wipe after the 90-degree upstream partial wipe");
 
 const backApplication = rows.find((row) =>
   row.applicationReference === true
@@ -179,6 +189,8 @@ assert.equal(bodyPreSpinTurn.tableAngle, 156,
   "Body pre-spin must start at the application gripper, not inside the brush channel");
 assert.equal(bodyPreSpinReference.tableAngle, 178.2,
   "Body pre-spin must be complete when the bottle reaches the simultaneous brush-channel entry");
+assert.equal(bodyPreSpinReference.parallelBrushHold, true,
+  "the 178.2-degree brush-entry Rest must be preserved as the hold reference through the parallel channel");
 assert.equal(bodyPreSpinReference.plateAngle, 90,
   "MAB1 must face the body label into the parallel brush channel before contact");
 
