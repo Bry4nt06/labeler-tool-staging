@@ -34,17 +34,17 @@ const standardFinal = standard.channelMoves.find((move) => move.centerTackStage 
 assert.equal(driver.standardOppositeEdgeProtectionAuthority, true);
 assert.equal(driver.fullWrapOverlapPolicyAuthority, true);
 assert.equal(standardFirst.rotation, 40, "standard first-edge wipe remains half a label plus over-wipe");
-assert.equal(standardFinal.rotation, 60, "standard final brush must stop before the opposite edge re-enters contact");
+assert.equal(standardFinal.rotation, 40, "standard final brush only wipes the remaining center-tack half plus over-wipe");
 assert.equal(standardFinal.oppositeLabelEdgeProtected, true);
 assert.equal(standard.oppositeLabelEdgeProtection.enabled, true);
 assert.equal(standard.oppositeLabelEdgeProtection.oppositeEdgeClearanceDeg, 10);
 assert.equal(standard.oppositeLabelEdgeProtection.legacyFinalRotationDeg, 80);
-assert.equal(standard.oppositeLabelEdgeProtection.protectedFinalRotationDeg, 60);
+assert.equal(standard.oppositeLabelEdgeProtection.protectedFinalRotationDeg, 40);
 
 const minimumGuard = channelPlan({ overWipeDeg: 1, labelEdgeGuardDeg: 3 });
 const guardedFinal = minimumGuard.channelMoves.find((move) => move.centerTackStage === "edge-to-opposite-edge-protected");
 assert.equal(minimumGuard.oppositeLabelEdgeProtection.oppositeEdgeClearanceDeg, 3);
-assert.equal(guardedFinal.rotation, 58, "minimum guard stops three bottle degrees before the opposite edge");
+assert.equal(guardedFinal.rotation, 31, "later brush only wipes the remaining center-tack half plus configured over-wipe");
 
 const fullWrap = driver.createBrushChannelPlan({
   channels: [{ id: "full-neck-channel", outerStart: 70, outerEnd: 120, innerStart: 100, innerEnd: 150 }],
