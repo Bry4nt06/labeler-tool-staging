@@ -102,8 +102,12 @@
       if (!brand) throw new Error("Choose a Brand / Label spec to upload.");
       return { payload: { brand: clone(brand) }, name: brand.brand || "Community Brand", map: null, bottle: null, brand };
     }
-    if (!map || !bottle || !brand) throw new Error("A Complete Setup requires a Machine Map, Bottle spec, and Brand / Label spec.");
-    return { payload: { map: clone(map), bottle: clone(bottle), brand: clone(brand) }, name: `${brand.brand || "Brand"} • ${map.name || "Map"}`, map, bottle, brand };
+    if (type === "rpc_program") {
+      const library = global.LabelerCommunityLibrary;
+      if (!library?.currentPackage) throw new Error("Community RPC upload service is unavailable.");
+      return library.currentPackage("rpc_program");
+    }
+    throw new Error("Complete Setup uploads are no longer supported.");
   }
 
   function updateUploadVisibility() {
@@ -111,9 +115,9 @@
     if (!form) return;
     const type = form.elements.type?.value || "bundle";
     const visibility = {
-      communityUploadMapField: type === "map" || type === "bundle",
-      communityUploadBottleField: type === "bottle" || type === "bundle",
-      communityUploadBrandField: type === "brand" || type === "bundle"
+      communityUploadMapField: type === "map",
+      communityUploadBottleField: type === "bottle",
+      communityUploadBrandField: type === "brand"
     };
     Object.entries(visibility).forEach(([id, show]) => {
       const node = document.getElementById(id);
@@ -133,7 +137,8 @@
       const name = form.elements.name;
       if (forceName || !name.value.trim() || name.value.trim() === lastSuggestedName) name.value = current.name;
       lastSuggestedName = current.name;
-      host.innerHTML = `<strong>${form.elements.type.value === "bundle" ? "Complete Setup" : form.elements.type.value === "map" ? "Machine Map" : form.elements.type.value === "bottle" ? "Bottle" : "Brand / Label"}</strong><div class="sf-community-meta">Map: ${current.map?.name || "—"} • Bottle: ${current.bottle?.bottleType || "—"} • Brand: ${current.brand?.brand || "—"}</div>`;
+      const type = form.elements.type.value;
+      host.innerHTML = `<strong>${type === "map" ? "Machine Map" : type === "bottle" ? "Bottle" : type === "brand" ? "Brand / Label" : type === "rpc_program" ? "Custom Servo Program" : "Unsupported"}</strong><div class="sf-community-meta">Map: ${current.map?.name || "—"} • Bottle: ${current.bottle?.bottleType || "—"} • Brand: ${current.brand?.brand || "—"}${current.rpcProgram ? ` • RPC: ${current.rpcProgram.name || "Unnamed"}` : ""}</div>`;
     } catch (error) {
       host.innerHTML = `<div class="notice bad">${error.message}</div>`;
     }
@@ -180,6 +185,9 @@
         schemaVersion: 1,
         servoforgeVersion: String(global.SERVOFORGE_RELEASE_VERSION || "0.9.10"),
         configPayload: library.sanitize ? library.sanitize(current.payload) : current.payload,
+        rpcProgram: form.elements.type.value === "rpc_program"
+          ? (library.sanitize ? library.sanitize(current.rpcProgram) : current.rpcProgram)
+          : undefined,
         validationSummary: summary
       });
       if (status) status.textContent = `Submitted #SF-C${result.package.packageNumber} for review.`;
