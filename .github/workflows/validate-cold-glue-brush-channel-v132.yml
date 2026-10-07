@@ -28,6 +28,7 @@ on:
       - "tests/cold-glue-equal-channel-hold-v317.test.js"
       - "tests/cold-glue-gripper-priority-carryover-v348.test.js"
       - "tests/cold-glue-remaining-label-coverage-v349.test.js"
+      - "tests/autocol-cold-glue-brush-entry-framing-v351.test.js"
       - "tests/cold-glue-slot-topology-guard-v315.test.js"
       - "tests/build-input-brand-authority-v317.test.js"
       - "tests/cold-glue-neck-wrap-policy.test.js"
@@ -67,6 +68,7 @@ on:
       - "tests/cold-glue-equal-channel-hold-v317.test.js"
       - "tests/cold-glue-gripper-priority-carryover-v348.test.js"
       - "tests/cold-glue-remaining-label-coverage-v349.test.js"
+      - "tests/autocol-cold-glue-brush-entry-framing-v351.test.js"
       - "tests/cold-glue-slot-topology-guard-v315.test.js"
       - "tests/build-input-brand-authority-v317.test.js"
       - "tests/cold-glue-neck-wrap-policy.test.js"
@@ -127,6 +129,7 @@ jobs:
           node tests/cold-glue-equal-channel-hold-v317.test.js
           node tests/cold-glue-gripper-priority-carryover-v348.test.js
           node tests/cold-glue-remaining-label-coverage-v349.test.js
+          node tests/autocol-cold-glue-brush-entry-framing-v351.test.js
           node tests/cold-glue-slot-topology-guard-v315.test.js
           node tests/build-input-brand-authority-v317.test.js
           node tests/cold-glue-neck-wrap-policy.test.js
