@@ -49,9 +49,9 @@ function coldGlueMapObjects() {
   const machineMap = activeColdGlueMachineMap();
   if (machineMap) {
     machineMap.objects = normalizeColdGlueMachineMapObjects(machineMap.objects, machineMap.stationCount || 6);
-    const normalized = normalizeCanonicalColdGlueObjects(machineMap.objects, machineMap.stationCount || 6);
-    state.coldGlueMap = normalized.map((item) => ({ ...item }));
-    return normalized;
+    const canonicalProcessObjects = coldGlueProcessObjects(machineMap.objects);
+    state.coldGlueMap = canonicalProcessObjects.map((item) => ({ ...item }));
+    return canonicalProcessObjects;
   }
 
   const legacy = normalizeCanonicalColdGlueObjects(state.coldGlueMap, 6);
