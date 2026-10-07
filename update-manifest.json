@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-gripper-priority-v348-20261006",
+  "buildId": "cold-glue-remaining-wipe-v349-20261006",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Cold Glue application grippers now override brush-turn authority, explicit cross-station label ownership is honored, and finishing neck brushes can pause for a gripper application then resume while preserving the application centerline."
+  "notes": "Cold Glue center-tack wiping now treats upstream brush coverage cumulatively: the later one-sided brush only rotates the remaining half-label amount instead of another full label length, while gripper application centerlines retain priority."
 }
