@@ -95,6 +95,34 @@
       || LEGACY_PACKAGED_MAP_IDS.some((legacyId) => key(legacyId) === id);
   }
 
+  function hasAplProcessHardware(map) {
+    return (Array.isArray(map?.objects) ? map.objects : [])
+      .some((item) => item?.kind === "roller" || item?.kind === "pad");
+  }
+
+  function healMissingDefaultHardware(local, packaged) {
+    if (!local?.localStructuralMapOverride || hasAplProcessHardware(local)) return null;
+    const packagedIds = new Set((Array.isArray(packaged?.objects) ? packaged.objects : [])
+      .map((item) => String(item?.id || "")));
+    const ancillary = (Array.isArray(local?.objects) ? local.objects : [])
+      .filter((item) =>
+        item
+        && item.kind !== "roller"
+        && item.kind !== "pad"
+        && !packagedIds.has(String(item.id || ""))
+      )
+      .map(clone);
+    return {
+      ...clone(packaged),
+      machineSettings: local?.localMachineSettingsOverride
+        ? clone(local.machineSettings || packaged.machineSettings)
+        : clone(packaged.machineSettings),
+      objects: [...clone(packaged.objects || []), ...ancillary],
+      localMachineSettingsOverride: Boolean(local?.localMachineSettingsOverride),
+      localStructuralMapOverride: ancillary.length > 0
+    };
+  }
+
   async function enforce({ persist = true, render = true } = {}) {
     const service = global.LabelerCompanyDefaultsService;
     if (!service?.loadCatalog || !global.state) {
@@ -107,6 +135,8 @@
     const localById = new Map(currentBeforeEnforcement.map((map) => [key(map?.id), map]));
     const official = approvedMaps(catalog).map((packaged) => {
       const local = localById.get(key(packaged?.id));
+      const healed = healMissingDefaultHardware(local, packaged);
+      if (healed) return healed;
       if (local?.localStructuralMapOverride) {
         return {
           ...clone(local),
@@ -210,6 +240,8 @@
       enforce,
       stripLabelSensorsFromMap,
       migrateExistingLabelSensorsOnce,
+      hasAplProcessHardware,
+      healMissingDefaultHardware,
       optionalLabelSensorsV136: true,
       localMachineSettingsOverrideV87: true
     });
