@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "simulation-context-selectors-v343-20261004",
+  "buildId": "cold-glue-flick-brush-v344-20261006",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Servo Simulation includes in-place Brand and Bottle dropdowns; coder objects default to depth 19 and use a center anchor/centerline; Community Custom Programs include cart/import support; and the Community Spec filter browser syntax/freeze guard is corrected."
+  "notes": "Cold Glue Map Builder adds a fixed 1° Flick Brush object, preserves coder/sensor ancillary objects during Cold Glue conversion, and supports the new MAB1 Cold Glue community map cloned from #SF-C41."
 }
