@@ -365,6 +365,7 @@
           }
           return payload;
         })(),
+        rpcProgram: type === "rpc_program" ? library.sanitize(current.rpcProgram) : undefined,
         validationSummary
       });
       if (status) status.textContent = `Submitted #SF-C${result.package.packageNumber} for review.`;
