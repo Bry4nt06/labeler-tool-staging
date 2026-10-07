@@ -345,8 +345,12 @@
     phasePlans.forEach((phasePlan, phaseIndex) => {
       const fullWrapFirstRotation = wrapPlan.motionWrapAngleDeg / 2 + overWipeDeg;
       const fullWrapFinalRotation = wrapPlan.motionWrapAngleDeg + overWipeDeg + wrapPlan.seamOverWipeDeg;
-      const deferFinalPhase = options?.deferFinalPhase === true && phaseIndex > 0 && !wrapPlan.fullWrapReady;
-      const requiredRotation = phaseIndex === 0
+      const phaseStart = finite(phasePlan.windows?.[0]?.start, NaN);
+      const opposedBeforePhase = Number.isFinite(phaseStart)
+        && segments.some((segment) => segment.stage === "opposed" && segment.end <= phaseStart + EPSILON);
+      const phaseIsFinal = phaseIndex > 0 || opposedBeforePhase;
+      const deferFinalPhase = options?.deferFinalPhase === true && phaseIsFinal && !wrapPlan.fullWrapReady;
+      const requiredRotation = !phaseIsFinal
         ? Math.max(0, wrapPlan.fullWrapReady ? fullWrapFirstRotation : firstSideTargetDeg)
         : deferFinalPhase
           ? 0
@@ -357,15 +361,15 @@
         ...window,
         originalWindowKey: window.key,
         direction: wipeDirectionForSide(phasePlan.side, mapDirection),
-        centerTackStage: phaseIndex === 0
+        centerTackStage: !phaseIsFinal
           ? wrapPlan.fullWrapReady ? "full-wrap-first-edge-wipe" : "center-to-first-edge"
           : wrapPlan.fullWrapReady ? "full-wrap-circumference-wipe" : "edge-to-opposite-edge-protected",
         wipeOutward: true,
         leadingEdgeWipe: false,
         tackMode: "center",
-        oppositeLabelEdgeProtected: phaseIndex > 0 && !wrapPlan.fullWrapReady,
-        permittedOverlapEdge: phaseIndex > 0 && wrapPlan.fullWrapReady ? wrapPlan.overlapEdge : null,
-        underlyingEdge: phaseIndex > 0 && wrapPlan.fullWrapReady ? wrapPlan.underlyingEdge : null
+        oppositeLabelEdgeProtected: phaseIsFinal && !wrapPlan.fullWrapReady,
+        permittedOverlapEdge: phaseIsFinal && wrapPlan.fullWrapReady ? wrapPlan.overlapEdge : null,
+        underlyingEdge: phaseIsFinal && wrapPlan.fullWrapReady ? wrapPlan.underlyingEdge : null
       }));
       if (phaseIndex === 0 && wrapPlan.fullWrapReady) {
         plannedAllocations = plannedAllocations.map((move) => ({
@@ -393,9 +397,9 @@
       phasePlan.remaining = allocation.remaining + deferredRotation;
       phasePlan.deferredToFinalBrush = deferFinalPhase;
       phasePlan.ratio = allocation.requestedRatio;
-      phasePlan.oppositeLabelEdgeProtected = phaseIndex > 0 && !wrapPlan.fullWrapReady;
-      phasePlan.oppositeEdgeClearanceDeg = phaseIndex > 0 && !wrapPlan.fullWrapReady ? oppositeEdgeClearanceDeg : 0;
-      phasePlan.permittedOverlapEdge = phaseIndex > 0 && wrapPlan.fullWrapReady ? wrapPlan.overlapEdge : null;
+      phasePlan.oppositeLabelEdgeProtected = phaseIsFinal && !wrapPlan.fullWrapReady;
+      phasePlan.oppositeEdgeClearanceDeg = phaseIsFinal && !wrapPlan.fullWrapReady ? oppositeEdgeClearanceDeg : 0;
+      phasePlan.permittedOverlapEdge = phaseIsFinal && wrapPlan.fullWrapReady ? wrapPlan.overlapEdge : null;
       if (allocation.remaining > EPSILON && !deferFinalPhase) {
         issues.push({
           level: "bad",
