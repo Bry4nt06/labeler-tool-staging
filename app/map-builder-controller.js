@@ -1,5 +1,19 @@
 "use strict";
 
+function normalizeColdGlueBuilderObjects(items, stationCount = 6) {
+  if (typeof normalizeColdGlueMachineMapObjects === "function") {
+    return normalizeColdGlueMachineMapObjects(items, stationCount);
+  }
+  const processKinds = new Set(["brush", "brush-channel", "wipe", "roller", "gripper"]);
+  return (Array.isArray(items) ? items : []).map((item) => {
+    if (!processKinds.has(item?.kind)) return { ...item };
+    const source = { ...item, kind: item.kind === "wipe" ? "brush" : item.kind, application: "cold-glue" };
+    return typeof normalizeBuilderObject === "function"
+      ? normalizeBuilderObject(source, "cold-glue", stationCount)
+      : source;
+  });
+}
+
 function machineSettingNumber(control, currentValue, minimum = null) {
   const raw = String(control?.value ?? "").trim();
   const current = Number(currentValue);
@@ -34,7 +48,7 @@ function saveMapDefinitionFromControls(event) {
   state.applicationMode = els.applicationMode?.value === "cold-glue" ? "cold-glue" : "apl";
   map.applicationMode = state.applicationMode;
   if (map.applicationMode === "cold-glue") {
-    map.objects = normalizeColdGlueMachineMapObjects(map.objects, map.stationCount || 6);
+    map.objects = normalizeColdGlueBuilderObjects(map.objects, map.stationCount || 6);
     map.restoreDefaultObjects = false;
   }
   ensureSelectedBrandForApplication();
@@ -263,7 +277,7 @@ function addBuilderObjectFromControls() {
   }, machineMap.applicationMode, machineMap.stationCount);
   machineMap.objects.push(addedObject);
   if (machineMap.applicationMode === "cold-glue") {
-    const normalizedColdGlueObjects = normalizeColdGlueMachineMapObjects(machineMap.objects, machineMap.stationCount || 6);
+    const normalizedColdGlueObjects = normalizeColdGlueBuilderObjects(machineMap.objects, machineMap.stationCount || 6);
     machineMap.objects.splice(0, machineMap.objects.length, ...normalizedColdGlueObjects);
     state.coldGlueMap = coldGlueProcessObjects(machineMap.objects).map((item) => ({ ...item }));
   }
