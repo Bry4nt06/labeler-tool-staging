@@ -91,6 +91,13 @@ function generatedColdGlueFixedProfile() {
     }
     moveToReference(targetTable, targetPlate, action, extra);
   };
+  const moveFromCurrentToReference = (targetTable, targetPlate, action, extra = {}) => {
+    const start = lastTable;
+    const target = unwrapAfter(targetTable, start);
+    add(7, start, plate, action, extra);
+    plate = targetPlate;
+    add(3, target, plate, `${action} - Reference`, extra);
+  };
   const plateTravelTo = (targetPlate) => Math.abs(((num(targetPlate, plate) - plate + 540) % 360) - 180);
   const moveInWindow = (startTable, endTable, targetPlate, action, extra = {}) => {
     const start = unwrapAfter(startTable, lastTable);
@@ -375,8 +382,7 @@ function generatedColdGlueFixedProfile() {
             const alignmentStart = Math.max(lastTable + 0.5, brushEntryTable - plateTravelTo(flowFacingPlate) / Math.max(0.1, Math.min(state.maxMoveRatio * 0.9, 7.5)));
             moveInWindow(alignmentStart, brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Face Bottle With Flow Before Brush Channel`, alignmentExtra);
           } else {
-            moveInWindow(
-              lastTable,
+            moveFromCurrentToReference(
               brushEntryTable,
               flowFacingPlate,
               `${sectionLabel(section)} Rotate After Application to Parallel Brush Entry`,
