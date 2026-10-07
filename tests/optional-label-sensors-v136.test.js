@@ -173,6 +173,24 @@ function sensorsIn(map) {
     "a Label Sensor explicitly added through Map Builder must persist");
   assert.equal(sensorsIn(officialAfterSecond)[0].id, "user-added-label-sensor");
 
+  const brokenOfficial = state.mapLibrary.find((map) => map.id === "map-apl-default");
+  brokenOfficial.localStructuralMapOverride = true;
+  brokenOfficial.objects = [{
+    id: "keep-custom-sensor",
+    kind: "sensor",
+    station: 2,
+    angle: 210
+  }];
+
+  const third = await sandbox.LabelerCompanyDefaultsService.reconcile();
+  assert.equal(third.changed, true,
+    "a protected default with no roller/pad process hardware must self-heal");
+  const healedOfficial = state.mapLibrary.find((map) => map.id === "map-apl-default");
+  assert.ok(healedOfficial.objects.some((item) => item.kind === "pad"),
+    "self-heal must restore packaged APL wipe-down hardware");
+  assert.ok(healedOfficial.objects.some((item) => item.id === "keep-custom-sensor"),
+    "self-heal must preserve ancillary user-added objects when restoring core hardware");
+
   const packagedProjection = sandbox.LabelerApprovedDefaultMapCatalog.approvedMaps({ maps: packagedMaps });
   packagedProjection.forEach((map) => {
     assert.equal(sensorsIn(map).length, 0,
