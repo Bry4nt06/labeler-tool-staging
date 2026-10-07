@@ -43,6 +43,18 @@ function applyMachineTypeProfileFraming(rows) {
       return;
     }
     if (Number(previous?.cmd) === 3 && Number(row.cmd) === 3) {
+      const preserveEarlierBrushEntry = previous?.brushEntryAlignment === true
+        || previous?.postApplicationBrushEntry === true
+        || (previous?.parallelBrushHold === true && Number.isFinite(Number(previous?.brushHoldUntil)));
+      if (preserveEarlierBrushEntry
+        && Math.abs(Number(previous?.plateAngle) - Number(row?.plateAngle)) <= 0.001) {
+        alternating[alternating.length - 1] = {
+          ...previous,
+          brushHoldUntil: Math.max(Number(previous?.brushHoldUntil) || Number(previous?.tableAngle) || 0, Number(row?.brushHoldUntil) || Number(row?.tableAngle) || 0),
+          equalLengthChannel: previous?.equalLengthChannel === true || row?.equalLengthChannel === true
+        };
+        return;
+      }
       alternating[alternating.length - 1] = row;
       return;
     }
