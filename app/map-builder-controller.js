@@ -13,6 +13,10 @@ function normalizeColdGlueBuilderObjects(items, stationCount = 6) {
       : source;
   });
 }
+function coldGlueBuilderProcessObjects(items) {
+  const processKinds = new Set(["brush", "brush-channel", "wipe", "roller", "gripper"]);
+  return (Array.isArray(items) ? items : []).filter((item) => processKinds.has(item?.kind));
+}
 
 function machineSettingNumber(control, currentValue, minimum = null) {
   const raw = String(control?.value ?? "").trim();
@@ -279,7 +283,7 @@ function addBuilderObjectFromControls() {
   if (machineMap.applicationMode === "cold-glue") {
     const normalizedColdGlueObjects = normalizeColdGlueBuilderObjects(machineMap.objects, machineMap.stationCount || 6);
     machineMap.objects.splice(0, machineMap.objects.length, ...normalizedColdGlueObjects);
-    state.coldGlueMap = coldGlueProcessObjects(machineMap.objects).map((item) => ({ ...item }));
+    state.coldGlueMap = coldGlueBuilderProcessObjects(machineMap.objects).map((item) => ({ ...item }));
   }
   builderExpandedStation = String(type === "coding" ? "coding" : station);
   if (els.configuredMapObjectsSection) els.configuredMapObjectsSection.open = true;
