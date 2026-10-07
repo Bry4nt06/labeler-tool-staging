@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-remaining-wipe-v349-20261006",
+  "buildId": "cold-glue-final-brush-handoff-v350-20261006",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Cold Glue center-tack wiping now treats upstream brush coverage cumulatively: the later one-sided brush only rotates the remaining half-label amount instead of another full label length, while gripper application centerlines retain priority."
+  "notes": "Cold Glue final-brush handoff now preserves upstream wipe debt, prevents finishing-brush rotation across a new label application, rotates only away from brush contact, and begins the next label's brush-entry pre-spin immediately after the gripper so the bottle reaches parallel brush contact already aligned."
 }
