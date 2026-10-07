@@ -115,6 +115,11 @@ for (const required of [
   "payload: { rpcProgram: clone(rpcProgram) }",
   "RPC upload preparation failed"
 ]) assert.ok(communityV103.includes(required), `RPC upload handoff regression missing: ${required}`);
+
+assert.ok(community.includes('rpcProgram: type === "rpc_program" ? sanitize(current.rpcProgram) : undefined'),
+  "Base Community uploader must send the selected RPC program explicitly.");
+assert.ok(communityV103.includes('rpcProgram: type === "rpc_program" ? library.sanitize(current.rpcProgram) : undefined'),
+  "V103 Community uploader must send the selected RPC program explicitly.");
 assert.ok(bootstrap.includes('"app/controllers/simulation-editor-controller.js"'));
 assert.ok(!bootstrap.includes('"app/rpc-program-library-integration.js"'),
   "Bootstrap must not load a competing RPC profile controller.");
