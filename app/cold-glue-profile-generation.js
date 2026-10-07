@@ -159,13 +159,23 @@ function generatedColdGlueFixedProfile() {
       return [{ ...item }];
     });
   };
-  const pairedBrushPlan = (section, stationObjects) => {
+  const downstreamFinalBrushForSection = (section, station) => objects
+    .filter((item) =>
+      item?.kind === "brush"
+      && explicitLabelSection(item) === section
+      && String(item?.role || "process") === "final"
+      && Number(item?.station) !== Number(station)
+    )
+    .sort((left, right) => num(left.start, left.angle) - num(right.start, right.angle))[0] || null;
+  const pairedBrushPlan = (section, stationObjects, station) => {
     const wipe = sectionWipePlan(section);
     if (!wipe || !coldGlueDriver) return null;
     const ownedObjects = brushObjectsForSection(section, stationObjects);
+    const deferredFinalBrush = downstreamFinalBrushForSection(section, station);
     const common = {
       labelDeg: wipe.labelDeg,
       applicationPlateDeg: applicationTargets[section],
+      deferFinalPhase: Boolean(deferredFinalBrush),
       // neckOverWipeDeg is an APL pad setting. Cold Glue neck motion uses the
       // physical label length plus the dedicated full-wrap seam-wipe setting.
       overWipeDeg: section === "neck" ? 0 : wipe.overWipeDeg,
@@ -198,7 +208,7 @@ function generatedColdGlueFixedProfile() {
   const prepareCarryoverWipes = (stationObjects, stationSection, aggregateAngle, station) => {
     const bySection = new Map();
     (Array.isArray(stationObjects) ? stationObjects : []).forEach((item) => {
-      if (item?.kind !== "brush") return;
+      if (item?.kind !== "brush" || String(item?.role || "process") !== "final") return;
       const section = explicitLabelSection(item);
       if (!section || section === stationSection || !applications[section]) return;
       const list = bySection.get(section) || [];
@@ -333,7 +343,7 @@ function generatedColdGlueFixedProfile() {
     const stationPlanObjects = Number.isFinite(stationBrushDeadline)
       ? clipBrushObjectsBefore(stationObjects, stationBrushDeadline)
       : stationObjects;
-    const stationPlan = section ? pairedBrushPlan(section, stationPlanObjects) : null;
+    const stationPlan = section ? pairedBrushPlan(section, stationPlanObjects, station) : null;
     const carryover = prepareCarryoverWipes(stationObjects, section, aggregateAngle, station);
     applyCarryoverPieces(carryover.before, "before-application");
     // Preserve the full-wrap protection, but compare against the aggregate's
