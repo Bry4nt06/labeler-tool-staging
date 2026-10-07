@@ -345,9 +345,13 @@
     phasePlans.forEach((phasePlan, phaseIndex) => {
       const fullWrapFirstRotation = wrapPlan.motionWrapAngleDeg / 2 + overWipeDeg;
       const fullWrapFinalRotation = wrapPlan.motionWrapAngleDeg + overWipeDeg + wrapPlan.seamOverWipeDeg;
+      const deferFinalPhase = options?.deferFinalPhase === true && phaseIndex > 0 && !wrapPlan.fullWrapReady;
       const requiredRotation = phaseIndex === 0
         ? Math.max(0, wrapPlan.fullWrapReady ? fullWrapFirstRotation : firstSideTargetDeg)
-        : Math.max(0, wrapPlan.fullWrapReady ? fullWrapFinalRotation : protectedFinalRotationDeg);
+        : deferFinalPhase
+          ? 0
+          : Math.max(0, wrapPlan.fullWrapReady ? fullWrapFinalRotation : protectedFinalRotationDeg);
+      const deferredRotation = deferFinalPhase ? protectedFinalRotationDeg : 0;
       const allocation = allocateAcrossWindows(requiredRotation, phasePlan.windows, maxRatio, safetyFactor);
       let plannedAllocations = allocation.allocations.map((window) => ({
         ...window,
@@ -385,12 +389,14 @@
       });
       phasePlan.windows = plannedAllocations;
       phasePlan.requiredRotation = requiredRotation;
-      phasePlan.remaining = allocation.remaining;
+      phasePlan.deferredRotation = deferredRotation;
+      phasePlan.remaining = allocation.remaining + deferredRotation;
+      phasePlan.deferredToFinalBrush = deferFinalPhase;
       phasePlan.ratio = allocation.requestedRatio;
       phasePlan.oppositeLabelEdgeProtected = phaseIndex > 0 && !wrapPlan.fullWrapReady;
       phasePlan.oppositeEdgeClearanceDeg = phaseIndex > 0 && !wrapPlan.fullWrapReady ? oppositeEdgeClearanceDeg : 0;
       phasePlan.permittedOverlapEdge = phaseIndex > 0 && wrapPlan.fullWrapReady ? wrapPlan.overlapEdge : null;
-      if (allocation.remaining > EPSILON) {
+      if (allocation.remaining > EPSILON && !deferFinalPhase) {
         issues.push({
           level: "bad",
           code: phaseIndex > 0 && wrapPlan.fullWrapReady
