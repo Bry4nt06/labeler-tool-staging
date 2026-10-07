@@ -116,9 +116,46 @@ function generatedColdGlueFixedProfile() {
     plate += direction * rotation;
     add(3, end, plate, restAction || `${action} - Rest`, rowExtra);
   };
+  const explicitLabelSection = (item) => {
+    const value = String(item?.labelSection || "").trim().toLowerCase();
+    return ["neck", "body", "back"].includes(value) ? value : null;
+  };
+  const brushObjectsForSection = (section, stationObjects) => (Array.isArray(stationObjects) ? stationObjects : [])
+    .filter((item) => {
+      if (item?.kind !== "brush" && item?.kind !== "brush-channel") return false;
+      const explicit = explicitLabelSection(item);
+      return !explicit || explicit === section;
+    });
+  const clipBrushObjectsBefore = (stationObjects, deadline) => {
+    if (!Number.isFinite(Number(deadline))) return (Array.isArray(stationObjects) ? stationObjects : []).map((item) => ({ ...item }));
+    const limit = Number(deadline);
+    return (Array.isArray(stationObjects) ? stationObjects : []).flatMap((item) => {
+      if (item?.kind === "brush") {
+        const start = num(item.start, item.angle);
+        const end = Math.min(num(item.end, start), limit);
+        return end > start + 0.001 ? [{ ...item, end }] : [];
+      }
+      if (item?.kind === "brush-channel") {
+        const outerStart = num(item.outerStart, item.start);
+        const innerStart = num(item.innerStart, item.start);
+        const outerEnd = Math.min(num(item.outerEnd, item.end), limit);
+        const innerEnd = Math.min(num(item.innerEnd, item.end), limit);
+        if (outerEnd <= outerStart + 0.001 && innerEnd <= innerStart + 0.001) return [];
+        return [{
+          ...item,
+          start: Math.min(outerStart, innerStart),
+          end: Math.max(outerEnd, innerEnd),
+          outerEnd: Math.max(outerStart, outerEnd),
+          innerEnd: Math.max(innerStart, innerEnd)
+        }];
+      }
+      return [{ ...item }];
+    });
+  };
   const pairedBrushPlan = (section, stationObjects) => {
     const wipe = sectionWipePlan(section);
     if (!wipe || !coldGlueDriver) return null;
+    const ownedObjects = brushObjectsForSection(section, stationObjects);
     const common = {
       labelDeg: wipe.labelDeg,
       applicationPlateDeg: applicationTargets[section],
@@ -132,15 +169,101 @@ function generatedColdGlueFixedProfile() {
         ? selectedNeckWrapPlan()
         : null
     };
-    const channels = stationObjects.filter((item) => item.kind === "brush-channel");
+    const channels = ownedObjects.filter((item) => item.kind === "brush-channel");
     if (channels.length && typeof coldGlueDriver.createBrushChannelPlan === "function") {
       return coldGlueDriver.createBrushChannelPlan({ ...common, channels });
     }
-    const brushes = stationObjects.filter((item) => item.kind === "brush");
+    const brushes = ownedObjects.filter((item) => item.kind === "brush");
     if (brushes.length && typeof coldGlueDriver.createPlan === "function") {
       return coldGlueDriver.createPlan({ ...common, brushes });
     }
     return null;
+  };
+  const safeTurnRatio = () => Math.max(0.1, num(state.maxMoveRatio, 21) * 0.9);
+  const applicationReserveTableDeg = () => 0.5 + 180 / safeTurnRatio();
+  const carryoverRequiredRotation = (section) => {
+    const wipe = sectionWipePlan(section);
+    if (!wipe) return 0;
+    const overWipeDeg = section === "neck" ? 0 : Math.max(0, num(wipe.overWipeDeg, 0));
+    return Math.max(0, num(wipe.labelDeg, 0) + overWipeDeg - Math.max(overWipeDeg, 3));
+  };
+  const prepareCarryoverWipes = (stationObjects, stationSection, aggregateAngle, station) => {
+    const bySection = new Map();
+    (Array.isArray(stationObjects) ? stationObjects : []).forEach((item) => {
+      if (item?.kind !== "brush") return;
+      const section = explicitLabelSection(item);
+      if (!section || section === stationSection || !applications[section]) return;
+      const list = bySection.get(section) || [];
+      list.push(item);
+      bySection.set(section, list);
+    });
+    const before = [];
+    const after = [];
+    bySection.forEach((brushes, section) => {
+      let remaining = carryoverRequiredRotation(section);
+      const ratio = safeTurnRatio();
+      const reserve = applicationReserveTableDeg();
+      brushes
+        .slice()
+        .sort((left, right) => num(left.start, left.angle) - num(right.start, right.angle))
+        .forEach((brush) => {
+          if (remaining <= 0.001) return;
+          const start = num(brush.start, brush.angle);
+          const end = num(brush.end, start + 1);
+          const side = brush.side === "inner" ? "inner" : "outer";
+          const direction = coldGlueDriver?.wipeDirectionForSide
+            ? coldGlueDriver.wipeDirectionForSide(side, mapDirection)
+            : (side === "inner" ? -1 : 1);
+          const preEnd = Math.min(end, aggregateAngle - reserve);
+          if (preEnd > start + 0.001) {
+            const rotation = Math.min(remaining, (preEnd - start) * ratio);
+            before.push({ section, brush, start, end: preEnd, rotation, direction, side });
+            remaining -= rotation;
+          }
+          if (remaining > 0.001 && end > aggregateAngle + 0.1) {
+            const postStart = Math.max(start, aggregateAngle + 0.1);
+            if (end > postStart + 0.001) {
+              const rotation = Math.min(remaining, (end - postStart) * ratio);
+              after.push({ section, brush, start: postStart, end, rotation, direction, side });
+              remaining -= rotation;
+            }
+          }
+        });
+      if (remaining > 0.001) {
+        issues.push({
+          level: "bad",
+          code: "cold-glue-carryover-wipe-capacity",
+          station,
+          section,
+          message: `${sectionLabel(section)} carry-over brush travel is short by ${remaining.toFixed(1)}° of bottle rotation after reserving the application gripper centerline.`
+        });
+      }
+    });
+    return { before, after };
+  };
+  const applyCarryoverPieces = (pieces, phase) => {
+    (Array.isArray(pieces) ? pieces : []).forEach((piece) => {
+      if (piece.rotation <= 0.001) return;
+      applyMove(
+        piece.start,
+        piece.end,
+        piece.rotation,
+        piece.direction,
+        `${sectionLabel(piece.section)} Carry-Over ${piece.side === "inner" ? "Inside" : "Outside"} Brush Wipe`,
+        {
+          station: Number(piece.brush.station) || null,
+          section: piece.section,
+          brushId: piece.brush.id,
+          brushStage: "carryover",
+          brushSide: piece.side,
+          carryoverWipe: true,
+          carryoverPhase: phase,
+          applicationGripperPriority: true,
+          plannedRotation: piece.rotation,
+          plannedRatio: piece.rotation / Math.max(0.001, piece.end - piece.start)
+        }
+      );
+    });
   };
 
   add(3, 0, startPlate, "Zero Line");
@@ -191,7 +314,23 @@ function generatedColdGlueFixedProfile() {
     const aggregateDatum = aggregateTimeline.get(station) || {};
     const rawAggregateAngle = num(aggregateDatum.raw, num(aggregateAngles[String(station)], num(machineMap?.stationAngles?.[String(station)], station * 40 + 35)));
     const aggregateAngle = num(aggregateDatum.table, unwrapAfter(rawAggregateAngle, lastTable));
-    const stationPlan = section ? pairedBrushPlan(section, stationObjects) : null;
+    const nextStation = stationNumbers[index + 1];
+    const nextAggregateDatum = nextStation ? aggregateTimeline.get(nextStation) : null;
+    const nextApplicationBoundary = Number.isFinite(Number(nextAggregateDatum?.table))
+      ? Number(nextAggregateDatum.table)
+      : null;
+    // Application grippers are hard motion boundaries. Brush hardware may
+    // physically continue through the area, but servo wipe authority must end
+    // early enough to have the bottle fully on the next application centerline.
+    const stationBrushDeadline = Number.isFinite(nextApplicationBoundary)
+      ? nextApplicationBoundary - applicationReserveTableDeg()
+      : null;
+    const stationPlanObjects = Number.isFinite(stationBrushDeadline)
+      ? clipBrushObjectsBefore(stationObjects, stationBrushDeadline)
+      : stationObjects;
+    const stationPlan = section ? pairedBrushPlan(section, stationPlanObjects) : null;
+    const carryover = prepareCarryoverWipes(stationObjects, section, aggregateAngle, station);
+    applyCarryoverPieces(carryover.before, "before-application");
     // Preserve the full-wrap protection, but compare against the aggregate's
     // continuous TABLE datum. A later physical aggregate at e.g. 115° is 475°
     // after a first aggregate near 355°, not an aggregate that has already
@@ -214,6 +353,11 @@ function generatedColdGlueFixedProfile() {
     } else if (!section && stationObjects.length) {
       moveToReference(aggregateAngle, plate, `Aggregate ${station} Entry`, { station });
     }
+
+    // If a finishing brush physically spans an application gripper, the
+    // gripper wins: reach the application centerline first, then resume only
+    // the remaining brush travel after the label has been picked up.
+    applyCarryoverPieces(carryover.after, "after-application");
 
     if (stationPlan) {
       (stationPlan.issues || []).forEach((issue) => issues.push({ ...issue, station, section }));
