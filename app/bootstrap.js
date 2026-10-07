@@ -2,7 +2,7 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "cold-glue-gripper-priority-v348-20261006";
+  const build = "cold-glue-remaining-wipe-v349-20261006";
   const buildUpdatedAt = "Oct 6, 2026";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
