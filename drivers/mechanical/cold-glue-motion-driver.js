@@ -350,12 +350,12 @@
         && segments.some((segment) => segment.stage === "opposed" && segment.end <= phaseStart + EPSILON);
       const phaseIsFinal = phaseIndex > 0 || opposedBeforePhase;
       const deferFinalPhase = options?.deferFinalPhase === true && phaseIsFinal && !wrapPlan.fullWrapReady;
+      const finalPhaseCap = Math.max(0, finite(options?.finalPhaseMaxRotationDeg, Infinity));
+      const finalPhaseTarget = Math.max(0, wrapPlan.fullWrapReady ? fullWrapFinalRotation : protectedFinalRotationDeg);
       const requiredRotation = !phaseIsFinal
         ? Math.max(0, wrapPlan.fullWrapReady ? fullWrapFirstRotation : firstSideTargetDeg)
-        : deferFinalPhase
-          ? 0
-          : Math.max(0, wrapPlan.fullWrapReady ? fullWrapFinalRotation : protectedFinalRotationDeg);
-      const deferredRotation = deferFinalPhase ? protectedFinalRotationDeg : 0;
+        : Math.min(finalPhaseTarget, finalPhaseCap);
+      const deferredRotation = deferFinalPhase ? Math.max(0, finalPhaseTarget - requiredRotation) : 0;
       const allocation = allocateAcrossWindows(requiredRotation, phasePlan.windows, maxRatio, safetyFactor);
       let plannedAllocations = allocation.allocations.map((window) => ({
         ...window,
