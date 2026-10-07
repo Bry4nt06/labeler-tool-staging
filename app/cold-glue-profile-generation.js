@@ -167,15 +167,46 @@ function generatedColdGlueFixedProfile() {
       && Number(item?.station) !== Number(station)
     )
     .sort((left, right) => num(left.start, left.angle) - num(right.start, right.angle))[0] || null;
-  const pairedBrushPlan = (section, stationObjects, station) => {
+  const finalBrushSideForObjects = (stationObjects) => {
+    const channels = (Array.isArray(stationObjects) ? stationObjects : []).filter((item) => item?.kind === "brush-channel");
+    if (channels.length) {
+      const channel = channels[0];
+      const outerEnd = num(channel.outerEnd, channel.end);
+      const innerEnd = num(channel.innerEnd, channel.end);
+      if (Math.abs(outerEnd - innerEnd) <= 0.001) return null;
+      return outerEnd > innerEnd ? "outer" : "inner";
+    }
+    const brushes = (Array.isArray(stationObjects) ? stationObjects : [])
+      .filter((item) => item?.kind === "brush")
+      .sort((left, right) => num(right.end, right.start) - num(left.end, left.start));
+    return brushes[0]?.side === "inner" ? "inner" : brushes[0] ? "outer" : null;
+  };
+  const rotationToTargetInDirection = (startPlate, targetPlate, direction) => {
+    const start = norm(startPlate);
+    const target = norm(targetPlate);
+    return direction >= 0 ? norm(target - start) : norm(start - target);
+  };
+  const pairedBrushPlan = (section, stationObjects, station, nextSection) => {
     const wipe = sectionWipePlan(section);
     if (!wipe || !coldGlueDriver) return null;
     const ownedObjects = brushObjectsForSection(section, stationObjects);
     const deferredFinalBrush = downstreamFinalBrushForSection(section, station);
+    const finalSide = finalBrushSideForObjects(ownedObjects);
+    const channelEntry = typeof coldGlueDriver.channelEntryAngle === "function"
+      ? coldGlueDriver.channelEntryAngle(mapDirection, wipe.labelDeg)
+      : (mapDirection === "ccw" ? 90 : -90);
+    const finalDirection = finalSide && typeof coldGlueDriver.wipeDirectionForSide === "function"
+      ? coldGlueDriver.wipeDirectionForSide(finalSide, mapDirection)
+      : 0;
+    const nextApplicationTarget = nextSection ? applicationTargets[nextSection] : null;
+    const finalPhaseMaxRotationDeg = deferredFinalBrush && finalSide && Number.isFinite(Number(nextApplicationTarget))
+      ? rotationToTargetInDirection(channelEntry, nextApplicationTarget, finalDirection)
+      : Infinity;
     const common = {
       labelDeg: wipe.labelDeg,
       applicationPlateDeg: applicationTargets[section],
       deferFinalPhase: Boolean(deferredFinalBrush),
+      finalPhaseMaxRotationDeg,
       // neckOverWipeDeg is an APL pad setting. Cold Glue neck motion uses the
       // physical label length plus the dedicated full-wrap seam-wipe setting.
       overWipeDeg: section === "neck" ? 0 : wipe.overWipeDeg,
@@ -343,7 +374,7 @@ function generatedColdGlueFixedProfile() {
     const stationPlanObjects = Number.isFinite(stationBrushDeadline)
       ? clipBrushObjectsBefore(stationObjects, stationBrushDeadline)
       : stationObjects;
-    const stationPlan = section ? pairedBrushPlan(section, stationPlanObjects, station) : null;
+    const stationPlan = section ? pairedBrushPlan(section, stationPlanObjects, station, activeSections[index + 1] || null) : null;
     const carryover = prepareCarryoverWipes(stationObjects, section, aggregateAngle, station);
     applyCarryoverPieces(carryover.before, "before-application");
     // Preserve the full-wrap protection, but compare against the aggregate's
