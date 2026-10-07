@@ -9,6 +9,8 @@ on:
       - app/simulation-table-renderer.js
       - app/controllers/simulation-controller.js
       - app/controllers/simulation-editor-controller.js
+      - app/community-library-integration.js
+      - app/community-library-v103-integration.js
       - app/controllers/tabs-controller.js
       - app/defaults.js
       - app/persistence.js
@@ -19,6 +21,7 @@ on:
       - package.json
       - tests/simulation-independent-workspace.test.js
       - tests/simulation-draft-persistence-and-print.test.js
+      - tests/rpc-program-community-library.test.js
       - tests/servo-program-print-browser.test.cjs
       - .github/workflows/validate-independent-servo-simulator.yml
   push:
@@ -28,6 +31,8 @@ on:
       - app/simulation-table-renderer.js
       - app/controllers/simulation-controller.js
       - app/controllers/simulation-editor-controller.js
+      - app/community-library-integration.js
+      - app/community-library-v103-integration.js
       - app/controllers/tabs-controller.js
       - app/defaults.js
       - app/persistence.js
@@ -38,6 +43,7 @@ on:
       - package.json
       - tests/simulation-independent-workspace.test.js
       - tests/simulation-draft-persistence-and-print.test.js
+      - tests/rpc-program-community-library.test.js
       - tests/servo-program-print-browser.test.cjs
       - .github/workflows/validate-independent-servo-simulator.yml
 
@@ -68,6 +74,8 @@ jobs:
           node --check tests/simulation-independent-workspace.test.js
       - name: Run simulation regressions
         run: npm run test:simulation
+      - name: Run RPC Community upload regression
+        run: node --test tests/rpc-program-community-library.test.js
       - name: Run adjacent navigation and map reset regressions
         run: node --test tests/top-navigation-recovery.test.js tests/map-aggregate-custom-simulation-reset.test.js
       - name: Run browser simulator and print flow
