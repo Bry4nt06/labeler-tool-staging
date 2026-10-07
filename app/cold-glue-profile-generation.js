@@ -181,14 +181,12 @@ function generatedColdGlueFixedProfile() {
   };
   const safeTurnRatio = () => Math.max(0.1, num(state.maxMoveRatio, 21) * 0.9);
   const applicationReserveTableDeg = () => 0.5 + 180 / safeTurnRatio();
-  const carryoverRequiredRotation = (section) => {
-    const wipe = sectionWipePlan(section);
-    if (!wipe) return 0;
-    const overWipeDeg = section === "neck" ? 0 : Math.max(0, num(wipe.overWipeDeg, 0));
-    // Carry-over brushes finish only the unwiped center-tack half. They do not
-    // restart a full-label turn after upstream brush contact has already seated
-    // the opposite side.
-    return Math.max(0, num(wipe.labelDeg, 0) / 2 + overWipeDeg);
+  const remainingWipeBySection = new Map();
+  const recordRemainingWipe = (section, plan) => {
+    if (!section || !plan) return;
+    const remaining = (Array.isArray(plan.phasePlans) ? plan.phasePlans : [])
+      .reduce((sum, phase) => sum + Math.max(0, num(phase?.remaining, 0)), 0);
+    remainingWipeBySection.set(section, remaining);
   };
   const prepareCarryoverWipes = (stationObjects, stationSection, aggregateAngle, station) => {
     const bySection = new Map();
@@ -201,9 +199,9 @@ function generatedColdGlueFixedProfile() {
       bySection.set(section, list);
     });
     const before = [];
-    const after = [];
     bySection.forEach((brushes, section) => {
-      let remaining = carryoverRequiredRotation(section);
+      let remaining = Math.max(0, num(remainingWipeBySection.get(section), 0));
+      if (remaining <= 0.001) return;
       const ratio = safeTurnRatio();
       const reserve = applicationReserveTableDeg();
       brushes
@@ -217,32 +215,29 @@ function generatedColdGlueFixedProfile() {
           const direction = coldGlueDriver?.wipeDirectionForSide
             ? coldGlueDriver.wipeDirectionForSide(side, mapDirection)
             : (side === "inner" ? -1 : 1);
+          // Cold Glue cannot reverse across a seated label. A carry-over brush
+          // is allowed to rotate only away from its contact face, and only for
+          // the exact upstream wipe debt. All rotation must finish before the
+          // application-gripper reserve window begins.
           const preEnd = Math.min(end, aggregateAngle - reserve);
           if (preEnd > start + 0.001) {
             const rotation = Math.min(remaining, (preEnd - start) * ratio);
             before.push({ section, brush, start, end: preEnd, rotation, direction, side });
             remaining -= rotation;
           }
-          if (remaining > 0.001 && end > aggregateAngle + 0.1) {
-            const postStart = Math.max(start, aggregateAngle + 0.1);
-            if (end > postStart + 0.001) {
-              const rotation = Math.min(remaining, (end - postStart) * ratio);
-              after.push({ section, brush, start: postStart, end, rotation, direction, side });
-              remaining -= rotation;
-            }
-          }
         });
+      remainingWipeBySection.set(section, remaining);
       if (remaining > 0.001) {
         issues.push({
           level: "bad",
           code: "cold-glue-carryover-wipe-capacity",
           station,
           section,
-          message: `${sectionLabel(section)} carry-over brush travel is short by ${remaining.toFixed(1)}° of bottle rotation after reserving the application gripper centerline.`
+          message: `${sectionLabel(section)} finishing brush is short by ${remaining.toFixed(1)}° of remaining wipe before Aggregate ${station}. Increase pre-gripper brush travel; Cold Glue rotation will not continue across the new label application.`
         });
       }
     });
-    return { before, after };
+    return { before };
   };
   const applyCarryoverPieces = (pieces, phase) => {
     (Array.isArray(pieces) ? pieces : []).forEach((piece) => {
@@ -357,11 +352,6 @@ function generatedColdGlueFixedProfile() {
       moveToReference(aggregateAngle, plate, `Aggregate ${station} Entry`, { station });
     }
 
-    // If a finishing brush physically spans an application gripper, the
-    // gripper wins: reach the application centerline first, then resume only
-    // the remaining brush travel after the label has been picked up.
-    applyCarryoverPieces(carryover.after, "after-application");
-
     if (stationPlan) {
       (stationPlan.issues || []).forEach((issue) => issues.push({ ...issue, station, section }));
 
@@ -385,7 +375,13 @@ function generatedColdGlueFixedProfile() {
             const alignmentStart = Math.max(lastTable + 0.5, brushEntryTable - plateTravelTo(flowFacingPlate) / Math.max(0.1, Math.min(state.maxMoveRatio * 0.9, 7.5)));
             moveInWindow(alignmentStart, brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Face Bottle With Flow Before Brush Channel`, alignmentExtra);
           } else {
-            moveToReference(brushEntryTable, flowFacingPlate, `${sectionLabel(section)} Pre-Spin Center-Tacked Label Before Brush Contact`, alignmentExtra);
+            moveInWindow(
+              lastTable,
+              brushEntryTable,
+              flowFacingPlate,
+              `${sectionLabel(section)} Rotate After Application to Parallel Brush Entry`,
+              { ...alignmentExtra, postApplicationBrushEntry: true }
+            );
           }
         }
       }
@@ -482,6 +478,7 @@ function generatedColdGlueFixedProfile() {
           }
         });
       }
+      recordRemainingWipe(section, stationPlan);
     } else if (section) {
       issues.push({ level: "bad", code: "cold-glue-missing-brush-station", station, section, message: `Aggregate ${station} is assigned to the ${section} label but has no complete outside/inside brush set.` });
     }
