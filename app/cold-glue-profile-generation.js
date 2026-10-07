@@ -428,7 +428,7 @@ function generatedColdGlueFixedProfile() {
           ? coldGlueDriver.flowFacingTarget(plate, mapDirection, stationPlan.labelDeg)
           : applicationTargets[section] + (mapDirection === "ccw" ? -90 : 90);
         const brushEntryTable = firstBrush.start - Math.max(0, num(stationPlan.brushEntryLeadDeg, 0));
-        const alignmentExtra = { station, section, brushEntryAlignment: true, preBrushRotation: true, centerTackOnly: true, tackMode: "center", leadingEdgeWipe: false, mapDirection, flowFacingOffsetDeg: mapDirection === "ccw" ? 90 : -90 };
+        const alignmentExtra = { station, section, brushEntryAlignment: true, preBrushRotation: true, centerTackOnly: true, tackMode: "center", leadingEdgeWipe: false, mapDirection, flowFacingOffsetDeg: mapDirection === "ccw" ? 90 : -90, canonicalColdGlueBrushPlan: true };
         const brushEntryMoveRequired = plateTravelTo(flowFacingPlate) > 0.001;
         if (brushEntryMoveRequired) {
           if (stationPlan.fullWrap) {
@@ -464,6 +464,7 @@ function generatedColdGlueFixedProfile() {
           const commonExtra = {
             station,
             section,
+            canonicalColdGlueBrushPlan: true,
             brushStage: allocation.stage,
             brushSide: allocation.side || null,
             tackMode: "center",
