@@ -213,7 +213,10 @@
       if (!owner) return;
       const section = String(owner.labelSection);
       changed = setValue(item, "application", "cold-glue") || changed;
-      changed = setValue(item, "station", Number(owner.station)) || changed;
+      // Label ownership and physical station are separate. Explicitly assigned
+      // finishing brushes may live downstream of another gripper; never pull
+      // those objects back onto the label's application station.
+      if (!explicitSection) changed = setValue(item, "station", Number(owner.station)) || changed;
       if (!explicitSection || item.labelSection === "auto") changed = setValue(item, "labelSection", section) || changed;
       if (section === "neck" && item.kind === "brush") {
         if (!item.neckWipeSide || item.neckWipeSide === "none") changed = setValue(item, "neckWipeSide", item.side === "inner" ? "right" : "left") || changed;
