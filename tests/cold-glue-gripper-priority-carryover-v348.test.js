@@ -127,7 +127,7 @@ const bodyApplication = rows.find((row) =>
   && Number(row.tableAngle) === 156
   && Math.abs(Number(row.plateAngle)) <= 0.001
 );
-assert.ok(bodyApplication, "the second application gripper must retain an explicit Body application reference");
+assert.ok(bodyApplication, "Body rows: " + JSON.stringify(rows.filter((row) => row.section === "body" || Number(row.station) === 3).map((row) => ({cmd:row.cmd,table:row.tableAngle,plate:row.plateAngle,action:row.action,station:row.station,section:row.section}))));
 assert.equal(bodyApplication.tableAngle, 156, "Body application must occur at the second gripper table datum");
 assert.equal(bodyApplication.plateAngle, 0, "Body application must land on the same 0-degree bottle centerline as Neck");
 
