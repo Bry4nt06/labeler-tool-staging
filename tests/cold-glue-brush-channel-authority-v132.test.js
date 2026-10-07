@@ -93,11 +93,11 @@ assert.equal(insideRunout.start, 100);
 assert.equal(insideRunout.end, 113.9);
 assert.equal(insideRunout.direction, -1,
   "stored ccw means physical CW, so an inside-brush runout must turn negative/away from the brush");
-assert.ok(Math.abs(insideRunout.rotation - 62) < 1e-9,
-  "the remaining inside brush must stop at the three-degree opposite-edge guard");
+assert.ok(Math.abs(insideRunout.rotation - 32.5) < 1e-9,
+  "the remaining inside brush must wipe only the unwiped center-tack half");
 assert.equal(insideRunout.centerTackStage, "edge-to-opposite-edge-protected");
 assert.equal(insideRunout.oppositeLabelEdgeProtected, true);
-assert.equal(outsideFirst.totalRotation, 94.5);
+assert.equal(outsideFirst.totalRotation, 65);
 assert.equal(outsideFirst.issues.length, 0);
 
 // The physical rule is symmetric. If the outside brush remains after overlap,
@@ -124,7 +124,7 @@ assert.ok(Math.abs(insideFirst.channelMoves[0].rotation - 32.5) < 1e-9);
 assert.equal(insideFirst.channelMoves[1].stage, "opposed");
 assert.equal(insideFirst.channelMoves[2].stage, "outer");
 assert.equal(insideFirst.channelMoves[2].direction, 1);
-assert.ok(Math.abs(insideFirst.channelMoves[2].rotation - 62) < 1e-9);
+assert.ok(Math.abs(insideFirst.channelMoves[2].rotation - 32.5) < 1e-9);
 
 // Real saved Cold Glue maps currently store separate brush objects rather than
 // a synthetic brush-channel object. Protect the 60H CG MAB1 pattern: outside
@@ -153,7 +153,7 @@ assert.equal(savedMapPattern.channelMoves[2].stage, "inner");
 assert.equal(savedMapPattern.channelMoves[2].start, 125);
 assert.equal(savedMapPattern.channelMoves[2].end, 153);
 assert.equal(savedMapPattern.channelMoves[2].direction, -1);
-assert.ok(Math.abs(savedMapPattern.channelMoves[2].rotation - 62) < 1e-9);
+assert.ok(Math.abs(savedMapPattern.channelMoves[2].rotation - 32.5) < 1e-9);
 assert.equal(savedMapPattern.issues.length, 0);
 
 // Reversing the stored machine direction mirrors both physical wipe directions.
@@ -176,7 +176,7 @@ assert.equal(reversed.channelMoves[0].direction, -1);
 assert.equal(reversed.channelMoves[1].holdAngle, -90);
 assert.equal(reversed.channelMoves[2].stage, "inner");
 assert.equal(reversed.channelMoves[2].direction, 1);
-assert.ok(Math.abs(reversed.channelMoves[2].rotation - 62) < 1e-9);
+assert.ok(Math.abs(reversed.channelMoves[2].rotation - 32.5) < 1e-9);
 
 for (const plan of [fullParallel, outsideFirst, insideFirst, savedMapPattern, reversed]) {
   assert.ok(plan.channelMoves.every((move) => move.leadingEdgeWipe !== true));
