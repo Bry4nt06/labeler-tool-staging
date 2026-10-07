@@ -322,7 +322,12 @@
     const wrapPlan = normalizedWrapPlan(options, labelDeg);
     const edgeGuardDeg = Math.max(0.5, Math.min(12, finite(options?.labelEdgeGuardDeg, DEFAULT_LABEL_EDGE_GUARD_DEG)));
     const oppositeEdgeClearanceDeg = Math.max(overWipeDeg, edgeGuardDeg);
-    const protectedFinalRotationDeg = Math.max(0, labelDeg + overWipeDeg - oppositeEdgeClearanceDeg);
+    // Center-tack Cold Glue wiping is cumulative across the two one-sided
+    // brush phases. Once the first side has wiped from the center to one edge,
+    // the later brush only owes the remaining half of the label (plus its
+    // configured over-wipe); it must not rotate another full label length.
+    const firstSideTargetDeg = Math.max(0, labelDeg / 2 + overWipeDeg);
+    const protectedFinalRotationDeg = firstSideTargetDeg;
     const legacyFinalRotationDeg = Math.max(0, labelDeg + overWipeDeg * 2);
     const issues = [...(Array.isArray(wrapPlan.issues) ? wrapPlan.issues : [])];
     const allocationsByWindow = new Map();
@@ -341,7 +346,7 @@
       const fullWrapFirstRotation = wrapPlan.motionWrapAngleDeg / 2 + overWipeDeg;
       const fullWrapFinalRotation = wrapPlan.motionWrapAngleDeg + overWipeDeg + wrapPlan.seamOverWipeDeg;
       const requiredRotation = phaseIndex === 0
-        ? Math.max(0, wrapPlan.fullWrapReady ? fullWrapFirstRotation : labelDeg / 2 + overWipeDeg)
+        ? Math.max(0, wrapPlan.fullWrapReady ? fullWrapFirstRotation : firstSideTargetDeg)
         : Math.max(0, wrapPlan.fullWrapReady ? fullWrapFinalRotation : protectedFinalRotationDeg);
       const allocation = allocateAcrossWindows(requiredRotation, phasePlan.windows, maxRatio, safetyFactor);
       let plannedAllocations = allocation.allocations.map((window) => ({
@@ -449,7 +454,7 @@
             legacyFinalRotationDeg,
             protectedFinalRotationDeg,
             remainingRotation: phasePlans[1]?.remaining || 0,
-            rule: "single-brush-exit-must-stop-before-opposite-label-edge"
+            rule: "second-brush-wipes-only-remaining-center-tack-half"
           })
       : null;
 
