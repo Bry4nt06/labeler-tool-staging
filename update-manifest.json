@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "rpc-upload-handler-v354-20261007",
+  "buildId": "default-map-self-heal-v355-20261007",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Fixes the remaining Custom RPC upload failure caused by the Top Action Community fallback treating rpc_program as a retired Complete Setup. All Community upload handlers now build and send the selected RPC program payload correctly."
+  "notes": "Protected APL company-default maps now self-heal if their core roller/wipe-pad hardware disappears from persisted workspace state. The packaged APL 6-Aggregate hardware is restored while ancillary user-added objects and local machine settings are preserved."
 }
