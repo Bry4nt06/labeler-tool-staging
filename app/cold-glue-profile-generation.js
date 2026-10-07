@@ -185,7 +185,10 @@ function generatedColdGlueFixedProfile() {
     const wipe = sectionWipePlan(section);
     if (!wipe) return 0;
     const overWipeDeg = section === "neck" ? 0 : Math.max(0, num(wipe.overWipeDeg, 0));
-    return Math.max(0, num(wipe.labelDeg, 0) + overWipeDeg - Math.max(overWipeDeg, 3));
+    // Carry-over brushes finish only the unwiped center-tack half. They do not
+    // restart a full-label turn after upstream brush contact has already seated
+    // the opposite side.
+    return Math.max(0, num(wipe.labelDeg, 0) / 2 + overWipeDeg);
   };
   const prepareCarryoverWipes = (stationObjects, stationSection, aggregateAngle, station) => {
     const bySection = new Map();
