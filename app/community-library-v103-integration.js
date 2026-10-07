@@ -234,6 +234,32 @@
     };
   }
 
+  function selectedRpcUploadProgram() {
+    const source = stateNow();
+    const programs = Array.isArray(source?.servoProfileLibrary) ? source.servoProfileLibrary : [];
+    const requestedId = String(
+      document.getElementById("communityRpcProgram")?.value
+      || source?.activeServoProfileId
+      || ""
+    );
+    return programs.find((entry) => String(entry?.id || "") === requestedId) || programs[0] || null;
+  }
+
+  function validateRpcUploadProgram(program) {
+    if (!program || typeof program !== "object" || Array.isArray(program)) {
+      throw new Error("Save or select an RPC program before uploading.");
+    }
+    if (!String(program.name || "").trim()) throw new Error("The selected RPC program is missing a name.");
+    const simulation = program.simulation;
+    if (!simulation || typeof simulation !== "object" || Array.isArray(simulation)) {
+      throw new Error("The selected RPC program is missing simulation data.");
+    }
+    for (const key of ["turns", "rows", "deletedRows", "lines"]) {
+      if (!Array.isArray(simulation[key])) throw new Error(`The selected RPC program is missing simulation ${key} data.`);
+    }
+    return program;
+  }
+
   function buildUploadPackage(type) {
     const { map, bottle, brand } = selectedRecords();
     if (type === "map") {
@@ -248,7 +274,32 @@
       if (!brand) throw new Error("Choose a Brand / Label spec to upload.");
       return { payload: { brand: clone(brand) }, name: brand.brand || "Community Brand", map: null, bottle: null, brand };
     }
-    if (type === "rpc_program") return library.currentPackage(type);
+    if (type === "rpc_program") {
+      const rpcProgram = validateRpcUploadProgram(selectedRpcUploadProgram());
+      const source = stateNow();
+      const rpcMap = (Array.isArray(source?.mapLibrary) ? source.mapLibrary : [])
+        .find((entry) => String(entry?.id || "") === String(rpcProgram.mapId || ""))
+        || (Array.isArray(source?.mapLibrary) ? source.mapLibrary : [])
+          .find((entry) => String(entry?.name || "") === String(rpcProgram.mapName || ""))
+        || map
+        || null;
+      const rpcBottle = (Array.isArray(source?.bottleSpecs) ? source.bottleSpecs : [])
+        .find((entry) => String(entry?.bottleType || "") === String(rpcProgram.bottleType || ""))
+        || bottle
+        || null;
+      const rpcBrand = (Array.isArray(source?.labelSpecs) ? source.labelSpecs : [])
+        .find((entry) => String(entry?.brand || "") === String(rpcProgram.brand || ""))
+        || brand
+        || null;
+      return {
+        payload: { rpcProgram: clone(rpcProgram) },
+        name: rpcProgram.name || "Community RPC Program",
+        map: rpcMap,
+        bottle: rpcBottle,
+        brand: rpcBrand,
+        rpcProgram
+      };
+    }
     throw new Error("Choose a supported Community package type.");
   }
 
@@ -307,7 +358,13 @@
         bottleName: current.bottle?.bottleType || "",
         schemaVersion: 1,
         servoforgeVersion: String(global.SERVOFORGE_RELEASE_VERSION || document.querySelector('meta[name="application-version"]')?.content || ""),
-        configPayload: library.sanitize(current.payload),
+        configPayload: (() => {
+          const payload = library.sanitize(current.payload);
+          if (type === "rpc_program" && (!payload?.rpcProgram || typeof payload.rpcProgram !== "object")) {
+            throw new Error("RPC upload preparation failed: the selected program data was not included.");
+          }
+          return payload;
+        })(),
         validationSummary
       });
       if (status) status.textContent = `Submitted #SF-C${result.package.packageNumber} for review.`;
