@@ -394,6 +394,7 @@
         schemaVersion: 1,
         servoforgeVersion: String(global.SERVOFORGE_RELEASE_VERSION || document.querySelector('meta[name="application-version"]')?.content || ""),
         configPayload: sanitize(current.payload),
+        rpcProgram: type === "rpc_program" ? sanitize(current.rpcProgram) : undefined,
         validationSummary: summary
       });
       status.textContent = `Submitted #SF-C${response.package.packageNumber} for review.`;
