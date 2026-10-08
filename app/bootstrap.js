@@ -2,7 +2,7 @@
 
 (function loadServoForgeBootstrapModules() {
   const version = "0.9.10";
-  const build = "default-map-self-heal-v355-20261007";
+  const build = "cold-glue-brush-exit-v356-20261007";
   const buildUpdatedAt = "Oct 7, 2026";
   window.SERVOFORGE_RELEASE_VERSION = version;
   window.SERVOFORGE_BUILD_UPDATED_AT = buildUpdatedAt;
