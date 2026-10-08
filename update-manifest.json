@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "default-map-self-heal-v355-20261007",
+  "buildId": "cold-glue-brush-exit-v356-20261007",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Protected APL company-default maps now self-heal if their core roller/wipe-pad hardware disappears from persisted workspace state. The packaged APL 6-Aggregate hardware is restored while ancillary user-added objects and local machine settings are preserved."
+  "notes": "Cold Glue Map Builder now offers Shortest Rotation (legacy) or No Reverse Across Label. The opt-in safety mode blocks reverse gripper corrections and over-limit brush movement with explicit diagnostics rather than commanding label-peeling rotation."
 }
