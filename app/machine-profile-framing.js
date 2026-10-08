@@ -24,6 +24,22 @@ function applyMachineTypeProfileFraming(rows) {
   if (firstCorrectionIndex > 0) middle = middle.slice(firstCorrectionIndex);
   if (motionEndRest) middle.push(motionEndRest);
 
+  // A trailing Correction that holds the same angle through End of curve
+  // serves no positioning purpose. Preserve its Rest boundary and terminal
+  // setpoint, rather than adding a fictitious movement to satisfy grammar.
+  const lastMove = middle[middle.length - 1];
+  if (machineMap?.applicationMode === "cold-glue" && Number(lastMove?.cmd) === 7 && terminal
+    && Math.abs(Number(lastMove.plateAngle) - Number(terminal.plateAngle)) <= 0.001) {
+    const preceding = middle[middle.length - 2];
+    if (Number(preceding?.cmd) === 3
+      && Math.abs(Number(preceding.plateAngle) - Number(lastMove.plateAngle)) <= 0.001) {
+      middle.pop();
+      middle[middle.length - 1] = { ...preceding, autocolBoundary: "motion-end-rest" };
+    } else {
+      middle[middle.length - 1] = { ...lastMove, cmd: 3, autocolBoundary: "motion-end-rest" };
+    }
+  }
+
   const alternating = [];
   middle.forEach((row, index) => {
     const previous = alternating[alternating.length - 1];
@@ -62,7 +78,9 @@ function applyMachineTypeProfileFraming(rows) {
   });
 
   middle = alternating;
-  const finalPlate = middle.length && Number.isFinite(Number(middle[middle.length - 1].plateAngle))
+  const finalPlate = terminal && Number.isFinite(Number(terminal.plateAngle))
+    ? Number(terminal.plateAngle)
+    : middle.length && Number.isFinite(Number(middle[middle.length - 1].plateAngle))
     ? Number(middle[middle.length - 1].plateAngle)
     : 0;
   const framed = [

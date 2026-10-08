@@ -263,6 +263,9 @@
     const result = { neck: [], body: [], back: [] };
     (Array.isArray(rows) ? rows : []).forEach((row, index) => {
       logicalApplicationRows(row).forEach((candidate) => {
+        if (target?.applicationMode === "cold-glue"
+          && (Number(candidate?.cmd) !== 3 || candidate?.applicationReference !== true
+            || candidate?.brushEntryAlignment || candidate?.postApplicationBrushEntry)) return;
         const section = sectionFromApplicationRow(candidate);
         const angle = finite(candidate?.plateAngle, NaN);
         if (!section || !Number.isFinite(angle)) return;
@@ -356,6 +359,28 @@
   function validationNotes(rows = [], target = stateRef()) {
     const refs = applicationReferences(rows, target);
     const notes = [];
+    if (target?.applicationMode === "cold-glue") {
+      // Cold Glue grippers use fixed center-tack datums. Subsequent brush
+      // rotation is intentional and is not another application reference.
+      const datums = { neck: 0, body: 0, back: 180 };
+      Object.entries(datums).forEach(([section, expected]) => {
+        const stations = (target?.motionPlan?.stationPlans || []).filter((station) => station.section === section);
+        const measured = stations.length ? stations.map((station) => {
+          const table = finite(station.aggregateTableAngle, NaN);
+          // Framing may merge a held gripper Rest. Sample the actual curve at
+          // the physical pickup datum even when that named row no longer exists.
+          return Number.isFinite(table) && typeof global.plateAngleAt === "function"
+            ? global.plateAngleAt(table, rows) : NaN;
+        }) : refs[section].map((reference) => reference.applicationAngle);
+        measured.forEach((angle) => {
+          const mismatch = circularDistance(angle, expected);
+          if (!Number.isFinite(angle) || mismatch > FRONT_ALIGNMENT_TOLERANCE_DEG) notes.push(["bad",
+            `${section} application gripper centerline is ${Number.isFinite(angle) ? angle.toFixed(1) + "°" : "unresolved"}; expected ${expected.toFixed(1)}°${Number.isFinite(angle) ? ` (${mismatch.toFixed(1)}° error)` : ""}. Post-application brush orientation is evaluated separately.`,
+            { code: "cold-glue-gripper-centerline", category: "orientation", section, mismatchDeg: mismatch }]);
+        });
+      });
+      return notes;
+    }
     const neck = refs.neck[0]?.centerline;
     const body = refs.body[0]?.centerline;
     const back = refs.back[0]?.centerline;
