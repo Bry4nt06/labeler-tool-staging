@@ -159,6 +159,7 @@
       if (accepted === false) target.value = state.selectedBottle;
       else scheduleBottleSelectionRender();
     }
+    else if (target.id === "programColdGlueBrushExitMotion") build.updateColdGlueBrushExitMotion(target.value);
     else if (target.id === "neckWrapType") build.updateNeckWrapSetting("wrapType", target.value);
     else if (target.id === "neckOverlapEdge") build.updateNeckWrapSetting("overlapEdge", target.value);
     else if (target.id === "neckOverlapTargetMm") build.updateNeckWrapSetting("overlapTargetMm", target.value);

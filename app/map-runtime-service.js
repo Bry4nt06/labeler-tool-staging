@@ -71,6 +71,7 @@
     machineMap.applicationMode = state.applicationMode;
     machineMap.headCount = state.headCount;
     machineMap.machineSettings = {
+      ...machineMap.machineSettings,
       direction: state.direction,
       radius: state.radius,
       referencePitchRadiusMm: state.referencePitchRadiusMm,

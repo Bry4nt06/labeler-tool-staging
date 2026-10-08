@@ -96,6 +96,12 @@ function renderBuildInputs() {
   const modeSpecificInputs = isColdGlue
     ? `
         <h3>Cold Glue Program Parameters</h3>
+        <label>Cold Glue Brush Exit Motion
+          <select id="programColdGlueBrushExitMotion">
+            <option value="shortest"${activeMachineMap()?.machineSettings?.coldGlueBrushExitMotion === "no-reverse" ? "" : " selected"}>Shortest Rotation (legacy)</option>
+            <option value="no-reverse"${activeMachineMap()?.machineSettings?.coldGlueBrushExitMotion === "no-reverse" ? " selected" : ""}>No Reverse Across Label</option>
+          </select>
+        </label>
         <p class="application-filter-note">Cold Glue uses center-tack application and map-defined brush channels.</p>
         <label>Starting Servo Position (deg) <input id="plateStartPositionDeg" type="number" step="0.1" value="${state.buildInputs.plateStartPositionDeg}"></label>
         <label>Neck Contact Parameter (deg) <input id="programNeckContactDeg" type="number" min="0" step="0.001" value="${fmt(neckContactDeg, 3)}"></label>

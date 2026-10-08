@@ -245,6 +245,18 @@
     }, { syncMap: true });
   }
 
+  function updateColdGlueBrushExitMotion(rawValue) {
+    const map = actions.call("editableMachineMap");
+    if (!map || state.applicationMode !== "cold-glue") return false;
+    return commit(() => {
+      map.machineSettings = {
+        ...map.machineSettings,
+        coldGlueBrushExitMotion: rawValue === "no-reverse" ? "no-reverse" : "shortest"
+      };
+      map.localMachineSettingsOverride = true;
+    }, { regenerate: true });
+  }
+
   function updateNeckWrapSetting(field, rawValue) {
     const label = selectedLabel();
     if (!label) return false;
@@ -285,6 +297,7 @@
     updateApplicationReference,
     updateNeckApplication,
     updateCalculatedField,
-    updateNeckWrapSetting
+    updateNeckWrapSetting,
+    updateColdGlueBrushExitMotion
   });
 })(window);
