@@ -248,6 +248,38 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     assert.equal(simulationTab.ariaLabel, "Print Simulation Profile");
     assert.equal(simulationTab.followsSimulationTab, true);
 
+    // Exercise the real delegated change event at desktop and mobile widths.
+    const brandFixture = await page.evaluate(() => ({
+      original: state.selectedBrand,
+      alternate: state.labelSpecs.find((label) => label.brand !== state.selectedBrand)?.brand,
+      draft: JSON.stringify(state.simulation)
+    }));
+    assert.ok(brandFixture.alternate, "A second recipe is required for brand selection coverage.");
+    for (const width of [1280, 390]) {
+      await page.setViewport({ width, height: 900 });
+      await page.select("#simulationBrandSelect", brandFixture.alternate);
+      await sleep(250);
+      const selection = await page.evaluate(() => {
+        const saved = JSON.parse(localStorage.getItem("labelerToolSettings") || "{}");
+        const label = state.labelSpecs.find((row) => row.brand === state.selectedBrand);
+        return {
+          brand: state.selectedBrand, visibleBrand: document.querySelector("#simulationBrandSelect")?.value,
+          bottle: state.selectedBottle, expectedBottle: label?.bottleType,
+          storedBrand: saved.selectedBrand, tab: state.activeTab,
+          draft: JSON.stringify(state.simulation)
+        };
+      });
+      assert.equal(selection.brand, brandFixture.alternate);
+      assert.equal(selection.visibleBrand, brandFixture.alternate);
+      assert.equal(selection.storedBrand, brandFixture.alternate);
+      assert.equal(selection.bottle, selection.expectedBottle);
+      assert.equal(selection.tab, "simulation");
+      assert.equal(selection.draft, brandFixture.draft, "Changing brands must preserve every custom simulation row.");
+      await page.select("#simulationBrandSelect", brandFixture.original);
+      await sleep(250);
+    }
+    await page.setViewport({ width: 1280, height: 900 });
+
     await page.evaluate(() => {
       window.__servoForgePrintHtml = "";
       window.__servoForgePrintCalled = false;

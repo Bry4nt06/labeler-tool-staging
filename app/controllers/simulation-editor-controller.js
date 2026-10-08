@@ -98,22 +98,10 @@
   }
 
   function selectContextBrand(value) {
-    const requested = String(value || "");
-    const selected = (Array.isArray(state.labelSpecs) ? state.labelSpecs : [])
-      .find((entry) => String(entry?.brand || "") === requested);
-    if (!selected) return false;
-
-    actions.execute({
-      mutate() {
-        state.selectedBrand = selected.brand;
-        actions.call("ensureBottleReferenceForLabel", selected);
-        actions.call("applyLabelLengthStationRules");
-        global.LabelerLabelCenterlinePolicy?.ensureApplicationReferenceDefaults?.(state);
-      },
-      persist: true,
-      render: "all"
-    });
-    return true;
+    // Both workspaces choose the same recipe. Use the established selection
+    // transaction rather than full-render normalization, preserving this tab
+    // and the simulator's independent custom program.
+    return global.LabelerBuildInputsController.selectBrand(value, { restoreTab: "simulation" }) !== false;
   }
 
   function selectContextBottle(value) {

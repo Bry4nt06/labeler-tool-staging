@@ -312,12 +312,6 @@
     if (!base || base.brandContactDefaultsV2) return Boolean(base?.brandContactDefaultsV2);
     global.LabelerBuildInputsController = Object.freeze({
       ...base,
-      selectBrand(value) {
-        ensureBrand(stateRef(), (stateRef()?.labelSpecs || []).find((spec) => text(spec?.brand) === text(value)) || { brand: value, applicationMode: stateRef()?.applicationMode });
-        const result = base.selectBrand(value);
-        global.setTimeout(refreshAfterContextChange, 0);
-        return result;
-      },
       selectBottle(value) {
         const result = base.selectBottle(value);
         global.setTimeout(refreshAfterContextChange, 0);
