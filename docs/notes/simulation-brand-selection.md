@@ -19,9 +19,10 @@ Regression: `tests/simulation-brand-selection.test.js` reproduces full-render
 recipe replacement and delayed compatibility changes. Three cases fail before
 the change and all six pass after it. `npm run test:simulation` passes 14 tests.
 Adjacent brand, bottle, rendering, navigation, map reset and RPC tests pass 11;
-startup passes 261; update passes 3. The old brand contact parameter source test
-fails on untouched staging too because it requires the obsolete
-`editable-contact-parameters-v65-20260811` marker; it is unchanged.
+startup passes 261; update passes 3. The brand contact parameter test used an obsolete v65 loader marker and a
+mocked controller that depended on the removed wrapper. It now validates the
+current loader and the actual controller/action service, preserving all contact
+parameter behavior assertions; the updated test passes.
 The existing browser simulator/print CI now selects another brand through the
 real dropdown event at 1280px and 390px, checks displayed and persisted context,
 and verifies preservation of the complete custom draft.

@@ -24,6 +24,7 @@ on:
       - package.json
       - tests/simulation-independent-workspace.test.js
       - tests/simulation-brand-selection.test.js
+      - tests/brand-contact-parameter-defaults.test.js
       - tests/simulation-draft-persistence-and-print.test.js
       - tests/rpc-program-community-library.test.js
       - tests/servo-program-print-browser.test.cjs
@@ -50,6 +51,7 @@ on:
       - package.json
       - tests/simulation-independent-workspace.test.js
       - tests/simulation-brand-selection.test.js
+      - tests/brand-contact-parameter-defaults.test.js
       - tests/simulation-draft-persistence-and-print.test.js
       - tests/rpc-program-community-library.test.js
       - tests/servo-program-print-browser.test.cjs
@@ -83,7 +85,9 @@ jobs:
           node --check app/startup-runtime.js
           node --check tests/simulation-independent-workspace.test.js
       - name: Run simulation regressions
-        run: npm run test:simulation
+        run: |
+          npm run test:simulation
+          node --test tests/brand-contact-parameter-defaults.test.js
       - name: Run RPC Community upload regression
         run: node --test tests/rpc-program-community-library.test.js
       - name: Run adjacent navigation and map reset regressions

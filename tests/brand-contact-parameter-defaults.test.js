@@ -22,7 +22,7 @@ assert.match(controllerSource, /persistContactParameter\("neck", value\)/);
 assert.match(controllerSource, /persistContactParameter\("body", value\)/);
 assert.match(controllerSource, /persistContactParameter\("back", value\)/);
 assert.match(controllerSource, /LabelerBrandContactParameterDefaults\?\.setContactDeg/);
-assert.match(startup, /editable-contact-parameters-v65-20260811/);
+assert.match(startup, /loadScript\("app\/global-machine-parameter-defaults-integration\.js"/);
 assert.doesNotMatch(startup, /brand-contact-parameter-defaults-integration\.js/);
 assert.match(startup, /global-machine-parameter-defaults-integration\.js/);
 
@@ -66,25 +66,6 @@ function bodyCircumference(bottle) {
   return Math.PI * (Number(bottle.diameterTargetMm) - 2 * Number(bottle.radiusReductionMm));
 }
 
-const baseController = {
-  selectBrand(value) {
-    state.selectedBrand = value;
-    const label = state.labelSpecs.find((spec) => spec.brand === value);
-    state.selectedBottle = label?.bottleType || state.selectedBottle;
-  },
-  selectBottle(value) {
-    state.selectedBottle = value;
-  },
-  updateCalculatedField(id, rawValue) {
-    const value = Number(rawValue);
-    const label = state.labelSpecs.find((spec) => spec.brand === state.selectedBrand);
-    const bottle = state.bottleSpecs.find((spec) => spec.bottleType === state.selectedBottle);
-    const bodyCirc = bodyCircumference(bottle);
-    if (id === "programNeckContactDeg") state.buildInputs.neckContactMm = value / 360 * Math.max(0.001, Number(label.neckBottomCircumferenceMm));
-    if (id === "programBodyContactDeg") state.buildInputs.bodyContactMm = value / 360 * bodyCirc;
-    if (id === "programBackContactDeg") state.buildInputs.backContactMm = value / 360 * bodyCirc;
-  }
-};
 
 const context = {
   console,
@@ -110,14 +91,18 @@ const context = {
     };
   },
   renderBuildInputs() {},
-  LabelerBuildInputsController: baseController,
+  ensureBottleReferenceForLabel(label) { state.selectedBottle = label.bottleType; },
+  applyLabelLengthStationRules() {},
   saveCurrentSettings() {},
   applyGeneratedServoProfile() {},
   render() {}
 };
 context.window = context;
 context.globalThis = context;
-vm.runInNewContext(source, context);
+vm.createContext(context);
+vm.runInContext(fs.readFileSync(path.join(root, "app/controllers/workspace-action-service.js"), "utf8"), context);
+vm.runInContext(controllerSource, context);
+vm.runInContext(source, context);
 
 assert.equal(context.LabelerBrandContactParameterDefaults.installed, true);
 assert.equal(context.LabelerBrandContactParameterDefaults.version, 2);
