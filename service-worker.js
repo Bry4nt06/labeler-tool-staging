@@ -1,7 +1,7 @@
 "use strict";
 
 const RELEASE_VERSION = "0.9.10";
-const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-default-map-self-heal-v355-20261007";
+const CACHE_NAME = "servoforge-labeler-staging-v0.9.10-cold-glue-brush-exit-v356-20261007";
 const CACHE_PREFIX = "servoforge-labeler-staging-";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 
