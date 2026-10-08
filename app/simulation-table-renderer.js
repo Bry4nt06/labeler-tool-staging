@@ -26,9 +26,10 @@ function currentServoProfileContext() {
 }
 
 function servoSimulationSelectOptions(values, selectedValue) {
-  const selected = String(selectedValue || "");
-  return [...new Set((Array.isArray(values) ? values : []).map((value) => String(value || "").trim()).filter(Boolean))]
-    .map((value) => `<option value="${escapeServoProfileHtml(value)}"${value === selected ? " selected" : ""}>${escapeServoProfileHtml(value)}</option>`)
+  const selected = String(selectedValue ?? "");
+  // Option values are saved recipe identities; trim only the display label.
+  return [...new Set((Array.isArray(values) ? values : []).map((value) => String(value ?? "")).filter((value) => value.trim()))]
+    .map((value) => `<option value="${escapeServoProfileHtml(value)}"${value === selected ? " selected" : ""}>${escapeServoProfileHtml(value.trim())}</option>`)
     .join("");
 }
 
