@@ -27,7 +27,7 @@ assert.match(source,/data-top-view-frame=\"head-1-world\"/);
 assert.match(source,/headOneWorldFrameTopViewV80: true/);
 assert.match(source,/mechanicalMapTransformParityV80: true/);
 assert.match(source,/coverage\.tackMode = \"leading\"/);
-assert.match(animationRuntime,/LabelerBottleOrientationPanel\?\.renderAll\?\.\(\)/);
+assert.match(animationRuntime,/LabelerBottleOrientationPanel\?\.renderAll\?\.\(\{ visibleOnly: true \}\)/);
 assert.match(source,/topViewOnlyV84: true/);
 assert.match(source,/standaloneOrientationControlsRemovedV84: true/);
 assert.match(source,/topViewWipeGraphicRemovedV84: true/);

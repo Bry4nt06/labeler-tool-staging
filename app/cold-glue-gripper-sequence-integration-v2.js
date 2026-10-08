@@ -10,8 +10,6 @@
   const DEFAULT_NECK_PRESS_TABLE_DEG = 4;
   const SEQUENCE_VERSION = 2;
   let installed = false;
-  let decoratePending = false;
-  let mapObserver = null;
 
   function finite(value, fallback = 0) {
     const parsed = Number(value);
@@ -349,77 +347,6 @@
     return output;
   }
 
-  function refreshMotion() {
-    try { if (typeof syncApplicationMapToLegacyState === "function") syncApplicationMapToLegacyState(); } catch { }
-    try { if (typeof applyGeneratedServoProfile === "function") applyGeneratedServoProfile(); } catch { }
-    try { if (typeof saveCurrentSettings === "function") saveCurrentSettings(); } catch { }
-    try { if (typeof render === "function") render(); } catch { }
-  }
-
-  function decorateGrippers() {
-    decoratePending = false;
-    const map = activeMap();
-    const list = document.querySelector("#wipeBuilderList");
-    if (!map || map.applicationMode !== "cold-glue" || !list) return;
-    const changed = normalizeGripperSequence(map);
-    if (changed && typeof renderWipeDownBuilder === "function") {
-      window.requestAnimationFrame(() => renderWipeDownBuilder());
-      return;
-    }
-    const grippers = sortedGrippers(map).slice(0, 3);
-    grippers.forEach((gripper, index) => {
-      const row = list.querySelector(`.wipe-builder-row[data-builder-object-id="${CSS.escape(String(gripper.id))}"]`);
-      const grid = row?.querySelector(".cold-glue-process-parameters .cold-glue-parameter-grid");
-      if (!grid) return;
-      let badge = row.querySelector(".cold-glue-gripper-order-badge");
-      if (!badge) {
-        badge = document.createElement("div");
-        badge.className = "cold-glue-gripper-order-badge";
-        grid.parentElement?.insertBefore(badge, grid);
-      }
-      badge.textContent = grippers.length >= 3
-        ? `Application Gripper ${index + 1} • ${String(gripper.labelSection || "").toUpperCase()} • Station ${gripper.station}`
-        : `Gripper • Station ${gripper.station} • add ${3 - grippers.length} more gripper object${3 - grippers.length === 1 ? "" : "s"} to enable automatic Neck/Body/Back assignment`;
-      if (!grid.querySelector('[data-cold-glue-sequence-param="brushEntryPlateAngleDeg"]')) {
-        const label = document.createElement("label");
-        label.innerHTML = `Bottle angle entering brushes<input data-cold-glue-sequence-param="brushEntryPlateAngleDeg" type="number" step="0.1" value="${finish(finite(gripper.brushEntryPlateAngleDeg, 90))}"><small>Reached after the label leaves this gripper and before physical brush contact begins.</small>`;
-        grid.appendChild(label);
-      }
-    });
-  }
-
-  function scheduleDecorate() {
-    if (decoratePending) return;
-    decoratePending = true;
-    window.requestAnimationFrame(decorateGrippers);
-  }
-
-  function bindSequenceControls() {
-    if (document.documentElement.dataset.coldGlueGripperSequenceV2Bound === "true") return;
-    document.documentElement.dataset.coldGlueGripperSequenceV2Bound = "true";
-    const apply = (event) => {
-      const control = event.target.closest?.("[data-cold-glue-sequence-param]");
-      if (!control) return;
-      const row = control.closest(".wipe-builder-row[data-builder-object-id]");
-      const map = activeMap();
-      const item = map?.objects?.find((entry) => String(entry.id) === String(row?.dataset.builderObjectId));
-      if (!item) return;
-      item[control.dataset.coldGlueSequenceParam] = finite(control.value, item[control.dataset.coldGlueSequenceParam]);
-      refreshMotion();
-      scheduleDecorate();
-    };
-    document.addEventListener("input", apply);
-    document.addEventListener("change", apply);
-  }
-
-  function installStyles() {
-    if (document.querySelector("#coldGlueGripperSequenceStyles")) return;
-    const style = document.createElement("style");
-    style.id = "coldGlueGripperSequenceStyles";
-    style.textContent = `.cold-glue-gripper-order-badge{margin:0 0 7px;padding:6px 8px;border:1px solid var(--green);border-radius:6px;background:color-mix(in srgb,var(--panel) 82%,var(--green) 18%);color:var(--green);font-size:9px;font-weight:900;letter-spacing:.04em}`;
-    document.head.appendChild(style);
-  }
-
   function wrapGenerator() {
     const original = window.generatedColdGlueFixedProfile;
     if (typeof original !== "function" || original.coldGlueThreeGripperWrappedV2) return false;
@@ -440,19 +367,14 @@
     if (installed) return true;
     if (typeof state === "undefined" || typeof window.generatedColdGlueFixedProfile !== "function") return false;
     if (!wrapGenerator()) return false;
-    installStyles();
-    bindSequenceControls();
     const changed = normalizeGripperSequence(activeMap());
-    const list = document.querySelector("#wipeBuilderList");
-    if (list && !mapObserver) {
-      mapObserver = new MutationObserver(scheduleDecorate);
-      mapObserver.observe(list, { childList: true, subtree: true });
-    }
     if (changed && typeof renderWipeDownBuilder === "function") window.setTimeout(() => renderWipeDownBuilder(), 0);
-    scheduleDecorate();
+    window.LabelerColdGlueParameterEditor?.refresh?.();
     installed = true;
     return true;
   }
+
+  window.LabelerColdGlueGripperSequence = Object.freeze({ normalizeGripperSequence, sortedGrippers });
 
   function wait() {
     if (install()) return;

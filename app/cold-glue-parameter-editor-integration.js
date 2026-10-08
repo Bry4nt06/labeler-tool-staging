@@ -123,9 +123,10 @@
 
   function parameterMarkup(item) {
     const common = `<label>Label use<select data-cold-glue-param="labelSection">${sectionOptions(String(item.labelSection || "auto"))}</select><small>Defines which label geometry this object belongs to.</small></label>`;
-    if (item.kind === "gripper") {
+    if (["gripper", "pallet"].includes(item.kind)) {
       return `${common}
         <label>Bottle angle on gripper centerline<input data-cold-glue-param="applicationPlateAngleDeg" type="number" step="0.1" value="${html(finite(item.applicationPlateAngleDeg, 0))}"><small>0° keeps the bottle reference aligned with the gripper centerline.</small></label>
+        <label>Bottle angle entering brushes<input data-cold-glue-param="brushEntryPlateAngleDeg" type="number" step="0.1" value="${html(finite(item.brushEntryPlateAngleDeg, 90))}"><small>Reached after the label leaves this gripper and before physical brush contact begins.</small></label>
         <label>Finish alignment before gripper (table deg)<input data-cold-glue-param="alignmentLeadTableDeg" type="number" min="0" step="0.1" value="${html(finite(item.alignmentLeadTableDeg, 6))}"><small>The bottle reaches centerline this far before the gripper point, then holds through application.</small></label>
         <label>Neck wipe order<select data-cold-glue-param="neckWipeOrder"><option value="left-right"${item.neckWipeOrder !== "right-left" ? " selected" : ""}>Left side, then right side</option><option value="right-left"${item.neckWipeOrder === "right-left" ? " selected" : ""}>Right side, then left side</option></select></label>
         <label>Neck over-wipe (mm)<input data-cold-glue-param="neckOverWipeMm" type="number" min="0" step="0.1" value="${html(finite(item.neckOverWipeMm, 5))}"><small>Added beyond each neck-label edge.</small></label>
@@ -145,11 +146,24 @@
     return common;
   }
 
+  function gripperBadge(item, map) {
+    const grippers = window.LabelerColdGlueGripperSequence?.sortedGrippers?.(map)?.slice(0, 3) || [];
+    const index = grippers.indexOf(item);
+    if (index < 0) return "";
+    return grippers.length >= 3
+      ? `Application Gripper ${index + 1} • ${String(item.labelSection || "").toUpperCase()} • Station ${item.station}`
+      : `Gripper • Station ${item.station} • add ${3 - grippers.length} more gripper object${3 - grippers.length === 1 ? "" : "s"} to enable automatic Neck/Body/Back assignment`;
+  }
+
   function decorateRows() {
     decoratePending = false;
     const map = activeMap();
     const list = document.querySelector("#wipeBuilderList");
     if (!map || map.applicationMode !== "cold-glue" || !list) return;
+    if (window.LabelerColdGlueGripperSequence?.normalizeGripperSequence?.(map)) {
+      if (typeof renderWipeDownBuilder === "function") renderWipeDownBuilder();
+      return;
+    }
     if (migratedMapId !== String(map.id || "active-cold-glue-map")) migrateActiveMap();
 
     list.querySelectorAll(".wipe-builder-row[data-builder-object-id]").forEach((row) => {
@@ -158,7 +172,10 @@
       const editor = row.querySelector(".builder-object-editor");
       if (!editor) return;
       let section = editor.querySelector(":scope > .cold-glue-process-parameters");
+      const badge = gripperBadge(item, map);
       const signature = JSON.stringify({
+        badge,
+        brushEntryPlateAngleDeg: item.brushEntryPlateAngleDeg,
         kind: item.kind,
         labelSection: item.labelSection,
         applicationPlateAngleDeg: item.applicationPlateAngleDeg,
@@ -179,9 +196,19 @@
       }
       if (section.dataset.signature !== signature) {
         section.dataset.signature = signature;
-        section.innerHTML = `<legend>Cold Glue process parameters</legend><div class="cold-glue-parameter-grid">${parameterMarkup(item)}</div>`;
+        section.innerHTML = `<legend>Cold Glue process parameters</legend>${badge ? `<div class="cold-glue-gripper-order-badge">${html(badge)}</div>` : ""}<div class="cold-glue-parameter-grid">${parameterMarkup(item)}</div>`;
       }
     });
+  }
+
+  function builderRowsChanged(records) {
+    // Parameter markup is owned here. Its own text/control updates must never
+    // feed the row observer; only the builder replacing rows/editors needs work.
+    return records.some((record) => record.type === "childList"
+      && !record.target?.closest?.(".cold-glue-process-parameters")
+      && [...record.addedNodes, ...record.removedNodes].some((node) =>
+        node.nodeType === 1 && (node.matches?.(".wipe-builder-row,.builder-object-editor")
+          || node.querySelector?.(".wipe-builder-row,.builder-object-editor"))));
   }
 
   function scheduleDecorate() {
@@ -230,7 +257,7 @@
     if (document.querySelector("#coldGlueParameterEditorStyles")) return;
     const style = document.createElement("style");
     style.id = "coldGlueParameterEditorStyles";
-    style.textContent = `.cold-glue-process-parameters{margin:0 0 9px;padding:8px;border:1px solid color-mix(in srgb,var(--green) 42%,var(--line));border-radius:7px;background:color-mix(in srgb,var(--panel) 88%,var(--green) 12%)}.cold-glue-process-parameters legend{padding:0 5px;color:var(--green);font-size:9px;font-weight:800}.cold-glue-parameter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.cold-glue-parameter-grid label{min-width:0}.cold-glue-parameter-grid small{display:block;margin-top:3px;color:var(--muted);font-size:8px;line-height:1.3}.cold-glue-param-check{align-self:end;min-height:34px;padding:7px;border:1px solid var(--line);border-radius:6px;background:var(--input)}@media(max-width:800px){.cold-glue-parameter-grid{grid-template-columns:1fr}}`;
+    style.textContent = `.cold-glue-gripper-order-badge{margin:0 0 7px;padding:6px 8px;border:1px solid var(--green);border-radius:6px;background:color-mix(in srgb,var(--panel) 82%,var(--green) 18%);color:var(--green);font-size:9px;font-weight:900;letter-spacing:.04em}.cold-glue-process-parameters{margin:0 0 9px;padding:8px;border:1px solid color-mix(in srgb,var(--green) 42%,var(--line));border-radius:7px;background:color-mix(in srgb,var(--panel) 88%,var(--green) 12%)}.cold-glue-process-parameters legend{padding:0 5px;color:var(--green);font-size:9px;font-weight:800}.cold-glue-parameter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.cold-glue-parameter-grid label{min-width:0}.cold-glue-parameter-grid small{display:block;margin-top:3px;color:var(--muted);font-size:8px;line-height:1.3}.cold-glue-param-check{align-self:end;min-height:34px;padding:7px;border:1px solid var(--line);border-radius:6px;background:var(--input)}@media(max-width:800px){.cold-glue-parameter-grid{grid-template-columns:1fr}}`;
     document.head.appendChild(style);
   }
 
@@ -241,12 +268,14 @@
     bindControls();
     migrateActiveMap();
     if (!observer) {
-      observer = new MutationObserver(scheduleDecorate);
+      observer = new MutationObserver((records) => { if (builderRowsChanged(records)) scheduleDecorate(); });
       observer.observe(list, { childList: true, subtree: true });
     }
     scheduleDecorate();
     return true;
   }
+
+  window.LabelerColdGlueParameterEditor = Object.freeze({ refresh: scheduleDecorate, builderRowsChanged, gripperBadge });
 
   function wait() {
     if (install()) return;

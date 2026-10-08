@@ -36,7 +36,7 @@ function renderSharedAnimationPresentation() {
   }
 
   try {
-    window.LabelerBottleOrientationPanel?.renderAll?.();
+    window.LabelerBottleOrientationPanel?.renderAll?.({ visibleOnly: true });
   } catch (error) {
     console.error("Bottle orientation frame render failed", error);
   }

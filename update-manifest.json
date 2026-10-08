@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-inputs-performance-v358-20261008",
+  "buildId": "cold-glue-frame-performance-v359-20261008",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Cold Glue Brush Exit Motion is now in Build Inputs and retains its per-map saved choice. Animation reuses program segments within each frame and avoids full scene rebuilds at ordinary command transitions; motion, fault overlays and speed limits are preserved."
+  "notes": "Cold Glue builder badges and brush-entry controls now use one parameter-editor renderer, eliminating the self-scheduling gripper decoration observer. Hidden or collapsed bottle-orientation panels skip live animation work. Motion and the migrated Build Inputs settings are preserved."
 }
