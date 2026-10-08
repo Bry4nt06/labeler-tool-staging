@@ -104,3 +104,29 @@ test("Simulation applies saved brand contact parameters before generation and pe
   assert.equal(f.saved.at(-1).buildInputs.neckContactMm, 8);
   assert.equal(f.state.activeTab, "simulation");
 });
+
+test("Simulation option values round-trip saved brand names with surrounding spaces", () => {
+  const f = fixture();
+  f.state.labelSpecs[1].brand = " Modelo Especial ";
+  const presentSimulation = f.context.renderSimulation;
+  vm.runInContext(fs.readFileSync(path.join(root, "app/simulation-table-renderer.js"), "utf8"), f.context);
+  f.context.renderSimulation = presentSimulation;
+  const html = f.context.servoSimulationSelectOptions([" Modelo Especial "], " Modelo Especial ");
+  const value = html.match(/<option value="([^"]+)"/)[1];
+  assert.equal(value, " Modelo Especial ", "The option must preserve the saved recipe identity.");
+  assert.match(html, / selected>Modelo Especial<\/option>/, "The display label can trim spaces without changing identity.");
+  assert.equal(f.select(value), true);
+  while (f.frames.length) f.frames.shift()();
+  assert.equal(f.state.selectedBrand, " Modelo Especial ");
+  assert.equal(f.saved.at(-1).selectedBrand, " Modelo Especial ");
+  assert.equal(f.state.selectedBottle, "Bottle B");
+});
+
+test("Simulation options preserve distinct identities and escape names safely", () => {
+  const f = fixture();
+  vm.runInContext(fs.readFileSync(path.join(root, "app/simulation-table-renderer.js"), "utf8"), f.context);
+  const html = f.context.servoSimulationSelectOptions(["Modelo", "Modelo ", "Modelo", "   ", null, 'A&B "Special"'], "Modelo ");
+  assert.equal((html.match(/<option /g) || []).length, 3);
+  assert.match(html, /value="Modelo " selected>Modelo<\/option>/);
+  assert.match(html, /value="A&amp;B &quot;Special&quot;">A&amp;B &quot;Special&quot;<\/option>/);
+});

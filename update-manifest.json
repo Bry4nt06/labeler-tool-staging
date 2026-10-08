@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "simulation-brand-selection-v360-20261008",
+  "buildId": "simulation-brand-values-v361-20261008",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Servo Simulation brand selection now uses the same authoritative recipe transaction as Build Inputs. The selected brand and bottle persist while custom simulation lines and the Simulation tab are preserved."
+  "notes": "Servo Simulation selectors preserve exact saved brand and bottle names, including surrounding spaces, while displaying tidy labels. Imported recipes can be selected without renaming them or losing custom simulation lines."
 }

@@ -248,6 +248,12 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     assert.equal(simulationTab.ariaLabel, "Print Simulation Profile");
     assert.equal(simulationTab.followsSimulationTab, true);
 
+    // Include an imported recipe whose saved name contains surrounding spaces.
+    await page.evaluate(() => {
+      const label = state.labelSpecs.find((entry) => entry.brand === state.selectedBrand);
+      state.labelSpecs.unshift({ ...label, brand: " Modelo selection fixture " });
+      renderSimulation();
+    });
     // Exercise the real delegated change event at desktop and mobile widths.
     const brandFixture = await page.evaluate(() => ({
       original: state.selectedBrand,
