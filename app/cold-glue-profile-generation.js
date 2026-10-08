@@ -89,6 +89,7 @@ function generatedColdGlueFixedProfile() {
         });
         // Never silently substitute a high-speed 360-degree return that could
         // peel an already adhered Cold Glue label.
+        return;
       }
     }
     add(7, correctionStart, plate, action, {
@@ -140,9 +141,9 @@ function generatedColdGlueFixedProfile() {
     // faults on Autocol profiles.
     const { restAction, ...rowExtra } = extra;
     add(7, start, plate, `${action} - Turn`, rowExtra);
-    if (noReverseBrushExit && extra.wipeOutward === true && start >= 330 && end - start < 1) {
+    if (noReverseBrushExit && extra.wipeOutward === true && (end - start) * Math.max(0.1, num(state.maxMoveRatio, 24)) < rotation - 0.001) {
       issues.push({ level: "bad", code: "cold-glue-late-brush-exit", section: extra.section,
-        message: `No Reverse Across Label: brush move at ${start.toFixed(1)}° provides only ${(end-start).toFixed(1)}° table travel and cannot safely wipe ${rotation.toFixed(1)}° bottle rotation. Move brush contact earlier or reduce assigned coverage.` });
+        message: `No Reverse Across Label: brush turn at ${start.toFixed(1)}° requires ${rotation.toFixed(1)}° bottle rotation in ${(end-start).toFixed(1)}° table travel, exceeding the configured turn-speed limit. Reposition brush or reduce assigned coverage.` });
       rows.pop();
       lastTable = rows.length ? num(rows[rows.length - 1].tableAngle, 0) : 0;
       return;
