@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-frame-performance-v359-20261008",
+  "buildId": "simulation-brand-selection-v360-20261008",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Cold Glue builder badges and brush-entry controls now use one parameter-editor renderer, eliminating the self-scheduling gripper decoration observer. Hidden or collapsed bottle-orientation panels skip live animation work. Motion and the migrated Build Inputs settings are preserved."
+  "notes": "Servo Simulation brand selection now uses the same authoritative recipe transaction as Build Inputs. The selected brand and bottle persist while custom simulation lines and the Simulation tab are preserved."
 }

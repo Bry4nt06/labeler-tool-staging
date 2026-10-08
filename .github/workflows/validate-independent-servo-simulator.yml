@@ -9,6 +9,8 @@ on:
       - app/simulation-table-renderer.js
       - app/controllers/simulation-controller.js
       - app/controllers/simulation-editor-controller.js
+      - app/controllers/build-inputs-controller.js
+      - app/controllers/workspace-action-service.js
       - app/community-library-integration.js
       - app/community-library-v103-integration.js
       - app/controllers/tabs-controller.js
@@ -20,6 +22,7 @@ on:
       - update-manifest.json
       - package.json
       - tests/simulation-independent-workspace.test.js
+      - tests/simulation-brand-selection.test.js
       - tests/simulation-draft-persistence-and-print.test.js
       - tests/rpc-program-community-library.test.js
       - tests/servo-program-print-browser.test.cjs
@@ -31,6 +34,8 @@ on:
       - app/simulation-table-renderer.js
       - app/controllers/simulation-controller.js
       - app/controllers/simulation-editor-controller.js
+      - app/controllers/build-inputs-controller.js
+      - app/controllers/workspace-action-service.js
       - app/community-library-integration.js
       - app/community-library-v103-integration.js
       - app/controllers/tabs-controller.js
@@ -42,6 +47,7 @@ on:
       - update-manifest.json
       - package.json
       - tests/simulation-independent-workspace.test.js
+      - tests/simulation-brand-selection.test.js
       - tests/simulation-draft-persistence-and-print.test.js
       - tests/rpc-program-community-library.test.js
       - tests/servo-program-print-browser.test.cjs
@@ -67,6 +73,8 @@ jobs:
           node --check app/simulation-table-renderer.js
           node --check app/controllers/simulation-controller.js
           node --check app/controllers/simulation-editor-controller.js
+          node --check app/controllers/build-inputs-controller.js
+          node --check tests/simulation-brand-selection.test.js
           node --check app/controllers/tabs-controller.js
           node --check app/defaults.js
           node --check app/persistence.js

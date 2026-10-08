@@ -60,12 +60,13 @@
 
   let brandSelectionSequence = 0;
 
-  function selectBrand(value) {
+  function selectBrand(value, options = {}) {
     const requested = String(value ?? "");
     const available = state.labelSpecs || [];
     const selected = available.find((row) => String(row?.brand ?? "") === requested);
     if (!selected) return false;
     const requestedBrand = String(selected.brand);
+    const destination = options.restoreTab === "simulation" ? "simulation" : "buildInputs";
     const transaction = ++brandSelectionSequence;
 
     const applyRequestedSelection = () => {
@@ -75,10 +76,10 @@
       global.LabelerLabelCenterlinePolicy?.ensureApplicationReferenceDefaults?.(state);
     };
 
-    const restoreBuildInputs = () => {
+    const restoreSelectionTab = () => {
       global.LabelerTabsController?.setDirectTabState?.(
-        "buildInputs",
-        global.document?.querySelector?.('.tabs .tab[data-tab="buildInputs"]') || null
+        destination,
+        global.document?.querySelector?.(`.tabs .tab[data-tab="${destination}"]`) || null
       );
     };
 
@@ -88,7 +89,7 @@
       applyRequestedSelection();
       if (persist) actions.call("saveCurrentSettings");
       actions.present?.();
-      restoreBuildInputs();
+      restoreSelectionTab();
     };
 
     return actions.execute({
@@ -98,7 +99,7 @@
       regenerate: true,
       persist: true,
       render: null,
-      restoreTab: "buildInputs",
+      restoreTab: destination,
       after() {
         if (transaction !== brandSelectionSequence) return;
 
@@ -121,7 +122,7 @@
           // state here but skipped this repaint when state already matched,
           // leaving the old Brand/Bottle visible in Build Inputs.
           actions.present?.();
-          restoreBuildInputs();
+          restoreSelectionTab();
         };
 
         if (typeof global.requestAnimationFrame === "function") global.requestAnimationFrame(settle);
