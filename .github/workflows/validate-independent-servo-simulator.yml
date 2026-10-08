@@ -11,6 +11,7 @@ on:
       - app/controllers/simulation-editor-controller.js
       - app/controllers/build-inputs-controller.js
       - app/controllers/workspace-action-service.js
+      - app/global-machine-parameter-defaults-integration.js
       - app/community-library-integration.js
       - app/community-library-v103-integration.js
       - app/controllers/tabs-controller.js
@@ -36,6 +37,7 @@ on:
       - app/controllers/simulation-editor-controller.js
       - app/controllers/build-inputs-controller.js
       - app/controllers/workspace-action-service.js
+      - app/global-machine-parameter-defaults-integration.js
       - app/community-library-integration.js
       - app/community-library-v103-integration.js
       - app/controllers/tabs-controller.js

@@ -72,6 +72,7 @@
     const applyRequestedSelection = () => {
       state.selectedBrand = requestedBrand;
       actions.call("ensureBottleReferenceForLabel", selected);
+      global.LabelerBrandContactParameterDefaults?.applySelectedBrand?.(state);
       actions.call("applyLabelLengthStationRules");
       global.LabelerLabelCenterlinePolicy?.ensureApplicationReferenceDefaults?.(state);
     };

@@ -10,11 +10,14 @@ The invariant is that a valid brand selection updates the matching bottle,
 generated program, visible selectors and saved recipe while leaving the
 independent simulation draft unchanged and keeping the originating workspace tab.
 Invalid choices do nothing; the latest selection owns deferred presentation.
-The duplicate Simulation mutation was removed, with no new listener or wrapper.
+The duplicate Simulation mutation and the contact-defaults brand override were
+removed. The latter dropped controller options and scheduled full normalization.
+Contact defaults now apply directly inside the brand transaction before program
+generation and persistence, with no new listener or wrapper.
 
 Regression: `tests/simulation-brand-selection.test.js` reproduces full-render
 recipe replacement and delayed compatibility changes. Three cases fail before
-the change and all five pass after it. `npm run test:simulation` passes 13 tests.
+the change and all six pass after it. `npm run test:simulation` passes 14 tests.
 Adjacent brand, bottle, rendering, navigation, map reset and RPC tests pass 11;
 startup passes 261; update passes 3. The old brand contact parameter source test
 fails on untouched staging too because it requires the obsolete

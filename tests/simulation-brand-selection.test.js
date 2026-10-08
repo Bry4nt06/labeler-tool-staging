@@ -20,8 +20,10 @@ function fixture(applicationMode = "cold-glue") {
     simulation: { useCustom: true, source: "manual", draftName: "My draft", lines: [{ cmd: 7, tableAngle: 13, plateAngle: 27 }] }
   };
   const context = {
-    state, document: { querySelector: () => null },
+    state, document: { querySelector: () => null, getElementById: () => null },
     requestAnimationFrame: callback => frames.push(callback),
+    setTimeout: callback => frames.push(callback),
+    loadSavedSettings() {}, buildProgramSummary: () => ({ rows: [] }), renderBuildInputs() {},
     LabelerTabsController: { setDirectTabState: tab => { state.activeTab = tab; } },
     saveCurrentSettings: () => saved.push(JSON.parse(JSON.stringify(state))),
     ensureBottleReferenceForLabel: label => { state.selectedBottle = label.bottleType; },
@@ -37,6 +39,7 @@ function fixture(applicationMode = "cold-glue") {
   for (const file of ["workspace-action-service", "build-inputs-controller", "simulation-editor-controller"]) {
     vm.runInContext(fs.readFileSync(path.join(root, `app/controllers/${file}.js`), "utf8"), context, { filename: file });
   }
+  vm.runInContext(fs.readFileSync(path.join(root, "app/global-machine-parameter-defaults-integration.js"), "utf8"), context);
   return { context, state, frames, saved, displayed, select: value => context.LabelerSimulationEditorController.selectContextBrand(value) };
 }
 
@@ -85,4 +88,19 @@ test("Build Inputs keeps its existing brand selection destination", () => {
   while (f.frames.length) f.frames.shift()();
   assert.equal(f.state.selectedBrand, "Second");
   assert.equal(f.state.activeTab, "buildInputs");
+});
+
+test("Simulation applies saved brand contact parameters before generation and persistence", () => {
+  const f = fixture();
+  const label = f.state.labelSpecs[1];
+  label.neckBottomCircumferenceMm = 120;
+  f.context.LabelerBrandContactParameterDefaults.setContactDeg(f.state, "neck", 24, label);
+  let generatedContact;
+  f.context.applyGeneratedServoProfile = () => { generatedContact = f.state.buildInputs.neckContactMm; };
+  f.select("Second");
+  while (f.frames.length) f.frames.shift()();
+  assert.equal(generatedContact, 8);
+  assert.equal(f.state.buildInputs.neckContactMm, 8);
+  assert.equal(f.saved.at(-1).buildInputs.neckContactMm, 8);
+  assert.equal(f.state.activeTab, "simulation");
 });
