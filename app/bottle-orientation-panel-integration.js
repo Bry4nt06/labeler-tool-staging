@@ -679,7 +679,9 @@ function topViewWipeDirection() {
     return true;
   }
 
-  function renderAll() {
+  function renderAll({ visibleOnly = false } = {}) {
+    if (visibleOnly && runtimeState()?.activeTab !== "program") return;
+    if (visibleOnly && panelHost("program")?.querySelector(`[${PANEL_ATTR}="program"]`)?.open === false) return;
     removePanel("simulation");
     ["program"].forEach((source) => {
       if (panelHost(source)) renderSource(source);

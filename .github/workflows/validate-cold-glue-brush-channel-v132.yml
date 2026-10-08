@@ -14,6 +14,7 @@ on:
       - "app/simulation-engine.js"
       - "app/map-animation-renderer.js"
       - "tests/cold-glue-inputs-performance.test.js"
+      - "tests/cold-glue-frame-performance.test.js"
       - "app/controllers/build-inputs-controller.js"
       - "app/controllers/specs-controller.js"
       - "app/controllers/setup-event-controller-integration.js"
@@ -58,6 +59,7 @@ on:
       - "app/simulation-engine.js"
       - "app/map-animation-renderer.js"
       - "tests/cold-glue-inputs-performance.test.js"
+      - "tests/cold-glue-frame-performance.test.js"
       - "app/controllers/build-inputs-controller.js"
       - "app/controllers/specs-controller.js"
       - "app/controllers/setup-event-controller-integration.js"
@@ -133,7 +135,7 @@ jobs:
       - name: Validate brush-channel motion, wipe direction, default depth, and startup integrity
         run: |
           set -euo pipefail
-          node --test tests/cold-glue-inputs-performance.test.js
+          node --test tests/cold-glue-inputs-performance.test.js tests/cold-glue-frame-performance.test.js
           node tests/cold-glue-brush-channel-authority-v132.test.js
           node tests/cold-glue-equal-channel-hold-v317.test.js
           node tests/cold-glue-gripper-priority-carryover-v348.test.js
