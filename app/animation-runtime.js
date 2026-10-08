@@ -24,6 +24,10 @@ function authoritativeAnimationRenderer() {
 }
 
 function renderSharedAnimationFrame() {
+  return withProgramSegmentFrame(renderSharedAnimationPresentation);
+}
+
+function renderSharedAnimationPresentation() {
   try {
     const renderer = authoritativeAnimationRenderer();
     if (typeof renderer === "function") renderer();

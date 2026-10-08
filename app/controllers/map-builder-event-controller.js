@@ -16,8 +16,7 @@
     "mapEncoderCountsPerRev",
     "mapServoGearRatio",
     "mapZeroAngle",
-    "mapMaxMoveRatio",
-    "mapColdGlueBrushExitMotion"
+    "mapMaxMoveRatio"
   ]);
   const definitionFields = new Set([...liveDefinitionFields, ...machineSettingFields]);
 

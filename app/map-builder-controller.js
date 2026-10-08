@@ -66,7 +66,7 @@ function saveMapDefinitionFromControls(event) {
     autoScaleTableMap: Boolean(els.mapAutoScaleTableMap?.checked),
     zeroAngle: norm(machineSettingNumber(els.mapZeroAngle, map.machineSettings?.zeroAngle)),
     maxMoveRatio: machineSettingNumber(els.mapMaxMoveRatio, map.machineSettings?.maxMoveRatio, 0.1),
-    coldGlueBrushExitMotion: els.mapColdGlueBrushExitMotion?.value === "no-reverse" ? "no-reverse" : "shortest"
+    coldGlueBrushExitMotion: map.machineSettings?.coldGlueBrushExitMotion === "no-reverse" ? "no-reverse" : "shortest"
   };
   // Protected/company maps stay protected, but a user's local machine setup is
   // allowed to differ from the packaged template until they perform a reset.

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "0.9.10",
-  "buildId": "cold-glue-validation-cleanup-v357-20261007",
+  "buildId": "cold-glue-inputs-performance-v358-20261008",
   "releaseUrl": "./",
   "downloadUrl": "./",
-  "notes": "Cold Glue validation checks actual upstream and downstream finishing-brush contact, validates bottle orientation at application grippers, and removes redundant Autocol terminal corrections while preserving required terminal positioning. Near-limit speed remains advisory; incomplete coverage and excessive speed remain faults."
+  "notes": "Cold Glue Brush Exit Motion is now in Build Inputs and retains its per-map saved choice. Animation reuses program segments within each frame and avoids full scene rebuilds at ordinary command transitions; motion, fault overlays and speed limits are preserved."
 }

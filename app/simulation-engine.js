@@ -174,8 +174,20 @@ function currentProgram() {
   return state.activeTab === "simulation" ? simulationProgram() : state.program;
 }
 
+// Share derived segments only during one synchronous animation frame. Outside
+// that scope, edits (including in-place row changes) always see fresh data.
+let animationSegmentCache = null;
+function withProgramSegmentFrame(callback) {
+  if (animationSegmentCache) return callback();
+  animationSegmentCache = new WeakMap();
+  try { return callback(); }
+  finally { animationSegmentCache = null; }
+}
+
 function programSegments(program = currentProgram()) {
-  return program.map((row, i) => {
+  const cached = animationSegmentCache?.get(program);
+  if (cached && cached.maxMoveRatio === state.maxMoveRatio) return cached.segments;
+  const segments = program.map((row, i) => {
     const next = program[i + 1];
     const tableTravel = next ? next.tableAngle - row.tableAngle : null;
     const isMotionCommand = Number(row.cmd) === 7;
@@ -195,6 +207,8 @@ function programSegments(program = currentProgram()) {
       : 0;
     return { ...row, isMotionCommand, tableTravel, plateTravel, speed, absSpeed, moveFault, excessPlateTravel };
   });
+  animationSegmentCache?.set(program, { segments, maxMoveRatio: state.maxMoveRatio });
+  return segments;
 }
 
 function faultMoves(program = currentProgram()) {

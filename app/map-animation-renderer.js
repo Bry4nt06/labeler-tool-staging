@@ -23,14 +23,19 @@
     const segmentKey = String(active?.hmi ?? "none");
     const headNodes = svg.querySelectorAll("[data-animation-head]");
     const pocketNodes = svg.querySelectorAll("[data-animation-pocket]");
+    const segmentChanged = svg.dataset.animationSegment !== segmentKey;
+    const commandOverlayVisible = (state.showMoveDistanceOverlay && !state.showAllProgramMovesOverlay)
+      || faultMoves(program).length > 0;
     if (
-      svg.dataset.animationSegment !== segmentKey
+      (segmentChanged && commandOverlayVisible)
       || headNodes.length !== state.headCount
       || pocketNodes.length !== state.headCount
     ) {
       fallbackRender();
       return;
     }
+
+    svg.dataset.animationSegment = segmentKey;
 
     const previewLine = svg.querySelector("[data-animation-preview]");
     const preview = angleToXY(state.previewAngle, state.radius + 12);
