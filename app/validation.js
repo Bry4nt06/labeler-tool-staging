@@ -150,7 +150,7 @@ function validate() {
   const motionValidationDriver = window.LabelerMotionValidationDriver;
   const commandDriver = window.LabelerServoCommandDriver;
   if (motionValidationDriver && state.motionPlan) {
-    motionValidationDriver.analyze({ plan: state.motionPlan, rows: state.program, tolerance: 0.5 })
+    motionValidationDriver.analyze({ plan: state.motionPlan, rows: state.program, maxRatio: state.maxMoveRatio, tolerance: 0.5 })
       .forEach((issue) => notes.push([issue.level, issue.message]));
   }
   if (commandDriver) {

@@ -470,6 +470,7 @@
 
     return {
       source,
+      mapDirection,
       labelDeg,
       overWipeDeg,
       totalRotation,
@@ -545,9 +546,71 @@
     return planSegments(options, segments, "cold-glue-brush-pair");
   }
 
+  // Validation reads the exported commands, not the requested allocation. A
+  // blocked, edited or noncontact turn must never pay down physical wipe debt.
+  function analyzeCoverage({ plan, rows = [], maxRatio = Infinity, tolerance = 0.5 } = {}) {
+    const stations = Array.isArray(plan?.stationPlans) ? plan.stationPlans : [];
+    const issues = [];
+    const reconciled = new Set();
+    const contactRotation = (row, next, windows, direction) => {
+      if (Number(row?.cmd) !== 7 || !next) return 0;
+      const start = finite(row.tableAngle, NaN);
+      const end = finite(next.tableAngle, NaN);
+      const rotation = finite(next.plateAngle, NaN) - finite(row.plateAngle, NaN);
+      if (!(end > start + EPSILON) || rotation * direction <= 0
+        || Math.abs(rotation) / (end - start) > maxRatio + EPSILON) return 0;
+      // Merge contact intervals so overlapping objects cannot count twice.
+      const intervals = windows.map((window) => [Math.max(start, window.start), Math.min(end, window.end)])
+        .filter(([from, to]) => to > from).sort((a, b) => a[0] - b[0]);
+      let span = 0;
+      let until = -Infinity;
+      intervals.forEach(([from, to]) => { span += Math.max(0, to - Math.max(from, until)); until = Math.max(until, to); });
+      return Math.abs(rotation) * span / (end - start);
+    };
+    stations.forEach((station) => {
+      const phases = station.plan?.phasePlans;
+      // Full-wrap overlap/seam rules remain with their dedicated validator.
+      if (!Array.isArray(phases) || !phases.length || station.plan?.wrapPlan?.fullWrapReady) return;
+      const section = station.section;
+      const mapDirection = station.plan.mapDirection || "ccw";
+      let finishingCredit = 0;
+      rows.forEach((row, index) => {
+        if (!row.carryoverWipe || row.section !== section) return;
+        const owner = stations.find((item) => Number(item.station) === Number(row.station));
+        const brush = owner?.objects?.find((item) => item.id === row.brushId && item.kind === "brush"
+          && item.role === "final" && item.labelSection === section && item.side === row.brushSide);
+        if (!brush) return;
+        const boundary = finite(owner.aggregateTableAngle, NaN);
+        if (!Number.isFinite(boundary)) return;
+        const window = { start: finite(brush.start, brush.angle), end: Math.min(finite(brush.end, brush.start), boundary) };
+        finishingCredit += contactRotation(row, rows[index + 1], [window], wipeDirectionForSide(brush.side, mapDirection));
+      });
+      phases.forEach((phase, phaseIndex) => {
+        const required = Math.max(0, finite(phase.requiredRotation, 0) + finite(phase.deferredRotation, 0));
+        let upstream = 0;
+        rows.forEach((row, index) => {
+          if (!row.wipeOutward || row.carryoverWipe || row.section !== section
+            || Number(row.station) !== Number(station.station) || row.brushSide !== phase.side) return;
+          upstream += contactRotation(row, rows[index + 1], phase.windows || [], wipeDirectionForSide(phase.side, mapDirection));
+        });
+        const debt = Math.max(0, required - upstream);
+        const downstream = phase.deferredToFinalBrush ? Math.min(debt, finishingCredit) : 0;
+        finishingCredit -= downstream;
+        const remaining = Math.max(0, debt - downstream);
+        issues.push({ level: remaining > tolerance ? "bad" : "ok", code: "cold-glue-combined-coverage",
+          station: station.station, section, side: phase.side, phaseIndex,
+          requiredRotation: required, upstreamRotation: upstream, downstreamRotation: downstream, remainingRotation: remaining,
+          message: `${section} ${phase.side === "inner" ? "Inside" : "Outside"} wipe: ${upstream.toFixed(1)}° upstream + ${downstream.toFixed(1)}° downstream finishing contact / ${required.toFixed(1)}° required.${remaining > tolerance ? ` Incomplete coverage: ${remaining.toFixed(1)}° remains; extend the physical brush window before the next application gripper.` : " Commanded contact covers the assigned wipe."}` });
+      });
+      reconciled.add(`${station.station}:${section}`);
+    });
+    return { issues, reconciled };
+  }
+
   global.LabelerColdGlueMotionDriver = Object.freeze({
     createPlan,
     createBrushChannelPlan,
+    analyzeCoverage,
     flowFacingTarget,
     channelEntryAngle,
     physicalMachineDirection,

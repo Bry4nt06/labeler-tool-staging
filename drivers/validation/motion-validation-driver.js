@@ -11,7 +11,11 @@
   }
 
   function analyze(options) {
-    const issues = [...(options.plan?.issues || [])];
+    const coverage = global.LabelerColdGlueMotionDriver?.analyzeCoverage?.(options);
+    const capacityCodes = new Set(["cold-glue-channel-capacity", "cold-glue-brush-exit-clearance-capacity"]);
+    const issues = (options.plan?.issues || []).filter((issue) =>
+      !(capacityCodes.has(issue.code) && coverage?.reconciled.has(`${issue.station}:${issue.section}`)));
+    if (coverage) issues.push(...coverage.issues);
     const tolerance = Number.isFinite(options.tolerance) ? options.tolerance : 0.5;
     const plans = options.plan?.stationPlans || [];
     const pairPlans = options.plan?.pairPlans || [];
