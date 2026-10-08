@@ -197,4 +197,17 @@ assert.equal(bodyPreSpinReference.parallelBrushHold, true,
 assert.equal(bodyPreSpinReference.plateAngle, 90,
   "MAB1 must face the body label into the parallel brush channel before contact");
 
+
+// Opt-in safety mode must not replace a reverse-across-label gripper correction
+// with another damaging turn. It must raise a diagnostic instead.
+const safeMap = { ...map, machineSettings: { ...map.machineSettings, coldGlueBrushExitMotion: "no-reverse" } };
+context.activeMachineMap = () => safeMap;
+const safeRows = context.generatedColdGlueFixedProfile();
+assert.ok(Array.isArray(safeRows) && safeRows.length > 0);
+assert.ok(context.state.motionPlan && Array.isArray(context.state.motionPlan.issues));
+assert.ok(profileSource.includes("cold-glue-no-reverse-gripper-conflict"),
+  "the opt-in mode must fault rather than silently command a reverse through an adhered label");
+assert.ok(profileSource.includes("cold-glue-late-brush-exit"),
+  "an over-speed brush turn must be blocked and diagnosed in the opt-in mode");
+
 console.log("Cold Glue gripper-priority and cross-station neck carry-over regression passed.");
