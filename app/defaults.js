@@ -250,6 +250,7 @@ const els = {
   mapAutoScaleTableMap: document.querySelector("#mapAutoScaleTableMap"),
   mapZeroAngle: document.querySelector("#mapZeroAngle"),
   mapMaxMoveRatio: document.querySelector("#mapMaxMoveRatio"),
+  mapColdGlueBrushExitMotion: document.querySelector("#mapColdGlueBrushExitMotion"),
   mapAggregateCount: document.querySelector("#mapAggregateCount"),
   mapStationCount: document.querySelector("#mapStationCount"),
   machineLayoutSection: document.querySelector("#machineLayoutSection"),
