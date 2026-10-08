@@ -16,7 +16,9 @@ ordinary command transitions; structural changes, active move overlays and fault
 programs retain the existing scene redraw behavior. Servo motion is unchanged.
 
 Verification: all three new regressions fail against staging main and pass on this
-branch; focused Cold Glue/map/build suites pass (22 tests); startup passes (261).
+branch; focused Cold Glue/map/build/wrap/update suites pass (30 tests); startup passes (261).
+The existing Cold Glue CI workflow runs the new regression suite and watches its
+animation modules.
 Broad 3D suite: 73 pass / 15 fail, identical to untouched staging main. Three extra
 presentation/controller source-contract tests also fail identically on main.
 No existing tests were weakened. Browser localhost access is blocked in the
