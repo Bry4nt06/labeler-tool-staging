@@ -10,6 +10,7 @@ function renderBuildInputs() {
   const label = summary.label;
   const bottle = summary.bottle;
   const isColdGlue = state.applicationMode === "cold-glue";
+  const brushExitMotion = window.activeMachineMap?.()?.machineSettings?.coldGlueBrushExitMotion;
   const bodyCirc = bodyCircumference(bottle);
   const neckCirc = num(label?.neckBottomCircumferenceMm, NaN);
   const neckLabelDeg = degFromMm(label?.neckBottomCurveMm, neckCirc);
@@ -98,8 +99,8 @@ function renderBuildInputs() {
         <h3>Cold Glue Program Parameters</h3>
         <label>Cold Glue Brush Exit Motion
           <select id="programColdGlueBrushExitMotion">
-            <option value="shortest"${activeMachineMap()?.machineSettings?.coldGlueBrushExitMotion === "no-reverse" ? "" : " selected"}>Shortest Rotation (legacy)</option>
-            <option value="no-reverse"${activeMachineMap()?.machineSettings?.coldGlueBrushExitMotion === "no-reverse" ? " selected" : ""}>No Reverse Across Label</option>
+            <option value="shortest"${brushExitMotion === "no-reverse" ? "" : " selected"}>Shortest Rotation (legacy)</option>
+            <option value="no-reverse"${brushExitMotion === "no-reverse" ? " selected" : ""}>No Reverse Across Label</option>
           </select>
         </label>
         <p class="application-filter-note">Cold Glue uses center-tack application and map-defined brush channels.</p>
