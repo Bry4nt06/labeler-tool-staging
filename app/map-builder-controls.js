@@ -158,7 +158,8 @@ function renderMapLibraryControls() {
   const builderMachineFields = {
     mapDirection: settings.direction, mapRadius: settings.radius, mapReferencePitchRadiusMm: settings.referencePitchRadiusMm,
     mapEncoderCountsPerRev: settings.encoderCountsPerRev,
-    mapServoGearRatio: settings.servoGearRatio, mapZeroAngle: settings.zeroAngle, mapMaxMoveRatio: settings.maxMoveRatio
+    mapServoGearRatio: settings.servoGearRatio, mapZeroAngle: settings.zeroAngle, mapMaxMoveRatio: settings.maxMoveRatio,
+    mapColdGlueBrushExitMotion: settings.coldGlueBrushExitMotion === "no-reverse" ? "no-reverse" : "shortest"
   };
   Object.entries(builderMachineFields).forEach(([key, value]) => { if (els[key]) els[key].value = value; });
   if (els.mapAutoScaleTableMap) els.mapAutoScaleTableMap.checked = settings.autoScaleTableMap !== false;
