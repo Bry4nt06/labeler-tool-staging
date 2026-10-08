@@ -22,6 +22,7 @@ function generatedColdGlueFixedProfile() {
   const aggregateAngles = coldGlueSettings.aggregateAngles || machineMap?.aggregateAngles || {};
   const mapDirection = (coldGlueSettings.machineSettings?.direction || machineMap?.machineSettings?.direction) === "ccw" ? "ccw" : "cw";
   const startPlate = num(state.buildInputs.plateStartPositionDeg, 0);
+  const noReverseBrushExit = machineMap?.machineSettings?.coldGlueBrushExitMotion === "no-reverse";
   // Cold Glue aggregate application references are fixed physical bottle
   // center-line datums. They do not inherit APL section targets or change for
   // full-wrap labels: Neck and Body apply at 0°, Back applies at 180°.
@@ -61,6 +62,8 @@ function generatedColdGlueFixedProfile() {
     });
     lastTable = normalizedTable;
   };
+  let lastWipeDirection = 0;
+  let lastWipeSection = "";
   const moveToReference = (targetTable, targetPlate, action, extra = {}) => {
     const applicationTransition = extra.applicationTransition === true;
     // A new correction must begin from the bottle angle established by the
@@ -71,6 +74,23 @@ function generatedColdGlueFixedProfile() {
       ? lastTable + 0.5
       : lastTable;
     const target = unwrapAfter(targetTable, correctionStart);
+    if (noReverseBrushExit && applicationTransition && lastWipeDirection && lastWipeSection) {
+      const shortest = ((num(targetPlate, plate) - plate + 540) % 360) - 180;
+      if (shortest * lastWipeDirection < -0.001) {
+        const forward = lastWipeDirection > 0
+          ? norm(num(targetPlate, plate) - plate)
+          : norm(plate - num(targetPlate, plate));
+        const travel = Math.max(0.001, target - correctionStart);
+        issues.push({
+          level: "bad",
+          code: "cold-glue-no-reverse-gripper-conflict",
+          section: lastWipeSection,
+          message: `No Reverse Across Label: ${lastWipeSection} brush exit would reverse ${Math.abs(shortest).toFixed(1)}° into the next gripper. Same-direction travel is ${forward.toFixed(1)}° over ${travel.toFixed(1)}° table. Reposition the brush/extend the exit window; no reverse correction is permitted.`
+        });
+        // Never silently substitute a high-speed 360-degree return that could
+        // peel an already adhered Cold Glue label.
+      }
+    }
     add(7, correctionStart, plate, action, {
       ...extra,
       applicationReference: false
@@ -120,7 +140,18 @@ function generatedColdGlueFixedProfile() {
     // faults on Autocol profiles.
     const { restAction, ...rowExtra } = extra;
     add(7, start, plate, `${action} - Turn`, rowExtra);
+    if (noReverseBrushExit && extra.wipeOutward === true && start >= 330 && end - start < 1) {
+      issues.push({ level: "bad", code: "cold-glue-late-brush-exit", section: extra.section,
+        message: `No Reverse Across Label: brush move at ${start.toFixed(1)}° provides only ${(end-start).toFixed(1)}° table travel and cannot safely wipe ${rotation.toFixed(1)}° bottle rotation. Move brush contact earlier or reduce assigned coverage.` });
+      rows.pop();
+      lastTable = rows.length ? num(rows[rows.length - 1].tableAngle, 0) : 0;
+      return;
+    }
     plate += direction * rotation;
+    if (extra.wipeOutward === true) {
+      lastWipeDirection = direction;
+      lastWipeSection = String(extra.section || "");
+    }
     add(3, end, plate, restAction || `${action} - Rest`, rowExtra);
   };
   const explicitLabelSection = (item) => {
